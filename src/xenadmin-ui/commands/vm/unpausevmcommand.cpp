@@ -79,13 +79,13 @@ void UnpauseVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
+            QMessageBox::warning(MainWindow::instance(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
 
         // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
-        VMUnpause* action = new VMUnpause(vm, this->mainWindow());
+        VMUnpause* action = new VMUnpause(vm, MainWindow::instance());
 
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);

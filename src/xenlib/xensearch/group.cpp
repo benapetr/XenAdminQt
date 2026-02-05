@@ -228,7 +228,7 @@ namespace XenSearch
 
             // Check if VM is on non-live host
             QString residentOnRef = objectData.value("resident_on").toString();
-            if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
+            if (!residentOnRef.isEmpty() && residentOnRef != XENOBJECT_NULL)
             {
                 QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, residentOnRef);
                 if (host && !host->IsLive())

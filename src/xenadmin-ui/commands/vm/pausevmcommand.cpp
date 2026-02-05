@@ -77,12 +77,12 @@ void PauseVMCommand::Run()
 
         if (!vm->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMPause action (parent is MainWindow to prevent premature deletion)
-        VMPause* action = new VMPause(vm, this->mainWindow());
+        VMPause* action = new VMPause(vm, MainWindow::instance());
 
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);

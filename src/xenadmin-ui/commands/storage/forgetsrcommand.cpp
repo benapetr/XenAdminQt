@@ -93,7 +93,7 @@ void ForgetSRCommand::Run()
     }
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle("Forget Storage Repository");
     msgBox.setText(QString("Are you sure you want to forget SR '%1'?").arg(srName));
     msgBox.setInformativeText("This will remove the SR from the XenServer database.\n"
@@ -114,7 +114,7 @@ void ForgetSRCommand::Run()
     XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+        QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
         return;
     }
 

@@ -45,7 +45,7 @@ namespace
             return false;
 
         QString hostRef = vmData.value("resident_on").toString();
-        if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+        if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
             return false;
 
         QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
@@ -53,7 +53,7 @@ namespace
             return false;
 
         QString hostControlDomain = hostData.value("control_domain").toString();
-        if (!hostControlDomain.isEmpty() && hostControlDomain != "OpaqueRef:NULL")
+        if (!hostControlDomain.isEmpty() && hostControlDomain != XENOBJECT_NULL)
             return hostControlDomain == vmRef;
 
         qint64 domid = vmData.value("domid").toLongLong();
@@ -120,7 +120,7 @@ QSharedPointer<Host> SR::GetHost(XenCache* cache) const
         {
             QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRef);
             QString masterRef = poolData.value("master").toString();
-            if (!masterRef.isEmpty() && masterRef != "OpaqueRef:NULL")
+            if (!masterRef.isEmpty() && masterRef != XENOBJECT_NULL)
                 return cache->ResolveObject<Host>(XenObjectType::Host, masterRef);
         }
         return QSharedPointer<Host>();
@@ -134,7 +134,7 @@ QSharedPointer<Host> SR::GetHost(XenCache* cache) const
         if (!pbdData.isEmpty())
         {
             QString hostRef = pbdData.value("host").toString();
-            if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
                 return cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
         }
     }
@@ -350,13 +350,13 @@ bool SR::HasDriverDomain(QString* outVMRef) const
         return false;
 
     QString srRef = this->OpaqueRef();
-    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+    if (srRef.isEmpty() || srRef == XENOBJECT_NULL)
         return false;
 
     QStringList pbdRefs = this->GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
     {
-        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
+        if (pbdRef.isEmpty() || pbdRef == XENOBJECT_NULL)
             continue;
 
         QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
@@ -365,7 +365,7 @@ bool SR::HasDriverDomain(QString* outVMRef) const
 
         QVariantMap otherConfig = pbdData.value("other_config").toMap();
         QString vmRef = otherConfig.value("storage_driver_domain").toString();
-        if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
+        if (vmRef.isEmpty() || vmRef == XENOBJECT_NULL)
             continue;
 
         QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
@@ -522,7 +522,7 @@ QList<QSharedPointer<PBD>> SR::GetPBDs() const
     QStringList pbdRefs = this->GetPBDRefs();
     for (const QString& ref : pbdRefs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>(ref);
             if (pbd)
@@ -548,7 +548,7 @@ QList<QSharedPointer<VDI>> SR::GetVDIs() const
     QStringList vdiRefs = this->GetVDIRefs();
     for (const QString& ref : vdiRefs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(ref);
             if (vdi)
@@ -577,7 +577,7 @@ QList<QSharedPointer<Blob>> SR::GetBlobs() const
     {
         iter.next();
         QString ref = iter.value().toString();
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<Blob> blob = cache->ResolveObject<Blob>(ref);
             if (blob)

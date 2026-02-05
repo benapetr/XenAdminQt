@@ -63,7 +63,7 @@ QSharedPointer<VM> Console::GetVM() const
         return QSharedPointer<VM>();
 
     QString vmRef = this->GetVMRef();
-    if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
+    if (vmRef.isEmpty() || vmRef == XENOBJECT_NULL)
         return QSharedPointer<VM>();
 
     return cache->ResolveObject<VM>(XenObjectType::VM, vmRef);

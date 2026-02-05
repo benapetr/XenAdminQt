@@ -58,7 +58,7 @@ void VMRecoveryModeCommand::Run()
         return;
 
     // Create HVMBootAction
-    HVMBootAction* action = new HVMBootAction(vm, this->mainWindow());
+    HVMBootAction* action = new HVMBootAction(vm, MainWindow::instance());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

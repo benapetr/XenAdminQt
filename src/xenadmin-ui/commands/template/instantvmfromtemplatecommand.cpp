@@ -66,7 +66,7 @@ void InstantVMFromTemplateCommand::Run()
     QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
-        QMessageBox::warning(this->mainWindow(), "Cannot Create VM",
+        QMessageBox::warning(MainWindow::instance(), "Cannot Create VM",
                              "The selected template cannot be used for instant VM creation.");
         return;
     }
@@ -81,7 +81,7 @@ void InstantVMFromTemplateCommand::Run()
     // };
     // action.RunAsync();
 
-    QMessageBox::information(this->mainWindow(), "Not Implemented",
+    QMessageBox::information(MainWindow::instance(), "Not Implemented",
                              "Instant VM creation will be implemented using CreateVMFastAction + auto-start.");
 }
 

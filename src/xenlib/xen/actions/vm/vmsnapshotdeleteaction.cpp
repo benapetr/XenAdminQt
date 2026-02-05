@@ -100,7 +100,7 @@ void VMSnapshotDeleteAction::run()
                     QSharedPointer<VBD> vbd = GetConnection()->GetCache()->ResolveObject<VBD>(vbdRef);
                     QString vdiRef = vbd ? vbd->GetVDIRef() : QString();
 
-                    if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+                    if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
                     {
                         // Destroy the VBD first
                         XenAPI::VBD::destroy(GetSession(), vbdRef);

@@ -57,7 +57,7 @@ void NetworkPropertiesCommand::Run()
     QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->GetObject());
     if (!network)
         return;
-    NetworkPropertiesDialog dialog(network, this->mainWindow());
+    NetworkPropertiesDialog dialog(network, MainWindow::instance());
     dialog.exec();
 }
 

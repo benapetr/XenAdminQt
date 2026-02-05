@@ -122,7 +122,7 @@ void AttachVirtualDiskDialog::populateVDITable()
             continue;
 
         QString vdiRef = vbd->GetVDIRef();
-        if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+        if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
         {
             attachedVDIs.append(vdiRef);
         }

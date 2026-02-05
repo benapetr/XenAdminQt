@@ -215,14 +215,14 @@ void StartVMCommand::Run()
 
     if (runnable.size() == 1 && brokenCds.isEmpty())
     {
-        VMStartAction* action = createStartAction(this->mainWindow(), runnable.first());
+        VMStartAction* action = createStartAction(MainWindow::instance(), runnable.first());
         action->RunAsync(true);
         return;
     }
 
     if (!brokenCds.isEmpty())
     {
-        QMessageBox prompt(this->mainWindow());
+        QMessageBox prompt(MainWindow::instance());
         prompt.setWindowTitle(runnable.size() > 1 ? tr("Starting VMs") : tr("Starting VM"));
         prompt.setText(tr("It may not be possible to start the selected VMs as they are using ISOs from an SR which is unavailable.\n\n"
                           "Would you like to eject these ISOs before continuing?"));
@@ -246,7 +246,7 @@ void StartVMCommand::Run()
     {
         if (!brokenCds.contains(vm))
         {
-            actions.append(createStartAction(this->mainWindow(), vm));
+            actions.append(createStartAction(MainWindow::instance(), vm));
             continue;
         }
 
@@ -254,9 +254,9 @@ void StartVMCommand::Run()
         const QList<QSharedPointer<VBD>>& vbds = brokenCds[vm];
         for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), this->mainWindow()));
+            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), MainWindow::instance()));
         }
-        subActions.append(createStartAction(this->mainWindow(), vm));
+        subActions.append(createStartAction(MainWindow::instance(), vm));
 
         XenConnection* conn = vm->GetConnection();
         MultipleAction* multi = new MultipleAction(
@@ -268,7 +268,7 @@ void StartVMCommand::Run()
             false,
             false,
             false,
-            this->mainWindow());
+            MainWindow::instance());
         actions.append(multi);
     }
 
@@ -283,7 +283,7 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
     QList<QSharedPointer<VBD>> brokenVbds;
     if (hasBrokenCd(vm, brokenVbds))
     {
-        QMessageBox prompt(this->mainWindow());
+        QMessageBox prompt(MainWindow::instance());
         prompt.setWindowTitle(tr("Starting VM"));
         prompt.setText(tr("It may not be possible to start the selected VMs as they are using ISOs from an SR which is unavailable.\n\n"
                           "Would you like to eject these ISOs before continuing?"));
@@ -307,9 +307,9 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
         QList<AsyncOperation*> subActions;
         for (const QSharedPointer<VBD>& vbd : brokenVbds)
         {
-            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), this->mainWindow()));
+            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), MainWindow::instance()));
         }
-        subActions.append(createStartAction(this->mainWindow(), vm));
+        subActions.append(createStartAction(MainWindow::instance(), vm));
 
         MultipleAction* multi = new MultipleAction(
             vm->GetConnection(),
@@ -320,12 +320,12 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
             false,
             false,
             false,
-            this->mainWindow());
+            MainWindow::instance());
         multi->RunAsync();
         return true;
     }
 
-    VMStartAction* action = createStartAction(this->mainWindow(), vm);
+    VMStartAction* action = createStartAction(MainWindow::instance(), vm);
     action->RunAsync(true);
     return true;
 }

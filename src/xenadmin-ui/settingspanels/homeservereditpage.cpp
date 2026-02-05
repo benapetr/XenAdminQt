@@ -117,7 +117,7 @@ AsyncOperation* HomeServerEditPage::SaveSettings()
     // Determine new affinity
     QString newAffinityRef;
     QString selectedRef = ui->picker->selectedAffinityRef();
-    newAffinityRef = selectedRef.isEmpty() ? QString("OpaqueRef:NULL") : selectedRef;
+    newAffinityRef = selectedRef.isEmpty() ? QString(XENOBJECT_NULL) : selectedRef;
 
     auto* op = new DelegatedAsyncOperation(
         m_connection,
@@ -158,11 +158,11 @@ bool HomeServerEditPage::HasChanged() const
 {
     QString currentAffinityRef = ui->picker->selectedAffinityRef();
     if (currentAffinityRef.isEmpty())
-        currentAffinityRef = "OpaqueRef:NULL";
+        currentAffinityRef = XENOBJECT_NULL;
 
     QString origRef = m_originalAffinityRef;
-    if (origRef.isEmpty() || origRef == "OpaqueRef:NULL")
-        origRef = "OpaqueRef:NULL";
+    if (origRef.isEmpty() || origRef == XENOBJECT_NULL)
+        origRef = XENOBJECT_NULL;
 
     return origRef != currentAffinityRef;
 }

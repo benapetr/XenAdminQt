@@ -124,7 +124,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
                 continue;
 
             QString vdiRef = vbd->GetVDIRef();
-            if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
                 continue;
 
             QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);

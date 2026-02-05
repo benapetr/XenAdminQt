@@ -45,7 +45,7 @@ AddNewHostToPoolCommand::AddNewHostToPoolCommand(MainWindow* mainWindow,  QShare
 
 void AddNewHostToPoolCommand::Run()
 {
-    AddServerDialog dialog(nullptr, false, this->mainWindow());
+    AddServerDialog dialog(nullptr, false, MainWindow::instance());
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -79,7 +79,7 @@ void AddNewHostToPoolCommand::Run()
         this->onCachePopulated(connection);
     }, Qt::UniqueConnection);
 
-    XenConnectionUI::BeginConnect(connection, true, this->mainWindow(), false);
+    XenConnectionUI::BeginConnect(connection, true, MainWindow::instance(), false);
 }
 
 void AddNewHostToPoolCommand::onCachePopulated(XenConnection* connection)
@@ -106,7 +106,7 @@ void AddNewHostToPoolCommand::onCachePopulated(XenConnection* connection)
                          .arg(hostPool->GetName())
                          .arg(this->pool_ ? this->pool_->GetName() : tr("Unknown Pool"));
         
-        QMessageBox::warning(this->mainWindow(), tr("Host Already in Pool"), message);
+        QMessageBox::warning(MainWindow::instance(), tr("Host Already in Pool"), message);
     }
     else
     {
@@ -114,7 +114,7 @@ void AddNewHostToPoolCommand::onCachePopulated(XenConnection* connection)
         QList<QSharedPointer<Host>> hosts;
         hosts.append(hostToAdd);
         
-        AddHostToPoolCommand* cmd = new AddHostToPoolCommand(this->mainWindow(), hosts, this->pool_, false);
+        AddHostToPoolCommand* cmd = new AddHostToPoolCommand(MainWindow::instance(), hosts, this->pool_, false);
         cmd->Run();
         delete cmd;
     }

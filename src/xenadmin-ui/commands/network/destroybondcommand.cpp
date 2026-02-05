@@ -79,7 +79,7 @@ void DestroyBondCommand::Run()
     if (affectsPrimary && this->isHAEnabled())
     {
         QMessageBox::critical(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Cannot Delete Bond",
             QString("Cannot delete bond '%1' because High Availability (HA) is enabled "
                     "and this bond carries the primary management interface.\n\n"

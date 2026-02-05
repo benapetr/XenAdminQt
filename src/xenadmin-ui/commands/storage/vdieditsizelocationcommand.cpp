@@ -52,7 +52,7 @@ void VdiEditSizeLocationCommand::Run()
     // Open VDI properties dialog
     // The dialog handles size editing, name/description editing
     // For location changes, user can use "Move Virtual Disk" command
-    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(vdi, this->mainWindow());
+    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(vdi, MainWindow::instance());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }

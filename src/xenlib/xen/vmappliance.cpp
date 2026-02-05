@@ -26,8 +26,6 @@
  */
 
 #include "vmappliance.h"
-#include "vm.h"
-#include "sr.h"
 #include "network/connection.h"
 #include "../xencache.h"
 #include <QSet>
@@ -90,7 +88,7 @@ QStringList VMAppliance::GetFateSharingVMs() const
             QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
             
-            if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+            if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
             {
                 QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                 QString srRef = vdiData.value("SR").toString();
@@ -128,7 +126,7 @@ QStringList VMAppliance::GetFateSharingVMs() const
                 QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
                 QString vdiRef = vbdData.value("VDI").toString();
                 
-                if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+                if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
                 {
                     QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                     QString srRef = vdiData.value("SR").toString();

@@ -60,7 +60,7 @@ void DeleteVirtualDiskCommand::Run()
     QString confirmText = this->getConfirmationText(vdiType, vdiName);
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
     msgBox.setIcon(QMessageBox::Warning);

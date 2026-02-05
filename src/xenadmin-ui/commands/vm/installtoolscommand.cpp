@@ -52,7 +52,7 @@ void InstallToolsCommand::Run()
         return;
 
     // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Install XenServer Tools",
+    int ret = QMessageBox::question(MainWindow::instance(), "Install XenServer Tools",
                                     "This will mount the XenServer Tools ISO in the VM.\n\n"
                                     "You can then install the tools from within the VM's guest OS.\n\n"
                                     "Continue?",
@@ -60,10 +60,10 @@ void InstallToolsCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->ShowStatusMessage("Mounting XenServer Tools ISO...");
+        MainWindow::instance()->ShowStatusMessage("Mounting XenServer Tools ISO...");
 
         // TODO: Implement VM.assert_can_mount_tools and VM.mount_tools_iso
-        QMessageBox::information(this->mainWindow(), "Not Implemented",
+        QMessageBox::information(MainWindow::instance(), "Not Implemented",
                                  "Install Tools functionality will be implemented with XenAPI VM bindings.\n\n"
                                  "This will mount xs-tools.iso in the VM's CD drive.");
     }

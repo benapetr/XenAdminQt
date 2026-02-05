@@ -32,10 +32,7 @@
 #include "../../../xencache.h"
 #include <stdexcept>
 
-AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection,
-                                         XenConnection* hostConnection,
-                                         QSharedPointer<Host> joiningHost,
-                                         QObject* parent)
+AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection, XenConnection* hostConnection, QSharedPointer<Host> joiningHost, bool auto_delete, QObject* parent)
     : AsyncOperation(hostConnection, // Use host connection as primary (matches C# pattern)
                      QString("Adding host to pool"),
                      QString("Join pool operation"),
@@ -46,6 +43,7 @@ AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection,
 {
     // Note: We don't use the Host object in this simplified version
     // The C# version uses it for licensing and AD checks
+    this->m_autoDelete = auto_delete;
 }
 
 void AddHostToPoolAction::run()

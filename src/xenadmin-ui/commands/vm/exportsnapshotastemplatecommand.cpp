@@ -92,13 +92,13 @@ void ExportSnapshotAsTemplateCommand::Run()
 
     if (!snapshot->IsSnapshot())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
         return;
     }
 
     if (!this->m_snapshotRef.isEmpty())
     {
-        ExportWizard* wizard = new ExportWizard(this->mainWindow());
+        ExportWizard* wizard = new ExportWizard(MainWindow::instance());
         connect(wizard, &QWizard::finished, wizard, &QObject::deleteLater);
         wizard->show();
         wizard->raise();
@@ -107,7 +107,7 @@ void ExportSnapshotAsTemplateCommand::Run()
     }
 
     // Reuse ExportVMCommand - snapshots are exported just like VMs
-    ExportVMCommand* exportCmd = new ExportVMCommand(this->mainWindow(), this);
+    ExportVMCommand* exportCmd = new ExportVMCommand(MainWindow::instance(), this);
     exportCmd->Run();
     exportCmd->deleteLater();
 }

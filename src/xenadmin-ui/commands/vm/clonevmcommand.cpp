@@ -67,7 +67,7 @@ void CloneVMCommand::Run()
     // Check if VM is in a cloneable state
     if (powerState != "Halted")
     {
-        QMessageBox::warning(this->mainWindow(), "Clone VM",
+        QMessageBox::warning(MainWindow::instance(), "Clone VM",
                              QString("VM '%1' must be shut down before it can be cloned.\n\n"
                                      "Current state: %2")
                                  .arg(vmName, powerState));
@@ -76,7 +76,7 @@ void CloneVMCommand::Run()
 
     // Get new name for the clone
     bool ok;
-    QString cloneName = QInputDialog::getText(this->mainWindow(), "Clone VM",
+    QString cloneName = QInputDialog::getText(MainWindow::instance(), "Clone VM",
                                               QString("Enter a name for the cloned VM:"),
                                               QLineEdit::Normal,
                                               QString("Copy of %1").arg(vmName), &ok);
@@ -85,7 +85,7 @@ void CloneVMCommand::Run()
         return;
 
     // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Clone VM",
+    int ret = QMessageBox::question(MainWindow::instance(), "Clone VM",
                                     QString("Are you sure you want to clone VM '%1' as '%2'?\n\n"
                                             "This will create a full copy of the VM including all disks.")
                                         .arg(vmName, cloneName),
@@ -97,13 +97,13 @@ void CloneVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
+            QMessageBox::warning(MainWindow::instance(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
 
         // Create VMCloneAction (matches C# VMCloneAction pattern)
-        VMCloneAction* action = new VMCloneAction(vm, cloneName, "", this->mainWindow());
+        VMCloneAction* action = new VMCloneAction(vm, cloneName, "", MainWindow::instance());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

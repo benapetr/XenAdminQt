@@ -86,7 +86,7 @@ namespace XenAPI
             /**
              * @brief Check if opaque reference is null or empty
              * @param opaqueRef Reference to check
-             * @return True if null, empty, or "OpaqueRef:NULL"
+             * @return True if null, empty, or XENOBJECT_NULL
              *
              * Matches C# Helper.IsNullOrEmptyOpaqueRef()
              */

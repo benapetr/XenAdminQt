@@ -63,7 +63,7 @@ void ReattachSRCommand::Run()
 
     QSharedPointer<XenObject> ob = this->GetObject();
     XenConnection* connection = ob ? ob->GetConnection() : nullptr;
-    NewSRWizard* wizard = new NewSRWizard(connection, sr, this->mainWindow());
+    NewSRWizard* wizard = new NewSRWizard(connection, sr, MainWindow::instance());
     wizard->setAttribute(Qt::WA_DeleteOnClose);
     wizard->show();
 }

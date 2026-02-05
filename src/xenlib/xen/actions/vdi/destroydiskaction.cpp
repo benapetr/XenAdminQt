@@ -30,6 +30,7 @@
 #include "../../xenapi/xenapi_VDI.h"
 #include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "xen/xenobject.h"
 
 using namespace XenAPI;
 
@@ -94,10 +95,8 @@ void DestroyDiskAction::run()
             QVariantMap vbdRecord = XenAPI::VBD::get_record(session, vbdRef);
             QString vmRef = vbdRecord.value("VM").toString();
 
-            if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
-            {
+            if (vmRef.isEmpty() || vmRef == XENOBJECT_NULL)
                 continue;
-            }
 
             // Get VM record
             QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);

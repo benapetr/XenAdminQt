@@ -261,7 +261,7 @@ void NetworkTabPage::populateVIFsForVM()
 
     XenCache* cache = vm->GetCache();
 
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         // Resolve guest_metrics from cache to get network info (IP addresses)
         guestMetrics = cache->ResolveObject<VMGuestMetrics>(guestMetricsRef);

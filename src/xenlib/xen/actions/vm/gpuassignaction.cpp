@@ -72,7 +72,7 @@ void GpuAssignAction::run()
         {
             QVariantMap vgpuMap = vgpuVar.toMap();
             QString opaqueRef = vgpuMap.value("opaque_ref").toString();
-            if (!opaqueRef.isEmpty() && opaqueRef != "OpaqueRef:NULL")
+            if (!opaqueRef.isEmpty() && opaqueRef != XENOBJECT_NULL)
             {
                 vgpusToKeep.insert(opaqueRef);
             }
@@ -102,7 +102,7 @@ void GpuAssignAction::run()
         {
             QVariantMap vgpuMap = vgpuVar.toMap();
             QString opaqueRef = vgpuMap.value("opaque_ref").toString();
-            if (opaqueRef.isEmpty() || opaqueRef == "OpaqueRef:NULL")
+            if (opaqueRef.isEmpty() || opaqueRef == XENOBJECT_NULL)
             {
                 vgpusToAdd.append(vgpuMap);
             }
@@ -136,7 +136,7 @@ void GpuAssignAction::run()
 
 void GpuAssignAction::addGpu(const QString& gpuGroupRef, const QString& vgpuTypeRef, const QString& device)
 {
-    if (gpuGroupRef.isEmpty() || gpuGroupRef == "OpaqueRef:NULL")
+    if (gpuGroupRef.isEmpty() || gpuGroupRef == XENOBJECT_NULL)
     {
         return; // No GPU group specified
     }
@@ -144,7 +144,7 @@ void GpuAssignAction::addGpu(const QString& gpuGroupRef, const QString& vgpuType
     QVariantMap otherConfig; // Empty for now
 
     QString taskRef;
-    if (vgpuTypeRef.isEmpty() || vgpuTypeRef == "OpaqueRef:NULL")
+    if (vgpuTypeRef.isEmpty() || vgpuTypeRef == XENOBJECT_NULL)
     {
         // Create without type (basic VGPU)
         taskRef = XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig);

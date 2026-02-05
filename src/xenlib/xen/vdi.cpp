@@ -32,8 +32,7 @@
 #include "vbd.h"
 #include <QLocale>
 
-VDI::VDI(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VDI::VDI(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -118,7 +117,7 @@ QString VDI::SnapshotOfRef() const
 bool VDI::IsSnapshot() const
 {
     QString snapshotOf = this->SnapshotOfRef();
-    return !snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL";
+    return !snapshotOf.isEmpty() && snapshotOf != XENOBJECT_NULL;
 }
 
 QStringList VDI::AllowedOperations() const
@@ -238,7 +237,7 @@ QSharedPointer<SR> VDI::GetSR() const
         return QSharedPointer<SR>();
     
     QString ref = this->SRRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<SR>();
     
     return cache->ResolveObject<SR>(ref);
@@ -251,8 +250,7 @@ QString VDI::NameWithLocation() const
         QSharedPointer<SR> sr = GetSR();
         if (sr)
         {
-            return QString("%1 on '%2' %3")
-                .arg(GetName(), sr->GetName(), sr->LocationString());
+            return QString("%1 on '%2' %3").arg(GetName(), sr->GetName(), sr->LocationString());
         }
     }
 
@@ -273,7 +271,7 @@ QList<QSharedPointer<VBD>> VDI::GetVBDs() const
     QStringList refs = this->GetVBDRefs();
     for (const QString& ref : refs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<VBD> obj = cache->ResolveObject<VBD>(ref);
             if (obj)

@@ -45,7 +45,7 @@ QString Pool::GetName() const
     if (!name.isEmpty())
         return name;
 
-    QSharedPointer<Host> master = this->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->GetMasterHostRef());
+    QSharedPointer<Host> master = this->GetCache()->ResolveObject<Host>(this->GetMasterHostRef());
     return master ? master->GetName() : QString();
 }
 
@@ -91,7 +91,8 @@ bool Pool::IsVisible() const
         return false;
 
     const int hostCount = this->GetCache()->GetAllRefs(XenObjectType::Host).size();
-    return !this->GetName().isEmpty() || hostCount > 1;
+    // Match C# Pool.IsVisible: name_label must be set (no master-name fallback)
+    return !this->stringProperty("name_label").isEmpty() || hostCount > 1;
 }
 
 bool Pool::IsWLBEnabled() const
@@ -413,7 +414,7 @@ QSharedPointer<SR> Pool::GetCrashDumpSR() const
 QSharedPointer<VDI> Pool::GetRedoLogVDI() const
 {
     QString vdiRef = this->GetRedoLogVDIRef();
-    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+    if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
         return QSharedPointer<VDI>();
 
     return this->GetCache()->ResolveObject<VDI>(vdiRef);
@@ -439,7 +440,7 @@ QList<QSharedPointer<Host>> Pool::GetHosts() const
 QSharedPointer<Host> Pool::GetMasterHost() const
 {
     QString masterRef = this->GetMasterHostRef();
-    if (masterRef.isEmpty() || masterRef == "OpaqueRef:NULL")
+    if (masterRef.isEmpty() || masterRef == XENOBJECT_NULL)
         return QSharedPointer<Host>();
 
     return this->GetCache()->ResolveObject<Host>(XenObjectType::Host, masterRef);

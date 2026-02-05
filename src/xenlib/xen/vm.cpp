@@ -875,7 +875,7 @@ bool VM::CanMigrateToHost(const QString& hostRef, QString* error) const
         return false;
     }
 
-    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
     {
         if (error)
             *error = "Invalid host reference";
@@ -1373,7 +1373,7 @@ bool VM::ReadCachingEnabled() const
     
     // Get resident host
     QString residentHostRef = this->GetResidentOnRef();
-    if (residentHostRef.isEmpty() || residentHostRef == "OpaqueRef:NULL")
+    if (residentHostRef.isEmpty() || residentHostRef == XENOBJECT_NULL)
         return false;
     
     // Check all VBDs
@@ -1391,7 +1391,7 @@ bool VM::ReadCachingEnabled() const
             continue;
         
         QString vdiRef = vbd->GetVDIRef();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+        if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
             continue;
         
         QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
@@ -1462,7 +1462,7 @@ QString VM::GetOSName() const
         return QString();
     
     QString guestMetricsRef = this->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return QString();
     
     // Get guest_metrics from cache
@@ -1497,7 +1497,7 @@ int VM::GetVirtualizationStatus() const
         return 0; // NotInstalled
     
     QString guestMetricsRef = this->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return 0; // NotInstalled
     
     XenConnection* conn = this->GetConnection();
@@ -1556,7 +1556,7 @@ QList<ComparableAddress> VM::GetIPAddresses() const
         return addresses;
     
     QString guestMetricsRef = this->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return addresses;
     
     XenConnection* conn = this->GetConnection();
@@ -1601,7 +1601,7 @@ qint64 VM::GetStartTime() const
     // Gets start_time from guest_metrics or metrics
     
     QString guestMetricsRef = this->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         XenConnection* conn = this->GetConnection();
         if (conn)

@@ -78,7 +78,7 @@ QSharedPointer<VM> VUSB::GetVM() const
         return QSharedPointer<VM>();
     
     QString ref = this->GetVMRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<VM>();
     
     return cache->ResolveObject<VM>(XenObjectType::VM, ref);
@@ -95,7 +95,7 @@ QSharedPointer<USBGroup> VUSB::GetUSBGroup() const
         return QSharedPointer<USBGroup>();
     
     QString ref = this->USBGroupRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<USBGroup>();
     
     return cache->ResolveObject<USBGroup>(ref);

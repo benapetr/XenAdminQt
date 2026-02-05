@@ -79,7 +79,7 @@ QList<QSharedPointer<PUSB>> USBGroup::GetPUSBs() const
     QStringList refs = this->GetPUSBRefs();
     for (const QString& ref : refs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<PUSB> obj = cache->ResolveObject<PUSB>(ref);
             if (obj)
@@ -103,7 +103,7 @@ QList<QSharedPointer<VUSB>> USBGroup::GetVUSBs() const
     QStringList refs = this->GetVUSBRefs();
     for (const QString& ref : refs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<VUSB> obj = cache->ResolveObject<VUSB>(ref);
             if (obj)

@@ -191,10 +191,10 @@ AddHostToSelectedPoolCommand::AddHostToSelectedPoolCommand(MainWindow* mainWindo
 
 bool AddHostToSelectedPoolCommand::CanRun() const
 {
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
         return false;
 
-    QTreeWidget* tree = this->mainWindow()->GetServerTreeWidget();
+    QTreeWidget* tree = MainWindow::instance()->GetServerTreeWidget();
     if (!tree)
         return false;
 

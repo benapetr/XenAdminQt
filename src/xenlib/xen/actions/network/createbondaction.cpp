@@ -190,7 +190,7 @@ void CreateBondAction::run()
                     throw std::runtime_error("Bond not found in cache after creation");
 
                 QString bondInterfaceRef = bond->MasterRef();
-                if (bondInterfaceRef.isEmpty() || bondInterfaceRef == "OpaqueRef:NULL")
+                if (bondInterfaceRef.isEmpty() || bondInterfaceRef == XENOBJECT_NULL)
                     throw std::runtime_error("Bond master interface not found in cache after creation");
                 QSharedPointer<PIF> bondInterface = this->GetConnection()->GetCache()->ResolveObject<PIF>(bondInterfaceRef);
                 if (!bondInterface)

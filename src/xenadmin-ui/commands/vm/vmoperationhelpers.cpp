@@ -263,7 +263,7 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
         return false;
     }
 
-    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
     {
         if (cannotBootReason)
             *cannotBootReason = QObject::tr("No home server");
@@ -281,7 +281,7 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
     if (vm->GetPowerState() == "Running")
     {
         QString residentRef = vm->GetResidentOnRef();
-        if (!residentRef.isEmpty() && residentRef != "OpaqueRef:NULL")
+        if (!residentRef.isEmpty() && residentRef != XENOBJECT_NULL)
         {
             if (residentRef == hostRef)
             {

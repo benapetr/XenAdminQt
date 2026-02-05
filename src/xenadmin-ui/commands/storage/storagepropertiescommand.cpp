@@ -67,7 +67,7 @@ void StoragePropertiesCommand::Run()
     if (!sr || !sr->IsValid())
         return;
 
-    StoragePropertiesDialog dialog(sr, this->mainWindow());
+    StoragePropertiesDialog dialog(sr, MainWindow::instance());
     dialog.exec();
 }
 

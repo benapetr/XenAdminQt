@@ -74,7 +74,7 @@ void NewVMFromTemplateCommand::Run()
     QSharedPointer<VM> templateVm = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
-        QMessageBox::warning(this->mainWindow(), "Cannot Create VM", "The selected template cannot be used to create a VM.");
+        QMessageBox::warning(MainWindow::instance(), "Cannot Create VM", "The selected template cannot be used to create a VM.");
         return;
     }
 
@@ -82,7 +82,7 @@ void NewVMFromTemplateCommand::Run()
     if (!selectedObject->GetConnection())
         return;
 
-    NewVMWizard* wizard = new NewVMWizard(selectedObject->GetConnection(), this->mainWindow());
+    NewVMWizard* wizard = new NewVMWizard(selectedObject->GetConnection(), MainWindow::instance());
     // TODO: Set template as wizard source
     // wizard->setSourceTemplate(templateRef);
     wizard->show();

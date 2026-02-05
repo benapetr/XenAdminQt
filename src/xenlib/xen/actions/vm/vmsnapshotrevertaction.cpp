@@ -50,7 +50,7 @@ VMSnapshotRevertAction::VMSnapshotRevertAction(QSharedPointer<VM> snapshot, QObj
 
     // Get parent VM reference
     QString vmRef = m_snapshot->SnapshotOfRef();
-    if (!vmRef.isEmpty() && vmRef != "OpaqueRef:NULL")
+    if (!vmRef.isEmpty() && vmRef != XENOBJECT_NULL)
     {
         m_vm = m_snapshot->GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
         if (m_vm && m_vm->IsValid())

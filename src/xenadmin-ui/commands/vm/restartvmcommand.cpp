@@ -108,12 +108,12 @@ void RestartVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
-        VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
+        VMCleanReboot* action = new VMCleanReboot(vm, MainWindow::instance());
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
@@ -137,7 +137,7 @@ void RestartVMCommand::Run()
 
     if (runnable.size() > 1)
     {
-        int ret = QMessageBox::question(this->mainWindow(), tr("Reboot Multiple VMs"),
+        int ret = QMessageBox::question(MainWindow::instance(), tr("Reboot Multiple VMs"),
                                         tr("Are you sure you want to reboot the selected VMs?"),
                                         QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
@@ -145,7 +145,7 @@ void RestartVMCommand::Run()
 
         QList<AsyncOperation*> actions;
         for (const QSharedPointer<VM>& vm : runnable)
-            actions.append(new VMCleanReboot(vm, this->mainWindow()));
+            actions.append(new VMCleanReboot(vm, MainWindow::instance()));
 
         this->RunMultipleActions(actions, tr("Rebooting VMs"), tr("Rebooting VMs"), tr("Rebooted"), true);
         return;
@@ -155,7 +155,7 @@ void RestartVMCommand::Run()
     if (!vm || !canRestartVm(vm))
         return;
 
-    int ret = QMessageBox::question(this->mainWindow(), tr("Reboot VM"),
+    int ret = QMessageBox::question(MainWindow::instance(), tr("Reboot VM"),
                                     tr("Are you sure you want to reboot the selected VM?"),
                                     QMessageBox::Yes | QMessageBox::No);
 

@@ -90,9 +90,9 @@ void NewNetworkCommand::showNewNetworkWizard()
         host = qSharedPointerDynamicCast<Host>(selected);
     }
 
-    if (!connection && this->mainWindow() && this->mainWindow()->GetSelectionManager())
+    if (!connection && MainWindow::instance() && MainWindow::instance()->GetSelectionManager())
     {
-        const QList<XenConnection*> connections = this->mainWindow()->GetSelectionManager()->SelectedConnections();
+        const QList<XenConnection*> connections = MainWindow::instance()->GetSelectionManager()->SelectedConnections();
         if (!connections.isEmpty())
             connection = connections.first();
     }
@@ -100,13 +100,13 @@ void NewNetworkCommand::showNewNetworkWizard()
     if (!connection)
         return;
 
-    NewNetworkWizard wizard(connection, pool, host, this->mainWindow());
+    NewNetworkWizard wizard(connection, pool, host, MainWindow::instance());
 
     if (wizard.exec() == QDialog::Accepted)
     {
         qDebug() << "NewNetworkCommand: New Network Wizard completed successfully";
 
-        if (this->mainWindow())
+        if (MainWindow::instance())
         {
             qDebug() << "NewNetworkCommand: Network creation completed";
         }

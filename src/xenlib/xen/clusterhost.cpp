@@ -17,7 +17,7 @@ QSharedPointer<Cluster> ClusterHost::GetCluster() const
     XenCache* cache = connection->GetCache();
     
     QString clusterRef = this->GetClusterRef();
-    if (clusterRef.isEmpty() || clusterRef == "OpaqueRef:NULL")
+    if (clusterRef.isEmpty() || clusterRef == XENOBJECT_NULL)
         return QSharedPointer<Cluster>();
     
     return cache->ResolveObject<Cluster>(clusterRef);
@@ -32,7 +32,7 @@ QSharedPointer<Host> ClusterHost::GetHost() const
     XenCache* cache = connection->GetCache();
     
     QString hostRef = this->GetHostRef();
-    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
         return QSharedPointer<Host>();
     
     return cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
@@ -47,7 +47,7 @@ QSharedPointer<PIF> ClusterHost::GetPIF() const
     XenCache* cache = connection->GetCache();
     
     QString pifRef = this->GetPIFRef();
-    if (pifRef.isEmpty() || pifRef == "OpaqueRef:NULL")
+    if (pifRef.isEmpty() || pifRef == XENOBJECT_NULL)
         return QSharedPointer<PIF>();
     
     return cache->ResolveObject<PIF>(pifRef);

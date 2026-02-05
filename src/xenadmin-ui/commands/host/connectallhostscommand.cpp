@@ -42,13 +42,13 @@ bool ConnectAllHostsCommand::CanRun() const
 
 void ConnectAllHostsCommand::Run()
 {
-    this->mainWindow()->ShowStatusMessage("Connecting to all servers...");
+    MainWindow::instance()->ShowStatusMessage("Connecting to all servers...");
 
     QList<XenConnection*> allConnections = Xen::ConnectionsManager::instance()->GetAllConnections();
     for (XenConnection* conn : allConnections)
     {
         if (conn && !conn->IsConnected() && !conn->InProgress())
-            XenConnectionUI::BeginConnect(conn, false, this->mainWindow(), false);
+            XenConnectionUI::BeginConnect(conn, false, MainWindow::instance(), false);
     }
 }
 

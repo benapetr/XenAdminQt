@@ -124,11 +124,11 @@ void DeactivateVBDCommand::Run()
     {
         XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbd->OpaqueRef());
 
-        this->mainWindow()->ShowStatusMessage(QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName), 5000);
+        MainWindow::instance()->ShowStatusMessage(QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName), 5000);
     } catch (const std::exception& e)
     {
         QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Deactivate Virtual Disk Failed",
             QString("Failed to deactivate virtual disk '%1' from VM '%2': %3").arg(vdiName, vmName, e.what()));
     }

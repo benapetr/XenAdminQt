@@ -142,7 +142,7 @@ void InstallCertificateCommand::Run()
     }
     
     // TODO: Show InstallCertificateDialog when ported
-    // InstallCertificateDialog* dialog = new InstallCertificateDialog(host, this->mainWindow());
+    // InstallCertificateDialog* dialog = new InstallCertificateDialog(host, MainWindow::instance());
     // dialog->exec();
     // dialog->deleteLater();
     

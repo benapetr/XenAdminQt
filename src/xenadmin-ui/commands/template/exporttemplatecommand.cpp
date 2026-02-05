@@ -57,13 +57,13 @@ void ExportTemplateCommand::Run()
     // Launch the export wizard
     // Note: The wizard will allow the user to select which templates/VMs to export
     // The currently selected template will be the default choice
-    ExportWizard wizard(this->mainWindow());
+    ExportWizard wizard(MainWindow::instance());
 
     if (wizard.exec() == QDialog::Accepted)
     {
         // TODO: Launch ExportVmAction with wizard parameters
         // For now, show a message that action will be implemented
-        this->mainWindow()->ShowStatusMessage(
+        MainWindow::instance()->ShowStatusMessage(
             QString("Export template '%1' - action pending HTTP infrastructure integration").arg(templateName), 
             5000);
     }

@@ -129,7 +129,7 @@ QSharedPointer<Host> PUSB::GetHost() const
         return QSharedPointer<Host>();
     
     QString ref = this->GetHostRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
     
     return cache->ResolveObject<Host>(XenObjectType::Host, ref);

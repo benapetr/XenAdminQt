@@ -241,7 +241,7 @@ void CreateVMAction::run()
 
             QVariantMap vbdRecord;
             vbdRecord["VM"] = newVmRef;
-            vbdRecord["VDI"] = "OpaqueRef:NULL";
+            vbdRecord["VDI"] = XENOBJECT_NULL;
             vbdRecord["bootable"] = (this->m_installMethod == InstallMethod::CD);
             vbdRecord["device"] = "";
             vbdRecord["userdevice"] = device;

@@ -91,12 +91,12 @@ void StopVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMCleanShutdown action (parent is MainWindow to prevent premature deletion)
-        VMCleanShutdown* action = new VMCleanShutdown(vm, this->mainWindow());
+        VMCleanShutdown* action = new VMCleanShutdown(vm, MainWindow::instance());
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
@@ -120,7 +120,7 @@ void StopVMCommand::Run()
 
     if (runnable.size() > 1)
     {
-        int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down Multiple VMs"),
+        int ret = QMessageBox::question(MainWindow::instance(), tr("Shut Down Multiple VMs"),
                                         tr("Are you sure you want to shut down the selected VMs?"),
                                         QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
@@ -128,7 +128,7 @@ void StopVMCommand::Run()
 
         QList<AsyncOperation*> actions;
         for (const QSharedPointer<VM>& vm : runnable)
-            actions.append(new VMCleanShutdown(vm, this->mainWindow()));
+            actions.append(new VMCleanShutdown(vm, MainWindow::instance()));
 
         RunMultipleActions(actions, tr("Shutting Down VMs"), tr("Shutting Down VMs"), tr("Shut down"), true);
         return;
@@ -142,7 +142,7 @@ void StopVMCommand::Run()
         ? tr("The selected VM is currently protected by HA. Are you sure you want to shut it down?")
         : tr("Are you sure you want to shut down the selected VM?");
 
-    int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down VM"), text, QMessageBox::Yes | QMessageBox::No);
+    int ret = QMessageBox::question(MainWindow::instance(), tr("Shut Down VM"), text, QMessageBox::Yes | QMessageBox::No);
 
     if (ret != QMessageBox::Yes)
         return;

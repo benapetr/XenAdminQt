@@ -116,11 +116,11 @@ void ForceRebootVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+            QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
             return;
         }
 
-        VMHardReboot* action = new VMHardReboot(vm, this->mainWindow());
+        VMHardReboot* action = new VMHardReboot(vm, MainWindow::instance());
         OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
     };
@@ -146,7 +146,7 @@ void ForceRebootVMCommand::Run()
                                 "This is equivalent to pressing the reset button and may cause data loss.";
 
         QMessageBox::StandardButton reply = QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Force Reboot VMs",
             message,
             QMessageBox::Yes | QMessageBox::No,
@@ -181,7 +181,7 @@ void ForceRebootVMCommand::Run()
                                 .arg(vmName);
 
     QMessageBox::StandardButton reply = QMessageBox::warning(
-        this->mainWindow(),
+        MainWindow::instance(),
         "Force Reboot VM",
         message,
         QMessageBox::Yes | QMessageBox::No,

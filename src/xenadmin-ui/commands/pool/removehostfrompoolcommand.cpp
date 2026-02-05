@@ -123,7 +123,7 @@ void RemoveHostFromPoolCommand::Run()
                            .arg(poolName);
     }
 
-    int result = QMessageBox::question(this->mainWindow(), "Remove Server from Pool", confirmation, QMessageBox::Yes | QMessageBox::No);
+    int result = QMessageBox::question(MainWindow::instance(), "Remove Server from Pool", confirmation, QMessageBox::Yes | QMessageBox::No);
     if (result != QMessageBox::Yes)
         return;
 
@@ -159,7 +159,7 @@ void RemoveHostFromPoolCommand::Run()
         connect(action, &AsyncOperation::completed, this, [action, this, newConnection, hostname, port]()
         {
             if (newConnection)
-                RemoveHostFromPoolCommand::scheduleReconnect(this->mainWindow(), newConnection, hostname, port);
+                RemoveHostFromPoolCommand::scheduleReconnect(MainWindow::instance(), newConnection, hostname, port);
             action->deleteLater();
         });
 

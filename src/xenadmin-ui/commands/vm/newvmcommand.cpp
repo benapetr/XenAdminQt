@@ -69,7 +69,7 @@ void NewVMCommand::Run()
 bool NewVMCommand::CanRun() const
 {
     // Check if we have an active connection with at least one enabled host
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         return false;
     }
@@ -104,12 +104,12 @@ void NewVMCommand::showNewVMWizard()
 
     if (!connection)
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
+        QMessageBox::warning(MainWindow::instance(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
         return;
     }
 
-    NewVMWizard wizard(connection, this->mainWindow());
+    NewVMWizard wizard(connection, MainWindow::instance());
 
     // If we have a default template, we could set it here
     if (!this->m_defaultTemplateUuid.isEmpty())
@@ -121,7 +121,7 @@ void NewVMCommand::showNewVMWizard()
     {
         qDebug() << "NewVMCommand: New VM Wizard completed successfully";
 
-        if (this->mainWindow())
+        if (MainWindow::instance())
         {
             qDebug() << "NewVMCommand: New VM wizard completed successfully";
         }
@@ -133,7 +133,7 @@ void NewVMCommand::showNewVMWizard()
 
 void NewVMCommand::runWithConnection()
 {
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         qWarning() << "NewVMCommand: No main window available";
         return;
@@ -145,7 +145,7 @@ void NewVMCommand::runWithConnection()
 
 bool NewVMCommand::hasEnabledHost() const
 {
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
         return false;
 
     XenConnection* connection = nullptr;

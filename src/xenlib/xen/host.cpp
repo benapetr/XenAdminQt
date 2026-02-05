@@ -685,7 +685,7 @@ QList<QSharedPointer<VM>> Host::GetResidentVMs() const
     QStringList vmRefs = this->GetResidentVMRefs();
     for (const QString& ref : vmRefs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, ref);
             if (vm)
@@ -723,7 +723,7 @@ QList<QSharedPointer<PBD>> Host::GetPBDs() const
     QStringList pbdRefs = this->GetPBDRefs();
     for (const QString& ref : pbdRefs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>(ref);
             if (pbd)
@@ -749,7 +749,7 @@ QList<QSharedPointer<PIF>> Host::GetPIFs() const
     QStringList pifRefs = this->GetPIFRefs();
     for (const QString& ref : pifRefs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(ref);
             if (pif)

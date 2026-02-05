@@ -76,7 +76,7 @@ void TrimSRCommand::Run()
     QString srName = sr->GetName();
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle("Trim Storage Repository");
     msgBox.setText(QString("Are you sure you want to trim storage repository '%1'?").arg(srName));
     msgBox.setInformativeText("Trimming will reclaim freed space from the storage repository.\n\nThis operation may take some time depending on the amount of space to reclaim.\n\nDo you want to continue?");
@@ -95,7 +95,7 @@ void TrimSRCommand::Run()
     XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+        QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
         return;
     }
 

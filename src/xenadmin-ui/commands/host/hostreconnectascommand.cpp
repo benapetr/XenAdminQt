@@ -87,7 +87,7 @@ void HostReconnectAsCommand::Run()
     this->m_reconnectConnection = conn;
     this->m_disconnectHandler = connect(conn, &XenConnection::ConnectionStateChanged, this, &HostReconnectAsCommand::onReconnectConnectionStateChanged);
 
-    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+    DisconnectCommand disconnectCmd(MainWindow::instance(), conn, true, this);
     disconnectCmd.Run();
 
     if (conn->IsConnected())
@@ -142,6 +142,6 @@ void HostReconnectAsCommand::startReconnect()
     if (!this->m_reconnectConnection)
         return;
 
-    this->mainWindow()->ShowStatusMessage("Reconnecting as different user...");
-    XenConnectionUI::BeginConnect(this->m_reconnectConnection, true, this->mainWindow(), true);
+    MainWindow::instance()->ShowStatusMessage("Reconnecting as different user...");
+    XenConnectionUI::BeginConnect(this->m_reconnectConnection, true, MainWindow::instance(), true);
 }

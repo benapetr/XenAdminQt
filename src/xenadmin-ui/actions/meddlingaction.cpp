@@ -25,13 +25,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "meddlingaction.h"
-#include <QDebug>
-#include <xen/api.h>
-#include <xen/network/connection.h>
-#include <xen/session.h>
-#include <QtCore/QDebug>
 #include <QtCore/QDateTime>
+#include <QDebug>
+#include "meddlingaction.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/api.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
 
 MeddlingAction::MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask, QObject* parent) : AsyncOperation(connection, "Task", QString(), parent), m_isOurTask(isOurTask)
 {
@@ -200,7 +200,7 @@ bool MeddlingAction::isTaskUnwanted(const QVariantMap& taskData, const QString& 
 
     // Check if this is a subtask (we monitor parent task instead)
     QString subtaskOf = taskData.value("subtask_of").toString();
-    if (!subtaskOf.isEmpty() && subtaskOf != "OpaqueRef:NULL")
+    if (!subtaskOf.isEmpty() && subtaskOf != XENOBJECT_NULL)
     {
         return true;
     }

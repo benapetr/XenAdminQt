@@ -51,7 +51,7 @@ void PoolPropertiesCommand::Run()
     if (!pool || !pool->IsValid())
         return;
 
-    PoolPropertiesDialog* dialog = new PoolPropertiesDialog(pool, this->mainWindow());
+    PoolPropertiesDialog* dialog = new PoolPropertiesDialog(pool, MainWindow::instance());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();

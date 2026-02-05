@@ -228,7 +228,7 @@ bool CreateDiskAction::hasBootableDisk()
 
             // Get VDI reference
             QString vdiRef = vbdRecord.value("VDI").toString();
-            if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
             {
                 continue;
             }
@@ -237,7 +237,7 @@ bool CreateDiskAction::hasBootableDisk()
             QVariantMap vdiRecord = XenAPI::VDI::get_record(session, vdiRef);
             QString srRef = vdiRecord.value("SR").toString();
 
-            if (!srRef.isEmpty() && srRef != "OpaqueRef:NULL")
+            if (!srRef.isEmpty() && srRef != XENOBJECT_NULL)
             {
                 // Get SR record to check if it's a tools SR
                 QVariantMap srRecord = XenAPI::SR::get_record(session, srRef);

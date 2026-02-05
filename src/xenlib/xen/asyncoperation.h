@@ -222,6 +222,13 @@ class XENLIB_EXPORT AsyncOperation : public QObject
 
         QPointer<XenConnection> m_connection;
 
+        // Most of async ops are actions that are run by commands async which makes them hard to manage from memory perspective
+        // parenting them to command leads to segfaults because command is usually deleted earlier than async op it launched
+
+       // parenting them to anything persistent leads to memory leaks, so we can run these with auto delete which means the op
+       // will delete itself once it's finished
+        bool m_autoDelete = false;
+
     private:
         static const int TASK_POLL_INTERVAL_MS = 900;
         static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
@@ -265,13 +272,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
 
         // Session ownership
         bool m_ownsSession = false;
-
-        // Most of async ops are actions that are run by commands async which makes them hard to manage from memory perspective
-        // parenting them to command leads to segfaults because command is usually deleted earlier than async op it launched
-
-        // parenting them to anything persistent leads to memory leaks, so we can run these with auto delete which means the op
-        // will delete itself once it's finished
-        bool m_autoDelete = false;
 };
 
 #endif // ASYNCOPERATION_H

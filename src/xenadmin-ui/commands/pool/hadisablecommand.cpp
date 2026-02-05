@@ -57,7 +57,7 @@ void HADisableCommand::Run()
     QString poolName = pool->GetName();
 
     // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Disable High Availability",
+    int ret = QMessageBox::question(MainWindow::instance(), "Disable High Availability",
                                     QString("Are you sure you want to disable High Availability for pool '%1'?\n\n"
                                             "VMs will no longer restart automatically if a host fails.")
                                         .arg(poolName),
@@ -70,7 +70,7 @@ void HADisableCommand::Run()
     XenConnection* connection = pool->GetConnection();
     if (!connection)
     {
-        QMessageBox::critical(this->mainWindow(), "Error", "No active connection.");
+        QMessageBox::critical(MainWindow::instance(), "Error", "No active connection.");
         return;
     }
 
@@ -96,7 +96,7 @@ void HADisableCommand::Run()
 
     // Run action asynchronously
     action->RunAsync();
-    this->mainWindow()->ShowStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
+    MainWindow::instance()->ShowStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
 }
 
 QString HADisableCommand::MenuText() const

@@ -182,7 +182,7 @@ QList<QSharedPointer<VM>> VMPP::GetVMs() const
     QStringList refs = this->GetVMRefs();
     for (const QString& ref : refs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
             QSharedPointer<VM> obj = cache->ResolveObject<VM>(XenObjectType::VM, ref);
             if (obj)

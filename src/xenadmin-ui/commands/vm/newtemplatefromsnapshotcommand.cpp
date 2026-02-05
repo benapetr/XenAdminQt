@@ -88,7 +88,7 @@ void NewTemplateFromSnapshotCommand::Run()
 
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
@@ -97,13 +97,13 @@ void NewTemplateFromSnapshotCommand::Run()
 
     if (!snapshot)
     {
-        QMessageBox::warning(this->mainWindow(), tr("Snapshot not found"), tr("Snapshot not found in XenCache"));
+        QMessageBox::warning(MainWindow::instance(), tr("Snapshot not found"), tr("Snapshot not found in XenCache"));
         return;
     }
 
     if (!snapshot->IsSnapshot())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
         return;
     }
 
@@ -112,7 +112,7 @@ void NewTemplateFromSnapshotCommand::Run()
 
     // Prompt for template name
     bool ok;
-    QString templateName = QInputDialog::getText(this->mainWindow(),
+    QString templateName = QInputDialog::getText(MainWindow::instance(),
                                                  tr("Create Template from Snapshot"),
                                                  tr("Enter a name for the new template:"),
                                                  QLineEdit::Normal,
@@ -126,13 +126,13 @@ void NewTemplateFromSnapshotCommand::Run()
     QString description = tr("Template created from snapshot '%1'").arg(snapshotName);
 
     // Create VMCloneAction
-    VMCloneAction* action = new VMCloneAction(snapshot, templateName, description, this->mainWindow());
+    VMCloneAction* action = new VMCloneAction(snapshot, templateName, description, MainWindow::instance());
 
     // Register with OperationManager
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal
-    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
+    connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {
@@ -141,11 +141,11 @@ void NewTemplateFromSnapshotCommand::Run()
             // For now, we'll just show success message
             // TODO: Add VM.add_to_other_config call to mark as instant template
 
-            this->mainWindow()->ShowStatusMessage(
+            MainWindow::instance()->ShowStatusMessage(
                 tr("Template '%1' created from snapshot").arg(templateName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to create template from snapshot:\n%1").arg(action->GetErrorMessage()));
+            QMessageBox::critical(MainWindow::instance(), tr("Error"), tr("Failed to create template from snapshot:\n%1").arg(action->GetErrorMessage()));
         }
 
         action->deleteLater();

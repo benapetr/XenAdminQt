@@ -60,7 +60,7 @@ void ExportVMCommand::Run()
     // Create and show the Export Wizard
     if (!this->m_exportWizard)
     {
-        this->m_exportWizard = new ExportWizard(this->mainWindow());
+        this->m_exportWizard = new ExportWizard(MainWindow::instance());
         connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
                 this, &ExportVMCommand::onWizardFinished);
     }
@@ -81,7 +81,7 @@ void ExportVMCommand::onWizardFinished(int result)
 
         if (directory.isEmpty() || fileName.isEmpty())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Export VM"),
+            QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
                                  tr("Invalid export settings. Please check directory and filename."));
             return;
         }
@@ -98,10 +98,10 @@ void ExportVMCommand::onWizardFinished(int result)
 
         // TODO: Start actual export operation using selected VMs and settings
         // This would integrate with the XenLib to perform the actual export
-        QMessageBox::information(this->mainWindow(), tr("Export Started"),
+        QMessageBox::information(MainWindow::instance(), tr("Export Started"),
                                  tr("Export operation has been started.\nDestination: %1").arg(fullPath));
 
-        this->mainWindow()->ShowStatusMessage(tr("Export started"), 3000);
+        MainWindow::instance()->ShowStatusMessage(tr("Export started"), 3000);
     }
 
     // Clean up wizard

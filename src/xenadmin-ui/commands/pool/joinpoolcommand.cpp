@@ -60,7 +60,7 @@ void JoinPoolCommand::Run()
         return;
 
     // Create a dialog to get pool master details
-    QDialog dialog(this->mainWindow());
+    QDialog dialog(MainWindow::instance());
     dialog.setWindowTitle("Join Resource Pool");
     dialog.setMinimumWidth(400);
 
@@ -92,12 +92,12 @@ void JoinPoolCommand::Run()
 
     if (masterAddress.isEmpty() || username.isEmpty() || password.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), "Join Pool", "Please provide all required information.");
+        QMessageBox::warning(MainWindow::instance(), "Join Pool", "Please provide all required information.");
         return;
     }
 
     // Confirm the operation
-    int result = QMessageBox::question(this->mainWindow(), "Join Resource Pool",
+    int result = QMessageBox::question(MainWindow::instance(), "Join Resource Pool",
                                        QString("This will join the current host to the pool managed by %1.\n\n"
                                                "The host will be rebooted and all VMs will be shut down.\n\n"
                                                "Do you want to continue?")
@@ -111,18 +111,18 @@ void JoinPoolCommand::Run()
     XenConnection* hostConnection = host->GetConnection();
     if (!hostConnection)
     {
-        QMessageBox::critical(this->mainWindow(), "Join Pool", "No active connection to the host.");
+        QMessageBox::critical(MainWindow::instance(), "Join Pool", "No active connection to the host.");
         return;
     }
 
     XenAPI::Session* session = hostConnection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        QMessageBox::critical(this->mainWindow(), "Join Pool", "Host session is not active.");
+        QMessageBox::critical(MainWindow::instance(), "Join Pool", "Host session is not active.");
         return;
     }
 
-    this->mainWindow()->ShowStatusMessage(QString("Joining pool at %1...").arg(masterAddress), 0);
+    MainWindow::instance()->ShowStatusMessage(QString("Joining pool at %1...").arg(masterAddress), 0);
 
     try
     {
@@ -133,7 +133,7 @@ void JoinPoolCommand::Run()
 
         // Note: After successful join, the host will reboot and reconnect to the coordinator
         // The connection will be dropped, so we just show success message
-        QMessageBox::information(this->mainWindow(), "Join Pool",
+        QMessageBox::information(MainWindow::instance(), "Join Pool",
                                  QString("Successfully initiated join pool operation.\n"
                                          "Task: %1\n\n"
                                          "The host will now be rebooted and join the pool.")
@@ -141,7 +141,7 @@ void JoinPoolCommand::Run()
 
     } catch (const std::exception& e)
     {
-        QMessageBox::critical(this->mainWindow(), "Join Pool", QString("Failed to join pool:\n%1").arg(e.what()));
+        QMessageBox::critical(MainWindow::instance(), "Join Pool", QString("Failed to join pool:\n%1").arg(e.what()));
     }
 }
 

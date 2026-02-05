@@ -58,7 +58,7 @@ void ConvertVMToTemplateCommand::Run()
 
     // Show confirmation dialog
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
+        MainWindow::instance(),
         tr("Convert to Template"),
         tr("Are you sure you want to convert VM '%1' to a template?\n\n"
            "The VM will be shut down and converted to a template. "
@@ -73,14 +73,14 @@ void ConvertVMToTemplateCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
+            QMessageBox::warning(MainWindow::instance(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(vm, this->mainWindow());
+        VMToTemplateAction* action = new VMToTemplateAction(vm, MainWindow::instance());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

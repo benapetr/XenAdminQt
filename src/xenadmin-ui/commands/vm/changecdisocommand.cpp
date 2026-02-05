@@ -72,7 +72,7 @@ void ChangeCDISOCommand::run()
 
     // Create ChangeVMISOAction (matches C# ChangeVMISOAction pattern)
     // Action automatically handles VBD lookup, insert/eject logic
-    ChangeVMISOAction* action = new ChangeVMISOAction(vmObj, this->m_isoRef, "" /*vbdRef*/, this->mainWindow());
+    ChangeVMISOAction* action = new ChangeVMISOAction(vmObj, this->m_isoRef, "" /*vbdRef*/, MainWindow::instance());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->registerOperation(action);
@@ -108,7 +108,7 @@ QString ChangeCDISOCommand::menuText() const
     } else
     {
         // Use cache to get ISO name
-        XenLib* xenLib = this->mainWindow()->xenLib();
+        XenLib* xenLib = MainWindow::instance()->xenLib();
         if (xenLib && xenLib->isConnected())
         {
             QVariantMap vdiData = xenLib->getCache()->resolve("vdi", this->m_isoRef);
@@ -160,8 +160,8 @@ QString ChangeCDISOCommand::getCurrentISO() const
         return QString();
     }
 
-    XenAPI* api = this->mainWindow()->xenLib()->getAPI();
-    if (!api || !this->mainWindow()->xenLib()->isConnected())
+    XenAPI* api = MainWindow::instance()->xenLib()->getAPI();
+    if (!api || !MainWindow::instance()->xenLib()->isConnected())
     {
         return QString();
     }

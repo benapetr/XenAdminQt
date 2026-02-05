@@ -77,7 +77,7 @@ void ResumeVMCommand::Run()
     const QList<QSharedPointer<VM>> vms = this->getVMs();
     if (vms.size() > 1)
     {
-        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VMs"), tr("Are you sure you want to resume the selected VMs?"), QMessageBox::Yes | QMessageBox::No);
+        int ret = QMessageBox::question(MainWindow::instance(), tr("Resume VMs"), tr("Are you sure you want to resume the selected VMs?"), QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
             return;
 
@@ -110,7 +110,7 @@ bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmNa
 
     if (promptUser)
     {
-        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VM"), tr("Are you sure you want to resume VM '%1'?").arg(displayName), QMessageBox::Yes | QMessageBox::No);
+        int ret = QMessageBox::question(MainWindow::instance(), tr("Resume VM"), tr("Are you sure you want to resume VM '%1'?").arg(displayName), QMessageBox::Yes | QMessageBox::No);
 
         if (ret != QMessageBox::Yes)
             return false;
@@ -120,14 +120,14 @@ bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmNa
     XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+        QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
         return false;
     }
 
     // Create VMResumeAction with diagnosis callbacks (matches C# pattern)
     // Note: VMResumeAction is for resuming from Suspended state (from disk)
     // For unpausing from Paused state (in memory), use VMUnpause instead
-    QPointer<MainWindow> mainWindow = this->mainWindow();
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
 
     VMResumeAction* action = new VMResumeAction(
         vm,
@@ -145,7 +145,7 @@ bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmNa
                 VMOperationHelpers::StartDiagnosisForm(conn, vmRef, displayName, false, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
-        this->mainWindow());
+        MainWindow::instance());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

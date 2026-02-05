@@ -72,7 +72,7 @@ void TakeSnapshotCommand::Run()
 
 bool TakeSnapshotCommand::CanRun() const
 {
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
         return false;
 
     return this->canTakeSnapshot();
@@ -107,7 +107,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
 {
     qDebug() << "TakeSnapshotCommand: Opening Take Snapshot dialog";
 
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         qWarning() << "TakeSnapshotCommand: No main window available";
         return;
@@ -118,12 +118,12 @@ void TakeSnapshotCommand::showSnapshotDialog()
     if (!vm)
     {
         qWarning() << "TakeSnapshotCommand: Could not find VM data for vm";
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Take Snapshot"), tr("Could not retrieve VM information."));
+        QMessageBox::warning(MainWindow::instance(), tr("Cannot Take Snapshot"), tr("Could not retrieve VM information."));
         return;
     }
 
     // Show the snapshot dialog
-    VmSnapshotDialog dialog(vm, this->mainWindow());
+    VmSnapshotDialog dialog(vm, MainWindow::instance());
     if (dialog.exec() == QDialog::Accepted)
     {
         QString name = dialog.snapshotName();
@@ -132,9 +132,9 @@ void TakeSnapshotCommand::showSnapshotDialog()
 
         // C#: Program.Invoke(Program.MainWindow, () => Program.MainWindow.ConsolePanel.SetCurrentSource(vm));
         // Set console to this VM before snapshot (matches C# line 89)
-        if (this->mainWindow() && this->mainWindow()->GetConsolePanel())
+        if (MainWindow::instance() && MainWindow::instance()->GetConsolePanel())
         {
-            this->mainWindow()->GetConsolePanel()->SetCurrentSource(vm);
+            MainWindow::instance()->GetConsolePanel()->SetCurrentSource(vm);
         }
 
         this->executeSnapshotOperation(name, description, type);
@@ -145,7 +145,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
 {
     emit snapshotStarted();
 
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         qWarning() << "TakeSnapshotCommand: No main window available";
         emit snapshotCompleted(false);
@@ -160,7 +160,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "TakeSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Snapshot Error"), tr("Not connected to XenServer."));
+        QMessageBox::critical(MainWindow::instance(), tr("Snapshot Error"), tr("Not connected to XenServer."));
         emit snapshotCompleted(false);
         return;
     }
@@ -190,14 +190,14 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     {
         QString powerState = vm->GetPowerState();
 
-        if (powerState == "Running" && this->mainWindow()->GetConsolePanel())
+        if (powerState == "Running" && MainWindow::instance()->GetConsolePanel())
         {
             qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
             try
             {
                 // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
                 // Note: We don't have sudo credentials yet - pass empty strings
-                screenshot = this->mainWindow()->GetConsolePanel()->Snapshot(vm, QString(), QString());
+                screenshot = MainWindow::instance()->GetConsolePanel()->Snapshot(vm, QString(), QString());
                 if (!screenshot.isNull())
                 {
                     qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
@@ -217,7 +217,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Create VMSnapshotCreateAction (matches C# VMSnapshotCreateAction pattern)
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
-    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, this->mainWindow());
+    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, MainWindow::instance());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

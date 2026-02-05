@@ -143,7 +143,7 @@ void CreateCdDriveAction::run()
     // Build VBD record for new CD drive
     QVariantMap vbdRecord;
     vbdRecord["VM"] = vmRef;
-    vbdRecord["VDI"] = "OpaqueRef:NULL";  // Empty drive
+    vbdRecord["VDI"] = XENOBJECT_NULL;  // Empty drive
     vbdRecord["bootable"] = false;
     vbdRecord["device"] = "";  // Auto-assign device name
     vbdRecord["userdevice"] = userdevice;

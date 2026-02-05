@@ -64,12 +64,12 @@ void CopyVMCommand::Run()
 
     if (this->canLaunchCrossPoolWizard())
     {
-        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Copy);
+        CrossPoolMigrateWizard wizard(MainWindow::instance(), vm, CrossPoolMigrateWizard::WizardMode::Copy);
         wizard.exec();
         return;
     }
 
-    CopyVMDialog dialog(vm, this->mainWindow());
+    CopyVMDialog dialog(vm, MainWindow::instance());
     dialog.exec();
 }
 
@@ -87,6 +87,6 @@ bool CopyVMCommand::canLaunchCrossPoolWizard() const
     if (vm->GetPowerState() != "Halted")
         return false;
 
-    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(), CrossPoolMigrateWizard::WizardMode::Copy, false, this->mainWindow());
+    CrossPoolMigrateCommand crossPoolCmd(MainWindow::instance(), CrossPoolMigrateWizard::WizardMode::Copy, false, MainWindow::instance());
     return crossPoolCmd.CanRun();
 }

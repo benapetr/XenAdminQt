@@ -336,13 +336,13 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (objectData.value("is_a_snapshot").toBool())
         {
             const QString snapshotOf = objectData.value("snapshot_of").toString();
-            if (!snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL" && this->m_connection)
+            if (!snapshotOf.isEmpty() && snapshotOf != XENOBJECT_NULL && this->m_connection)
             {
                 QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotOf);
                 if (vm)
                 {
                     const QString home = vm->GetHomeRef();
-                    if (!home.isEmpty() && home != "OpaqueRef:NULL")
+                    if (!home.isEmpty() && home != XENOBJECT_NULL)
                         return home;
                 }
             }
@@ -355,7 +355,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (powerState == "Running" || powerState == "Paused")
         {
             QString residentOn = objectData.value("resident_on", QString()).toString();
-            if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
+            if (!residentOn.isEmpty() && residentOn != XENOBJECT_NULL)
                 return residentOn;
         }
 
@@ -365,7 +365,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
             for (const QVariant& vbdRefVar : vbdRefs)
             {
                 const QString vbdRef = vbdRefVar.toString();
-                if (vbdRef.isEmpty() || vbdRef == "OpaqueRef:NULL")
+                if (vbdRef.isEmpty() || vbdRef == XENOBJECT_NULL)
                     continue;
 
                 const QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::VBD, vbdRef);
@@ -376,7 +376,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                     continue;
 
                 const QString vdiRef = vbdData.value("VDI").toString();
-                if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+                if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
                     continue;
 
                 const QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::VDI, vdiRef);
@@ -384,7 +384,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                     continue;
 
                 const QString srRef = vdiData.value("SR").toString();
-                if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+                if (srRef.isEmpty() || srRef == XENOBJECT_NULL)
                     continue;
 
                 const QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::SR, srRef);
@@ -399,12 +399,12 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 for (const QVariant& pbdRefVar : pbds)
                 {
                     const QString pbdRef = pbdRefVar.toString();
-                    if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
+                    if (pbdRef.isEmpty() || pbdRef == XENOBJECT_NULL)
                         continue;
 
                     const QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::PBD, pbdRef);
                     const QString hostRef = pbdData.value("host").toString();
-                    if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+                    if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
                         return hostRef;
                 }
             }

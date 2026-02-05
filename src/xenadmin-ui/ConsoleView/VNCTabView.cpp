@@ -87,7 +87,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     // if (guestMetrics != null)
     //     guestMetrics.PropertyChanged += guestMetrics_PropertyChanged;
     this->_guestMetricsRef = vm->GetGuestMetricsRef();
-    if (!this->_guestMetricsRef.isEmpty() && this->_guestMetricsRef != "OpaqueRef:NULL")
+    if (!this->_guestMetricsRef.isEmpty() && this->_guestMetricsRef != XENOBJECT_NULL)
     {
         // TODO: Wire up guestMetrics.PropertyChanged event handler
         // Will be implemented in registerEventListeners()
@@ -519,7 +519,7 @@ void VNCTabView::onVMPropertyChanged(const QString& propertyName)
             QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
             QString hostRef = vmData.value("resident_on").toString();
 
-            if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
             {
                 QVariantMap hostData = getCachedObjectData("host", hostRef);
                 QString hostName = hostData.value("name_label").toString();
@@ -1243,7 +1243,7 @@ void VNCTabView::registerEventListeners()
     // C#: guestMetrics.PropertyChanged += guestMetrics_PropertyChanged;
     // Use deferred update to avoid infinite loop (don't call cache queries inside cache callbacks)
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         connect(cache, &XenCache::objectChanged, this, [this, guestMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
         {
@@ -2153,7 +2153,7 @@ bool VNCTabView::isVMWindows(const QString& vmRef) const
         return false;
 
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
         if (!metricsData.isEmpty())
@@ -2209,7 +2209,7 @@ QString VNCTabView::getVMIPAddressForSSH(const QString& vmRef) const
     bool isControlDomain = this->m_vm->IsControlDomain();
 
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
         QVariantMap networks = metricsData.value("networks").toMap();

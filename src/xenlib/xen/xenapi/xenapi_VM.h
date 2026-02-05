@@ -681,7 +681,7 @@ namespace XenAPI
              * @brief Set affinity
              * @param session The session
              * @param vm The opaque_ref of the given VM
-             * @param host The host ref or "OpaqueRef:NULL"
+             * @param host The host ref or XENOBJECT_NULL
              *
              * Matches C# VM.set_affinity()
              */

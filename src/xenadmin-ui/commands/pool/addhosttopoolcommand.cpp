@@ -29,6 +29,8 @@
 #include "../../mainwindow.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/pooljoinrules.h"
+#include "xenlib/xen/actions/pool/addhosttopoolaction.h"
 #include "xenlib/xencache.h"
 #include <QMessageBox>
 
@@ -53,9 +55,8 @@ bool AddHostToPoolCommand::CanRun() const
         if (hostPool)
             return false;
         
-        // TODO: Check Host::RestrictPooling when ported
-        // if (Host::RestrictPooling(host))
-        //     return false;
+        if (host->RestrictPooling())
+            return false;
     }
     
     return true;
@@ -72,13 +73,12 @@ void AddHostToPoolCommand::Run()
         {
             QString hostName = this->hosts_[0]->GetName();
             message = tr("The pool '%1' is disconnected. Cannot add host '%2'.").arg(poolName).arg(hostName);
-        }
-        else
+        } else
         {
             message = tr("The pool '%1' is disconnected. Cannot add hosts.").arg(poolName);
         }
         
-        QMessageBox::critical(this->mainWindow(), tr("Pool Disconnected"), message);
+        QMessageBox::critical(MainWindow::instance(), tr("Pool Disconnected"), message);
         return;
     }
     
@@ -93,7 +93,7 @@ void AddHostToPoolCommand::Run()
             errorText += tr("• %1: %2\n").arg(it.key()).arg(it.value());
         }
         
-        QMessageBox::critical(this->mainWindow(), tr("Cannot Add to Pool"), errorText);
+        QMessageBox::critical(MainWindow::instance(), tr("Cannot Add to Pool"), errorText);
         return;
     }
     
@@ -109,9 +109,7 @@ void AddHostToPoolCommand::Run()
     QSharedPointer<Host> coordinator = this->m_pool->GetMasterHost();
     if (!coordinator)
     {
-        QMessageBox::critical(this->mainWindow(), tr("Error"), 
-                            tr("Cannot find pool coordinator for '%1'.")
-                            .arg(this->m_pool->GetName()));
+        QMessageBox::critical(MainWindow::instance(), tr("Error"), tr("Cannot find pool coordinator for '%1'.").arg(this->m_pool->GetName()));
         return;
     }
     
@@ -130,30 +128,58 @@ void AddHostToPoolCommand::Run()
     // TODO: Get permission for CPU feature levelling when HelpersGUI::GetPermissionForCpuFeatureLevelling is ported
     
     // Select pool in tree
-    this->mainWindow()->SelectObjectInTree("pool", this->m_pool->OpaqueRef());
-    
-    // TODO: Create and run AddHostToPoolAction for each host
-    // For now, show placeholder message
-    QMessageBox::information(this->mainWindow(), tr("Add to Pool"),
-                            tr("Adding %1 host(s) to pool '%2'.\n\n"
-                               "TODO: Implement AddHostToPoolAction")
-                            .arg(this->hosts_.count())
-                            .arg(this->m_pool->GetName()));
+    MainWindow::instance()->SelectObjectInTree("pool", this->m_pool->OpaqueRef());
+
+    QList<AsyncOperation*> actions;
+    actions.reserve(this->hosts_.size());
+
+    XenConnection* poolConnection = this->m_pool->GetConnection();
+    for (const QSharedPointer<Host>& host : this->hosts_)
+    {
+        if (!host || !host->GetConnection())
+            continue;
+
+        actions.append(new AddHostToPoolAction(poolConnection, host->GetConnection(), host, true, nullptr));
+    }
+
+    if (actions.isEmpty())
+        return;
+
+    this->RunMultipleActions(actions,
+                             tr("Adding Servers to Pool"),
+                             tr("Adding Servers to Pool"),
+                             tr("Added"),
+                             false);
 }
 
 QMap<QString, QString> AddHostToPoolCommand::checkPoolJoinRules() const
 {
     QMap<QString, QString> reasons;
     
-    // TODO: Implement PoolJoinRules::CanJoinPool when ported
-    // For now, perform basic checks
-    
+    XenConnection* poolConnection = this->m_pool ? this->m_pool->GetConnection() : nullptr;
+    const int poolSizeIncrement = this->hosts_.size();
+
     for (const auto& host : this->hosts_)
     {
         if (!host || !host->GetConnection() || !host->GetConnection()->IsConnected())
         {
             QString hostName = host ? host->GetName() : tr("Unknown Host");
             reasons[hostName] = tr("Host is not connected");
+            continue;
+        }
+
+        PoolJoinRules::Reason reason = PoolJoinRules::CanJoinPool(host->GetConnection(),
+                                                                  poolConnection,
+                                                                  true,
+                                                                  true,
+                                                                  poolSizeIncrement);
+        if (reason != PoolJoinRules::Reason::Allowed)
+        {
+            QString hostName = host->GetName();
+            QString message = PoolJoinRules::ReasonMessage(reason);
+            if (message.isEmpty())
+                message = tr("Host cannot join the pool");
+            reasons[hostName] = message;
         }
     }
     
@@ -176,7 +202,7 @@ bool AddHostToPoolCommand::showConfirmationDialog()
                     .arg(this->m_pool->GetName());
     }
     
-    QMessageBox::StandardButton reply = QMessageBox::question(this->mainWindow(), tr("Confirm Add to Pool"), message, QMessageBox::Yes | QMessageBox::No);
+    QMessageBox::StandardButton reply = QMessageBox::question(MainWindow::instance(), tr("Confirm Add to Pool"), message, QMessageBox::Yes | QMessageBox::No);
     return reply == QMessageBox::Yes;
 }
 

@@ -74,7 +74,7 @@ void DisableChangedBlockTrackingCommand::Run()
                           .arg(vmName);
 
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
+        MainWindow::instance(),
         tr("Disable Changed Block Tracking"),
         message,
         QMessageBox::Yes | QMessageBox::No,
@@ -89,7 +89,7 @@ void DisableChangedBlockTrackingCommand::Run()
     XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
@@ -118,7 +118,7 @@ void DisableChangedBlockTrackingCommand::Run()
 
     if (actions.isEmpty())
     {
-        QMessageBox::information(this->mainWindow(), tr("No CBT Enabled"), tr("The selected VM does not have Changed Block Tracking enabled."));
+        QMessageBox::information(MainWindow::instance(), tr("No CBT Enabled"), tr("The selected VM does not have Changed Block Tracking enabled."));
         return;
     }
 

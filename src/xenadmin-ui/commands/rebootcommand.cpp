@@ -46,13 +46,13 @@ bool RebootCommand::CanRun() const
     const XenObjectType selectionType = selection->SelectionType();
     if (selectionType == XenObjectType::Host)
     {
-        RebootHostCommand hostCmd(this->mainWindow(), nullptr);
+        RebootHostCommand hostCmd(MainWindow::instance(), nullptr);
         return hostCmd.CanRun();
     }
 
     if (selectionType == XenObjectType::VM)
     {
-        RestartVMCommand vmCmd(this->mainWindow(), nullptr);
+        RestartVMCommand vmCmd(MainWindow::instance(), nullptr);
         return vmCmd.CanRun();
     }
 
@@ -68,7 +68,7 @@ void RebootCommand::Run()
     const XenObjectType selectionType = selection->SelectionType();
     if (selectionType == XenObjectType::Host)
     {
-        RebootHostCommand hostCmd(this->mainWindow(), this);
+        RebootHostCommand hostCmd(MainWindow::instance(), this);
         if (hostCmd.CanRun())
         {
             hostCmd.Run();
@@ -78,7 +78,7 @@ void RebootCommand::Run()
 
     if (selectionType == XenObjectType::VM)
     {
-        RestartVMCommand vmCmd(this->mainWindow(), this);
+        RestartVMCommand vmCmd(MainWindow::instance(), this);
         if (vmCmd.CanRun())
         {
             vmCmd.Run();
@@ -86,7 +86,7 @@ void RebootCommand::Run()
         }
     }
 
-    QMessageBox::warning(this->mainWindow(), "Cannot Reboot", "The selected object cannot be rebooted, make sure you only selected hosts or VMs that are running.");
+    QMessageBox::warning(MainWindow::instance(), "Cannot Reboot", "The selected object cannot be rebooted, make sure you only selected hosts or VMs that are running.");
 }
 
 QString RebootCommand::MenuText() const

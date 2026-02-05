@@ -570,7 +570,7 @@ QVariant NullPropertyQuery::Match(const QVariantMap& objectData, const QString& 
     bool valueIsNull = !value.isValid() || 
                        value.isNull() || 
                        value.toString().isEmpty() ||
-                       value.toString() == "OpaqueRef:NULL";
+                       value.toString() == XENOBJECT_NULL;
     
     // Return true if (isNull && valueIsNull) or (!isNull && !valueIsNull)
     // C# equivalent: return ((o == null) == query)
@@ -627,7 +627,7 @@ QVariant RecursiveXMOPropertyQuery::Match(const QVariantMap& objectData, const Q
         return false;
     
     QString ref = propertyValue.toString();
-    if (ref == "OpaqueRef:NULL")
+    if (ref == XENOBJECT_NULL)
         return false;
     
     // Get object data for the referenced object
@@ -708,7 +708,7 @@ QVariant RecursiveXMOListPropertyQuery::Match(const QVariantMap& objectData, con
     for (const QVariant& refVariant : refList)
     {
         QString ref = refVariant.toString();
-        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
         
         // Get object data from cache
@@ -921,7 +921,7 @@ QVariant XenModelObjectListContainsNameQuery::Match(const QVariantMap& objectDat
     for (const QVariant& refVariant : refList)
     {
         QString ref = refVariant.toString();
-        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
         
         // Get object data from cache

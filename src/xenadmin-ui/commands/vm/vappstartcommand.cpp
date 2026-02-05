@@ -98,7 +98,7 @@ bool VappStartCommand::CanRun() const
                 return false;
 
             QString applianceRef = vms.first()->ApplianceRef();
-            if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+            if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
                 return false;
 
             for (const QSharedPointer<VM>& vm : vms)
@@ -206,17 +206,17 @@ void VappStartCommand::Run()
                     if (!connection || !connection->IsConnected())
                         continue;
 
-                    StartApplianceAction* action = new StartApplianceAction(connection, appliance->OpaqueRef(), this->mainWindow());
+                    StartApplianceAction* action = new StartApplianceAction(connection, appliance->OpaqueRef(), MainWindow::instance());
                     OperationManager::instance()->RegisterOperation(action);
                     connect(action, &AsyncOperation::completed, action, [=]()
                     {
                         if (action->GetState() == AsyncOperation::Completed)
                         {
-                            this->mainWindow()->ShowStatusMessage(
+                            MainWindow::instance()->ShowStatusMessage(
                                 tr("vApp '%1' started successfully").arg(appliance->GetName()), 5000);
                         } else if (action->GetState() == AsyncOperation::Failed)
                         {
-                            QMessageBox::critical(this->mainWindow(), tr("Error"),
+                            QMessageBox::critical(MainWindow::instance(), tr("Error"),
                                                   tr("Failed to start vApp '%1':\n%2")
                                                       .arg(appliance->GetName(), action->GetErrorMessage()));
                         }
@@ -263,17 +263,17 @@ void VappStartCommand::Run()
                 if (!appliance || !this->canStartAppliance(appliance))
                     return;
 
-                StartApplianceAction* action = new StartApplianceAction(connection, applianceRef, this->mainWindow());
+                StartApplianceAction* action = new StartApplianceAction(connection, applianceRef, MainWindow::instance());
                 OperationManager::instance()->RegisterOperation(action);
-                connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
+                connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
                 {
                     if (action->GetState() == AsyncOperation::Completed)
                     {
-                        this->mainWindow()->ShowStatusMessage(
+                        MainWindow::instance()->ShowStatusMessage(
                             tr("vApp '%1' started successfully").arg(appliance->GetName()), 5000);
                     } else if (action->GetState() == AsyncOperation::Failed)
                     {
-                        QMessageBox::critical(this->mainWindow(), tr("Error"),
+                        QMessageBox::critical(MainWindow::instance(), tr("Error"),
                                               tr("Failed to start vApp '%1':\n%2")
                                                   .arg(appliance->GetName(), action->GetErrorMessage()));
                     }
@@ -298,7 +298,7 @@ void VappStartCommand::Run()
         applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Not in vApp"),
+            QMessageBox::warning(MainWindow::instance(), tr("Not in vApp"),
                                  tr("Selected VM is not part of a VM appliance"));
             return;
         }
@@ -331,7 +331,7 @@ void VappStartCommand::Run()
     // Validate before starting
     if (!this->canStartAppliance(appliance))
     {
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Start vApp"), tr("VM appliance '%1' cannot be started").arg(appName));
+        QMessageBox::warning(MainWindow::instance(), tr("Cannot Start vApp"), tr("VM appliance '%1' cannot be started").arg(appName));
         return;
     }
 
@@ -339,25 +339,25 @@ void VappStartCommand::Run()
     XenConnection* conn = connection;
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
     // Create and start action
-    StartApplianceAction* action = new StartApplianceAction(conn, applianceRef, this->mainWindow());
+    StartApplianceAction* action = new StartApplianceAction(conn, applianceRef, MainWindow::instance());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
-    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
+    connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {
-            this->mainWindow()->ShowStatusMessage(tr("vApp '%1' started successfully").arg(appName), 5000);
+            MainWindow::instance()->ShowStatusMessage(tr("vApp '%1' started successfully").arg(appName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to start vApp '%1':\n%2").arg(appName, action->GetErrorMessage()));
+            QMessageBox::critical(MainWindow::instance(), tr("Error"), tr("Failed to start vApp '%1':\n%2").arg(appName, action->GetErrorMessage()));
         }
 
         // Auto-delete when complete

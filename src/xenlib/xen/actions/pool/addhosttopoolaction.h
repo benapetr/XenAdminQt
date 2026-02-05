@@ -59,10 +59,7 @@ class AddHostToPoolAction : public AsyncOperation
          * @param joiningHost Host object being joined to pool
          * @param parent Parent QObject
          */
-        AddHostToPoolAction(XenConnection* poolConnection,
-                            XenConnection* hostConnection,
-                            QSharedPointer<Host> joiningHost,
-                            QObject* parent = nullptr);
+        AddHostToPoolAction(XenConnection* poolConnection, XenConnection* hostConnection, QSharedPointer<Host> joiningHost, bool auto_delete, QObject* parent = nullptr);
 
     protected:
         void run() override;

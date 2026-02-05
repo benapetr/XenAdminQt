@@ -106,7 +106,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
             QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef) : QSharedPointer<VM>();
             QString guestMetricsRef = vm ? vm->GetGuestMetricsRef() : QString();
 
-            if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+            if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
             {
                 QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
                 QVariantMap networks = guestMetrics.value("networks").toMap();
@@ -825,7 +825,7 @@ bool XSVNCScreen::isControlDomainZero(const QString& vmRef, QString* outHostRef)
         return false;
 
     QString hostRef = vm->GetResidentOnRef();
-    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
         return false;
 
     if (outHostRef)
@@ -836,7 +836,7 @@ bool XSVNCScreen::isControlDomainZero(const QString& vmRef, QString* outHostRef)
         return false;
 
     QString controlDomain = host->ControlDomainRef();
-    if (!controlDomain.isEmpty() && controlDomain != "OpaqueRef:NULL")
+    if (!controlDomain.isEmpty() && controlDomain != XENOBJECT_NULL)
         return controlDomain == vmRef;
 
     return vm->Domid() == 0;
@@ -855,7 +855,7 @@ bool XSVNCScreen::hasGPUPassthrough(const QString& vmRef) const
     QStringList vgpuRefs = vm->VGPURefs();
     for (const QString& vgpuRef : vgpuRefs)
     {
-        if (vgpuRef.isEmpty() || vgpuRef == "OpaqueRef:NULL")
+        if (vgpuRef.isEmpty() || vgpuRef == XENOBJECT_NULL)
             continue;
 
         QVariantMap vgpuData = cache->ResolveObjectData("vgpu", vgpuRef);
@@ -863,7 +863,7 @@ bool XSVNCScreen::hasGPUPassthrough(const QString& vmRef) const
             continue;
 
         QString vgpuTypeRef = vgpuData.value("type").toString();
-        if (vgpuTypeRef.isEmpty() || vgpuTypeRef == "OpaqueRef:NULL")
+        if (vgpuTypeRef.isEmpty() || vgpuTypeRef == XENOBJECT_NULL)
             continue;
 
         QVariantMap vgpuTypeData = cache->ResolveObjectData("vgpu_type", vgpuTypeRef);
@@ -891,7 +891,7 @@ bool XSVNCScreen::hasRDP() const
         return false;
 
     QString guestMetricsRef = vm->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 
     return false;
@@ -1176,7 +1176,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
 
         // Get guest_metrics reference
         QString guestMetricsRef = vm->GetGuestMetricsRef();
-        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
             return QString();
 
         // Get guest metrics record

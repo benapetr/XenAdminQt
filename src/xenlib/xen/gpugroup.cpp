@@ -84,7 +84,7 @@ QList<QSharedPointer<PGPU>> GPUGroup::GetPGPUs() const
     QList<QSharedPointer<PGPU>> result;
     for (const QString& ref : refs)
     {
-        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
         QSharedPointer<PGPU> obj = cache->ResolveObject<PGPU>(ref);
         if (obj)
@@ -107,7 +107,7 @@ QList<QSharedPointer<VGPU>> GPUGroup::GetVGPUs() const
     QList<QSharedPointer<VGPU>> result;
     for (const QString& ref : refs)
     {
-        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
         QSharedPointer<VGPU> obj = cache->ResolveObject<VGPU>(ref);
         if (obj)

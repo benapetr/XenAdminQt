@@ -83,11 +83,11 @@ void ForceShutdownVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+            QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
             return;
         }
 
-        VMHardShutdown* action = new VMHardShutdown(vm, this->mainWindow());
+        VMHardShutdown* action = new VMHardShutdown(vm, MainWindow::instance());
         OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
     };
@@ -113,7 +113,7 @@ void ForceShutdownVMCommand::Run()
                                 "This is equivalent to pulling the power cable out and may cause data loss.";
 
         QMessageBox::StandardButton reply = QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Force Shutdown VMs",
             message,
             QMessageBox::Yes | QMessageBox::No,
@@ -148,7 +148,7 @@ void ForceShutdownVMCommand::Run()
                                 .arg(vmName);
 
     QMessageBox::StandardButton reply = QMessageBox::warning(
-        this->mainWindow(),
+        MainWindow::instance(),
         "Force Shutdown VM",
         message,
         QMessageBox::Yes | QMessageBox::No,

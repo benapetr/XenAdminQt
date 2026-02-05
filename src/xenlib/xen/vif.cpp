@@ -167,11 +167,9 @@ QSharedPointer<Network> VIF::GetNetwork() const
         return QSharedPointer<Network>();
     
     XenCache* cache = connection->GetCache();
-    if (!cache)
-        return QSharedPointer<Network>();
     
     QString ref = this->GetNetworkRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<Network>();
     
     return cache->ResolveObject<Network>(ref);
@@ -184,11 +182,9 @@ QSharedPointer<VM> VIF::GetVM() const
         return QSharedPointer<VM>();
     
     XenCache* cache = connection->GetCache();
-    if (!cache)
-        return QSharedPointer<VM>();
     
     QString ref = this->GetVMRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<VM>();
 
     return cache->ResolveObject<VM>(XenObjectType::VM, ref);

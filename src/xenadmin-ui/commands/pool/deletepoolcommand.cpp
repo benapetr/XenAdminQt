@@ -74,7 +74,7 @@ void DeletePoolCommand::Run()
     if (haEnabling)
     {
         QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Cannot Delete Pool",
             QString("Cannot delete pool '%1' because High Availability is currently being enabled.\n\n"
                     "Please wait for the operation to complete, then disable HA before deleting the pool.")
@@ -85,7 +85,7 @@ void DeletePoolCommand::Run()
     if (haEnabled)
     {
         QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Cannot Delete Pool",
             QString("Cannot delete pool '%1' because High Availability is enabled.\n\n"
                     "You must disable HA before deleting the pool.")
@@ -97,7 +97,7 @@ void DeletePoolCommand::Run()
     if (this->hasMultipleHosts(pool))
     {
         QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Cannot Delete Pool",
             QString("Pool '%1' contains multiple servers.\n\n"
                     "You must eject all servers except the coordinator before deleting the pool.\n\n"
@@ -107,7 +107,7 @@ void DeletePoolCommand::Run()
     }
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle("Delete Pool");
     msgBox.setText(QString("Are you sure you want to delete pool '%1'?").arg(poolName));
     msgBox.setInformativeText("This will convert the pool back to a standalone server. The server configuration will remain unchanged.");

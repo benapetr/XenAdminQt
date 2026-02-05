@@ -67,7 +67,7 @@ bool NewVMFromSnapshotCommand::CanRun() const
 
 void NewVMFromSnapshotCommand::Run()
 {
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
         return;
 
     QString snapshotRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
@@ -89,11 +89,11 @@ void NewVMFromSnapshotCommand::Run()
     QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
     if (!snapshot || !snapshot->IsSnapshot())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
         return;
     }
 
-    NewVMWizard wizard(connection, this->mainWindow());
+    NewVMWizard wizard(connection, MainWindow::instance());
     wizard.exec();
 }
 

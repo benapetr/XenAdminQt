@@ -62,7 +62,7 @@ QString VBD::GetVDIRef() const
 {
     QString vdi = this->stringProperty("VDI");
     // Return empty string if VDI is NULL reference (CD drive with no disc)
-    if (vdi == "OpaqueRef:NULL")
+    if (vdi == XENOBJECT_NULL)
     {
         return QString();
     }

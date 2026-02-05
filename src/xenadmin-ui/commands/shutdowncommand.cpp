@@ -46,13 +46,13 @@ bool ShutdownCommand::CanRun() const
     const XenObjectType selectionType = selection->SelectionType();
     if (selectionType == XenObjectType::Host)
     {
-        ShutdownHostCommand hostCmd(this->mainWindow(), nullptr);
+        ShutdownHostCommand hostCmd(MainWindow::instance(), nullptr);
         return hostCmd.CanRun();
     }
 
     if (selectionType == XenObjectType::VM)
     {
-        StopVMCommand vmCmd(this->mainWindow(), nullptr);
+        StopVMCommand vmCmd(MainWindow::instance(), nullptr);
         return vmCmd.CanRun();
     }
 
@@ -68,7 +68,7 @@ void ShutdownCommand::Run()
     const XenObjectType selectionType = selection->SelectionType();
     if (selectionType == XenObjectType::Host)
     {
-        ShutdownHostCommand hostCmd(this->mainWindow(), this);
+        ShutdownHostCommand hostCmd(MainWindow::instance(), this);
         if (hostCmd.CanRun())
         {
             hostCmd.Run();
@@ -78,7 +78,7 @@ void ShutdownCommand::Run()
 
     if (selectionType == XenObjectType::VM)
     {
-        StopVMCommand vmCmd(this->mainWindow(), this);
+        StopVMCommand vmCmd(MainWindow::instance(), this);
         if (vmCmd.CanRun())
         {
             vmCmd.Run();
@@ -86,7 +86,7 @@ void ShutdownCommand::Run()
         }
     }
 
-    QMessageBox::warning(this->mainWindow(), "Cannot Shutdown", "The selected object cannot be shut down.");
+    QMessageBox::warning(MainWindow::instance(), "Cannot Shutdown", "The selected object cannot be shut down.");
 }
 
 QString ShutdownCommand::MenuText() const

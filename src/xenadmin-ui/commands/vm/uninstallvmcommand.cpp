@@ -53,7 +53,7 @@ void UninstallVMCommand::Run()
     QString vmName = vm->GetName();
 
     // Show warning dialog
-    int ret = QMessageBox::warning(this->mainWindow(), "Uninstall VM",
+    int ret = QMessageBox::warning(MainWindow::instance(), "Uninstall VM",
                                    QString("Are you sure you want to uninstall VM '%1'?\n\n"
                                            "This will PERMANENTLY DELETE the VM and ALL its virtual disks.\n\n"
                                            "This action CANNOT be undone!")
@@ -62,11 +62,11 @@ void UninstallVMCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->ShowStatusMessage(QString("Uninstalling VM '%1'...").arg(vmName));
+        MainWindow::instance()->ShowStatusMessage(QString("Uninstalling VM '%1'...").arg(vmName));
 
         // TODO: Delete the VM and its VDIs using XenAPI
         // bool success = XenAPI::VM::destroy(session, vmRef);
-        QMessageBox::information(this->mainWindow(), "Not Implemented",
+        QMessageBox::information(MainWindow::instance(), "Not Implemented",
                                  "VM deletion will be implemented using XenAPI::VM::destroy.");
     }
 }

@@ -94,22 +94,22 @@ void VMLifeCycleCommand::Run()
 
     if (powerState == "Halted")
     {
-        StartVMCommand cmd(this->mainWindow());
+        StartVMCommand cmd(MainWindow::instance());
         if (cmd.CanRun())
             cmd.Run();
     } else if (powerState == "Running")
     {
-        StopVMCommand cmd(this->mainWindow());
+        StopVMCommand cmd(MainWindow::instance());
         if (cmd.CanRun())
             cmd.Run();
     } else if (powerState == "Paused")
     {
-        UnpauseVMCommand cmd(this->mainWindow());
+        UnpauseVMCommand cmd(MainWindow::instance());
         if (cmd.CanRun())
             cmd.Run();
     } else if (powerState == "Suspended")
     {
-        ResumeVMCommand cmd(this->mainWindow());
+        ResumeVMCommand cmd(MainWindow::instance());
         if (cmd.CanRun())
             cmd.Run();
     }

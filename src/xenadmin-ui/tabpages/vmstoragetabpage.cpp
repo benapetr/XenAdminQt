@@ -682,7 +682,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
     // Build VBD record for CD/DVD drive (empty VDI)
     QVariantMap vbdRecord;
     vbdRecord["VM"] = m_objectRef;
-    vbdRecord["VDI"] = "OpaqueRef:NULL"; // Empty for CD/DVD
+    vbdRecord["VDI"] = XENOBJECT_NULL; // Empty for CD/DVD
     vbdRecord["userdevice"] = nextDevice;
     vbdRecord["bootable"] = false;
     vbdRecord["mode"] = "RO";
@@ -923,7 +923,7 @@ QStringList VMStorageTabPage::getSelectedVDIRefs() const
         if (item)
         {
             QString vdiRef = item->data(Qt::UserRole + 1).toString();
-            if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+            if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
             {
                 refs.append(vdiRef);
             }

@@ -149,7 +149,7 @@ void DestroyBondAction::run()
         {
             QString networkRef = bondsToDestroy.first().networkRef;
 
-            if (!networkRef.isEmpty() && networkRef != "OpaqueRef:NULL")
+            if (!networkRef.isEmpty() && networkRef != XENOBJECT_NULL)
             {
                 try
                 {

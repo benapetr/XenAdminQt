@@ -117,7 +117,7 @@ void RotatePoolSecretCommand::Run()
     if (!this->canRotateSecret(pool))
     {
         QString reason = this->GetCantRunReason();
-        QMessageBox::information(this->mainWindow(), tr("Cannot Rotate Pool Secret"), reason);
+        QMessageBox::information(MainWindow::instance(), tr("Cannot Rotate Pool Secret"), reason);
         return;
     }
 
@@ -127,7 +127,7 @@ void RotatePoolSecretCommand::Run()
 
     if (showReminder)
     {
-        QDialog* dialog = new QDialog(this->mainWindow());
+        QDialog* dialog = new QDialog(MainWindow::instance());
         dialog->setWindowTitle(tr("Rotate Pool Secret"));
         dialog->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -172,7 +172,7 @@ void RotatePoolSecretCommand::Run()
     opManager->RegisterOperation(action);
     action->RunAsync(true);
 
-    this->mainWindow()->ShowStatusMessage(tr("Pool secret rotation started"), 3000);
+    MainWindow::instance()->ShowStatusMessage(tr("Pool secret rotation started"), 3000);
 }
 
 QString RotatePoolSecretCommand::MenuText() const

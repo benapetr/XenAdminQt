@@ -72,7 +72,7 @@ void DeleteSnapshotCommand::Run()
 
 bool DeleteSnapshotCommand::CanRun() const
 {
-    if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
+    if (!MainWindow::instance() || this->m_snapshotUuid.isEmpty())
     {
         return false;
     }
@@ -87,7 +87,7 @@ QString DeleteSnapshotCommand::MenuText() const
 
 bool DeleteSnapshotCommand::canDeleteSnapshot() const
 {
-    if (this->m_snapshotUuid.isEmpty() || !this->mainWindow())
+    if (this->m_snapshotUuid.isEmpty() || !MainWindow::instance())
         return false;
 
     QSharedPointer<XenObject> selectedObject = this->GetObject();
@@ -143,7 +143,7 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
     }
 
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
+        MainWindow::instance(),
         tr("Delete Snapshot"),
         tr("Are you sure you want to delete this snapshot?\n\n"
            "This action cannot be undone.\n\n"
@@ -159,7 +159,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
 {
     qDebug() << "DeleteSnapshotCommand: Deleting snapshot:" << this->m_snapshotUuid;
 
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         qWarning() << "DeleteSnapshotCommand: No main window available";
         return;
@@ -169,7 +169,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
     if (!snapshot || !snapshot->IsValid())
     {
         qWarning() << "DeleteSnapshotCommand: Failed to resolve snapshot VM";
-        QMessageBox::critical(this->mainWindow(), tr("Delete Error"), tr("Failed to resolve snapshot VM."));
+        QMessageBox::critical(MainWindow::instance(), tr("Delete Error"), tr("Failed to resolve snapshot VM."));
         return;
     }
 
@@ -177,13 +177,13 @@ void DeleteSnapshotCommand::deleteSnapshot()
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "DeleteSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Delete Error"), tr("Not connected to XenServer."));
+        QMessageBox::critical(MainWindow::instance(), tr("Delete Error"), tr("Not connected to XenServer."));
         return;
     }
 
     // Create VMSnapshotDeleteAction (matches C# VMSnapshotDeleteAction pattern)
     // Action handles task polling, history tracking, and automatic cache refresh
-    VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, this->mainWindow());
+    VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, MainWindow::instance());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

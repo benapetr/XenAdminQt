@@ -764,7 +764,7 @@ QSharedPointer<Pool> XenCache::GetPool()
     if (pool_ref.isEmpty())
         return QSharedPointer<Pool>();
 
-    QSharedPointer<Pool> pool = this->ResolveObject<Pool>(XenObjectType::Pool, pool_ref);
+    QSharedPointer<Pool> pool = this->ResolveObject<Pool>(pool_ref);
     if (pool && pool->IsVisible())
         return pool;
 
@@ -777,5 +777,5 @@ QSharedPointer<Pool> XenCache::GetPoolOfOne()
     if (pool_ref.isEmpty())
         return QSharedPointer<Pool>();
 
-    return this->ResolveObject<Pool>(XenObjectType::Pool, pool_ref);
+    return this->ResolveObject<Pool>(pool_ref);
 }

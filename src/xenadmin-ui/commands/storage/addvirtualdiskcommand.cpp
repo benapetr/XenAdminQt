@@ -72,7 +72,7 @@ void AddVirtualDiskCommand::Run()
         if (currentVBDs >= maxVBDs)
         {
             QMessageBox::warning(
-                this->mainWindow(),
+                MainWindow::instance(),
                 tr("Cannot Add Disk"),
                 tr("The maximum number of virtual disks (%1) has been reached for this VM.").arg(maxVBDs));
             return;
@@ -80,7 +80,7 @@ void AddVirtualDiskCommand::Run()
 
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
-        NewVirtualDiskDialog dialog(vm, this->mainWindow());
+        NewVirtualDiskDialog dialog(vm, MainWindow::instance());
         if (dialog.exec() != QDialog::Accepted)
         {
             qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";
@@ -119,7 +119,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
         CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, vm->GetConnection(), this);
 
-        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, this->mainWindow());
+        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, MainWindow::instance());
         qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
         int createResult = createDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Create dialog result:" << createResult
@@ -131,7 +131,7 @@ void AddVirtualDiskCommand::Run()
         if (createResult != QDialog::Accepted)
         {
             qWarning() << "[AddVirtualDiskCommand] VDI creation failed or cancelled";
-            QMessageBox::warning(this->mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
+            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
             delete createDialog;
             return;
         }
@@ -143,7 +143,7 @@ void AddVirtualDiskCommand::Run()
         if (vdiRef.isEmpty())
         {
             qWarning() << "[AddVirtualDiskCommand] VDI ref is empty despite success";
-            QMessageBox::warning(this->mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
+            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
             return;
         }
 
@@ -163,7 +163,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VbdCreateAndPlugAction to attach VDI to VM...";
         VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
 
-        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this->mainWindow());
+        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, MainWindow::instance());
         qDebug() << "[AddVirtualDiskCommand] Executing attach dialog...";
         int attachResult = attachDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Attach dialog result:" << attachResult
@@ -176,7 +176,7 @@ void AddVirtualDiskCommand::Run()
         if (attachResult != QDialog::Accepted)
         {
             qWarning() << "[AddVirtualDiskCommand] VBD attachment failed or cancelled";
-            QMessageBox::warning(this->mainWindow(), tr("Warning"),
+            QMessageBox::warning(MainWindow::instance(), tr("Warning"),
                                  tr("Virtual disk created but failed to attach to VM.\n"
                                     "You can attach it manually from the Attach menu."));
             delete attachDialog;
@@ -186,12 +186,12 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] VBD attached successfully";
         delete attachDialog;
 
-        this->mainWindow()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
+        MainWindow::instance()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
     } else if (objectType == XenObjectType::SR)
     {
         // For SR, we need to create a disk without a specific VM
         // This is typically not used in the Qt version, but we show a message
-        QMessageBox::information(this->mainWindow(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
+        QMessageBox::information(MainWindow::instance(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
     }
 }
 

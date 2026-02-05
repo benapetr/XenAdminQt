@@ -57,12 +57,12 @@ void MigrateVirtualDiskCommand::Run()
     QString reason;
     if (!this->canBeMigrated(vdi, reason))
     {
-        QMessageBox::information(this->mainWindow(), tr("Cannot Migrate"), reason);
+        QMessageBox::information(MainWindow::instance(), tr("Cannot Migrate"), reason);
         return;
     }
 
     // Open migrate dialog
-    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi, this->mainWindow());
+    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi, MainWindow::instance());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();

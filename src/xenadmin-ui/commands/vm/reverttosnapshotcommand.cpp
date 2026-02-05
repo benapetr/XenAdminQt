@@ -72,7 +72,7 @@ void RevertToSnapshotCommand::Run()
 
 bool RevertToSnapshotCommand::CanRun() const
 {
-    if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
+    if (!MainWindow::instance() || this->m_snapshotUuid.isEmpty())
     {
         return false;
     }
@@ -87,7 +87,7 @@ QString RevertToSnapshotCommand::MenuText() const
 
 bool RevertToSnapshotCommand::canRevertToSnapshot() const
 {
-    if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
+    if (!MainWindow::instance() || this->m_snapshotUuid.isEmpty())
         return false;
 
     QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
@@ -172,7 +172,7 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
     message += tr("\n\nThis action cannot be undone.");
 
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
+        MainWindow::instance(),
         tr("Revert to Snapshot"),
         message,
         QMessageBox::Yes | QMessageBox::No,
@@ -185,7 +185,7 @@ void RevertToSnapshotCommand::revertToSnapshot()
 {
     qDebug() << "RevertToSnapshotCommand: Reverting to snapshot:" << this->m_snapshotUuid;
 
-    if (!this->mainWindow())
+    if (!MainWindow::instance())
     {
         qWarning() << "RevertToSnapshotCommand: No main window available";
         return;
@@ -197,7 +197,7 @@ void RevertToSnapshotCommand::revertToSnapshot()
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "RevertToSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Revert Error"), tr("Not connected to XenServer."));
+        QMessageBox::critical(MainWindow::instance(), tr("Revert Error"), tr("Not connected to XenServer."));
         return;
     }
 
@@ -205,13 +205,13 @@ void RevertToSnapshotCommand::revertToSnapshot()
     if (!snapshot || !snapshot->IsValid())
     {
         qWarning() << "RevertToSnapshotCommand: Failed to resolve snapshot VM";
-        QMessageBox::critical(this->mainWindow(), tr("Revert Error"), tr("Failed to resolve snapshot VM."));
+        QMessageBox::critical(MainWindow::instance(), tr("Revert Error"), tr("Failed to resolve snapshot VM."));
         return;
     }
 
     // Create VMSnapshotRevertAction (matches C# VMSnapshotRevertAction pattern)
     // Action handles VM power cycle tracking and is cancellable
-    VMSnapshotRevertAction* action = new VMSnapshotRevertAction(snapshot, this->mainWindow());
+    VMSnapshotRevertAction* action = new VMSnapshotRevertAction(snapshot, MainWindow::instance());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

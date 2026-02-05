@@ -54,7 +54,7 @@ void MoveVirtualDiskCommand::Run()
         return;
 
     // Open the move virtual disk dialog
-    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi, this->mainWindow());
+    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi, MainWindow::instance());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();

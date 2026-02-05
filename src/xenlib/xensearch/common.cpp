@@ -209,7 +209,7 @@ void PropertyAccessors::Initialize()
                 if (cache)
                 {
                     QString metricsRef = vm->MetricsRef();
-                    if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
+                    if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
                     {
                         QVariantMap metrics = cache->ResolveObjectData(XenObjectType::VMMetrics, metricsRef);
                         if (!metrics.isEmpty())
@@ -969,7 +969,7 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
             QVariantMap srData = cache->ResolveObjectData(XenObjectType::SR, srRef);
             // Get SR.Home() - the host reference for storage repository
             QString homeRef = srData.value("home").toString();
-            if (!homeRef.isEmpty() && homeRef != "OpaqueRef:NULL")
+            if (!homeRef.isEmpty() && homeRef != XENOBJECT_NULL)
                 hostRefs.append(homeRef);
         }
     }
@@ -996,7 +996,7 @@ QVariant PropertyAccessors::StorageProperty(XenObject* o)
         {
             QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
-            if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+            if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
             {
                 QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                 QString srRef = vdiData.value("SR").toString();

@@ -41,7 +41,7 @@ bool NewPoolCommand::CanRun() const
 
 void NewPoolCommand::Run()
 {
-    NewPoolDialog dialog(this->mainWindow());
+    NewPoolDialog dialog(MainWindow::instance());
     dialog.exec();
 }
 

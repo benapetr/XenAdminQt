@@ -78,12 +78,12 @@ void SuspendVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMSuspendAction (parent is MainWindow to prevent premature deletion)
-        VMSuspendAction* action = new VMSuspendAction(vm, this->mainWindow());
+        VMSuspendAction* action = new VMSuspendAction(vm, MainWindow::instance());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);
@@ -96,7 +96,7 @@ void SuspendVMCommand::Run()
     const QList<QSharedPointer<VM>> vms = this->getVMs();
     if (vms.size() > 1)
     {
-        int ret = QMessageBox::question(this->mainWindow(), "Suspend VMs",
+        int ret = QMessageBox::question(MainWindow::instance(), "Suspend VMs",
                                         "Are you sure you want to suspend the selected VMs?",
                                         QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
@@ -117,7 +117,7 @@ void SuspendVMCommand::Run()
     if (vmName.isEmpty())
         return;
 
-    int ret = QMessageBox::question(this->mainWindow(), "Suspend VM",
+    int ret = QMessageBox::question(MainWindow::instance(), "Suspend VM",
                                     QString("Are you sure you want to suspend VM '%1'?").arg(vmName),
                                     QMessageBox::Yes | QMessageBox::No);
 

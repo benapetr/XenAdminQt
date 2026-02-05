@@ -71,7 +71,7 @@ void CopyTemplateCommand::Run()
     QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
-        QMessageBox::warning(this->mainWindow(), "Cannot Copy Template", "The selected template cannot be copied.");
+        QMessageBox::warning(MainWindow::instance(), "Cannot Copy Template", "The selected template cannot be copied.");
         return;
     }
 
@@ -82,7 +82,7 @@ void CopyTemplateCommand::Run()
     //     // Launch CopyVMDialog for local copy
     // }
 
-    QMessageBox::information(this->mainWindow(), "Not Implemented", "Template copy will be implemented using CopyVMDialog or CrossPoolMigrateWizard.");
+    QMessageBox::information(MainWindow::instance(), "Not Implemented", "Template copy will be implemented using CopyVMDialog or CrossPoolMigrateWizard.");
 }
 
 QString CopyTemplateCommand::MenuText() const

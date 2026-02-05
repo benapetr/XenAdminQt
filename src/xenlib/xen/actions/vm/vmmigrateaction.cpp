@@ -59,7 +59,7 @@ void VMMigrateAction::run()
         QString residentOnRef = this->m_vm->GetResidentOnRef();
         QString sourceHostName;
 
-        if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
+        if (!residentOnRef.isEmpty() && residentOnRef != XENOBJECT_NULL)
         {
             QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData("host", residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();

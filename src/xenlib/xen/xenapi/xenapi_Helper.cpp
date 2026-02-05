@@ -26,10 +26,11 @@
  */
 
 #include "xenapi_Helper.h"
+#include "../xenobject.h"
 
 namespace XenAPI
 {
-    const QString Helper::NullOpaqueRef = "OpaqueRef:NULL";
+    const QString Helper::NullOpaqueRef = XENOBJECT_NULL;
 
     bool Helper::AreEqual(const QVariant& o1, const QVariant& o2)
     {

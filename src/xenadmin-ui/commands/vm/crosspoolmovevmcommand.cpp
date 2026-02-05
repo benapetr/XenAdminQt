@@ -82,7 +82,7 @@ void CrossPoolMoveVMCommand::Run()
         return;
 
     CrossPoolMigrateWizard::WizardMode mode = GetWizardMode(baseVm);
-    CrossPoolMigrateWizard wizard(this->mainWindow(), vms, mode);
+    CrossPoolMigrateWizard wizard(MainWindow::instance(), vms, mode);
     wizard.exec();
 }
 

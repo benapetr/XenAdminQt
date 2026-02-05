@@ -59,17 +59,17 @@ void RepairSRCommand::Run()
     XenConnection* connection = sr->GetConnection();
     if (!connection || !connection->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed", "Not connected to XenServer.");
+        QMessageBox::warning(MainWindow::instance(), "Repair Storage Repository Failed", "Not connected to XenServer.");
         return;
     }
 
     if (!sr->MultipathAOK())
     {
-        QMessageBox::warning(this->mainWindow(), "Multipathing", "Multipathing has failed on this storage repository.");
+        QMessageBox::warning(MainWindow::instance(), "Multipathing", "Multipathing has failed on this storage repository.");
     }
 
     // Show the RepairSRDialog which will handle the repair operation
-    RepairSRDialog* dialog = new RepairSRDialog(sr, true, this->mainWindow());
+    RepairSRDialog* dialog = new RepairSRDialog(sr, true, MainWindow::instance());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }

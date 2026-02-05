@@ -99,7 +99,7 @@ bool VappShutDownCommand::CanRun() const
                 return false;
 
             QString applianceRef = vms.first()->ApplianceRef();
-            if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+            if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
                 return false;
 
             for (const QSharedPointer<VM>& vm : vms)
@@ -203,7 +203,7 @@ void VappShutDownCommand::Run()
                     appNames.append(appliance ? appliance->GetName() : QString());
 
                 QMessageBox::StandardButton reply = QMessageBox::question(
-                    this->mainWindow(),
+                    MainWindow::instance(),
                     tr("Shut Down vApp"),
                     tr("Are you sure you want to shut down vApp(s): %1?\n\n"
                        "All VMs in the appliance will be shut down gracefully.")
@@ -222,17 +222,17 @@ void VappShutDownCommand::Run()
                     if (!connection || !connection->IsConnected())
                         continue;
 
-                    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, appliance->OpaqueRef(), this->mainWindow());
+                    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, appliance->OpaqueRef(), MainWindow::instance());
                     OperationManager::instance()->RegisterOperation(action);
                     connect(action, &AsyncOperation::completed, action, [=]()
                     {
                         if (action->GetState() == AsyncOperation::Completed)
                         {
-                            this->mainWindow()->ShowStatusMessage(
+                            MainWindow::instance()->ShowStatusMessage(
                                 tr("vApp '%1' shut down successfully").arg(appliance->GetName()), 5000);
                         } else if (action->GetState() == AsyncOperation::Failed)
                         {
-                            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to shut down vApp '%1':\n%2").arg(appliance->GetName(), action->GetErrorMessage()));
+                            QMessageBox::critical(MainWindow::instance(), tr("Error"), tr("Failed to shut down vApp '%1':\n%2").arg(appliance->GetName(), action->GetErrorMessage()));
                         }
 
                         action->deleteLater();
@@ -259,7 +259,7 @@ void VappShutDownCommand::Run()
                     return;
 
                 QString applianceRef = vms.first()->ApplianceRef();
-                if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+                if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
                     return;
 
                 for (const QSharedPointer<VM>& vm : vms)
@@ -278,7 +278,7 @@ void VappShutDownCommand::Run()
                     return;
 
                 QMessageBox::StandardButton reply = QMessageBox::question(
-                    this->mainWindow(),
+                    MainWindow::instance(),
                     tr("Shut Down vApp"),
                     tr("Are you sure you want to shut down vApp '%1'?\n\n"
                        "All VMs in the appliance will be shut down gracefully.")
@@ -288,17 +288,17 @@ void VappShutDownCommand::Run()
                 if (reply != QMessageBox::Yes)
                     return;
 
-                ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, this->mainWindow());
+                ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, MainWindow::instance());
                 OperationManager::instance()->RegisterOperation(action);
-                connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
+                connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
                 {
                     if (action->GetState() == AsyncOperation::Completed)
                     {
-                        this->mainWindow()->ShowStatusMessage(
+                        MainWindow::instance()->ShowStatusMessage(
                             tr("vApp '%1' shut down successfully").arg(appliance->GetName()), 5000);
                     } else if (action->GetState() == AsyncOperation::Failed)
                     {
-                        QMessageBox::critical(this->mainWindow(), tr("Error"),
+                        QMessageBox::critical(MainWindow::instance(), tr("Error"),
                                               tr("Failed to shut down vApp '%1':\n%2")
                                                   .arg(appliance->GetName(), action->GetErrorMessage()));
                     }
@@ -323,7 +323,7 @@ void VappShutDownCommand::Run()
         applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Not in vApp"),
+            QMessageBox::warning(MainWindow::instance(), tr("Not in vApp"),
                                  tr("Selected VM is not part of a VM appliance"));
             return;
         }
@@ -358,13 +358,13 @@ void VappShutDownCommand::Run()
     // Validate before shutting down
     if (!this->canShutDownAppliance(appliance))
     {
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Shut Down vApp"), tr("VM appliance '%1' cannot be shut down").arg(appName));
+        QMessageBox::warning(MainWindow::instance(), tr("Cannot Shut Down vApp"), tr("VM appliance '%1' cannot be shut down").arg(appName));
         return;
     }
 
     // Confirm shutdown with user
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
+        MainWindow::instance(),
         tr("Shut Down vApp"),
         tr("Are you sure you want to shut down vApp '%1'?\n\n"
            "All VMs in the appliance will be shut down gracefully.")
@@ -379,25 +379,25 @@ void VappShutDownCommand::Run()
     // Get connection
     if (!connection->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+        QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
     // Create and start action (uses clean shutdown by default)
-    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, this->mainWindow());
+    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, MainWindow::instance());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
-    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
+    connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {
-            this->mainWindow()->ShowStatusMessage(tr("vApp '%1' shut down successfully").arg(appName), 5000);
+            MainWindow::instance()->ShowStatusMessage(tr("vApp '%1' shut down successfully").arg(appName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to shut down vApp '%1':\n%2").arg(appName, action->GetErrorMessage()));
+            QMessageBox::critical(MainWindow::instance(), tr("Error"), tr("Failed to shut down vApp '%1':\n%2").arg(appName, action->GetErrorMessage()));
         }
 
         // Auto-delete when complete

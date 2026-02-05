@@ -147,7 +147,7 @@ void DetachSRCommand::Run()
                                   "Some storage repositories cannot be detached.",
                                   cantRunReasons,
                                   mode,
-                                  this->mainWindow());
+                                  MainWindow::instance());
         if (dialog.exec() != QDialog::Accepted || runnable.isEmpty())
             return;
     }
@@ -162,7 +162,7 @@ void DetachSRCommand::Run()
         : "Are you sure you want to detach the selected storage repositories?";
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
     msgBox.setInformativeText("This will disconnect the storage repository from all hosts in the pool.\n"
@@ -189,7 +189,7 @@ void DetachSRCommand::Run()
         XenConnection* conn = sr->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
+            QMessageBox::warning(MainWindow::instance(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
@@ -198,7 +198,7 @@ void DetachSRCommand::Run()
 
         OperationManager::instance()->RegisterOperation(action);
 
-        QPointer<MainWindow> mainWindow = this->mainWindow();
+        QPointer<MainWindow> mainWindow = MainWindow::instance();
         connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]()
         {
             if (!mainWindow)
@@ -229,7 +229,7 @@ void DetachSRCommand::Run()
     {
         QString srRef = sr->OpaqueRef();
         QString srName = sr->GetName().isEmpty() ? srRef : sr->GetName();
-        DetachSrAction* action = new DetachSrAction(sr->GetConnection(), srRef, srName, false, this->mainWindow());
+        DetachSrAction* action = new DetachSrAction(sr->GetConnection(), srRef, srName, false, MainWindow::instance());
         actions.append(action);
     }
 

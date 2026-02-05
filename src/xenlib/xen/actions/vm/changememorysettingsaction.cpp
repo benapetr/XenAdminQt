@@ -82,7 +82,7 @@ void ChangeMemorySettingsAction::run()
 
         // Save host affinity for restart
         QString residentOn = this->m_vm->GetResidentOnRef();
-        if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
+        if (!residentOn.isEmpty() && residentOn != XENOBJECT_NULL)
         {
             this->m_vmHost = residentOn;
         }

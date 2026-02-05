@@ -30,10 +30,7 @@
 #include "../xencache.h"
 #include "pif.h"
 
-VLAN::VLAN(XenConnection* connection,
-           const QString& opaqueRef,
-           QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VLAN::VLAN(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -59,11 +56,9 @@ QSharedPointer<PIF> VLAN::GetTaggedPIF() const
         return QSharedPointer<PIF>();
     
     XenCache* cache = connection->GetCache();
-    if (!cache)
-        return QSharedPointer<PIF>();
     
     QString ref = this->GetTaggedPIFRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<PIF>();
     
     return cache->ResolveObject<PIF>(ref);
@@ -76,11 +71,9 @@ QSharedPointer<PIF> VLAN::GetUntaggedPIF() const
         return QSharedPointer<PIF>();
     
     XenCache* cache = connection->GetCache();
-    if (!cache)
-        return QSharedPointer<PIF>();
-    
+
     QString ref = this->GetUntaggedPIFRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<PIF>();
     
     return cache->ResolveObject<PIF>(ref);

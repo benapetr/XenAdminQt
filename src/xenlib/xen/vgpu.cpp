@@ -97,13 +97,13 @@ bool VGPU::IsAttached() const
 bool VGPU::IsResident() const
 {
     QString resident = this->ResidentOnRef();
-    return !resident.isEmpty() && resident != "OpaqueRef:NULL";
+    return !resident.isEmpty() && resident != XENOBJECT_NULL;
 }
 
 bool VGPU::HasScheduledLocation() const
 {
     QString scheduled = this->ScheduledToBeResidentOnRef();
-    return !scheduled.isEmpty() && scheduled != "OpaqueRef:NULL";
+    return !scheduled.isEmpty() && scheduled != XENOBJECT_NULL;
 }
 
 QSharedPointer<VM> VGPU::GetVM() const
@@ -117,7 +117,7 @@ QSharedPointer<VM> VGPU::GetVM() const
         return QSharedPointer<VM>();
 
     QString vmRef = this->GetVMRef();
-    if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
+    if (vmRef.isEmpty() || vmRef == XENOBJECT_NULL)
         return QSharedPointer<VM>();
 
     return cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
@@ -134,7 +134,7 @@ QSharedPointer<GPUGroup> VGPU::GetGPUGroup() const
         return QSharedPointer<GPUGroup>();
 
     QString ref = this->GetGPUGroupRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<GPUGroup>();
 
     return cache->ResolveObject<GPUGroup>(ref);
@@ -151,7 +151,7 @@ QSharedPointer<PCI> VGPU::GetPCI() const
         return QSharedPointer<PCI>();
 
     QString pciRef = this->GetPCIRef();
-    if (pciRef.isEmpty() || pciRef == "OpaqueRef:NULL")
+    if (pciRef.isEmpty() || pciRef == XENOBJECT_NULL)
         return QSharedPointer<PCI>();
 
     return cache->ResolveObject<PCI>(pciRef);

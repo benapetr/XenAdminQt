@@ -121,7 +121,7 @@ void CrossPoolMigrateCommand::Run()
     if (vms.isEmpty())
         return;
 
-    CrossPoolMigrateWizard wizard(this->mainWindow(), vms, m_mode, m_resumeAfterMigrate);
+    CrossPoolMigrateWizard wizard(MainWindow::instance(), vms, m_mode, m_resumeAfterMigrate);
     wizard.exec();
 }
 

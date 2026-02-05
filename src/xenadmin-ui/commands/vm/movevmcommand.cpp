@@ -62,12 +62,12 @@ void MoveVMCommand::Run()
     if (this->canLaunchCrossPoolWizard())
     {
         CrossPoolMigrateWizard::WizardMode mode = CrossPoolMoveVMCommand::GetWizardMode(vm);
-        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, mode);
+        CrossPoolMigrateWizard wizard(MainWindow::instance(), vm, mode);
         wizard.exec();
         return;
     }
 
-    MoveVMDialog dialog(vm, this->mainWindow());
+    MoveVMDialog dialog(vm, MainWindow::instance());
     dialog.exec();
 }
 
@@ -103,6 +103,6 @@ bool MoveVMCommand::canLaunchCrossPoolWizard() const
     if (!vm)
         return false;
 
-    CrossPoolMoveVMCommand crossPoolCmd(this->mainWindow(), this->mainWindow());
+    CrossPoolMoveVMCommand crossPoolCmd(MainWindow::instance(), MainWindow::instance());
     return crossPoolCmd.CanRun();
 }

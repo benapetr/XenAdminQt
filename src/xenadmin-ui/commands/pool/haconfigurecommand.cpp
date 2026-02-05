@@ -61,13 +61,13 @@ void HAConfigureCommand::Run()
     if (pool->HAEnabled())
     {
         // HA is already enabled - show edit dialog to modify priorities
-        EditVmHaPrioritiesDialog dialog(pool, this->mainWindow());
+        EditVmHaPrioritiesDialog dialog(pool, MainWindow::instance());
         dialog.exec();
         return;
     }
 
     // Launch HA wizard to enable HA
-    HAWizard wizard(pool, this->mainWindow());
+    HAWizard wizard(pool, MainWindow::instance());
     wizard.exec();
 }
 

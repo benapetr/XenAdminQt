@@ -222,12 +222,12 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
 
     if (deletableVms.isEmpty())
     {
-        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, this->mainWindow());
+        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, MainWindow::instance());
         dialog.exec();
         return;
     }
 
-    ConfirmVMDeleteDialog dialog(selected, this->mainWindow());
+    ConfirmVMDeleteDialog dialog(selected, MainWindow::instance());
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -250,7 +250,7 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
         if (!action)
             return;
 
-        QPointer<MainWindow> mw = this->mainWindow();
+        QPointer<MainWindow> mw = MainWindow::instance();
         const QString vmName = deletableVms.first()->GetName();
 
         OperationManager::instance()->RegisterOperation(action);
@@ -287,7 +287,7 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
 
     if (!cantRunReasons.isEmpty())
     {
-        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, this->mainWindow());
+        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, MainWindow::instance());
         dialog.exec();
     }
 }

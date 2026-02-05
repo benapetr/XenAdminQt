@@ -47,7 +47,7 @@ QSharedPointer<Host> PBD::GetHost()
     if (!this->GetConnection() || host_ref.isEmpty() || host_ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
 
-    return this->GetCache()->ResolveObject<Host>(XenObjectType::Host, host_ref);
+    return this->GetCache()->ResolveObject<Host>(host_ref);
 }
 
 QString PBD::GetSRRef() const

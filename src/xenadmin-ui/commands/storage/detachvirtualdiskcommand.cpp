@@ -187,7 +187,7 @@ void DetachVirtualDiskCommand::Run()
         confirmText = QString("Are you sure you want to detach virtual disk '%1'?").arg(vdiName);
     }
 
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
     msgBox.setIcon(QMessageBox::Warning);
@@ -248,7 +248,7 @@ void DetachVirtualDiskCommand::Run()
     if (actions.isEmpty())
     {
         QMessageBox::warning(
-            this->mainWindow(),
+            MainWindow::instance(),
             "Detach Virtual Disk",
             QString("No VBDs found to detach for virtual disk '%1'").arg(vdiName));
         return;
