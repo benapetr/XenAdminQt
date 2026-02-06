@@ -53,6 +53,7 @@ struct PowerOnMode
     QString ipAddress;
     QString username;
     QString password;
+    QString passwordSecretUuid;
     QMap<QString, QString> customConfig;
 
     PowerOnMode() : type(Disabled) {}

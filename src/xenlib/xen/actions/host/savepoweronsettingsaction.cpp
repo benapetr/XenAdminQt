@@ -32,8 +32,10 @@
 #include "../../host.h"
 #include "../../api.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../xenapi/xenapi_Secret.h"
 #include "../../../xencache.h"
 #include "../../../utils/misc.h"
+#include "../../apiversion.h"
 #include <QDebug>
 
 using namespace XenAPI;
@@ -81,6 +83,7 @@ SavePowerOnSettingsAction::SavePowerOnSettingsAction(XenConnection* connection,
     AddApiMethodToRoleCheck("pool.send_wlb_configuration");
     AddApiMethodToRoleCheck("secret.create");
     AddApiMethodToRoleCheck("secret.get_uuid");
+    AddApiMethodToRoleCheck("secret.get_by_uuid");
     AddApiMethodToRoleCheck("secret.destroy");
 }
 
@@ -124,39 +127,56 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     XenConnection* conn = this->GetConnection();
     Session* session = conn->GetSession();
     XenRpcAPI api(session);
-    
+
     QString modeString = mode.toString();
     QMap<QString, QString> config;
-    
+    QString createdSecretUuid;
+
+    if (modeString == "iLO" && session->ApiVersionMeets(APIVersion::API_2_15))
+    {
+        // C# fallback: iLO is unsupported on Stockholm+, so force disabled.
+        modeString.clear();
+    }
+
     // Build configuration based on mode type
-    if (mode.type == PowerOnMode::iLO || mode.type == PowerOnMode::DRAC)
+    if (!modeString.isEmpty() && (mode.type == PowerOnMode::iLO || mode.type == PowerOnMode::DRAC))
     {
         config["power_on_ip"] = mode.ipAddress;
         config["power_on_user"] = mode.username;
-        
+
         if (!mode.password.isEmpty())
         {
-            // Create secret for password
-            QString secretUuid = this->createSecret(mode.password);
-            config["power_on_password_secret"] = secretUuid;
+            createdSecretUuid = this->createSecret(mode.password);
+            config["power_on_password_secret"] = createdSecretUuid;
+        } else if (!mode.passwordSecretUuid.isEmpty())
+        {
+            config["power_on_password_secret"] = mode.passwordSecretUuid;
         }
-    } else if (mode.type == PowerOnMode::Custom)
+    } else if (!modeString.isEmpty() && mode.type == PowerOnMode::Custom)
     {
         // Copy custom config
         for (auto it = mode.customConfig.begin(); it != mode.customConfig.end(); ++it)
         {
             config[it.key()] = it.value();
         }
-        
-        // Check if password secret is needed
+
         if (config.contains("power_on_password_secret"))
         {
             QString password = config["power_on_password_secret"];
-            QString secretUuid = this->createSecret(password);
-            config["power_on_password_secret"] = secretUuid;
+            if (!password.isEmpty() && password != mode.passwordSecretUuid)
+            {
+                createdSecretUuid = this->createSecret(password);
+                config["power_on_password_secret"] = createdSecretUuid;
+            } else if (password.isEmpty() && !mode.passwordSecretUuid.isEmpty())
+            {
+                config["power_on_password_secret"] = mode.passwordSecretUuid;
+            }
+        } else if (!mode.passwordSecretUuid.isEmpty())
+        {
+            config["power_on_password_secret"] = mode.passwordSecretUuid;
         }
     }
-    
+
     // Convert QMap to QVariantMap for API call
     QVariantMap configMap;
     for (auto it = config.begin(); it != config.end(); ++it)
@@ -171,18 +191,34 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     params << modeString;
     params << configMap;
     
-    QByteArray request = api.BuildJsonRpcCall("host.set_power_on_mode", params);
-    QByteArray response = conn->SendRequest(request);
-    
-    QVariant result = api.ParseJsonRpcResponse(response);
-    if (Misc::QVariantIsMap(result))
+    try
     {
-        QVariantMap resultMap = result.toMap();
-        if (resultMap.value("Status").toString() != "Success")
+        QByteArray request = api.BuildJsonRpcCall("host.set_power_on_mode", params);
+        QByteArray response = conn->SendRequest(request);
+        QVariant result = api.ParseJsonRpcResponse(response);
+        if (Misc::QVariantIsMap(result))
         {
-            QString error = resultMap.value("ErrorDescription").toStringList().join(": ");
-            throw std::runtime_error(error.toStdString());
+            QVariantMap resultMap = result.toMap();
+            if (resultMap.value("Status").toString() != "Success")
+            {
+                QString error = resultMap.value("ErrorDescription").toStringList().join(": ");
+                throw std::runtime_error(error.toStdString());
+            }
         }
+    } catch (...) {
+        if (!createdSecretUuid.isEmpty())
+        {
+            try
+            {
+                const QString secretRef = XenAPI::Secret::get_by_uuid(session, createdSecretUuid);
+                if (!secretRef.isEmpty())
+                    this->destroySecret(secretRef);
+            }
+            catch (...)
+            {
+            }
+        }
+        throw;
     }
 
     if (modeString.isEmpty() && conn->GetCache())

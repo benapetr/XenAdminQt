@@ -29,6 +29,7 @@
 #define PERFMONALERTEDITPAGE_H
 
 #include "ieditpage.h"
+#include <QMap>
 #include <QVariantMap>
 
 class AsyncOperation;
@@ -38,12 +39,6 @@ namespace Ui
     class PerfmonAlertEditPage;
 }
 
-/**
- * @brief Performance monitoring alerts configuration page
- *
- * Matches C# XenAdmin.SettingsPanels.PerfmonAlertEditPage (simplified)
- * Allows configuring CPU and memory usage alerts
- */
 class PerfmonAlertEditPage : public IEditPage
 {
     Q_OBJECT
@@ -52,7 +47,6 @@ class PerfmonAlertEditPage : public IEditPage
         explicit PerfmonAlertEditPage(QWidget* parent = nullptr);
         ~PerfmonAlertEditPage() override;
 
-        // IEditPage interface
         QString GetText() const override;
         QString GetSubText() const override;
         QIcon GetImage() const override;
@@ -72,13 +66,33 @@ class PerfmonAlertEditPage : public IEditPage
     private:
         struct AlertConfig
         {
-            bool enabled;
-            double threshold;
-            int duration;
+            bool enabled = false;
+            double threshold = 0.0;
+            int durationSeconds = 0;
+            int intervalSeconds = 0;
         };
 
-        AlertConfig getAlertConfig(const QVariantMap& otherConfig, const QString& prefix) const;
-        void setAlertConfig(QVariantMap& otherConfig, const QString& prefix, const AlertConfig& config);
+        QMap<QString, AlertConfig> parsePerfmonDefinitions(const QString& perfmonXml) const;
+        QString buildPerfmonXml(const QMap<QString, AlertConfig>& definitions) const;
+
+        AlertConfig getAlert(const QMap<QString, AlertConfig>& definitions, const QString& perfmonName) const;
+        void setAlert(QMap<QString, AlertConfig>& definitions, const QString& perfmonName, const AlertConfig& config) const;
+
+        AlertConfig readCpuAlertFromUi() const;
+        AlertConfig readNetworkAlertFromUi() const;
+        AlertConfig readDiskAlertFromUi() const;
+        AlertConfig readSrAlertFromUi() const;
+        AlertConfig readMemoryAlertFromUi() const;
+        AlertConfig readDom0AlertFromUi() const;
+
+        void setCpuAlertToUi(const AlertConfig& config);
+        void setNetworkAlertToUi(const AlertConfig& config);
+        void setDiskAlertToUi(const AlertConfig& config);
+        void setSrAlertToUi(const AlertConfig& config);
+        void setMemoryAlertToUi(const AlertConfig& config);
+        void setDom0AlertToUi(const AlertConfig& config);
+
+        void configureVisibilityByObjectType();
 
         Ui::PerfmonAlertEditPage* ui;
         QString m_objectRef;
@@ -86,9 +100,12 @@ class PerfmonAlertEditPage : public IEditPage
         QVariantMap m_objectDataBefore;
         QVariantMap m_objectDataCopy;
 
-        // Original alert configurations
         AlertConfig m_origCPUAlert;
+        AlertConfig m_origNetworkAlert;
+        AlertConfig m_origDiskAlert;
+        AlertConfig m_origSrAlert;
         AlertConfig m_origMemoryAlert;
+        AlertConfig m_origDom0Alert;
 };
 
 #endif // PERFMONALERTEDITPAGE_H

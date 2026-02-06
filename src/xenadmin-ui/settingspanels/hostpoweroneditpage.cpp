@@ -28,6 +28,11 @@
 #include "hostpoweroneditpage.h"
 #include "ui_hostpoweroneditpage.h"
 #include "xenlib/xen/actions/host/savepoweronsettingsaction.h"
+#include "xenlib/xen/api.h"
+#include "xenlib/xen/xenapi/xenapi_Secret.h"
+#include "xenlib/xen/apiversion.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
 #include <QMessageBox>
 #include <QHostAddress>
 #include <QTableWidgetItem>
@@ -69,13 +74,13 @@ namespace
             mode.type = PowerOnMode::iLO;
             mode.ipAddress = powerOnConfig.value("power_on_ip").toString();
             mode.username = powerOnConfig.value("power_on_user").toString();
-            // Password is stored as secret ref, not directly readable
+            mode.passwordSecretUuid = powerOnConfig.value("power_on_password_secret").toString();
         } else if (powerOnModeStr == "DRAC")
         {
             mode.type = PowerOnMode::DRAC;
             mode.ipAddress = powerOnConfig.value("power_on_ip").toString();
             mode.username = powerOnConfig.value("power_on_user").toString();
-            // Password is stored as secret ref, not directly readable
+            mode.passwordSecretUuid = powerOnConfig.value("power_on_password_secret").toString();
         } else
         {
             mode.type = PowerOnMode::Custom;
@@ -85,6 +90,7 @@ namespace
             {
                 mode.customConfig[it.key()] = it.value().toString();
             }
+            mode.passwordSecretUuid = powerOnConfig.value("power_on_password_secret").toString();
         }
         
         return mode;
@@ -167,6 +173,62 @@ void HostPowerONEditPage::SetXenObjects(const QString& objectRef,
     
     this->m_originalMode = powerOnModeFromHostData(powerOnConfig, powerOnModeStr);
     this->m_currentMode = this->m_originalMode;
+
+    // C# Host.PowerOnMode.Load resolves password secrets when available.
+    if (this->connection() && this->connection()->GetSession())
+    {
+        auto loadSecret = [this](PowerOnMode& mode)
+        {
+            if (mode.passwordSecretUuid.isEmpty())
+                return;
+            try
+            {
+                QString secretRef = XenAPI::Secret::get_by_uuid(this->connection()->GetSession(), mode.passwordSecretUuid);
+                if (!secretRef.isEmpty())
+                {
+                    XenRpcAPI api(this->connection()->GetSession());
+                    QVariantList params;
+                    params << this->connection()->GetSession()->GetSessionID() << secretRef;
+                    QByteArray request = api.BuildJsonRpcCall("secret.get_value", params);
+                    QByteArray response = this->connection()->SendRequest(request);
+                    mode.password = api.ParseJsonRpcResponse(response).toString();
+                }
+            }
+            catch (...)
+            {
+                // Keep empty password if secret cannot be read.
+                mode.password.clear();
+            }
+        };
+        loadSecret(this->m_originalMode);
+        loadSecret(this->m_currentMode);
+    }
+
+    // C# defensively disables iLO on Stockholm+.
+    if (this->connection() && this->connection()->GetSession() &&
+        this->connection()->GetSession()->ApiVersionMeets(APIVersion::API_2_15))
+    {
+        this->ui->radioILO->setVisible(false);
+        if (this->m_currentMode.type == PowerOnMode::iLO)
+        {
+            this->m_currentMode.type = PowerOnMode::Disabled;
+            this->m_currentMode.ipAddress.clear();
+            this->m_currentMode.username.clear();
+            this->m_currentMode.password.clear();
+            this->m_currentMode.passwordSecretUuid.clear();
+        }
+        if (this->m_originalMode.type == PowerOnMode::iLO)
+        {
+            this->m_originalMode.type = PowerOnMode::Disabled;
+            this->m_originalMode.ipAddress.clear();
+            this->m_originalMode.username.clear();
+            this->m_originalMode.password.clear();
+            this->m_originalMode.passwordSecretUuid.clear();
+        }
+    } else
+    {
+        this->ui->radioILO->setVisible(true);
+    }
     
     // Update UI to show current mode
     this->m_programmaticUpdate = true;
@@ -402,7 +464,12 @@ void HostPowerONEditPage::updateModeFromCredentials()
     if (this->m_currentMode.type == PowerOnMode::iLO || this->m_currentMode.type == PowerOnMode::DRAC) {
         this->m_currentMode.ipAddress = this->ui->textInterface->text();
         this->m_currentMode.username = this->ui->textUser->text();
-        this->m_currentMode.password = this->ui->textPassword->text();
+        const QString newPassword = this->ui->textPassword->text();
+        if (!newPassword.isEmpty())
+        {
+            this->m_currentMode.password = newPassword;
+            this->m_currentMode.passwordSecretUuid.clear();
+        }
     }
 }
 
@@ -414,6 +481,7 @@ void HostPowerONEditPage::updateModeFromCustom()
         
         // Update custom config from table
         this->m_currentMode.customConfig.clear();
+        this->m_currentMode.passwordSecretUuid.clear();
         for (int row = 0; row < this->ui->tableCustomParams->rowCount(); ++row)
         {
             QTableWidgetItem* keyItem = this->ui->tableCustomParams->item(row, 0);
@@ -425,7 +493,11 @@ void HostPowerONEditPage::updateModeFromCustom()
                 QString value = valueItem->text().trimmed();
                 
                 if (!key.isEmpty() && !value.isEmpty())
+                {
                     this->m_currentMode.customConfig[key] = value;
+                    if (key == "power_on_password_secret")
+                        this->m_currentMode.passwordSecretUuid = value;
+                }
             }
         }
     }

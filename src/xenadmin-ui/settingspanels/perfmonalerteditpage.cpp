@@ -31,6 +31,36 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/api.h"
+#include <QDomDocument>
+#include <QSet>
+#include <QXmlStreamWriter>
+#include <QtMath>
+
+namespace
+{
+    static const QString PERFMON_KEY = QStringLiteral("perfmon");
+    static const QString PERFMON_CPU = QStringLiteral("cpu_usage");
+    static const QString PERFMON_NETWORK = QStringLiteral("network_usage");
+    static const QString PERFMON_DISK = QStringLiteral("disk_usage");
+    static const QString PERFMON_MEMORY_FREE = QStringLiteral("memory_free_kib");
+    static const QString PERFMON_DOM0_MEMORY = QStringLiteral("mem_usage");
+    static const QString PERFMON_SR = QStringLiteral("sr_io_throughput_total_per_host");
+
+    bool almostEqual(double a, double b)
+    {
+        return qAbs(a - b) < 0.0001;
+    }
+
+    int toMinutes(int seconds)
+    {
+        return seconds > 0 ? qMax(1, seconds / 60) : 5;
+    }
+
+    int toSeconds(int minutes)
+    {
+        return qMax(1, minutes) * 60;
+    }
+}
 
 PerfmonAlertEditPage::PerfmonAlertEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::PerfmonAlertEditPage)
 {
@@ -44,29 +74,27 @@ PerfmonAlertEditPage::~PerfmonAlertEditPage()
 
 QString PerfmonAlertEditPage::GetText() const
 {
-    return tr("Alerts");
+    return tr("Performance Alerts");
 }
 
 QString PerfmonAlertEditPage::GetSubText() const
 {
-    QStringList alerts;
+    QStringList subs;
 
-    if (this->ui->groupBoxCPU->isChecked())
-    {
-        alerts << tr("CPU: %1%%").arg(this->ui->spinBoxCPUThreshold->value());
-    }
+    if (this->ui->groupBoxCPU->isVisible() && this->ui->groupBoxCPU->isChecked())
+        subs << tr("CPU");
+    if (this->ui->groupBoxNetwork->isVisible() && this->ui->groupBoxNetwork->isChecked())
+        subs << tr("Network");
+    if (this->ui->groupBoxMemory->isVisible() && this->ui->groupBoxMemory->isChecked())
+        subs << tr("Memory");
+    if (this->ui->groupBoxDom0Memory->isVisible() && this->ui->groupBoxDom0Memory->isChecked())
+        subs << tr("Dom0 Memory");
+    if (this->ui->groupBoxDisk->isVisible() && this->ui->groupBoxDisk->isChecked())
+        subs << tr("Disk");
+    if (this->ui->groupBoxSr->isVisible() && this->ui->groupBoxSr->isChecked())
+        subs << tr("Storage Throughput");
 
-    if (this->ui->groupBoxMemory->isChecked())
-    {
-        alerts << tr("Memory: %1 MB").arg(this->ui->spinBoxMemoryThreshold->value());
-    }
-
-    if (alerts.isEmpty())
-    {
-        return tr("No alerts configured");
-    }
-
-    return alerts.join(", ");
+    return subs.isEmpty() ? tr("None") : subs.join(", ");
 }
 
 QIcon PerfmonAlertEditPage::GetImage() const
@@ -74,55 +102,70 @@ QIcon PerfmonAlertEditPage::GetImage() const
     return QIcon(":/icons/alert_16.png");
 }
 
-void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef,
+                                         const QString& objectType,
+                                         const QVariantMap& objectDataBefore,
+                                         const QVariantMap& objectDataCopy)
 {
     this->m_objectRef = objectRef;
-    this->m_objectType = objectType;
+    this->m_objectType = objectType.toLower();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
-    QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
+    this->configureVisibilityByObjectType();
 
-    // Load CPU alert configuration
-    this->m_origCPUAlert = this->getAlertConfig(otherConfig, "perfmon_cpu");
-    this->ui->groupBoxCPU->setChecked(this->m_origCPUAlert.enabled);
-    this->ui->spinBoxCPUThreshold->setValue(this->m_origCPUAlert.threshold * 100); // Convert fraction to percentage
-    this->ui->spinBoxCPUDuration->setValue(this->m_origCPUAlert.duration / 60);    // Convert seconds to minutes
+    const QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
+    const QString perfmonXml = otherConfig.value(PERFMON_KEY).toString();
+    const QMap<QString, AlertConfig> defs = this->parsePerfmonDefinitions(perfmonXml);
 
-    // Load memory alert configuration
-    this->m_origMemoryAlert = this->getAlertConfig(otherConfig, "perfmon_memory_free");
-    this->ui->groupBoxMemory->setChecked(this->m_origMemoryAlert.enabled);
-    this->ui->spinBoxMemoryThreshold->setValue(this->m_origMemoryAlert.threshold / 1024); // Convert KiB to MB
-    this->ui->spinBoxMemoryDuration->setValue(this->m_origMemoryAlert.duration / 60);     // Convert seconds to minutes
+    this->m_origCPUAlert = this->getAlert(defs, PERFMON_CPU);
+    this->m_origNetworkAlert = this->getAlert(defs, PERFMON_NETWORK);
+    this->m_origDiskAlert = this->getAlert(defs, PERFMON_DISK);
+    this->m_origSrAlert = this->getAlert(defs, PERFMON_SR);
+    this->m_origMemoryAlert = this->getAlert(defs, PERFMON_MEMORY_FREE);
+    this->m_origDom0Alert = this->getAlert(defs, PERFMON_DOM0_MEMORY);
+
+    this->setCpuAlertToUi(this->m_origCPUAlert);
+    this->setNetworkAlertToUi(this->m_origNetworkAlert);
+    this->setDiskAlertToUi(this->m_origDiskAlert);
+    this->setSrAlertToUi(this->m_origSrAlert);
+    this->setMemoryAlertToUi(this->m_origMemoryAlert);
+    this->setDom0AlertToUi(this->m_origDom0Alert);
 }
 
 AsyncOperation* PerfmonAlertEditPage::SaveSettings()
 {
     if (!this->HasChanged())
-    {
         return nullptr;
-    }
 
-    // Update objectDataCopy with new alert configurations
     QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
+    QMap<QString, AlertConfig> defs = this->parsePerfmonDefinitions(otherConfig.value(PERFMON_KEY).toString());
 
-    // CPU alert
-    AlertConfig cpuAlert;
-    cpuAlert.enabled = this->ui->groupBoxCPU->isChecked();
-    cpuAlert.threshold = this->ui->spinBoxCPUThreshold->value() / 100.0; // Convert percentage to fraction
-    cpuAlert.duration = this->ui->spinBoxCPUDuration->value() * 60;      // Convert minutes to seconds
-    this->setAlertConfig(otherConfig, "perfmon_cpu", cpuAlert);
+    const QSet<QString> managed = {PERFMON_CPU, PERFMON_NETWORK, PERFMON_DISK, PERFMON_SR, PERFMON_MEMORY_FREE, PERFMON_DOM0_MEMORY};
+    for (const QString& key : managed)
+        defs.remove(key);
 
-    // Memory alert
-    AlertConfig memoryAlert;
-    memoryAlert.enabled = this->ui->groupBoxMemory->isChecked();
-    memoryAlert.threshold = this->ui->spinBoxMemoryThreshold->value() * 1024; // Convert MB to KiB
-    memoryAlert.duration = this->ui->spinBoxMemoryDuration->value() * 60;     // Convert minutes to seconds
-    this->setAlertConfig(otherConfig, "perfmon_memory_free", memoryAlert);
+    if (this->ui->groupBoxCPU->isVisible())
+        this->setAlert(defs, PERFMON_CPU, this->readCpuAlertFromUi());
+    if (this->ui->groupBoxNetwork->isVisible())
+        this->setAlert(defs, PERFMON_NETWORK, this->readNetworkAlertFromUi());
+    if (this->ui->groupBoxDisk->isVisible())
+        this->setAlert(defs, PERFMON_DISK, this->readDiskAlertFromUi());
+    if (this->ui->groupBoxSr->isVisible())
+        this->setAlert(defs, PERFMON_SR, this->readSrAlertFromUi());
+    if (this->ui->groupBoxMemory->isVisible())
+        this->setAlert(defs, PERFMON_MEMORY_FREE, this->readMemoryAlertFromUi());
+    if (this->ui->groupBoxDom0Memory->isVisible())
+        this->setAlert(defs, PERFMON_DOM0_MEMORY, this->readDom0AlertFromUi());
+
+    const QString perfmonXml = this->buildPerfmonXml(defs);
+    if (perfmonXml.isEmpty())
+        otherConfig.remove(PERFMON_KEY);
+    else
+        otherConfig[PERFMON_KEY] = perfmonXml;
 
     this->m_objectDataCopy["other_config"] = otherConfig;
 
-    // Return inline AsyncOperation
     class PerfmonAlertOperation : public AsyncOperation
     {
         public:
@@ -134,7 +177,8 @@ AsyncOperation* PerfmonAlertEditPage::SaveSettings()
                 : AsyncOperation(conn, tr("Update Performance Alerts"),
                                  tr("Updating performance alert configuration..."), parent),
                   m_objectRef(objectRef), m_objectType(objectType), m_otherConfig(otherConfig)
-            {}
+            {
+            }
 
         protected:
             void run() override
@@ -143,13 +187,12 @@ AsyncOperation* PerfmonAlertEditPage::SaveSettings()
 
                 SetPercentComplete(30);
 
-                // Build method name based on object type
                 QString methodName = m_objectType + ".set_other_config";
-
                 QVariantList params;
                 params << GetConnection()->GetSessionId() << this->m_objectRef << this->m_otherConfig;
                 QByteArray request = api.BuildJsonRpcCall(methodName, params);
-                GetConnection()->SendRequest(request);
+                QByteArray response = GetConnection()->SendRequest(request);
+                api.ParseJsonRpcResponse(response);
 
                 SetPercentComplete(100);
             }
@@ -170,90 +213,303 @@ bool PerfmonAlertEditPage::IsValidToSave() const
 
 void PerfmonAlertEditPage::ShowLocalValidationMessages()
 {
-    // No validation needed
 }
 
 void PerfmonAlertEditPage::HideLocalValidationMessages()
 {
-    // No validation messages
 }
 
 void PerfmonAlertEditPage::Cleanup()
 {
-    // Nothing to clean up
 }
 
 bool PerfmonAlertEditPage::HasChanged() const
 {
-    // Check CPU alert
-    AlertConfig currentCPU;
-    currentCPU.enabled = this->ui->groupBoxCPU->isChecked();
-    currentCPU.threshold = this->ui->spinBoxCPUThreshold->value() / 100.0;
-    currentCPU.duration = this->ui->spinBoxCPUDuration->value() * 60;
-
-    if (currentCPU.enabled != this->m_origCPUAlert.enabled ||
-        qAbs(currentCPU.threshold - this->m_origCPUAlert.threshold) > 0.01 ||
-        currentCPU.duration != this->m_origCPUAlert.duration)
+    if (this->ui->groupBoxCPU->isVisible())
     {
-        return true;
+        const AlertConfig cur = this->readCpuAlertFromUi();
+        if (cur.enabled != this->m_origCPUAlert.enabled ||
+            !almostEqual(cur.threshold, this->m_origCPUAlert.threshold) ||
+            cur.durationSeconds != this->m_origCPUAlert.durationSeconds ||
+            cur.intervalSeconds != this->m_origCPUAlert.intervalSeconds)
+            return true;
     }
 
-    // Check memory alert
-    AlertConfig currentMemory;
-    currentMemory.enabled = this->ui->groupBoxMemory->isChecked();
-    currentMemory.threshold = this->ui->spinBoxMemoryThreshold->value() * 1024;
-    currentMemory.duration = this->ui->spinBoxMemoryDuration->value() * 60;
-
-    if (currentMemory.enabled != this->m_origMemoryAlert.enabled ||
-        qAbs(currentMemory.threshold - this->m_origMemoryAlert.threshold) > 0.01 ||
-        currentMemory.duration != this->m_origMemoryAlert.duration)
+    if (this->ui->groupBoxNetwork->isVisible())
     {
-        return true;
+        const AlertConfig cur = this->readNetworkAlertFromUi();
+        if (cur.enabled != this->m_origNetworkAlert.enabled ||
+            !almostEqual(cur.threshold, this->m_origNetworkAlert.threshold) ||
+            cur.durationSeconds != this->m_origNetworkAlert.durationSeconds ||
+            cur.intervalSeconds != this->m_origNetworkAlert.intervalSeconds)
+            return true;
+    }
+
+    if (this->ui->groupBoxDisk->isVisible())
+    {
+        const AlertConfig cur = this->readDiskAlertFromUi();
+        if (cur.enabled != this->m_origDiskAlert.enabled ||
+            !almostEqual(cur.threshold, this->m_origDiskAlert.threshold) ||
+            cur.durationSeconds != this->m_origDiskAlert.durationSeconds ||
+            cur.intervalSeconds != this->m_origDiskAlert.intervalSeconds)
+            return true;
+    }
+
+    if (this->ui->groupBoxSr->isVisible())
+    {
+        const AlertConfig cur = this->readSrAlertFromUi();
+        if (cur.enabled != this->m_origSrAlert.enabled ||
+            !almostEqual(cur.threshold, this->m_origSrAlert.threshold) ||
+            cur.durationSeconds != this->m_origSrAlert.durationSeconds ||
+            cur.intervalSeconds != this->m_origSrAlert.intervalSeconds)
+            return true;
+    }
+
+    if (this->ui->groupBoxMemory->isVisible())
+    {
+        const AlertConfig cur = this->readMemoryAlertFromUi();
+        if (cur.enabled != this->m_origMemoryAlert.enabled ||
+            !almostEqual(cur.threshold, this->m_origMemoryAlert.threshold) ||
+            cur.durationSeconds != this->m_origMemoryAlert.durationSeconds ||
+            cur.intervalSeconds != this->m_origMemoryAlert.intervalSeconds)
+            return true;
+    }
+
+    if (this->ui->groupBoxDom0Memory->isVisible())
+    {
+        const AlertConfig cur = this->readDom0AlertFromUi();
+        if (cur.enabled != this->m_origDom0Alert.enabled ||
+            !almostEqual(cur.threshold, this->m_origDom0Alert.threshold) ||
+            cur.durationSeconds != this->m_origDom0Alert.durationSeconds ||
+            cur.intervalSeconds != this->m_origDom0Alert.intervalSeconds)
+            return true;
     }
 
     return false;
 }
 
-PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::getAlertConfig(
-    const QVariantMap& otherConfig, const QString& prefix) const
+QMap<QString, PerfmonAlertEditPage::AlertConfig> PerfmonAlertEditPage::parsePerfmonDefinitions(const QString& perfmonXml) const
 {
-    AlertConfig config;
-    config.enabled = false;
-    config.threshold = 0.0;
-    config.duration = 0;
+    QMap<QString, AlertConfig> defs;
+    if (perfmonXml.trimmed().isEmpty())
+        return defs;
 
-    // Check if alert is configured (has trigger_level key)
-    QString triggerKey = "perfmon_" + prefix + "_trigger_level";
-    if (otherConfig.contains(triggerKey))
+    QDomDocument doc;
+    if (!doc.setContent(perfmonXml))
+        return defs;
+
+    const QDomElement root = doc.documentElement();
+    if (root.tagName() != QStringLiteral("config"))
+        return defs;
+
+    for (QDomElement var = root.firstChildElement("variable"); !var.isNull(); var = var.nextSiblingElement("variable"))
     {
-        config.enabled = true;
-        config.threshold = otherConfig.value(triggerKey, 0.0).toDouble();
+        const QDomElement nameEl = var.firstChildElement("name");
+        if (nameEl.isNull())
+            continue;
 
-        QString periodKey = "perfmon_" + prefix + "_trigger_period";
-        config.duration = otherConfig.value(periodKey, 0).toInt();
+        const QString name = nameEl.attribute("value");
+        if (name.isEmpty())
+            continue;
+
+        AlertConfig cfg;
+        cfg.enabled = true;
+
+        const QDomElement levelEl = var.firstChildElement("alarm_trigger_level");
+        const QDomElement periodEl = var.firstChildElement("alarm_trigger_period");
+        const QDomElement inhibitEl = var.firstChildElement("alarm_auto_inhibit_period");
+
+        cfg.threshold = levelEl.attribute("value").toDouble();
+        cfg.durationSeconds = periodEl.attribute("value").toInt();
+        cfg.intervalSeconds = inhibitEl.attribute("value").toInt();
+
+        if (cfg.durationSeconds <= 0)
+            cfg.durationSeconds = 300;
+        if (cfg.intervalSeconds <= 0)
+            cfg.intervalSeconds = cfg.durationSeconds;
+
+        defs.insert(name, cfg);
     }
 
-    return config;
+    return defs;
 }
 
-void PerfmonAlertEditPage::setAlertConfig(QVariantMap& otherConfig,
-                                          const QString& prefix,
-                                          const AlertConfig& config)
+QString PerfmonAlertEditPage::buildPerfmonXml(const QMap<QString, AlertConfig>& definitions) const
 {
-    QString triggerKey = "perfmon_" + prefix + "_trigger_level";
-    QString periodKey = "perfmon_" + prefix + "_trigger_period";
-    QString intervalKey = "perfmon_" + prefix + "_alert_interval";
+    if (definitions.isEmpty())
+        return QString();
 
-    if (config.enabled)
+    QString xml;
+    QXmlStreamWriter writer(&xml);
+    writer.setAutoFormatting(true);
+    writer.writeStartDocument();
+    writer.writeStartElement(QStringLiteral("config"));
+
+    for (auto it = definitions.cbegin(); it != definitions.cend(); ++it)
     {
-        otherConfig[triggerKey] = QString::number(config.threshold, 'f', 4);
-        otherConfig[periodKey] = QString::number(config.duration);
-        otherConfig[intervalKey] = QString::number(config.duration); // Same as period by default
-    } else
-    {
-        // Remove alert configuration keys
-        otherConfig.remove(triggerKey);
-        otherConfig.remove(periodKey);
-        otherConfig.remove(intervalKey);
+        if (!it.value().enabled)
+            continue;
+
+        writer.writeStartElement(QStringLiteral("variable"));
+
+        writer.writeStartElement(QStringLiteral("name"));
+        writer.writeAttribute(QStringLiteral("value"), it.key());
+        writer.writeEndElement();
+
+        writer.writeStartElement(QStringLiteral("alarm_trigger_level"));
+        writer.writeAttribute(QStringLiteral("value"), QString::number(it.value().threshold, 'f', 10));
+        writer.writeEndElement();
+
+        writer.writeStartElement(QStringLiteral("alarm_trigger_period"));
+        writer.writeAttribute(QStringLiteral("value"), QString::number(it.value().durationSeconds));
+        writer.writeEndElement();
+
+        writer.writeStartElement(QStringLiteral("alarm_auto_inhibit_period"));
+        writer.writeAttribute(QStringLiteral("value"), QString::number(it.value().intervalSeconds));
+        writer.writeEndElement();
+
+        writer.writeEndElement();
     }
+
+    writer.writeEndElement();
+    writer.writeEndDocument();
+    return xml;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::getAlert(const QMap<QString, AlertConfig>& definitions,
+                                                                 const QString& perfmonName) const
+{
+    return definitions.value(perfmonName, AlertConfig());
+}
+
+void PerfmonAlertEditPage::setAlert(QMap<QString, AlertConfig>& definitions,
+                                    const QString& perfmonName,
+                                    const AlertConfig& config) const
+{
+    if (config.enabled)
+        definitions.insert(perfmonName, config);
+    else
+        definitions.remove(perfmonName);
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readCpuAlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxCPU->isChecked();
+    cfg.threshold = this->ui->spinBoxCPUThreshold->value() / 100.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxCPUDuration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxCPUInterval->value());
+    return cfg;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readNetworkAlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxNetwork->isChecked();
+    cfg.threshold = this->ui->spinBoxNetworkThreshold->value() * 1024.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxNetworkDuration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxNetworkInterval->value());
+    return cfg;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readMemoryAlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxMemory->isChecked();
+    cfg.threshold = this->ui->spinBoxMemoryThreshold->value() * 1024.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxMemoryDuration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxMemoryInterval->value());
+    return cfg;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readDiskAlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxDisk->isChecked();
+    cfg.threshold = this->ui->spinBoxDiskThreshold->value() * 1024.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxDiskDuration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxDiskInterval->value());
+    return cfg;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readSrAlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxSr->isChecked();
+    cfg.threshold = this->ui->spinBoxSrThreshold->value() / 1024.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxSrDuration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxSrInterval->value());
+    return cfg;
+}
+
+PerfmonAlertEditPage::AlertConfig PerfmonAlertEditPage::readDom0AlertFromUi() const
+{
+    AlertConfig cfg;
+    cfg.enabled = this->ui->groupBoxDom0Memory->isChecked();
+    cfg.threshold = this->ui->spinBoxDom0Threshold->value() / 100.0;
+    cfg.durationSeconds = toSeconds(this->ui->spinBoxDom0Duration->value());
+    cfg.intervalSeconds = toSeconds(this->ui->spinBoxDom0Interval->value());
+    return cfg;
+}
+
+void PerfmonAlertEditPage::setCpuAlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxCPU->setChecked(config.enabled);
+    this->ui->spinBoxCPUThreshold->setValue(qBound(1, static_cast<int>(qRound(config.threshold * 100.0)), 100));
+    this->ui->spinBoxCPUDuration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxCPUInterval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::setNetworkAlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxNetwork->setChecked(config.enabled);
+    this->ui->spinBoxNetworkThreshold->setValue(qMax(1, static_cast<int>(qRound(config.threshold / 1024.0))));
+    this->ui->spinBoxNetworkDuration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxNetworkInterval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::setMemoryAlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxMemory->setChecked(config.enabled);
+    this->ui->spinBoxMemoryThreshold->setValue(qMax(1, static_cast<int>(qRound(config.threshold / 1024.0))));
+    this->ui->spinBoxMemoryDuration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxMemoryInterval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::setDiskAlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxDisk->setChecked(config.enabled);
+    this->ui->spinBoxDiskThreshold->setValue(qMax(1, static_cast<int>(qRound(config.threshold / 1024.0))));
+    this->ui->spinBoxDiskDuration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxDiskInterval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::setSrAlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxSr->setChecked(config.enabled);
+    this->ui->spinBoxSrThreshold->setValue(qMax(1, static_cast<int>(qRound(config.threshold * 1024.0))));
+    this->ui->spinBoxSrDuration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxSrInterval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::setDom0AlertToUi(const AlertConfig& config)
+{
+    this->ui->groupBoxDom0Memory->setChecked(config.enabled);
+    this->ui->spinBoxDom0Threshold->setValue(qBound(1, static_cast<int>(qRound(config.threshold * 100.0)), 100));
+    this->ui->spinBoxDom0Duration->setValue(toMinutes(config.durationSeconds));
+    this->ui->spinBoxDom0Interval->setValue(toMinutes(config.intervalSeconds));
+}
+
+void PerfmonAlertEditPage::configureVisibilityByObjectType()
+{
+    const bool isVm = (this->m_objectType == QStringLiteral("vm"));
+    const bool isHost = (this->m_objectType == QStringLiteral("host"));
+    const bool isSr = (this->m_objectType == QStringLiteral("sr"));
+
+    this->ui->groupBoxCPU->setVisible(isVm || isHost);
+    this->ui->groupBoxNetwork->setVisible(isVm || isHost);
+    this->ui->groupBoxDisk->setVisible(isVm);
+    this->ui->groupBoxSr->setVisible(isSr);
+    this->ui->groupBoxMemory->setVisible(isHost);
+    this->ui->groupBoxDom0Memory->setVisible(isHost);
 }
