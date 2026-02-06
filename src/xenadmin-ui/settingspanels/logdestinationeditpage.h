@@ -74,6 +74,7 @@ class LogDestinationEditPage : public IEditPage
         void HideLocalValidationMessages() override;
         void Cleanup() override;
         bool HasChanged() const override;
+        QVariantMap GetModifiedObjectData() const override;
 
     protected:
         bool eventFilter(QObject* obj, QEvent* event) override;

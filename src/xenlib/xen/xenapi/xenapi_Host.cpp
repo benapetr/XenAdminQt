@@ -218,6 +218,20 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response);
     }
 
+    void Host::set_logging(Session* session, const QString& host, const QVariantMap& logging)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << logging;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.set_logging", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     void Host::set_iscsi_iqn(Session* session, const QString& host, const QString& value)
     {
         if (!session || !session->IsLoggedIn())
@@ -468,6 +482,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("host.add_to_other_config", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
+    }
+
+    void Host::syslog_reconfigure(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.syslog_reconfigure", params);
         QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }

@@ -30,10 +30,11 @@
 #include "../../xenlib/xen/asyncoperation.h"
 #include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "../../xenlib/xen/xenapi/xenapi_Host.h"
 #include <QIcon>
 #include <QToolTip>
 #include <QDebug>
+#include <stdexcept>
 
 LogDestinationEditPage::LogDestinationEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::LogDestinationEditPage), m_validToSave(true)
@@ -192,37 +193,18 @@ AsyncOperation* LogDestinationEditPage::SaveSettings()
     protected:
         void run() override
         {
-            if (!GetConnection() || !GetSession())
+            if (!this->GetConnection() || !this->GetSession())
             {
-                qWarning() << "SyslogReconfigureOperation: No connection or session";
-                return;
+                throw std::runtime_error("No connection or session");
             }
 
-            SetPercentComplete(0);
-            SetDescription(tr("Reconfiguring syslog..."));
+            this->SetPercentComplete(0);
+            this->SetDescription(tr("Reconfiguring syslog..."));
 
-            try
-            {
-                // Call Host.syslog_reconfigure(GetSession, host_ref)
-                XenRpcAPI api(GetSession());
+            XenAPI::Host::syslog_reconfigure(this->GetSession(), this->m_hostRef);
 
-                QVariantList params;
-                params << GetSession()->GetSessionID() << m_hostRef;
-
-                QByteArray request = api.BuildJsonRpcCall("host.syslog_reconfigure", params);
-                QByteArray response = GetConnection()->SendRequest(request);
-
-                // Parse response to check for errors
-                api.ParseJsonRpcResponse(response);
-
-                SetPercentComplete(100);
-                SetDescription(tr("Log destination updated successfully"));
-
-            } catch (const std::exception& e)
-            {
-                qWarning() << "SyslogReconfigureOperation failed:" << e.what();
-                SetDescription(tr("Failed to reconfigure syslog: %1").arg(e.what()));
-            }
+            this->SetPercentComplete(100);
+            this->SetDescription(tr("Log destination updated successfully"));
         }
 
     private:
@@ -230,6 +212,11 @@ AsyncOperation* LogDestinationEditPage::SaveSettings()
     };
 
     return new SyslogReconfigureOperation(this->m_connection, this->m_hostRef, this);
+}
+
+QVariantMap LogDestinationEditPage::GetModifiedObjectData() const
+{
+    return this->m_objectDataCopy;
 }
 
 bool LogDestinationEditPage::IsValidToSave() const

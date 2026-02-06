@@ -390,6 +390,11 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
             this->m_objectDataCopy["other_config"] = dialogOtherConfig;
         }
 
+        if (pageData.contains("logging"))
+        {
+            this->m_objectDataCopy["logging"] = pageData.value("logging").toMap();
+        }
+
         if (pageData.contains("VCPUs_params"))
         {
             this->m_objectDataCopy["VCPUs_params"] = pageData.value("VCPUs_params");
@@ -615,6 +620,8 @@ void VerticallyTabbedDialog::applySimpleChanges()
     // 3. Check if other_config changed (for things like iscsi_iqn)
     QVariantMap oldOtherConfig = this->m_objectDataBefore.value("other_config").toMap();
     QVariantMap newOtherConfig = this->m_objectDataCopy.value("other_config").toMap();
+    QVariantMap oldLogging = this->m_objectDataBefore.value("logging").toMap();
+    QVariantMap newLogging = this->m_objectDataCopy.value("logging").toMap();
 
     if (this->m_objectType == XenObjectType::VM)
     {
@@ -673,6 +680,21 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 qWarning() << "Failed to set Network other_config:" << ex.what();
             }
+        }
+    }
+
+    // 4. Check if logging changed (host only)
+    if (this->m_objectType == XenObjectType::Host && oldLogging != newLogging)
+    {
+        qDebug() << "VerticallyTabbedDialog: Applying Host logging changes";
+        try
+        {
+            XenAPI::Host::set_logging(session, this->m_objectRef, newLogging);
+            if (reportJsonError("Host.set_logging"))
+                hasChanges = true;
+        } catch (const std::exception& ex)
+        {
+            qWarning() << "Failed to set Host logging:" << ex.what();
         }
     }
 

@@ -114,6 +114,12 @@ namespace XenAPI
             static void set_other_config(Session* session, const QString& host, const QVariantMap& otherConfig);
 
             /**
+             * @brief Set the logging field
+             * Matches C# Host.set_logging()
+             */
+            static void set_logging(Session* session, const QString& host, const QVariantMap& logging);
+
+            /**
              * @brief Set the iSCSI IQN
              * Matches C# Host.set_iscsi_iqn()
              */
@@ -261,6 +267,15 @@ namespace XenAPI
              * Matches C# Host.add_to_other_config()
              */
             static void add_to_other_config(Session* session, const QString& host, const QString& key, const QString& value);
+
+            /**
+             * @brief Reconfigure syslog logging
+             * @param session XenServer session
+             * @param host Host opaque reference
+             *
+             * Matches C# Host.syslog_reconfigure()
+             */
+            static void syslog_reconfigure(Session* session, const QString& host);
 
             /**
              * @brief Reconfigure management interface
