@@ -1131,6 +1131,20 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response);
     }
 
+    void VM::set_PV_bootloader(Session* session, const QString& vm, const QString& value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.set_PV_bootloader", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     void VM::set_other_config(Session* session, const QString& vm, const QVariantMap& otherConfig)
     {
         if (!session || !session->IsLoggedIn())

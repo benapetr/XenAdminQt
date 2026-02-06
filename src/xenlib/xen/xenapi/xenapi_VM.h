@@ -656,6 +656,7 @@ namespace XenAPI
              * Matches C# VM.set_PV_args()
              */
             static void set_PV_args(Session* session, const QString& vm, const QString& value);
+            static void set_PV_bootloader(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set other_config

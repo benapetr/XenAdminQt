@@ -27,19 +27,80 @@
 
 #include "bootoptionseditpage.h"
 #include "ui_bootoptionseditpage.h"
+#include "xenlib/utils/misc.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
 #include "xenlib/xen/asyncoperation.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
-#include "xenlib/xen/api.h"
-#include <QMessageBox>
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_VBD.h"
+#include <algorithm>
 
-BootOptionsEditPage::BootOptionsEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::BootOptionsEditPage), m_origAutoBoot(false)
+namespace
+{
+    QString deviceText(QChar c)
+    {
+        if (c == 'C')
+            return QObject::tr("Hard Disk");
+        if (c == 'D')
+            return QObject::tr("DVD Drive");
+        if (c == 'N')
+            return QObject::tr("Network");
+        return QString();
+    }
+
+    QListWidgetItem* createBootItem(QChar c, bool checked)
+    {
+        auto* item = new QListWidgetItem(QString("%1 (%2)").arg(deviceText(c), QString(c)));
+        item->setData(Qt::UserRole, c);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+        return item;
+    }
+
+    QList<QSharedPointer<VBD>> sortedVbds(const QList<QSharedPointer<VBD>>& vbds)
+    {
+        QList<QSharedPointer<VBD>> sorted = vbds;
+
+        std::sort(sorted.begin(), sorted.end(), [](const QSharedPointer<VBD>& a, const QSharedPointer<VBD>& b)
+        {
+            if (!a || !b)
+                return static_cast<bool>(a);
+
+            const QString aUser = a->GetUserdevice();
+            const QString bUser = b->GetUserdevice();
+
+            if (aUser == "xvda")
+                return true;
+            if (bUser == "xvda")
+                return false;
+
+            return Misc::NaturalCompare(aUser, bUser) < 0;
+        });
+
+        return sorted;
+    }
+}
+
+BootOptionsEditPage::BootOptionsEditPage(QWidget* parent)
+    : IEditPage(parent),
+      ui(new Ui::BootOptionsEditPage),
+      m_origAutoBoot(false),
+      m_origPVBootFromCD(false),
+      m_currentPVBootFromCD(false),
+      m_origIsHVM(false),
+      m_currentIsHVM(false)
 {
     this->ui->setupUi(this);
 
     connect(this->ui->buttonUp, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveUpClicked);
     connect(this->ui->buttonDown, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveDownClicked);
     connect(this->ui->listWidgetBootOrder, &QListWidget::currentRowChanged, this, &BootOptionsEditPage::onSelectionChanged);
+    connect(this->ui->comboBoxBootDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &BootOptionsEditPage::onPVBootDeviceChanged);
+    connect(this->ui->buttonConvertToPV, &QPushButton::clicked, this, &BootOptionsEditPage::onConvertToPVClicked);
+    connect(this->ui->buttonConvertToHVM, &QPushButton::clicked, this, &BootOptionsEditPage::onConvertToHVMClicked);
 }
 
 BootOptionsEditPage::~BootOptionsEditPage()
@@ -54,38 +115,25 @@ QString BootOptionsEditPage::GetText() const
 
 QString BootOptionsEditPage::GetSubText() const
 {
-    if (this->isHVM())
+    if (this->m_currentIsHVM)
     {
-        QString order = this->getBootOrder();
-        QString devices;
-        for (QChar c : order)
+        QStringList devices;
+        for (QChar c : this->getBootOrder())
         {
-            if (!devices.isEmpty())
-                devices += ", ";
-            if (c == 'C')
-                devices += tr("Hard Disk");
-            else if (c == 'D')
-                devices += tr("DVD Drive");
-            else if (c == 'N')
-                devices += tr("Network");
+            const QString text = deviceText(c);
+            if (!text.isEmpty())
+                devices << text;
         }
 
+        const QString order = devices.isEmpty() ? tr("Default") : devices.join(", ");
         if (this->ui->checkBoxAutoBoot->isChecked())
-        {
-            return tr("Auto-start; Boot order: %1").arg(devices.isEmpty() ? tr("Default") : devices);
-        } else
-        {
-            return tr("Boot order: %1").arg(devices.isEmpty() ? tr("Default") : devices);
-        }
+            return tr("Auto-start; Boot order: %1").arg(order);
+
+        return tr("Boot order: %1").arg(order);
     }
 
-    if (this->ui->checkBoxAutoBoot->isChecked())
-    {
-        return tr("Auto-start enabled");
-    }
-
-    return tr("No specific boot order");
-} 
+    return tr("None defined");
+}
 
 QIcon BootOptionsEditPage::GetImage() const
 {
@@ -103,137 +151,211 @@ void BootOptionsEditPage::SetXenObjects(const QString& objectRef,
     this->m_vmRef = objectRef;
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
+    this->m_vm.clear();
 
-    // Get auto-boot setting from other_config
-    QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
-    this->m_origAutoBoot = (otherConfig.value("auto_poweron", "false").toString() == "true");
+    if (this->connection() && this->connection()->GetCache())
+        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
+
+    this->m_origAutoBoot = objectDataBefore.value("other_config").toMap().value("auto_poweron", "false").toString() == "true";
+    this->m_origBootOrder = objectDataBefore.value("HVM_boot_params").toMap().value("order", "dc").toString().toUpper();
+    this->m_origPVArgs = objectDataBefore.value("PV_args").toString();
+    this->m_origIsHVM = !objectDataBefore.value("HVM_boot_policy").toString().isEmpty();
+    this->m_currentIsHVM = this->m_origIsHVM;
+
+    this->m_origPVBootFromCD = this->vmPVBootableDVD();
+    this->m_currentPVBootFromCD = this->m_origPVBootFromCD;
+
     this->ui->checkBoxAutoBoot->setChecked(this->m_origAutoBoot);
-
-    // Get boot order from HVM_boot_params
-    QVariantMap hvmBootParams = objectDataBefore.value("HVM_boot_params").toMap();
-    this->m_origBootOrder = hvmBootParams.value("order", "dc").toString().toUpper();
-
-    // Get PV args
-    this->m_origPVArgs = objectDataBefore.value("PV_args", "").toString();
     this->ui->lineEditOsParams->setText(this->m_origPVArgs);
 
-    // Check if HVM or PV
-    bool vmIsHVM = objectDataBefore.value("HVM_boot_policy", "").toString() != "";
+    this->repopulate();
+}
 
-    // Show/hide appropriate sections
-    this->ui->groupBoxBootOrder->setEnabled(vmIsHVM);
-    this->ui->groupBoxPVParams->setVisible(!vmIsHVM);
+void BootOptionsEditPage::repopulate()
+{
+    this->ui->groupBoxBootOrder->setVisible(this->m_currentIsHVM);
+    this->ui->groupBoxPVParams->setVisible(!this->m_currentIsHVM);
 
-    if (vmIsHVM)
+    if (this->m_currentIsHVM)
     {
         this->populateBootOrder(this->m_origBootOrder);
     }
+    else
+    {
+        this->ui->comboBoxBootDevice->blockSignals(true);
+        this->ui->comboBoxBootDevice->clear();
+        this->ui->comboBoxBootDevice->addItem(tr("Hard Disk"));
+
+        if (this->m_vm && this->m_vm->HasCD())
+        {
+            this->ui->comboBoxBootDevice->addItem(tr("DVD Drive"));
+            this->ui->comboBoxBootDevice->setCurrentIndex(this->m_currentPVBootFromCD ? 1 : 0);
+        }
+        else
+        {
+            this->ui->comboBoxBootDevice->setCurrentIndex(0);
+        }
+        this->ui->comboBoxBootDevice->blockSignals(false);
+    }
 
     this->updateButtonStates();
-} 
+}
 
 AsyncOperation* BootOptionsEditPage::SaveSettings()
 {
-    if (!this->HasChanged())
-    {
+    if (!this->HasChanged() || !this->m_vm)
         return nullptr;
-    }
 
-    // Update objectDataCopy
+    const bool autoBoot = this->ui->checkBoxAutoBoot->isChecked();
+    const QString hvmOrder = this->getBootOrder();
+    const QString pvArgs = this->ui->lineEditOsParams->text();
+    const bool saveAsHvm = this->m_currentIsHVM;
+    const bool bootFromCd = this->m_currentPVBootFromCD;
+    const bool modeChanged = (this->m_currentIsHVM != this->m_origIsHVM);
+
     QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
-    otherConfig["auto_poweron"] = this->ui->checkBoxAutoBoot->isChecked() ? "true" : "false";
+    otherConfig["auto_poweron"] = autoBoot ? "true" : "false";
     this->m_objectDataCopy["other_config"] = otherConfig;
 
-    if (this->isHVM())
+    if (saveAsHvm)
     {
         QVariantMap hvmBootParams = this->m_objectDataCopy.value("HVM_boot_params").toMap();
-        hvmBootParams["order"] = this->getBootOrder().toLower();
+        hvmBootParams["order"] = hvmOrder.toLower();
         this->m_objectDataCopy["HVM_boot_params"] = hvmBootParams;
-    } else
+        this->m_objectDataCopy["HVM_boot_policy"] = "BIOS Order";
+    }
+    else
     {
-        this->m_objectDataCopy["PV_args"] = this->ui->lineEditOsParams->text();
+        this->m_objectDataCopy["PV_args"] = pvArgs;
+        this->m_objectDataCopy["HVM_boot_policy"] = "";
+        if (modeChanged)
+            this->m_objectDataCopy["PV_bootloader"] = "pygrub";
     }
 
-    // Return inline AsyncOperation for boot order changes
     class BootOptionsOperation : public AsyncOperation
     {
         public:
-            BootOptionsOperation(XenConnection* conn,
-                                 const QString& vmRef,
+            BootOptionsOperation(QSharedPointer<VM> vm,
                                  bool autoBoot,
-                                 const QString& bootOrder,
+                                 const QString& hvmOrder,
                                  const QString& pvArgs,
-                                 bool isHVM,
+                                 bool saveAsHvm,
+                                 bool bootFromCd,
+                                 bool modeChanged,
                                  QObject* parent)
-                : AsyncOperation(conn, tr("Change Boot Options"),
-                                 tr("Changing boot configuration..."), parent),
-                  m_vmRef(vmRef), m_autoBoot(autoBoot), m_bootOrder(bootOrder), m_pvArgs(pvArgs), m_isHVM(isHVM)
-            {}
+                : AsyncOperation(vm ? vm->GetConnection() : nullptr,
+                                 QObject::tr("Change Boot Options"),
+                                 QObject::tr("Changing boot configuration..."),
+                                 parent),
+                  m_vm(vm),
+                  m_autoBoot(autoBoot),
+                  m_hvmOrder(hvmOrder),
+                  m_pvArgs(pvArgs),
+                  m_saveAsHvm(saveAsHvm),
+                  m_bootFromCd(bootFromCd),
+                  m_modeChanged(modeChanged)
+            {
+                AddApiMethodToRoleCheck("VM.set_other_config");
+                AddApiMethodToRoleCheck("VM.set_HVM_boot_policy");
+                AddApiMethodToRoleCheck("VM.set_HVM_boot_params");
+                AddApiMethodToRoleCheck("VM.set_PV_args");
+                AddApiMethodToRoleCheck("VM.set_PV_bootloader");
+                AddApiMethodToRoleCheck("VBD.set_bootable");
+                this->SetSuppressHistory(true);
+            }
 
         protected:
             void run() override
             {
-                XenRpcAPI api(GetConnection()->GetSession());
+                if (!m_vm || !m_vm->IsValid())
+                {
+                    this->setError(QObject::tr("VM is no longer available."));
+                    return;
+                }
+
+                XenAPI::Session* session = this->GetSession();
+                if (!session || !session->IsLoggedIn())
+                {
+                    this->setError(QObject::tr("No valid session."));
+                    return;
+                }
 
                 SetPercentComplete(10);
 
-                // Set auto-boot (via other_config.auto_poweron)
-                QVariantList getConfigParams;
-                getConfigParams << GetConnection()->GetSessionId() << this->m_vmRef;
-                QByteArray getConfigRequest = api.BuildJsonRpcCall("VM.get_other_config", getConfigParams);
-                QByteArray getConfigResponse = GetConnection()->SendRequest(getConfigRequest);
-                QVariantMap otherConfig = api.ParseJsonRpcResponse(getConfigResponse).toMap();
+                QVariantMap otherConfig = m_vm->GetOtherConfig();
+                otherConfig["auto_poweron"] = m_autoBoot ? "true" : "false";
+                XenAPI::VM::set_other_config(session, m_vm->OpaqueRef(), otherConfig);
 
-                otherConfig["auto_poweron"] = this->m_autoBoot ? "true" : "false";
+                SetPercentComplete(30);
 
-                QVariantList setConfigParams;
-                setConfigParams << GetConnection()->GetSessionId() << this->m_vmRef << otherConfig;
-                QByteArray setConfigRequest = api.BuildJsonRpcCall("VM.set_other_config", setConfigParams);
-                GetConnection()->SendRequest(setConfigRequest);
-
-                SetPercentComplete(40);
-
-                if (this->m_isHVM)
+                if (m_saveAsHvm)
                 {
-                    // Set boot order (via HVM_boot_params.order)
-                    QVariantList getBootParams;
-                    getBootParams << GetConnection()->GetSessionId() << this->m_vmRef;
-                    QByteArray getBootRequest = api.BuildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
-                    QByteArray getBootResponse = GetConnection()->SendRequest(getBootRequest);
-                    QVariantMap hvmBootParams = api.ParseJsonRpcResponse(getBootResponse).toMap();
-
-                    hvmBootParams["order"] = this->m_bootOrder.toLower();
-
-                    QVariantList setBootParams;
-                    setBootParams << GetConnection()->GetSessionId() << this->m_vmRef << hvmBootParams;
-                    QByteArray setBootRequest = api.BuildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
-                    GetConnection()->SendRequest(setBootRequest);
-                } else
+                    XenAPI::VM::set_HVM_boot_policy(session, m_vm->OpaqueRef(), QStringLiteral("BIOS Order"));
+                    QVariantMap bootParams = XenAPI::VM::get_HVM_boot_params(session, m_vm->OpaqueRef());
+                    bootParams["order"] = m_hvmOrder.toLower();
+                    XenAPI::VM::set_HVM_boot_params(session, m_vm->OpaqueRef(), bootParams);
+                }
+                else
                 {
-                    // Set PV args
-                    QVariantList setPVParams;
-                    setPVParams << GetConnection()->GetSessionId() << this->m_vmRef << this->m_pvArgs;
-                    QByteArray setPVRequest = api.BuildJsonRpcCall("VM.set_PV_args", setPVParams);
-                    GetConnection()->SendRequest(setPVRequest);
+                    XenAPI::VM::set_HVM_boot_policy(session, m_vm->OpaqueRef(), QString());
+                    XenAPI::VM::set_PV_args(session, m_vm->OpaqueRef(), m_pvArgs);
+
+                    if (m_modeChanged)
+                    {
+                        XenAPI::VM::set_PV_bootloader(session, m_vm->OpaqueRef(), QStringLiteral("pygrub"));
+                    }
+                }
+
+                SetPercentComplete(65);
+
+                QList<QSharedPointer<VBD>> vbds = sortedVbds(m_vm->GetVBDs());
+                if (m_bootFromCd)
+                {
+                    for (const QSharedPointer<VBD>& vbd : vbds)
+                    {
+                        if (!vbd || !vbd->IsValid())
+                            continue;
+                        XenAPI::VBD::set_bootable(session, vbd->OpaqueRef(), vbd->IsCD());
+                    }
+                }
+                else
+                {
+                    bool foundSystemDisk = false;
+                    for (const QSharedPointer<VBD>& vbd : vbds)
+                    {
+                        if (!vbd || !vbd->IsValid())
+                            continue;
+
+                        bool bootable = !foundSystemDisk && !vbd->IsCD();
+                        if (bootable)
+                            foundSystemDisk = true;
+
+                        XenAPI::VBD::set_bootable(session, vbd->OpaqueRef(), bootable);
+                    }
                 }
 
                 SetPercentComplete(100);
             }
 
         private:
-            QString m_vmRef;
+            QSharedPointer<VM> m_vm;
             bool m_autoBoot;
-            QString m_bootOrder;
+            QString m_hvmOrder;
             QString m_pvArgs;
-            bool m_isHVM;
+            bool m_saveAsHvm;
+            bool m_bootFromCd;
+            bool m_modeChanged;
     };
 
-    return new BootOptionsOperation(this->m_connection, this->m_vmRef,
-                                    this->ui->checkBoxAutoBoot->isChecked(),
-                                    this->getBootOrder(),
-                                    this->ui->lineEditOsParams->text(),
-                                    this->isHVM(), nullptr);
-} 
+    return new BootOptionsOperation(this->m_vm,
+                                    autoBoot,
+                                    hvmOrder,
+                                    pvArgs,
+                                    saveAsHvm,
+                                    bootFromCd,
+                                    modeChanged,
+                                    this);
+}
 
 bool BootOptionsEditPage::IsValidToSave() const
 {
@@ -242,33 +364,31 @@ bool BootOptionsEditPage::IsValidToSave() const
 
 void BootOptionsEditPage::ShowLocalValidationMessages()
 {
-    // No validation needed
 }
 
 void BootOptionsEditPage::HideLocalValidationMessages()
 {
-    // No validation messages to hide
 }
 
 void BootOptionsEditPage::Cleanup()
 {
-    // Nothing to clean up
 }
 
 bool BootOptionsEditPage::HasChanged() const
 {
-    bool autoBootChanged = (this->ui->checkBoxAutoBoot->isChecked() != this->m_origAutoBoot);
+    const bool autoBootChanged = (this->ui->checkBoxAutoBoot->isChecked() != this->m_origAutoBoot);
+    const bool modeChanged = (this->m_currentIsHVM != this->m_origIsHVM);
+    const bool pvBootChanged = (this->m_currentPVBootFromCD != this->m_origPVBootFromCD);
 
-    if (this->isHVM())
+    if (this->m_currentIsHVM)
     {
-        bool bootOrderChanged = (this->getBootOrder() != this->m_origBootOrder);
-        return autoBootChanged || bootOrderChanged;
-    } else
-    {
-        bool pvArgsChanged = (this->ui->lineEditOsParams->text() != this->m_origPVArgs);
-        return autoBootChanged || pvArgsChanged;
+        const bool bootOrderChanged = (this->getBootOrder() != this->m_origBootOrder);
+        return autoBootChanged || modeChanged || bootOrderChanged || pvBootChanged;
     }
-} 
+
+    const bool pvArgsChanged = (this->ui->lineEditOsParams->text() != this->m_origPVArgs);
+    return autoBootChanged || modeChanged || pvArgsChanged || pvBootChanged;
+}
 
 void BootOptionsEditPage::onMoveUpClicked()
 {
@@ -280,7 +400,7 @@ void BootOptionsEditPage::onMoveUpClicked()
         this->ui->listWidgetBootOrder->setCurrentRow(currentRow - 1);
     }
     this->updateButtonStates();
-} 
+}
 
 void BootOptionsEditPage::onMoveDownClicked()
 {
@@ -292,83 +412,100 @@ void BootOptionsEditPage::onMoveDownClicked()
         this->ui->listWidgetBootOrder->setCurrentRow(currentRow + 1);
     }
     this->updateButtonStates();
-} 
+}
 
 void BootOptionsEditPage::onSelectionChanged()
 {
-    updateButtonStates();
+    this->updateButtonStates();
+}
+
+void BootOptionsEditPage::onPVBootDeviceChanged()
+{
+    this->m_currentPVBootFromCD = this->ui->comboBoxBootDevice->currentIndex() == 1;
+}
+
+void BootOptionsEditPage::onConvertToPVClicked()
+{
+    this->convert(true);
+}
+
+void BootOptionsEditPage::onConvertToHVMClicked()
+{
+    this->convert(false);
 }
 
 void BootOptionsEditPage::populateBootOrder(const QString& bootOrder)
 {
     this->ui->listWidgetBootOrder->clear();
 
-    // Add devices in the specified order
     for (QChar c : bootOrder)
     {
-        QListWidgetItem* item = new QListWidgetItem();
-        if (c == 'C')
-        {
-            item->setText(tr("Hard Disk (C)"));
-            item->setData(Qt::UserRole, 'C');
-        } else if (c == 'D')
-        {
-            item->setText(tr("DVD Drive (D)"));
-            item->setData(Qt::UserRole, 'D');
-        } else if (c == 'N')
-        {
-            item->setText(tr("Network (N)"));
-            item->setData(Qt::UserRole, 'N');
-        }
-        this->ui->listWidgetBootOrder->addItem(item);
+        if (c == 'C' || c == 'D' || c == 'N')
+            this->ui->listWidgetBootOrder->addItem(createBootItem(c, true));
     }
 
-    // Add any missing devices at the end
-    QString devices = "CDN";
-    for (QChar device : devices)
+    const QString all = QStringLiteral("CDN");
+    for (QChar c : all)
     {
-        if (!bootOrder.contains(device))
-        {
-            QListWidgetItem* item = new QListWidgetItem();
-            if (device == 'C')
-            {
-                item->setText(tr("Hard Disk (C)"));
-                item->setData(Qt::UserRole, 'C');
-            } else if (device == 'D')
-            {
-                item->setText(tr("DVD Drive (D)"));
-                item->setData(Qt::UserRole, 'D');
-            } else if (device == 'N')
-            {
-                item->setText(tr("Network (N)"));
-                item->setData(Qt::UserRole, 'N');
-            }
-            this->ui->listWidgetBootOrder->addItem(item);
-        }
+        if (!bootOrder.contains(c))
+            this->ui->listWidgetBootOrder->addItem(createBootItem(c, false));
     }
-} 
+
+    if (this->ui->listWidgetBootOrder->count() > 0)
+        this->ui->listWidgetBootOrder->setCurrentRow(0);
+}
 
 QString BootOptionsEditPage::getBootOrder() const
 {
     QString order;
     for (int i = 0; i < this->ui->listWidgetBootOrder->count(); ++i)
     {
-        QListWidgetItem* item = this->ui->listWidgetBootOrder->item(i);
+        const QListWidgetItem* item = this->ui->listWidgetBootOrder->item(i);
+        if (!item || item->checkState() != Qt::Checked)
+            continue;
         order += item->data(Qt::UserRole).toChar();
     }
     return order;
-} 
+}
 
-bool BootOptionsEditPage::isHVM() const
+bool BootOptionsEditPage::vmPVBootableDVD() const
 {
-    return this->m_objectDataBefore.value("HVM_boot_policy", "").toString() != "";
-} 
+    if (!this->m_vm)
+        return false;
+
+    for (const QSharedPointer<VBD>& vbd : this->m_vm->GetVBDs())
+    {
+        if (vbd && vbd->IsValid() && vbd->IsCD() && vbd->IsBootable())
+            return true;
+    }
+
+    return false;
+}
+
+void BootOptionsEditPage::convert(bool toPV)
+{
+    if (toPV)
+    {
+        this->m_currentIsHVM = false;
+        this->ui->lineEditOsParams->setText(QStringLiteral("console=tty0 xencons=tty"));
+    }
+    else
+    {
+        this->m_currentIsHVM = true;
+    }
+
+    this->repopulate();
+}
 
 void BootOptionsEditPage::updateButtonStates()
 {
-    int currentRow = this->ui->listWidgetBootOrder->currentRow();
-    int count = this->ui->listWidgetBootOrder->count();
+    const int currentRow = this->ui->listWidgetBootOrder->currentRow();
+    const int count = this->ui->listWidgetBootOrder->count();
 
-    this->ui->buttonUp->setEnabled(currentRow > 0);
-    this->ui->buttonDown->setEnabled(currentRow >= 0 && currentRow < count - 1);
+    this->ui->buttonUp->setEnabled(this->m_currentIsHVM && currentRow > 0);
+    this->ui->buttonDown->setEnabled(this->m_currentIsHVM && currentRow >= 0 && currentRow < count - 1);
+
+    const bool vmHalted = this->m_vm && this->m_vm->GetPowerState() == QStringLiteral("Halted");
+    this->ui->buttonConvertToPV->setEnabled(vmHalted && this->m_currentIsHVM);
+    this->ui->buttonConvertToHVM->setEnabled(vmHalted && !this->m_currentIsHVM);
 }

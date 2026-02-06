@@ -33,6 +33,7 @@
 #include <QListWidgetItem>
 
 class AsyncOperation;
+class VM;
 
 namespace Ui
 {
@@ -77,22 +78,32 @@ class BootOptionsEditPage : public IEditPage
         void onMoveUpClicked();
         void onMoveDownClicked();
         void onSelectionChanged();
+        void onPVBootDeviceChanged();
+        void onConvertToPVClicked();
+        void onConvertToHVMClicked();
 
     private:
         void populateBootOrder(const QString& bootOrder);
         QString getBootOrder() const;
-        bool isHVM() const;
+        void repopulate();
+        bool vmPVBootableDVD() const;
+        void convert(bool toPV);
         void updateButtonStates();
 
         Ui::BootOptionsEditPage* ui;
         QString m_vmRef;
         QVariantMap m_objectDataBefore;
         QVariantMap m_objectDataCopy;
+        QSharedPointer<VM> m_vm;
 
         // Original values
         bool m_origAutoBoot;
         QString m_origBootOrder;
         QString m_origPVArgs;
+        bool m_origPVBootFromCD;
+        bool m_currentPVBootFromCD;
+        bool m_origIsHVM;
+        bool m_currentIsHVM;
 };
 
 #endif // BOOTOPTIONSEDITPAGE_H

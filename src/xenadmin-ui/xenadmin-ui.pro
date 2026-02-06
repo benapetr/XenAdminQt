@@ -554,6 +554,8 @@ HEADERS += \
 # UI files
 FORMS += \
     mainwindow.ui \
+    dialogs/aboutdialog.ui \
+    dialogs/actionprogressdialog.ui \
     dialogs/addserverdialog.ui \
     dialogs/connectingtoserverdialog.ui \
     dialogs/changeserverpassworddialog.ui \

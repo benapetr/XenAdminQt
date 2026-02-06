@@ -546,6 +546,57 @@ bool VM::IsHVM() const
     return !stringProperty("HVM_boot_policy").isEmpty();
 }
 
+bool VM::HasCD() const
+{
+    for (const QSharedPointer<VBD>& vbd : this->GetVBDs())
+    {
+        if (vbd && vbd->IsValid() && vbd->IsCD())
+            return true;
+    }
+
+    return false;
+}
+
+QString VM::GetBootOrder() const
+{
+    const QVariantMap params = this->HVMBootParams();
+    if (params.contains("order"))
+        return params.value("order").toString().toUpper();
+
+    return QStringLiteral("CD");
+}
+
+void VM::SetBootOrder(const QString& value)
+{
+    QVariantMap params = this->HVMBootParams();
+    params["order"] = value.toLower();
+    this->setProperty("HVM_boot_params", params);
+}
+
+bool VM::GetAutoPowerOn() const
+{
+    const QVariantMap otherConfig = this->GetOtherConfig();
+    return otherConfig.value("auto_poweron").toString().toLower() == QStringLiteral("true");
+}
+
+void VM::SetAutoPowerOn(bool value)
+{
+    QVariantMap otherConfig = this->GetOtherConfig();
+    otherConfig["auto_poweron"] = value ? QStringLiteral("true") : QStringLiteral("false");
+    this->setProperty("other_config", otherConfig);
+}
+
+bool VM::CanBeEnlightened() const
+{
+    return this->GetOtherConfig().contains("xscontainer-monitor");
+}
+
+bool VM::IsEnlightened() const
+{
+    const QString v = this->GetOtherConfig().value("xscontainer-monitor").toString().toLower();
+    return v == QStringLiteral("true");
+}
+
 bool VM::IsWindows() const
 {
     QString guestMetricsRef = stringProperty("guest_metrics");

@@ -27,10 +27,9 @@
 
 #include "vmenlightenmenteditpage.h"
 #include "ui_vmenlightenmenteditpage.h"
-#include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmenlightenmentaction.h"
 
 VMEnlightenmentEditPage::VMEnlightenmentEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::VMEnlightenmentEditPage), m_originalEnlightened(false)
@@ -63,14 +62,18 @@ void VMEnlightenmentEditPage::SetXenObjects(const QString& objectRef,
                                             const QVariantMap& objectDataBefore,
                                             const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
+    Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
     this->m_vmRef = objectRef;
+    this->m_vm.clear();
 
-    // Check if VM is enlightened
-    // In C#, this checks for platform:device_id in VM.platform
-    this->m_originalEnlightened = this->isVMEnlightened(objectDataBefore);
+    if (objectType.toLower() == "vm" && this->connection() && this->connection()->GetCache())
+    {
+        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
+    }
+
+    this->m_originalEnlightened = this->m_vm && this->m_vm->IsEnlightened();
     this->ui->checkBoxEnlightenment->setChecked(this->m_originalEnlightened);
 }
 
@@ -81,67 +84,13 @@ AsyncOperation* VMEnlightenmentEditPage::SaveSettings()
         return nullptr;
     }
 
-    bool enable = this->ui->checkBoxEnlightenment->isChecked();
+    if (!this->m_vm)
+        return nullptr;
 
-    // Return inline AsyncOperation for enlightenment change
-    class VMEnlightenmentOperation : public AsyncOperation
-    {
-    public:
-        VMEnlightenmentOperation(XenConnection* conn,
-                                 const QString& vmRef,
-                                 bool enable,
-                                 const QString& vmUuid,
-                                 QObject* parent)
-            : AsyncOperation(conn,
-                             enable ? tr("Enable VM Enlightenment") : tr("Disable VM Enlightenment"),
-                             enable ? tr("Enabling Windows guest enlightenment...") : tr("Disabling Windows guest enlightenment..."),
-                             parent),
-              m_vmRef(vmRef), m_vmUuid(vmUuid), m_enable(enable)
-        {}
+    if (this->ui->checkBoxEnlightenment->isChecked())
+        return new EnableVMEnlightenmentAction(this->m_vm, true, this);
 
-    protected:
-        void run() override
-        {
-            XenRpcAPI api(GetConnection()->GetSession());
-
-            SetPercentComplete(30);
-
-            // Get coordinator host
-            // For now, we'll use a simplified approach
-            // In full implementation, would query pool coordinator
-
-            // Call host.call_plugin with xscontainer plugin
-            QString action = m_enable ? "register" : "deregister";
-
-            QVariantMap args;
-            args["vmuuid"] = m_vmUuid;
-
-            QVariantList params;
-            params << GetConnection()->GetSessionId()
-                   << "coordinator_host_ref" // TODO: Get actual coordinator host ref
-                   << "xscontainer"
-                   << action
-                   << args;
-
-            QByteArray request = api.BuildJsonRpcCall("host.call_plugin", params);
-
-            // NOTE: This will fail without proper coordinator host ref
-            // Full implementation needs to query pool to get coordinator
-            GetConnection()->SendRequest(request);
-
-            SetPercentComplete(100);
-        }
-
-    private:
-        QString m_vmRef;
-        QString m_vmUuid;
-        bool m_enable;
-    };
-
-    // Get VM UUID for plugin call
-    QString vmUuid = ""; // TODO: Extract from objectDataBefore
-
-    return new VMEnlightenmentOperation(this->m_connection, this->m_vmRef, enable, vmUuid, this);
+    return new DisableVMEnlightenmentAction(this->m_vm, true, this);
 }
 
 bool VMEnlightenmentEditPage::IsValidToSave() const
@@ -167,12 +116,4 @@ void VMEnlightenmentEditPage::Cleanup()
 bool VMEnlightenmentEditPage::HasChanged() const
 {
     return this->ui->checkBoxEnlightenment->isChecked() != this->m_originalEnlightened;
-}
-
-bool VMEnlightenmentEditPage::isVMEnlightened(const QVariantMap& vmData) const
-{
-    // Check if VM has enlightenment enabled
-    // In C#: vm.IsEnlightened() checks for platform["device_id"]
-    QVariantMap platform = vmData.value("platform").toMap();
-    return platform.contains("device_id");
 }

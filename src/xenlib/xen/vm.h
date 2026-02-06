@@ -187,6 +187,27 @@ class XENLIB_EXPORT VM : public XenObject
         //! Check if VM is HVM
         bool IsHVM() const;
 
+        //! Check whether VM has at least one CD VBD attached
+        bool HasCD() const;
+
+        //! Get VM boot order (HVM_boot_params["order"], default "CD")
+        QString GetBootOrder() const;
+
+        //! Set VM boot order in local record (HVM_boot_params["order"])
+        void SetBootOrder(const QString& value);
+
+        //! Get VM auto power-on setting from other_config
+        bool GetAutoPowerOn() const;
+
+        //! Set VM auto power-on setting in local record
+        void SetAutoPowerOn(bool value);
+
+        //! Check whether this VM can be enlightened via xscontainer
+        bool CanBeEnlightened() const;
+
+        //! Check whether enlightenment is currently enabled
+        bool IsEnlightened() const;
+
         //! Check if VM is Windows
         bool IsWindows() const;
 

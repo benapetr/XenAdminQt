@@ -25,55 +25,58 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMENLIGHTENMENTEDITPAGE_H
-#define VMENLIGHTENMENTEDITPAGE_H
+#ifndef VMENLIGHTENMENTACTION_H
+#define VMENLIGHTENMENTACTION_H
 
-#include "ieditpage.h"
+#include "../../asyncoperation.h"
 
-class AsyncOperation;
 class VM;
+class Host;
 
-namespace Ui
-{
-    class VMEnlightenmentEditPage;
-}
-
-/**
- * @brief VM enlightenment settings page
- *
- * Matches C# XenAdmin.SettingsPanels.VMEnlightenmentEditPage
- * Enables/disables Windows guest enlightenment (Hyper-V optimizations)
- */
-class VMEnlightenmentEditPage : public IEditPage
+class XENLIB_EXPORT VMEnlightenmentAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        explicit VMEnlightenmentEditPage(QWidget* parent = nullptr);
-        ~VMEnlightenmentEditPage() override;
+        explicit VMEnlightenmentAction(QSharedPointer<VM> vm,
+                                       bool enable,
+                                       bool suppressHistory = true,
+                                       QObject* parent = nullptr);
 
-        // IEditPage interface
-        QString GetText() const override;
-        QString GetSubText() const override;
-        QIcon GetImage() const override;
-
-        void SetXenObjects(const QString& objectRef,
-                           const QString& objectType,
-                           const QVariantMap& objectDataBefore,
-                           const QVariantMap& objectDataCopy) override;
-
-        AsyncOperation* SaveSettings() override;
-        bool IsValidToSave() const override;
-        void ShowLocalValidationMessages() override;
-        void HideLocalValidationMessages() override;
-        void Cleanup() override;
-        bool HasChanged() const override;
+    protected:
+        void run() override;
 
     private:
-        Ui::VMEnlightenmentEditPage* ui;
-        QString m_vmRef;
+        QSharedPointer<Host> resolveTargetHost() const;
+
         QSharedPointer<VM> m_vm;
-        bool m_originalEnlightened;
+        bool m_enable;
 };
 
-#endif // VMENLIGHTENMENTEDITPAGE_H
+class XENLIB_EXPORT EnableVMEnlightenmentAction : public VMEnlightenmentAction
+{
+    Q_OBJECT
+
+    public:
+        explicit EnableVMEnlightenmentAction(QSharedPointer<VM> vm,
+                                             bool suppressHistory = true,
+                                             QObject* parent = nullptr)
+            : VMEnlightenmentAction(vm, true, suppressHistory, parent)
+        {
+        }
+};
+
+class XENLIB_EXPORT DisableVMEnlightenmentAction : public VMEnlightenmentAction
+{
+    Q_OBJECT
+
+    public:
+        explicit DisableVMEnlightenmentAction(QSharedPointer<VM> vm,
+                                              bool suppressHistory = true,
+                                              QObject* parent = nullptr)
+            : VMEnlightenmentAction(vm, false, suppressHistory, parent)
+        {
+        }
+};
+
+#endif // VMENLIGHTENMENTACTION_H
