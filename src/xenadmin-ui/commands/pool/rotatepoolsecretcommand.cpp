@@ -239,9 +239,7 @@ bool RotatePoolSecretCommand::hasRotationRestriction(const QSharedPointer<Pool>&
         if (!host || !host->IsValid())
             continue;
 
-        // Check for restrict_pool_secret_rotation in host restrictions
-        QVariantMap restrictions = host->GetData().value("restrictions", QVariantMap()).toMap();
-        if (restrictions.value("restrict_pool_secret_rotation", false).toBool())
+        if (host->RestrictPoolSecretRotation())
             return true;
     }
 

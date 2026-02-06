@@ -122,6 +122,11 @@ bool Host::RestrictPoolSize() const
     return boolKey(LicenseParams(), "restrict_pool_size");
 }
 
+bool Host::RestrictPoolSecretRotation() const
+{
+    return boolKeyPreferTrue(this->LicenseParams(), "restrict_pool_secret_rotation");
+}
+
 bool Host::SriovNetworkDisabled() const
 {
     if (!this->RestrictSriovNetwork())

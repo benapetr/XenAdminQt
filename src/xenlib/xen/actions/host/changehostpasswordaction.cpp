@@ -25,47 +25,30 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#include "changehostpasswordaction.h"
+#include "../../network/connection.h"
+#include "../../xenapi/xenapi_Session.h"
 
-#include "hostcommand.h"
-#include <QSharedPointer>
-
-class Host;
-
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+ChangeHostPasswordAction::ChangeHostPasswordAction(XenConnection* connection,
+                                                   const QString& oldPassword,
+                                                   const QString& newPassword,
+                                                   QObject* parent)
+    : AsyncOperation(connection, "Changing server password", "Waiting...", parent),
+      m_oldPassword(oldPassword),
+      m_newPassword(newPassword)
 {
-    Q_OBJECT
+    this->AddApiMethodToRoleCheck("session.change_password");
+}
 
-    public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+void ChangeHostPasswordAction::run()
+{
+    this->SetDescription("Changing server password...");
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
+    XenAPI::SessionAPI::change_password(this->GetSession(), this->m_oldPassword, this->m_newPassword);
 
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
+    XenConnection* connection = this->GetConnection();
+    if (connection)
+        connection->SetPassword(this->m_newPassword);
 
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
-
-    private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
-};
-
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+    this->SetDescription("Completed");
+}

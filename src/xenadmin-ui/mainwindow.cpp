@@ -90,6 +90,13 @@
 #include "commands/host/poweronhostcommand.h"
 #include "commands/host/hostmaintenancemodecommand.h"
 #include "commands/host/hostpropertiescommand.h"
+#include "commands/host/certificatecommand.h"
+#include "commands/host/hostpasswordcommand.h"
+#include "commands/host/changehostpasswordcommand.h"
+#include "commands/host/changecontroldomainmemorycommand.h"
+#include "commands/host/destroyhostcommand.h"
+#include "commands/host/removehostcommand.h"
+#include "commands/connection/forgetsavedpasswordcommand.h"
 
 // Pool commands
 #include "commands/pool/newpoolcommand.h"
@@ -2422,7 +2429,18 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->rebootAction->setEnabled(canReboot);           // Use same variable as toolbar
     this->ui->shutDownAction->setEnabled(canShutdown);       // Use same variable as toolbar
     this->ui->powerOnHostAction->setEnabled(canPowerOnHost); // Use same variable as toolbar
+    this->ui->backupToolStripMenuItem->setEnabled(false);
+    this->ui->restoreFromBackupToolStripMenuItem->setEnabled(false);
+    this->ui->menuCertificate->setEnabled(this->m_commands["Certificate"]->CanRun());
+    this->ui->toolStripMenuItemInstallCertificate->setEnabled(this->m_commands["InstallCertificate"]->CanRun());
+    this->ui->toolStripMenuItemResetCertificate->setEnabled(this->m_commands["ResetCertificate"]->CanRun());
     this->ui->maintenanceModeToolStripMenuItem1->setEnabled(this->m_commands["HostMaintenanceMode"]->CanRun());
+    this->ui->controlDomainMemoryToolStripMenuItem->setEnabled(this->m_commands["ChangeControlDomainMemory"]->CanRun());
+    this->ui->menuHostPassword->setEnabled(this->m_commands["HostPassword"]->CanRun());
+    this->ui->ChangeRootPasswordToolStripMenuItem->setEnabled(this->m_commands["ChangeHostPassword"]->CanRun());
+    this->ui->forgetSavedPasswordToolStripMenuItem->setEnabled(this->m_commands["ForgetSavedPassword"]->CanRun());
+    this->ui->destroyServerToolStripMenuItem->setEnabled(this->m_commands["DestroyHost"]->CanRun());
+    this->ui->removeHostToolStripMenuItem->setEnabled(this->m_commands["RemoveHost"]->CanRun());
     this->ui->ServerPropertiesToolStripMenuItem->setEnabled(this->m_commands["HostProperties"]->CanRun());
 
     // Pool menu
@@ -2448,7 +2466,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->exportResourceDataToolStripMenuItem->setEnabled(false);
     this->ui->menuWorkloadBalancing->setEnabled(false);
     this->ui->makeStandaloneServerToolStripMenuItem->setEnabled(false);
-    this->ui->changePoolPasswordToolStripMenuItem->setEnabled(false);
+    this->ui->changePoolPasswordToolStripMenuItem->setEnabled(this->m_commands["ChangeHostPassword"]->CanRun());
     this->ui->rotatePoolSecretToolStripMenuItem->setEnabled(this->m_commands["RotatePoolSecret"]->CanRun());
     this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
     this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
@@ -2854,6 +2872,48 @@ void MainWindow::onReconnectAs()
         this->m_commands["HostReconnectAs"]->Run();
 }
 
+void MainWindow::onInstallCertificate()
+{
+    if (this->m_commands.contains("InstallCertificate"))
+        this->m_commands["InstallCertificate"]->Run();
+}
+
+void MainWindow::onResetCertificate()
+{
+    if (this->m_commands.contains("ResetCertificate"))
+        this->m_commands["ResetCertificate"]->Run();
+}
+
+void MainWindow::onChangeServerPassword()
+{
+    if (this->m_commands.contains("ChangeHostPassword"))
+        this->m_commands["ChangeHostPassword"]->Run();
+}
+
+void MainWindow::onControlDomainMemory()
+{
+    if (this->m_commands.contains("ChangeControlDomainMemory"))
+        this->m_commands["ChangeControlDomainMemory"]->Run();
+}
+
+void MainWindow::onForgetSavedPassword()
+{
+    if (this->m_commands.contains("ForgetSavedPassword"))
+        this->m_commands["ForgetSavedPassword"]->Run();
+}
+
+void MainWindow::onDestroyServer()
+{
+    if (this->m_commands.contains("DestroyHost"))
+        this->m_commands["DestroyHost"]->Run();
+}
+
+void MainWindow::onRemoveHost()
+{
+    if (this->m_commands.contains("RemoveHost"))
+        this->m_commands["RemoveHost"]->Run();
+}
+
 void MainWindow::onMaintenanceMode()
 {
     if (this->m_commands.contains("HostMaintenanceMode"))
@@ -3154,6 +3214,15 @@ void MainWindow::initializeCommands()
     this->m_commands["ShutdownHost"] = new ShutdownHostCommand(this, this);
     this->m_commands["PowerOnHost"] = new PowerOnHostCommand(this, this);
     this->m_commands["HostMaintenanceMode"] = new HostMaintenanceModeCommand(this, true, this);
+    this->m_commands["Certificate"] = new CertificateCommand(this, this);
+    this->m_commands["InstallCertificate"] = new InstallCertificateCommand(this, this);
+    this->m_commands["ResetCertificate"] = new ResetCertificateCommand(this, this);
+    this->m_commands["HostPassword"] = new HostPasswordCommand(this, this);
+    this->m_commands["ChangeHostPassword"] = new ChangeHostPasswordCommand(this, this);
+    this->m_commands["ChangeControlDomainMemory"] = new ChangeControlDomainMemoryCommand(this, this);
+    this->m_commands["ForgetSavedPassword"] = new ForgetSavedPasswordCommand(this, this);
+    this->m_commands["DestroyHost"] = new DestroyHostCommand(this, this);
+    this->m_commands["RemoveHost"] = new RemoveHostCommand(this, this);
     this->m_commands["HostProperties"] = new HostPropertiesCommand(this, this);
 
     // Pool commands
@@ -3260,6 +3329,13 @@ void MainWindow::connectMenuActions()
     connect(this->ui->disconnectAllToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisconnectAllHosts);
     connect(this->ui->restartToolstackAction, &QAction::triggered, this, &MainWindow::onRestartToolstack);
     connect(this->ui->reconnectAsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onReconnectAs);
+    connect(this->ui->toolStripMenuItemInstallCertificate, &QAction::triggered, this, &MainWindow::onInstallCertificate);
+    connect(this->ui->toolStripMenuItemResetCertificate, &QAction::triggered, this, &MainWindow::onResetCertificate);
+    connect(this->ui->controlDomainMemoryToolStripMenuItem, &QAction::triggered, this, &MainWindow::onControlDomainMemory);
+    connect(this->ui->ChangeRootPasswordToolStripMenuItem, &QAction::triggered, this, &MainWindow::onChangeServerPassword);
+    connect(this->ui->forgetSavedPasswordToolStripMenuItem, &QAction::triggered, this, &MainWindow::onForgetSavedPassword);
+    connect(this->ui->destroyServerToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDestroyServer);
+    connect(this->ui->removeHostToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRemoveHost);
     // Note: rebootAction, shutDownAction, powerOnHostAction are connected in initializeToolbar()
     // to avoid duplicate connections (toolbar and menu share the same QAction)
     connect(this->ui->maintenanceModeToolStripMenuItem1, &QAction::triggered, this, &MainWindow::onMaintenanceMode);
@@ -3273,6 +3349,7 @@ void MainWindow::connectMenuActions()
     connect(this->ui->deleteToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeletePool);
     connect(this->ui->toolStripMenuItemHaConfigure, &QAction::triggered, this, &MainWindow::onHAConfigure);
     connect(this->ui->toolStripMenuItemHaDisable, &QAction::triggered, this, &MainWindow::onHADisable);
+    connect(this->ui->changePoolPasswordToolStripMenuItem, &QAction::triggered, this, &MainWindow::onChangeServerPassword);
     connect(this->ui->rotatePoolSecretToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRotatePoolSecret);
     connect(this->ui->PoolPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onPoolProperties);
     connect(this->ui->addServerToPoolMenuItem, &QAction::triggered, this, &MainWindow::onJoinPool);
@@ -3399,4 +3476,3 @@ void MainWindow::on_actionCheck_for_leaks_triggered()
     QMessageBox::information(this, "Leaks", "Total actions: " + QString::number(AsyncOperation::GetTotalActionsCount()) + "\n"
                                             "Total objects: " + QString::number(XenObject::GetTotalObjectsCount()));
 }
-

@@ -96,6 +96,7 @@ class XENLIB_EXPORT Host : public XenObject
         bool RestrictManagementOnVLAN() const;
         bool RestrictPooling() const;
         bool RestrictPoolSize() const;
+        bool RestrictPoolSecretRotation() const;
         bool SriovNetworkDisabled() const;
         bool vSwitchNetworkBackend() const;
 

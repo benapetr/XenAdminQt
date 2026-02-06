@@ -87,6 +87,16 @@ namespace XenAPI
              * Matches C# Session.get_rbac_permissions()
              */
             static QStringList get_rbac_permissions(Session* session, const QString& sessionRef);
+
+            /**
+             * @brief Change password for the current local user
+             * @param session Active XenSession
+             * @param oldPassword Current password
+             * @param newPassword New password
+             *
+             * Matches C# Session.change_password()
+             */
+            static void change_password(Session* session, const QString& oldPassword, const QString& newPassword);
     };
 
 } // namespace XenAPI

@@ -25,47 +25,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef CHANGECONTROLDOMAINMEMORYACTION_H
+#define CHANGECONTROLDOMAINMEMORYACTION_H
 
-#include "hostcommand.h"
+#include "../../asyncoperation.h"
 #include <QSharedPointer>
 
 class Host;
 
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+class XENLIB_EXPORT ChangeControlDomainMemoryAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit ChangeControlDomainMemoryAction(QSharedPointer<Host> host, qint64 memory, bool suppressHistory, QObject* parent = nullptr);
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
-
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    protected:
+        void run() override;
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        QSharedPointer<Host> m_host;
+        qint64 m_memory;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // CHANGECONTROLDOMAINMEMORYACTION_H

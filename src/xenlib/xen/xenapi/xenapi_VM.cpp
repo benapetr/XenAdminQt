@@ -909,6 +909,20 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Void method
     }
 
+    void VM::set_memory(Session* session, const QString& vm, qint64 memory)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm << memory;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.set_memory", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method
+    }
+
     void VM::set_VCPUs_max(Session* session, const QString& vm, qint64 value)
     {
         if (!session || !session->IsLoggedIn())

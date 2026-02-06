@@ -493,6 +493,16 @@ namespace XenAPI
             static void set_memory_dynamic_range(Session* session, const QString& vm,
                                                  qint64 dynamic_min, qint64 dynamic_max);
 
+            /**
+             * @brief Set control domain memory target for VM.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param memory New target memory (bytes)
+             *
+             * Matches C# VM.set_memory()
+             */
+            static void set_memory(Session* session, const QString& vm, qint64 memory);
+
             // VCPU configuration
 
             /**

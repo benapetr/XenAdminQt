@@ -25,47 +25,42 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef CONTROLDOMAINMEMORYDIALOG_H
+#define CONTROLDOMAINMEMORYDIALOG_H
 
-#include "hostcommand.h"
+#include <QDialog>
 #include <QSharedPointer>
 
 class Host;
 
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+namespace Ui
+{
+    class ControlDomainMemoryDialog;
+}
+
+class ControlDomainMemoryDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        static const int MaximumDom0MemoryMB;
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
+        explicit ControlDomainMemoryDialog(QSharedPointer<Host> host, QWidget* parent = nullptr);
+        ~ControlDomainMemoryDialog() override;
 
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    private slots:
+        void onAccepted();
+        void onEnterMaintenanceMode();
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        void populate();
+        void updateMaintenanceWarning();
+        bool hasChanged() const;
+        bool saveChanges();
+
+        Ui::ControlDomainMemoryDialog* ui;
+        QSharedPointer<Host> m_host;
+        int m_originalMemoryMB;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // CONTROLDOMAINMEMORYDIALOG_H

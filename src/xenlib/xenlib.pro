@@ -163,6 +163,8 @@ HEADERS += \
     xen/actions/host/evacuatehostaction.h \
     xen/actions/host/destroyhostaction.h \
     xen/actions/host/changehostautostartaction.h \
+    xen/actions/host/changehostpasswordaction.h \
+    xen/actions/host/changecontroldomainmemoryaction.h \
     xen/actions/host/editmultipathaction.h \
     xen/actions/host/hahelpers.h \
     xen/actions/host/savepoweronsettingsaction.h \
@@ -384,6 +386,8 @@ SOURCES += \
     xen/actions/host/evacuatehostaction.cpp \
     xen/actions/host/destroyhostaction.cpp \
     xen/actions/host/changehostautostartaction.cpp \
+    xen/actions/host/changehostpasswordaction.cpp \
+    xen/actions/host/changecontroldomainmemoryaction.cpp \
     xen/actions/host/editmultipathaction.cpp \
     xen/actions/host/savepoweronsettingsaction.cpp \
     xen/actions/vdi/creatediskaction.cpp \

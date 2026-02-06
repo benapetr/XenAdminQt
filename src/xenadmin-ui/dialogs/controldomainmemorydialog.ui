@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ControlDomainMemoryDialog</class>
+ <widget class="QDialog" name="ControlDomainMemoryDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>520</width>
+    <height>280</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Control Domain Memory</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="introLabel">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Set the memory allocated to dom0 (control domain). This change is applied after host reboot.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="memoryLayout">
+     <item>
+     <widget class="QLabel" name="memoryLabel">
+       <property name="text">
+        <string>Control domain memory (MB):</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="memorySpinner">
+       <property name="maximum">
+        <number>262144</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="minimumValueLabel">
+     <property name="text">
+      <string>Minimum:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="maximumValueLabel">
+     <property name="text">
+      <string>Maximum:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="maintenanceWarningLabel">
+     <property name="styleSheet">
+      <string notr="true">color: #b00020;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>This host must be in maintenance mode before changing control domain memory.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="enterMaintenanceModeButton">
+     <property name="text">
+      <string>Enter Maintenance Mode...</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="rebootWarningLabel">
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>The host will be rebooted after this change is saved.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

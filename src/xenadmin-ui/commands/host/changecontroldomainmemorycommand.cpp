@@ -25,47 +25,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#include "changecontroldomainmemorycommand.h"
+#include "../../dialogs/controldomainmemorydialog.h"
+#include "xenlib/xen/apiversion.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
 
-#include "hostcommand.h"
-#include <QSharedPointer>
-
-class Host;
-
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+ChangeControlDomainMemoryCommand::ChangeControlDomainMemoryCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+bool ChangeControlDomainMemoryCommand::CanRun() const
+{
+    const QList<QSharedPointer<XenObject>> selected = this->getSelectedObjects();
+    if (selected.count() != 1)
+        return false;
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host || !host->IsLive())
+        return false;
 
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
+    XenConnection* connection = host->GetConnection();
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
+    return session && session->ApiVersionMeets(APIVersion::API_2_6);
+}
 
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+void ChangeControlDomainMemoryCommand::Run()
+{
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
 
-    private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
-};
+    ControlDomainMemoryDialog dialog(host, nullptr);
+    dialog.exec();
+}
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+QString ChangeControlDomainMemoryCommand::MenuText() const
+{
+    return tr("Control Domain Memory...");
+}

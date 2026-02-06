@@ -25,47 +25,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef CHANGEHOSTPASSWORDACTION_H
+#define CHANGEHOSTPASSWORDACTION_H
 
-#include "hostcommand.h"
-#include <QSharedPointer>
+#include "../../asyncoperation.h"
 
-class Host;
-
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+class XENLIB_EXPORT ChangeHostPasswordAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit ChangeHostPasswordAction(XenConnection* connection,
+                                          const QString& oldPassword,
+                                          const QString& newPassword,
+                                          QObject* parent = nullptr);
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
-
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    protected:
+        void run() override;
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        QString m_oldPassword;
+        QString m_newPassword;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // CHANGEHOSTPASSWORDACTION_H

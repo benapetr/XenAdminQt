@@ -45,6 +45,16 @@ HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, c
     Q_UNUSED(selection);
 }
 
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
+{
+    if (!host)
+        return;
+
+    QList<QSharedPointer<XenObject>> selection;
+    selection.append(host.staticCast<XenObject>());
+    this->SetSelectionOverride(selection);
+}
+
 bool HostMaintenanceModeCommand::CanRun() const
 {
     QSharedPointer<Host> host = this->getSelectedHost();
@@ -100,7 +110,8 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            auto ntolPrompt = [this](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
+            auto ntolPrompt = [](QSharedPointer<Pool> pool, qint64 current, qint64 target)
+            {
                 const QString poolName = pool ? pool->GetName() : QString();
                 const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
                 const QString text = QString("HA is enabled for %1.\n\n"
@@ -153,8 +164,8 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            auto ntolIncreasePrompt = [](QSharedPointer<Pool> pool, QSharedPointer<Host> targetHost,
-                                             qint64 current, qint64 target) {
+            auto ntolIncreasePrompt = [](QSharedPointer<Pool> pool, QSharedPointer<Host> targetHost, qint64 current, qint64 target)
+            {
                 const QString poolName = pool ? pool->GetName() : QString();
                 const QString hostNameLocal = targetHost ? targetHost->GetName() : QString();
                 const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);

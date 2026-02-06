@@ -25,47 +25,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef CHANGESERVERPASSWORDDIALOG_H
+#define CHANGESERVERPASSWORDDIALOG_H
 
-#include "hostcommand.h"
+#include <QDialog>
 #include <QSharedPointer>
 
 class Host;
+class Pool;
+class XenConnection;
 
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+namespace Ui
+{
+    class ChangeServerPasswordDialog;
+}
+
+class ChangeServerPasswordDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit ChangeServerPasswordDialog(QSharedPointer<Host> host, QWidget* parent = nullptr);
+        explicit ChangeServerPasswordDialog(QSharedPointer<Pool> pool, QWidget* parent = nullptr);
+        ~ChangeServerPasswordDialog() override;
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
-
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    private slots:
+        void onTextChanged();
+        void onAccepted();
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        void updateTitle();
+        void updateButtons();
+        void updateInfoRows();
+        bool stockholmOrGreater(XenConnection* connection) const;
+        bool hasPoolSecretRotationRestriction(XenConnection* connection) const;
+        static int compareVersion(const QString& lhs, const QString& rhs);
+
+        Ui::ChangeServerPasswordDialog* ui;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<Pool> m_pool;
+        XenConnection* m_connection;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // CHANGESERVERPASSWORDDIALOG_H

@@ -192,6 +192,13 @@ class MainWindow : public QMainWindow
         void onDisconnectAllHosts();
         void onRestartToolstack();
         void onReconnectAs();
+        void onInstallCertificate();
+        void onResetCertificate();
+        void onChangeServerPassword();
+        void onControlDomainMemory();
+        void onForgetSavedPassword();
+        void onDestroyServer();
+        void onRemoveHost();
         void onMaintenanceMode();
         void onServerProperties();
 

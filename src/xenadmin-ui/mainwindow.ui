@@ -153,9 +153,32 @@
     <addaction name="addServerToPoolMenuItem"/>
     <addaction name="menuItemRemoveFromPool"/>
     <addaction name="separator"/>
+    <addaction name="backupToolStripMenuItem"/>
+    <addaction name="restoreFromBackupToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="menuCertificate"/>
     <addaction name="maintenanceModeToolStripMenuItem1"/>
+    <addaction name="controlDomainMemoryToolStripMenuItem"/>
+    <addaction name="menuHostPassword"/>
+    <addaction name="separator"/>
+    <addaction name="destroyServerToolStripMenuItem"/>
+    <addaction name="removeHostToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="ServerPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuCertificate">
+    <property name="title">
+     <string>Certificate</string>
+    </property>
+    <addaction name="toolStripMenuItemInstallCertificate"/>
+    <addaction name="toolStripMenuItemResetCertificate"/>
+   </widget>
+   <widget class="QMenu" name="menuHostPassword">
+    <property name="title">
+     <string>Password</string>
+    </property>
+    <addaction name="ChangeRootPasswordToolStripMenuItem"/>
+    <addaction name="forgetSavedPasswordToolStripMenuItem"/>
    </widget>
    <widget class="QMenu" name="menuVM">
     <property name="title">
@@ -763,6 +786,38 @@
     <string>Remove this server from its pool</string>
    </property>
   </action>
+  <action name="backupToolStripMenuItem">
+   <property name="text">
+    <string>Back Up...</string>
+   </property>
+   <property name="statusTip">
+    <string>Back up this server</string>
+   </property>
+  </action>
+  <action name="restoreFromBackupToolStripMenuItem">
+   <property name="text">
+    <string>Restore From Backup...</string>
+   </property>
+   <property name="statusTip">
+    <string>Restore this server from backup</string>
+   </property>
+  </action>
+  <action name="toolStripMenuItemInstallCertificate">
+   <property name="text">
+    <string>Install...</string>
+   </property>
+   <property name="statusTip">
+    <string>Install server certificate</string>
+   </property>
+  </action>
+  <action name="toolStripMenuItemResetCertificate">
+   <property name="text">
+    <string>Reset</string>
+   </property>
+   <property name="statusTip">
+    <string>Reset server certificate</string>
+   </property>
+  </action>
   <action name="maintenanceModeToolStripMenuItem1">
    <property name="checkable">
     <bool>true</bool>
@@ -772,6 +827,46 @@
    </property>
    <property name="statusTip">
     <string>Enter or exit maintenance mode</string>
+   </property>
+  </action>
+  <action name="controlDomainMemoryToolStripMenuItem">
+   <property name="text">
+    <string>Control Domain Memory...</string>
+   </property>
+   <property name="statusTip">
+    <string>Change control domain memory</string>
+   </property>
+  </action>
+  <action name="ChangeRootPasswordToolStripMenuItem">
+   <property name="text">
+    <string>Change Server Password...</string>
+   </property>
+   <property name="statusTip">
+    <string>Change host password</string>
+   </property>
+  </action>
+  <action name="forgetSavedPasswordToolStripMenuItem">
+   <property name="text">
+    <string>Forget Saved Password</string>
+   </property>
+   <property name="statusTip">
+    <string>Forget saved host credentials</string>
+   </property>
+  </action>
+  <action name="destroyServerToolStripMenuItem">
+   <property name="text">
+    <string>Destroy</string>
+   </property>
+   <property name="statusTip">
+    <string>Destroy this server</string>
+   </property>
+  </action>
+  <action name="removeHostToolStripMenuItem">
+   <property name="text">
+    <string>Remove from XCP-ng Center</string>
+   </property>
+   <property name="statusTip">
+    <string>Remove this host from XCP-ng Center</string>
    </property>
   </action>
   <action name="ServerPropertiesToolStripMenuItem">

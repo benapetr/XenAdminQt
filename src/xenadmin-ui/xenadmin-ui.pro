@@ -24,6 +24,8 @@ SOURCES += \
     connectionprofile.cpp \
     dialogs/addserverdialog.cpp \
     dialogs/connectingtoserverdialog.cpp \
+    dialogs/changeserverpassworddialog.cpp \
+    dialogs/controldomainmemorydialog.cpp \
     dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/xencacheexplorer.cpp \
@@ -144,6 +146,9 @@ SOURCES += \
     commands/host/destroyhostcommand.cpp \
     commands/host/restarttoolstackcommand.cpp \
     commands/host/hostreconnectascommand.cpp \
+    commands/host/hostpasswordcommand.cpp \
+    commands/host/changehostpasswordcommand.cpp \
+    commands/host/changecontroldomainmemorycommand.cpp \
     commands/host/removehostcommand.cpp \
     commands/host/rescanpifscommand.cpp \
     commands/host/certificatecommand.cpp \
@@ -290,6 +295,8 @@ HEADERS += \
     connectionprofile.h \
     dialogs/addserverdialog.h \
     dialogs/connectingtoserverdialog.h \
+    dialogs/changeserverpassworddialog.h \
+    dialogs/controldomainmemorydialog.h \
     dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
     dialogs/xencacheexplorer.h \
@@ -415,6 +422,9 @@ HEADERS += \
     commands/host/destroyhostcommand.h \
     commands/host/restarttoolstackcommand.h \
     commands/host/hostreconnectascommand.h \
+    commands/host/hostpasswordcommand.h \
+    commands/host/changehostpasswordcommand.h \
+    commands/host/changecontroldomainmemorycommand.h \
     commands/host/removehostcommand.h \
     commands/host/rescanpifscommand.h \
     commands/shutdowncommand.h \
@@ -546,6 +556,8 @@ FORMS += \
     mainwindow.ui \
     dialogs/addserverdialog.ui \
     dialogs/connectingtoserverdialog.ui \
+    dialogs/changeserverpassworddialog.ui \
+    dialogs/controldomainmemorydialog.ui \
     dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/xencacheexplorer.ui \

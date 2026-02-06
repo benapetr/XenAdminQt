@@ -25,47 +25,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef CHANGEHOSTPASSWORDCOMMAND_H
+#define CHANGEHOSTPASSWORDCOMMAND_H
 
-#include "hostcommand.h"
-#include <QSharedPointer>
+#include "../command.h"
 
 class Host;
+class Pool;
 
-/**
- * @brief Command to enter/exit host maintenance mode
- *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
- */
-class HostMaintenanceModeCommand : public HostCommand
+class ChangeHostPasswordCommand : public Command
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Enter maintenance mode constructor
-         */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit ChangeHostPasswordCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
-
-        /**
-         * @brief Constructor with explicit host target
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        bool getTarget(QSharedPointer<Host>* host, QSharedPointer<Pool>* pool) const;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // CHANGEHOSTPASSWORDCOMMAND_H

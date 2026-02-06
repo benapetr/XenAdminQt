@@ -101,4 +101,18 @@ namespace XenAPI
         return QStringList();
     }
 
+    void SessionAPI::change_password(Session* session, const QString& oldPassword, const QString& newPassword)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << oldPassword << newPassword;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("session.change_password", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method
+    }
+
 } // namespace XenAPI
