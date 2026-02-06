@@ -25,13 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QApplication>
-#include <QSysInfo>
-#include <QDateTime>
-#include "globals.h"
 #include "aboutdialog.h"
+#include "ui_aboutdialog.h"
+#include "globals.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
@@ -39,38 +35,15 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
-AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
+#include <QApplication>
+#include <QSysInfo>
+#include <QDateTime>
+
+AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent), ui(new Ui::AboutDialog)
 {
-    this->setupUI();
-}
+    this->ui->setupUi(this);
 
-void AboutDialog::setupUI()
-{
-    this->setWindowTitle("About XenAdmin Qt");
-    this->setMinimumSize(500, 400);
-    this->resize(550, 450);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-
-    // Title and version
-    this->m_titleLabel = new QLabel("<h2>XenAdmin Qt</h2>", this);
-    this->m_titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(this->m_titleLabel);
-
-    this->m_versionLabel = new QLabel(this->getVersionInfo(), this);
-    this->m_versionLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(this->m_versionLabel);
-
-    // Separator
-    QFrame* line = new QFrame(this);
-    line->setFrameShape(QFrame::HLine);
-    line->setFrameShadow(QFrame::Sunken);
-    mainLayout->addWidget(line);
-
-    // Information text browser
-    this->m_infoText = new QTextBrowser(this);
-    this->m_infoText->setOpenExternalLinks(false);
-    this->m_infoText->setReadOnly(true);
+    this->ui->labelVersion->setText(this->getVersionInfo());
 
     QString infoHtml = QString(
                            "<h3>System Information</h3>"
@@ -86,17 +59,14 @@ void AboutDialog::setupUI()
                            "<p>This software is open source and distributed under the BSD license.</p>")
                            .arg(this->getSystemInfo(), this->getConnectionInfo(), this->getLicenseDetails());
 
-    this->m_infoText->setHtml(infoHtml);
-    mainLayout->addWidget(this->m_infoText);
+    this->ui->textBrowserInfo->setHtml(infoHtml);
 
-    // OK button
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    this->m_okButton = new QPushButton("OK", this);
-    this->m_okButton->setDefault(true);
-    connect(this->m_okButton, &QPushButton::clicked, this, &QDialog::accept);
-    buttonLayout->addWidget(this->m_okButton);
-    mainLayout->addLayout(buttonLayout);
+    connect(this->ui->buttonOk, &QPushButton::clicked, this, &QDialog::accept);
+}
+
+AboutDialog::~AboutDialog()
+{
+    delete this->ui;
 }
 
 QString AboutDialog::getVersionInfo() const

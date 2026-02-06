@@ -37,8 +37,46 @@
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
 #include "xen/pool.h"
+#include "xen/host.h"
+#include "xen/poolupdate.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
+
+namespace
+{
+    bool containerCapability(XenConnection* connection)
+    {
+        if (!connection || !connection->GetCache())
+            return false;
+
+        QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
+        if (!pool || !pool->IsValid())
+            return false;
+
+        QSharedPointer<Host> master = pool->GetMasterHost();
+        if (!master || !master->IsValid())
+            return false;
+
+        if (master->ProductBrand().compare(QStringLiteral("XCP-ng"), Qt::CaseInsensitive) == 0)
+            return true;
+
+        const QList<QSharedPointer<PoolUpdate>> updates = master->AppliedUpdates();
+        for (const QSharedPointer<PoolUpdate>& update : updates)
+        {
+            if (update && update->GetName().startsWith(QStringLiteral("xscontainer"), Qt::CaseInsensitive))
+                return true;
+        }
+
+        const QList<Host::SuppPack> packs = master->SuppPacks();
+        for (const Host::SuppPack& pack : packs)
+        {
+            if (pack.IsValid && pack.Name.startsWith(QStringLiteral("xscontainer"), Qt::CaseInsensitive))
+                return true;
+        }
+
+        return false;
+    }
+}
 
 VMPropertiesDialog::VMPropertiesDialog(QSharedPointer<VM> vm, QWidget* parent) : VerticallyTabbedDialog(vm, parent)
 {
@@ -58,7 +96,6 @@ void VMPropertiesDialog::build()
         return;
     bool isSnapshot = this->m_vm->IsSnapshot();
     bool isVm = !isSnapshot;
-    bool isTemplate = this->m_vm->IsTemplate();
     bool isHVM = this->m_vm->IsHVM();
 
     // Tab 1: General
@@ -79,51 +116,37 @@ void VMPropertiesDialog::build()
         this->showTab(new VMHAEditPage());
     }
 
-    // Tab 6: Performance Alerts
-    this->showTab(new PerfmonAlertEditPage());
-
-    // Tab 7: Home Server (only if WLB not enabled/configured)
-    bool wlbEnabled = false;
-    QSharedPointer<Pool> pool = this->m_vm && this->m_vm->GetConnection()
-        ? this->m_vm->GetConnection()->GetCache()->GetPoolOfOne()
-        : QSharedPointer<Pool>();
-    if (pool)
-        wlbEnabled = pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
-
-    if (!wlbEnabled)
+    if (isVm)
     {
-        this->showTab(new HomeServerEditPage());
-    }
+        // Tab 6: Performance Alerts
+        this->showTab(new PerfmonAlertEditPage());
 
-    // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:
-    //
-    // - GpuEditPage (lines 198-203) - only if VM.CanHaveGpu() and GPUs available
-    //   GPU passthrough configuration
-    //   Needs SaveGpuAction with VGPU creation/destruction
-    //
-    // - USBEditPage (lines 205-212) - only if !template && USB passthrough not restricted && PUSBs exist
-    //   USB device passthrough configuration
-    //   Has async Populated event - may need data fetching
-    //   Needs SaveUSBAction with PUSB/VUSB creation
-    //
-    // - USBEditPage (lines 205-212) - only if !template && USB passthrough not restricted && PUSBs exist
-    //
-    // - VMAdvancedEditPage (line 214) - only for HVM VMs
-    //
-    // - VMEnlightenmentEditPage (line 218-220) - only if container-capable connection && VM.CanBeEnlightened()
-    //
-    // - CloudConfigParametersPage (line 222-224) - only if VM.CanHaveCloudConfigDrive()
+        // Tab 7: Home Server (only if WLB not enabled/configured)
+        bool wlbEnabled = false;
+        QSharedPointer<Pool> pool = this->m_vm && this->m_vm->GetConnection()
+            ? this->m_vm->GetConnection()->GetCache()->GetPoolOfOne()
+            : QSharedPointer<Pool>();
+        if (pool)
+            wlbEnabled = pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
 
-    if (isHVM)
-    {
-        this->showTab(new VMAdvancedEditPage());
-    }
+        if (!wlbEnabled)
+        {
+            this->showTab(new HomeServerEditPage());
+        }
 
-    // TODO: Implement Helpers.ContainerCapability() and VM.CanBeEnlightened().
-    // For now, mirror previous behavior: show Enlightenment only for HVM non-templates.
-    if (isHVM && !isTemplate)
-    {
-        this->showTab(new VMEnlightenmentEditPage());
+        // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:
+        // - GpuEditPage (if VM.CanHaveGpu() and GPUs available)
+        // - USBEditPage (if !template and USB passthrough supported and PUSBs exist)
+        // - CloudConfigParametersPage (if VM.CanHaveCloudConfigDrive())
+        if (isHVM)
+        {
+            this->showTab(new VMAdvancedEditPage());
+        }
+
+        if (containerCapability(this->m_vm->GetConnection()) && this->m_vm->CanBeEnlightened())
+        {
+            this->showTab(new VMEnlightenmentEditPage());
+        }
     }
 
     if (!this->m_pages.isEmpty())

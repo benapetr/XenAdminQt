@@ -29,9 +29,11 @@
 #define ABOUTDIALOG_H
 
 #include <QDialog>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextBrowser>
+
+namespace Ui
+{
+    class AboutDialog;
+}
 
 class AboutDialog : public QDialog
 {
@@ -39,19 +41,15 @@ class AboutDialog : public QDialog
 
     public:
         explicit AboutDialog(QWidget* parent = nullptr);
+        ~AboutDialog();
 
     private:
-        void setupUI();
         QString getVersionInfo() const;
         QString getSystemInfo() const;
         QString getConnectionInfo() const;
         QString getLicenseDetails() const;
 
-        QLabel* m_logoLabel;
-        QLabel* m_titleLabel;
-        QLabel* m_versionLabel;
-        QTextBrowser* m_infoText;
-        QPushButton* m_okButton;
+        Ui::AboutDialog* ui;
 };
 
 #endif // ABOUTDIALOG_H

@@ -29,13 +29,13 @@
 #define ACTIONPROGRESSDIALOG_H
 
 #include <QDialog>
-#include <QProgressBar>
-#include <QLabel>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QPointer>
 #include "xen/asyncoperation.h"
+
+namespace Ui
+{
+    class ActionProgressDialog;
+}
 
 /**
  * @brief Progress dialog for monitoring AsyncOperation execution
@@ -144,11 +144,6 @@ class ActionProgressDialog : public QDialog
 
     private:
         /**
-         * @brief Initialize UI components
-         */
-        void setupUi();
-
-        /**
          * @brief Update status label from operation
          */
         void updateStatusLabel();
@@ -168,18 +163,8 @@ class ActionProgressDialog : public QDialog
          */
         void hideTitleBarIcons();
 
-        // UI Components
-        QVBoxLayout* m_mainLayout;
-        QHBoxLayout* m_iconLayout;
-        QHBoxLayout* m_buttonLayout;
-        QLabel* m_iconLabel;
-        QLabel* m_statusLabel;
-        QLabel* m_subStatusLabel;
-        QLabel* m_exceptionLabel;
-        QLabel* m_bottomLabel;
-        QProgressBar* m_progressBar;
-        QPushButton* m_cancelButton;
-        QPushButton* m_closeButton;
+        // UI
+        Ui::ActionProgressDialog* ui;
 
         // Operation (QPointer automatically becomes null if operation is deleted)
         QPointer<AsyncOperation> m_operation;
