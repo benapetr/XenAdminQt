@@ -26,6 +26,7 @@
  */
 
 #include "crosspoolmovevmcommand.h"
+#include "mainwindow.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"

@@ -27,6 +27,7 @@
 
 #include "crosspoolmigratecommand.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
+#include "mainwindow.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
