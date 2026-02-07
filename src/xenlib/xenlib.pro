@@ -178,6 +178,9 @@ HEADERS += \
     xen/actions/vbd/vbdcreateandplugaction.h \
     xen/actions/vbd/vbdeditaction.h \
     xen/actions/general/generaleditpageaction.h \
+    xen/actions/general/getdatasourcesaction.h \
+    xen/actions/general/enabledatasourceaction.h \
+    xen/actions/general/savedatasourcestateaction.h \
     xen/actions/vm/vmstartabstractaction.h \
     xen/actions/vm/vmstartonaction.h \
     xen/actions/vm/vmresumeaction.h \
@@ -404,6 +407,9 @@ SOURCES += \
     xen/actions/vbd/vbdcreateandplugaction.cpp \
     xen/actions/vbd/vbdeditaction.cpp \
     xen/actions/general/generaleditpageaction.cpp \
+    xen/actions/general/getdatasourcesaction.cpp \
+    xen/actions/general/enabledatasourceaction.cpp \
+    xen/actions/general/savedatasourcestateaction.cpp \
     xen/actions/vm/vmstartabstractaction.cpp \
     xen/actions/vm/vmstartonaction.cpp \
     xen/actions/vm/vmresumeaction.cpp \

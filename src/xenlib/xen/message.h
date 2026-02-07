@@ -71,8 +71,17 @@ class XENLIB_EXPORT Message : public XenObject
         //! Get the time at which the message was created
         QDateTime Timestamp() const;
 
+        //! Get message timestamp adjusted for server offset and converted to local time
+        QDateTime TimestampLocal() const;
+
         //! Get the body of the message
         QString Body() const;
+
+        //! Check whether this message type should be displayed on performance graphs
+        bool ShowOnGraphs() const;
+
+        //! Check whether this message type should be hidden from alerts/events views
+        bool IsSquelched() const;
 };
 
 #endif // MESSAGE_H

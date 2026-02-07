@@ -33,6 +33,7 @@
 #include <QStringList>
 #include <QVariant>
 #include <QHash>
+#include <QList>
 
 namespace XenAPI
 {
@@ -88,6 +89,36 @@ namespace XenAPI
              * Matches C# Host.query_data_source()
              */
             static double query_data_source(Session* session, const QString& host, const QString& data_source);
+
+            /**
+             * @brief Get available data sources for a host
+             * @param session Active Xen session
+             * @param host Host opaque reference
+             * @return List of data source records
+             *
+             * Matches C# Host.get_data_sources()
+             */
+            static QList<QVariantMap> get_data_sources(Session* session, const QString& host);
+
+            /**
+             * @brief Enable recording of a host data source
+             * @param session Active Xen session
+             * @param host Host opaque reference
+             * @param data_source Data source name
+             *
+             * Matches C# Host.record_data_source()
+             */
+            static void record_data_source(Session* session, const QString& host, const QString& data_source);
+
+            /**
+             * @brief Forget archived records for a host data source
+             * @param session Active Xen session
+             * @param host Host opaque reference
+             * @param data_source Data source name
+             *
+             * Matches C# Host.forget_data_source_archives()
+             */
+            static void forget_data_source_archives(Session* session, const QString& host, const QString& data_source);
 
             /**
              * @brief Set the name_label field

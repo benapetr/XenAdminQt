@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1000</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,219 +15,101 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QWidget" name="headerWidget" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Time Range:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="timeRangeCombo">
-        <item>
-         <property name="text">
-          <string>Last 1 Minute</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Last 5 Minutes</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Last 10 Minutes</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Last Hour</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable">
-      <bool>true</bool>
+    <widget class="QSplitter" name="contentSplitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>780</width>
-        <height>542</height>
-       </rect>
+     <widget class="QWidget" name="leftPanel">
+      <layout class="QVBoxLayout" name="leftLayout">
+       <item>
+        <layout class="QHBoxLayout" name="toolbarLayout">
+         <item>
+          <widget class="QPushButton" name="graphActionsButton">
+           <property name="text">
+            <string>Graph Actions</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="moveUpButton">
+           <property name="text">
+            <string>Move Up</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="moveDownButton">
+           <property name="text">
+            <string>Move Down</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="toolbarSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="zoomButton">
+           <property name="text">
+            <string>Zoom</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QWidget" name="graphListContainer" native="true"/>
+       </item>
+       <item>
+        <widget class="QWidget" name="plotNavContainer" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>56</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>80</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="rightPanel">
+      <property name="minimumSize">
+       <size>
+        <width>220</width>
+        <height>0</height>
+       </size>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="maximumSize">
+       <size>
+        <width>360</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="rightLayout">
        <item>
-        <widget class="QGroupBox" name="cpuGroupBox">
-         <property name="title">
-          <string>CPU Usage</string>
+        <widget class="QLabel" name="eventsLabel">
+         <property name="text">
+          <string>VM Lifecycle Events</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <item>
-             <widget class="QLabel" name="cpuLabel">
-              <property name="text">
-               <string>Current:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="cpuCurrentLabel">
-              <property name="text">
-               <string>N/A</string>
-              </property>
-              <property name="font">
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QWidget" name="cpuChartWidget" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="memoryGroupBox">
-         <property name="title">
-          <string>Memory Usage</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_3">
-            <item>
-             <widget class="QLabel" name="memoryLabel">
-              <property name="text">
-               <string>Current:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="memoryCurrentLabel">
-              <property name="text">
-               <string>N/A</string>
-              </property>
-              <property name="font">
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_3">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QWidget" name="memoryChartWidget" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="networkGroupBox">
-         <property name="title">
-          <string>Network I/O</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <item>
-           <widget class="QWidget" name="networkChartWidget" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="diskGroupBox">
-         <property name="title">
-          <string>Disk I/O</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
-          <item>
-           <widget class="QWidget" name="diskChartWidget" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>200</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
+        <widget class="QWidget" name="eventListContainer" native="true"/>
        </item>
       </layout>
      </widget>

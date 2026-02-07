@@ -82,6 +82,17 @@ SOURCES += \
     controls/customtreeview.cpp \
     controls/connectionwrapperwithmorestuff.cpp \
     controls/pdsection.cpp \
+    controls/customdatagraph/dataset.cpp \
+    controls/customdatagraph/dataarchive.cpp \
+    controls/customdatagraph/datasourceitem.cpp \
+    controls/customdatagraph/graphhelpers.cpp \
+    controls/customdatagraph/palette.cpp \
+    controls/customdatagraph/dataeventlist.cpp \
+    controls/customdatagraph/archivemaintainer.cpp \
+    controls/customdatagraph/dataplotnav.cpp \
+    controls/customdatagraph/datakey.cpp \
+    controls/customdatagraph/dataplot.cpp \
+    controls/customdatagraph/graphlist.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
     controls/xensearch/foldernavigator.cpp \
@@ -352,6 +363,22 @@ HEADERS += \
     controls/snapshottreeview.h \
     controls/multipledvdisolist.h \
     controls/pdsection.h \
+    controls/customdatagraph/archiveinterval.h \
+    controls/customdatagraph/datapoint.h \
+    controls/customdatagraph/datarange.h \
+    controls/customdatagraph/datatimerange.h \
+    controls/customdatagraph/dataset.h \
+    controls/customdatagraph/dataarchive.h \
+    controls/customdatagraph/datasourceitem.h \
+    controls/customdatagraph/graphhelpers.h \
+    controls/customdatagraph/palette.h \
+    controls/customdatagraph/dataevent.h \
+    controls/customdatagraph/dataeventlist.h \
+    controls/customdatagraph/archivemaintainer.h \
+    controls/customdatagraph/dataplotnav.h \
+    controls/customdatagraph/datakey.h \
+    controls/customdatagraph/dataplot.h \
+    controls/customdatagraph/graphlist.h \
     controls/xensearch/querypanel.h \
     controls/xensearch/searchoutput.h \
     controls/xensearch/foldernavigator.h \

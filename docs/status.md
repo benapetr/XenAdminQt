@@ -8,10 +8,8 @@
 * VM import / export
 * Folder and tag views
 * Network tab (host) - needs finish and test, especially wizards and properties
-* New pool wizard
 * New storage wizard
 * HA tab
-* NIC tab - bonding
 * Create template from VM
 * Create VM from template
 
@@ -51,6 +49,8 @@
 * General tab
 * Host command -> Restart toolstack
 * Memory tabs
+* New pool wizard
+* NIC tab - bonding
 
 # Known issues
 * When quitting the app sometimes the "pending ops" window appears that's empty

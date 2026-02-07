@@ -29,106 +29,92 @@
 #define PERFORMANCETABPAGE_H
 
 #include "basetabpage.h"
-#include <QTimer>
-#include <QMap>
+#include "controls/customdatagraph/graphhelpers.h"
+#include <QPointer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
     class PerformanceTabPage;
 }
+class QMenu;
 QT_END_NAMESPACE
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-// Qt5 requires actual includes for QtCharts classes, not forward declarations
-#include <QtCharts/QChartView>
-#include <QtCharts/QLineSeries>
-#include <QtCharts/QChart>
-#include <QtCharts/QValueAxis>
+namespace CustomDataGraph
+{
+    class GraphList;
+    class DataPlotNav;
+    class DataEventList;
+    class ArchiveMaintainer;
+}
 
-QT_CHARTS_USE_NAMESPACE
-#else
-QT_FORWARD_DECLARE_CLASS(QChartView)
-QT_FORWARD_DECLARE_CLASS(QLineSeries)
-QT_FORWARD_DECLARE_CLASS(QChart)
-QT_FORWARD_DECLARE_CLASS(QValueAxis)
-#endif
-
+/**
+ * Performance tab orchestration:
+ * - refreshContent() is lightweight and marks data as needing re-init.
+ * - Heavy startup (datasource fetch + archive maintainer start) is deferred to OnPageShown().
+ * - Datasources load asynchronously via GetDataSourcesAction; callbacks are token-guarded to ignore stale completions.
+ * - ArchiveMaintainer runs metric fetch/parse in worker-thread flow and notifies UI with ArchivesUpdated.
+ * - OnPageHidden()/removeObject() stop/cancel in-flight work and detach state to avoid stale-pointer usage.
+ */
 class PerformanceTabPage : public BaseTabPage
 {
     Q_OBJECT
 
     public:
         explicit PerformanceTabPage(QWidget* parent = nullptr);
-        ~PerformanceTabPage();
+        ~PerformanceTabPage() override;
 
-        QString GetTitle() const override
-        {
-            return "Performance";
-        }
-        Type GetType() const override
-        {
-            return Type::Performance;
-        }
+        QString GetTitle() const override { return "Performance"; }
+        Type GetType() const override { return Type::Performance; }
+        QString HelpID() const override { return "TabPagePerformance"; }
         bool IsApplicableForObjectType(const QString& objectType) const override;
+
+        void OnPageShown() override;
+        void OnPageHidden() override;
 
     protected:
         void refreshContent() override;
+        void removeObject() override;
 
     private slots:
-        void updateMetrics();
-        void onTimeRangeChanged(int index);
+        void onGraphActionsClicked();
+        void onZoomClicked();
+        void onMoveUpClicked();
+        void onMoveDownClicked();
+        void onGraphSelectionChanged();
+        void onArchivesUpdated();
+        void onConnectionMessageReceived(const QString& messageRef, const QVariantMap& messageData);
+        void onConnectionMessageRemoved(const QString& messageRef);
 
     private:
         Ui::PerformanceTabPage* ui;
-        QTimer* m_updateTimer;
 
-        // Chart components
-        QChartView* m_cpuChartView;
-        QChartView* m_memoryChartView;
-        QChartView* m_networkChartView;
-        QChartView* m_diskChartView;
+        CustomDataGraph::GraphList* m_graphList;
+        CustomDataGraph::DataPlotNav* m_dataPlotNav;
+        CustomDataGraph::DataEventList* m_dataEventList;
+        CustomDataGraph::ArchiveMaintainer* m_archiveMaintainer;
+        QPointer<class GetDataSourcesAction> m_getDataSourcesAction;
+        // Monotonic generation counter for async datasource loads; callbacks only apply if their token matches current state.
+        quint64 m_dataSourcesLoadToken = 0;
 
-        QChart* m_cpuChart;
-        QChart* m_memoryChart;
-        QChart* m_networkChart;
-        QChart* m_diskChart;
+        QMenu* m_graphActionsMenu;
+        QMenu* m_zoomMenu;
+        QList<CustomDataGraph::DataSourceItem> m_availableDataSources;
 
-        QLineSeries* m_cpuSeries;
-        QLineSeries* m_memorySeries;
-        QLineSeries* m_networkReadSeries;
-        QLineSeries* m_networkWriteSeries;
-        QLineSeries* m_diskReadSeries;
-        QLineSeries* m_diskWriteSeries;
+        QList<CustomDataGraph::DataSourceItem> buildAvailableDataSources() const;
+        void loadDataSources();
+        bool showGraphDetailsDialog(CustomDataGraph::DesignedGraph& graph, bool editMode);
+        void updateButtons();
+        void loadEvents();
+        void checkMessageForGraphs(const QVariantMap& messageData, bool add);
+        void disconnectConnectionSignals();
+        void connectConnectionSignals();
+        void initializeVisibleContent();
 
-        QValueAxis* m_cpuAxisX;
-        QValueAxis* m_cpuAxisY;
-        QValueAxis* m_memoryAxisX;
-        QValueAxis* m_memoryAxisY;
-        QValueAxis* m_networkAxisX;
-        QValueAxis* m_networkAxisY;
-        QValueAxis* m_diskAxisX;
-        QValueAxis* m_diskAxisY;
-
-        // Chart data
-        QMap<QString, QList<qreal>> m_metricsHistory;
-        int m_maxDataPoints;
-        qint64 m_startTime;
-
-        void setupCharts();
-        void updateCpuChart();
-        void updateMemoryChart();
-        void updateNetworkChart();
-        void updateDiskChart();
-        void fetchMetrics();
-        void clearHistory();
-
-        QChart* createChart(const QString& title);
-        void updateChart(QChart* chart, QLineSeries* series, const QList<qreal>& data,
-                         QValueAxis* axisX, QValueAxis* axisY, const QString& yLabel);
-
-        // Helper to add data point
-        void addDataPoint(const QString& metric, qreal value);
+        bool m_pageVisible = false;
+        bool m_needsVisibleInitialization = false;
+        QString m_loadedGraphsObjectRef;
+        XenObjectType m_loadedGraphsObjectType = XenObjectType::Null;
 };
 
 #endif // PERFORMANCETABPAGE_H

@@ -27,536 +27,791 @@
 
 #include "performancetabpage.h"
 #include "ui_performancetabpage.h"
-#include "xen/xenapi/xenapi_VM.h"
-#include "xen/xenapi/xenapi_Host.h"
-#include "xen/session.h"
-#include "xen/network/connection.h"
-#include <QDateTime>
+#include "controls/customdatagraph/graphlist.h"
+#include "controls/customdatagraph/dataplotnav.h"
+#include "controls/customdatagraph/dataeventlist.h"
+#include "controls/customdatagraph/archivemaintainer.h"
+#include "controls/customdatagraph/palette.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/general/getdatasourcesaction.h"
+#include "xenlib/xen/actions/general/enabledatasourceaction.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xencache.h"
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QMenu>
+#include <QAction>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QLabel>
-#include <QRandomGenerator>
-#include <QtCharts/QChartView>
-#include <QtCharts/QLineSeries>
-#include <QtCharts/QChart>
-#include <QtCharts/QValueAxis>
+#include <QPushButton>
+#include <QSplitter>
+#include <QMap>
+#include <QSet>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QCheckBox>
+#include <QColorDialog>
 
-PerformanceTabPage::PerformanceTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PerformanceTabPage), m_updateTimer(new QTimer(this)), m_cpuChartView(nullptr), m_memoryChartView(nullptr), m_networkChartView(nullptr), m_diskChartView(nullptr), m_cpuChart(nullptr), m_memoryChart(nullptr), m_networkChart(nullptr), m_diskChart(nullptr), m_cpuSeries(nullptr), m_memorySeries(nullptr), m_networkReadSeries(nullptr), m_networkWriteSeries(nullptr), m_diskReadSeries(nullptr), m_diskWriteSeries(nullptr), m_cpuAxisX(nullptr), m_cpuAxisY(nullptr), m_memoryAxisX(nullptr), m_memoryAxisY(nullptr), m_networkAxisX(nullptr), m_networkAxisY(nullptr), m_diskAxisX(nullptr), m_diskAxisY(nullptr), m_maxDataPoints(60) // 60 data points = 1 minute at 1-second intervals
-      ,   m_startTime(QDateTime::currentMSecsSinceEpoch())
+using namespace CustomDataGraph;
+
+namespace
 {
+    static QDateTime parseMessageTimestampLocal(const QVariant& timestampValue, XenConnection* connection)
+    {
+        QDateTime timestamp;
+        if (timestampValue.canConvert<QDateTime>())
+            timestamp = timestampValue.toDateTime();
+
+        if (!timestamp.isValid())
+        {
+            const QString raw = timestampValue.toString().trimmed();
+            if (!raw.isEmpty())
+            {
+                timestamp = QDateTime::fromString(raw, Qt::ISODate);
+                if (!timestamp.isValid())
+                    timestamp = QDateTime::fromString(raw, Qt::ISODateWithMs);
+                if (!timestamp.isValid())
+                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyyMMddTHH:mm:ssZ"));
+                if (!timestamp.isValid())
+                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyy-MM-ddTHH:mm:ssZ"));
+                if (!timestamp.isValid())
+                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyyMMddTHHmmssZ"));
+            }
+        }
+
+        if (!timestamp.isValid())
+        {
+            bool ok = false;
+            const qint64 epoch = timestampValue.toLongLong(&ok);
+            if (ok)
+            {
+                // Some paths pass Unix seconds, others milliseconds.
+                if (epoch > 1000000000000LL || epoch < -1000000000000LL)
+                    timestamp = QDateTime::fromMSecsSinceEpoch(epoch, Qt::UTC);
+                else
+                    timestamp = QDateTime::fromSecsSinceEpoch(epoch, Qt::UTC);
+            }
+        }
+
+        if (!timestamp.isValid())
+            return QDateTime();
+
+        timestamp = timestamp.toUTC();
+
+        if (connection)
+            timestamp = timestamp.addSecs(connection->GetServerTimeOffsetSeconds());
+
+        return timestamp.toLocalTime();
+    }
+
+    static bool isGraphMessageType(const QString& name)
+    {
+        const QString type = name.toUpper();
+        return type == QStringLiteral("VM_CLONED")
+               || type == QStringLiteral("VM_CRASHED")
+               || type == QStringLiteral("VM_REBOOTED")
+               || type == QStringLiteral("VM_RESUMED")
+               || type == QStringLiteral("VM_SHUTDOWN")
+               || type == QStringLiteral("VM_STARTED")
+               || type == QStringLiteral("VM_SUSPENDED");
+    }
+}
+
+PerformanceTabPage::PerformanceTabPage(QWidget* parent) : BaseTabPage(parent)
+{
+    this->ui = new Ui::PerformanceTabPage;
+    this->m_graphList = new GraphList(this);
+    this->m_dataPlotNav = new DataPlotNav(this);
+    this->m_dataEventList = new DataEventList(this);
+    this->m_archiveMaintainer = nullptr;
+    this->m_graphActionsMenu = new QMenu(this);
+    this->m_zoomMenu = new QMenu(this);
+
     this->ui->setupUi(this);
+    if (QSplitter* splitter = this->findChild<QSplitter*>(QStringLiteral("contentSplitter")))
+        splitter->setSizes({ 820, 260 });
 
-    // Setup update timer (update every second)
-    this->m_updateTimer->setInterval(1000);
-    connect(this->m_updateTimer, &QTimer::timeout, this, &PerformanceTabPage::updateMetrics);
+    auto* graphLayout = new QVBoxLayout(this->ui->graphListContainer);
+    graphLayout->setContentsMargins(0, 0, 0, 0);
+    graphLayout->addWidget(this->m_graphList);
 
-    // Connect time range selector
-    connect(this->ui->timeRangeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &PerformanceTabPage::onTimeRangeChanged);
+    auto* navLayout = new QVBoxLayout(this->ui->plotNavContainer);
+    navLayout->setContentsMargins(0, 0, 0, 0);
+    navLayout->addWidget(this->m_dataPlotNav);
 
-    this->setupCharts();
+    auto* eventLayout = new QVBoxLayout(this->ui->eventListContainer);
+    eventLayout->setContentsMargins(0, 0, 0, 0);
+    eventLayout->addWidget(this->m_dataEventList);
+
+    this->m_dataEventList->SetPlotNav(this->m_dataPlotNav);
+    this->m_graphList->SetDataPlotNav(this->m_dataPlotNav);
+    this->m_graphList->SetDataEventList(this->m_dataEventList);
+
+    connect(this->ui->graphActionsButton, &QPushButton::clicked, this, &PerformanceTabPage::onGraphActionsClicked);
+    connect(this->ui->zoomButton, &QPushButton::clicked, this, &PerformanceTabPage::onZoomClicked);
+    connect(this->ui->moveUpButton, &QPushButton::clicked, this, &PerformanceTabPage::onMoveUpClicked);
+    connect(this->ui->moveDownButton, &QPushButton::clicked, this, &PerformanceTabPage::onMoveDownClicked);
+    connect(this->m_graphList, &GraphList::SelectedGraphChanged, this, &PerformanceTabPage::onGraphSelectionChanged);
+
+    QAction* newGraphAction = this->m_graphActionsMenu->addAction(tr("New Graph"));
+    QAction* editGraphAction = this->m_graphActionsMenu->addAction(tr("Edit Graph"));
+    QAction* deleteGraphAction = this->m_graphActionsMenu->addAction(tr("Delete Graph"));
+    this->m_graphActionsMenu->addSeparator();
+    QAction* restoreDefaultsAction = this->m_graphActionsMenu->addAction(tr("Restore Default Graphs"));
+
+    connect(newGraphAction, &QAction::triggered, this, [this]()
+    {
+        DesignedGraph graph;
+        graph.DisplayName = tr("New Graph");
+        if (this->showGraphDetailsDialog(graph, false))
+            this->m_graphList->AddGraph(graph);
+    });
+
+    connect(editGraphAction, &QAction::triggered, this, [this]()
+    {
+        if (this->m_graphList->SelectedGraphIndex() < 0)
+            return;
+
+        DesignedGraph graph = this->m_graphList->SelectedGraph();
+        if (this->showGraphDetailsDialog(graph, true))
+            this->m_graphList->ReplaceGraphAt(this->m_graphList->SelectedGraphIndex(), graph);
+    });
+
+    connect(deleteGraphAction, &QAction::triggered, this, [this]()
+    {
+        if (this->m_graphList->SelectedGraphIndex() < 0 || this->m_graphList->Count() <= 1)
+            return;
+
+        this->m_graphList->DeleteGraph(this->m_graphList->SelectedGraph());
+    });
+
+    connect(restoreDefaultsAction, &QAction::triggered, this->m_graphList, &GraphList::RestoreDefaultGraphs);
+
+    QAction* lastYear = this->m_zoomMenu->addAction(tr("Last Year"));
+    QAction* lastMonth = this->m_zoomMenu->addAction(tr("Last Month"));
+    QAction* lastWeek = this->m_zoomMenu->addAction(tr("Last Week"));
+    QAction* lastDay = this->m_zoomMenu->addAction(tr("Last Day"));
+    QAction* lastHour = this->m_zoomMenu->addAction(tr("Last Hour"));
+    QAction* lastTenMinutes = this->m_zoomMenu->addAction(tr("Last Ten Minutes"));
+
+    connect(lastYear, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastYear);
+    connect(lastMonth, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastMonth);
+    connect(lastWeek, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastWeek);
+    connect(lastDay, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastDay);
+    connect(lastHour, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastHour);
+    connect(lastTenMinutes, &QAction::triggered, this->m_dataPlotNav, &DataPlotNav::ZoomLastTenMinutes);
+
+    this->updateButtons();
 }
 
 PerformanceTabPage::~PerformanceTabPage()
 {
-    this->m_updateTimer->stop();
+    this->disconnectConnectionSignals();
+
+    ++this->m_dataSourcesLoadToken;
+    if (this->m_getDataSourcesAction)
+    {
+        disconnect(this->m_getDataSourcesAction, nullptr, this, nullptr);
+        this->m_getDataSourcesAction->Cancel();
+        this->m_getDataSourcesAction = nullptr;
+    }
+
+    if (this->m_archiveMaintainer)
+    {
+        this->m_graphList->SetArchiveMaintainer(nullptr);
+        this->m_dataPlotNav->SetArchiveMaintainer(nullptr);
+        this->m_archiveMaintainer->Stop();
+        this->m_archiveMaintainer->deleteLater();
+        this->m_archiveMaintainer = nullptr;
+    }
+
     delete this->ui;
 }
 
 bool PerformanceTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
-    // Performance tab is applicable to VMs and Hosts
-    return objectType == "vm" || objectType == "host";
+    return objectType == QStringLiteral("vm") || objectType == QStringLiteral("host");
+}
+
+void PerformanceTabPage::OnPageShown()
+{
+    this->m_pageVisible = true;
+    this->initializeVisibleContent();
+}
+
+void PerformanceTabPage::OnPageHidden()
+{
+    this->m_pageVisible = false;
+
+    if (this->m_archiveMaintainer)
+        this->m_archiveMaintainer->Stop();
+
+    this->disconnectConnectionSignals();
+
+    ++this->m_dataSourcesLoadToken;
+    if (this->m_getDataSourcesAction)
+    {
+        disconnect(this->m_getDataSourcesAction, nullptr, this, nullptr);
+        this->m_getDataSourcesAction->Cancel();
+        this->m_getDataSourcesAction = nullptr;
+    }
+}
+
+void PerformanceTabPage::removeObject()
+{
+    this->m_needsVisibleInitialization = false;
+    this->m_loadedGraphsObjectRef.clear();
+    this->m_loadedGraphsObjectType = XenObjectType::Null;
+    this->disconnectConnectionSignals();
+    this->m_availableDataSources.clear();
+    ++this->m_dataSourcesLoadToken;
+
+    if (this->m_getDataSourcesAction)
+    {
+        disconnect(this->m_getDataSourcesAction, nullptr, this, nullptr);
+        this->m_getDataSourcesAction->Cancel();
+        this->m_getDataSourcesAction = nullptr;
+    }
+
+    if (this->m_archiveMaintainer)
+    {
+        this->m_graphList->SetArchiveMaintainer(nullptr);
+        this->m_dataPlotNav->SetArchiveMaintainer(nullptr);
+        this->m_archiveMaintainer->Stop();
+        this->m_archiveMaintainer->deleteLater();
+        this->m_archiveMaintainer = nullptr;
+    }
+
+    this->m_dataEventList->ClearEvents();
 }
 
 void PerformanceTabPage::refreshContent()
 {
-    if (this->m_objectData.isEmpty())
-    {
-        this->m_updateTimer->stop();
-        this->clearHistory();
+    if (!this->m_object)
         return;
+
+    const bool graphLayoutReloadNeeded = (this->m_loadedGraphsObjectRef != this->m_objectRef)
+                                         || (this->m_loadedGraphsObjectType != this->m_objectType);
+
+    if (graphLayoutReloadNeeded)
+    {
+        this->disconnectConnectionSignals();
+        this->m_dataEventList->ClearEvents();
+        this->m_availableDataSources.clear();
+        this->m_needsVisibleInitialization = true;
+
+        ++this->m_dataSourcesLoadToken;
+        if (this->m_getDataSourcesAction)
+        {
+            disconnect(this->m_getDataSourcesAction, nullptr, this, nullptr);
+            this->m_getDataSourcesAction->Cancel();
+            this->m_getDataSourcesAction = nullptr;
+        }
+
+        this->m_graphList->LoadGraphs(this->m_object.data());
+        this->m_loadedGraphsObjectRef = this->m_objectRef;
+        this->m_loadedGraphsObjectType = this->m_objectType;
+    } else
+    {
+        // Same object update: keep maintainer/signals alive and refresh plots in-place.
+        if (this->m_archiveMaintainer)
+            this->m_archiveMaintainer->SetDataSourceIds(this->m_graphList->DisplayedUuids());
+
+        if (this->m_pageVisible)
+        {
+            this->m_dataPlotNav->RefreshXRange(false);
+            this->m_graphList->RefreshGraphs();
+        }
     }
 
-    // Start collecting metrics
-    this->clearHistory();
-    this->m_startTime = QDateTime::currentMSecsSinceEpoch();
-    this->fetchMetrics();
-    this->m_updateTimer->start();
+    this->updateButtons();
+
+    if (this->m_pageVisible && this->m_needsVisibleInitialization)
+        this->initializeVisibleContent();
 }
 
-void PerformanceTabPage::setupCharts()
+void PerformanceTabPage::onGraphActionsClicked()
 {
-    // CPU Chart
-    this->m_cpuSeries = new QLineSeries();
-    this->m_cpuSeries->setName("CPU Usage");
-    this->m_cpuChart = this->createChart("CPU Usage (%)");
-    this->m_cpuChart->addSeries(this->m_cpuSeries);
-
-    this->m_cpuAxisX = new QValueAxis();
-    this->m_cpuAxisX->setTitleText("Time (seconds)");
-    this->m_cpuAxisX->setLabelFormat("%d");
-    this->m_cpuAxisX->setRange(0, 60);
-
-    this->m_cpuAxisY = new QValueAxis();
-    this->m_cpuAxisY->setTitleText("CPU %");
-    this->m_cpuAxisY->setRange(0, 100);
-
-    this->m_cpuChart->addAxis(this->m_cpuAxisX, Qt::AlignBottom);
-    this->m_cpuChart->addAxis(this->m_cpuAxisY, Qt::AlignLeft);
-    this->m_cpuSeries->attachAxis(this->m_cpuAxisX);
-    this->m_cpuSeries->attachAxis(this->m_cpuAxisY);
-
-    this->m_cpuChartView = new QChartView(this->m_cpuChart);
-    this->m_cpuChartView->setRenderHint(QPainter::Antialiasing);
-
-    QVBoxLayout* cpuLayout = new QVBoxLayout(this->ui->cpuChartWidget);
-    cpuLayout->setContentsMargins(0, 0, 0, 0);
-    cpuLayout->addWidget(this->m_cpuChartView);
-
-    // Memory Chart
-    this->m_memorySeries = new QLineSeries();
-    this->m_memorySeries->setName("Memory Usage");
-    this->m_memoryChart = this->createChart("Memory Usage (%)");
-    this->m_memoryChart->addSeries(this->m_memorySeries);
-
-    this->m_memoryAxisX = new QValueAxis();
-    this->m_memoryAxisX->setTitleText("Time (seconds)");
-    this->m_memoryAxisX->setLabelFormat("%d");
-    this->m_memoryAxisX->setRange(0, 60);
-
-    this->m_memoryAxisY = new QValueAxis();
-    this->m_memoryAxisY->setTitleText("Memory %");
-    this->m_memoryAxisY->setRange(0, 100);
-
-    this->m_memoryChart->addAxis(this->m_memoryAxisX, Qt::AlignBottom);
-    this->m_memoryChart->addAxis(this->m_memoryAxisY, Qt::AlignLeft);
-    this->m_memorySeries->attachAxis(this->m_memoryAxisX);
-    this->m_memorySeries->attachAxis(this->m_memoryAxisY);
-
-    this->m_memoryChartView = new QChartView(this->m_memoryChart);
-    this->m_memoryChartView->setRenderHint(QPainter::Antialiasing);
-
-    QVBoxLayout* memLayout = new QVBoxLayout(this->ui->memoryChartWidget);
-    memLayout->setContentsMargins(0, 0, 0, 0);
-    memLayout->addWidget(this->m_memoryChartView);
-
-    // Network Chart
-    this->m_networkReadSeries = new QLineSeries();
-    this->m_networkReadSeries->setName("Network Read");
-    this->m_networkWriteSeries = new QLineSeries();
-    this->m_networkWriteSeries->setName("Network Write");
-
-    this->m_networkChart = this->createChart("Network I/O (KB/s)");
-    this->m_networkChart->addSeries(this->m_networkReadSeries);
-    this->m_networkChart->addSeries(this->m_networkWriteSeries);
-
-    this->m_networkAxisX = new QValueAxis();
-    this->m_networkAxisX->setTitleText("Time (seconds)");
-    this->m_networkAxisX->setLabelFormat("%d");
-    this->m_networkAxisX->setRange(0, 60);
-
-    this->m_networkAxisY = new QValueAxis();
-    this->m_networkAxisY->setTitleText("KB/s");
-    this->m_networkAxisY->setRange(0, 1000);
-
-    this->m_networkChart->addAxis(this->m_networkAxisX, Qt::AlignBottom);
-    this->m_networkChart->addAxis(this->m_networkAxisY, Qt::AlignLeft);
-    this->m_networkReadSeries->attachAxis(this->m_networkAxisX);
-    this->m_networkReadSeries->attachAxis(this->m_networkAxisY);
-    this->m_networkWriteSeries->attachAxis(this->m_networkAxisX);
-    this->m_networkWriteSeries->attachAxis(this->m_networkAxisY);
-
-    this->m_networkChartView = new QChartView(this->m_networkChart);
-    this->m_networkChartView->setRenderHint(QPainter::Antialiasing);
-
-    QVBoxLayout* netLayout = new QVBoxLayout(this->ui->networkChartWidget);
-    netLayout->setContentsMargins(0, 0, 0, 0);
-    netLayout->addWidget(this->m_networkChartView);
-
-    // Disk Chart
-    this->m_diskReadSeries = new QLineSeries();
-    this->m_diskReadSeries->setName("Disk Read");
-    this->m_diskWriteSeries = new QLineSeries();
-    this->m_diskWriteSeries->setName("Disk Write");
-
-    this->m_diskChart = this->createChart("Disk I/O (ops/s)");
-    this->m_diskChart->addSeries(this->m_diskReadSeries);
-    this->m_diskChart->addSeries(this->m_diskWriteSeries);
-
-    this->m_diskAxisX = new QValueAxis();
-    this->m_diskAxisX->setTitleText("Time (seconds)");
-    this->m_diskAxisX->setLabelFormat("%d");
-    this->m_diskAxisX->setRange(0, 60);
-
-    this->m_diskAxisY = new QValueAxis();
-    this->m_diskAxisY->setTitleText("ops/s");
-    this->m_diskAxisY->setRange(0, 100);
-
-    this->m_diskChart->addAxis(this->m_diskAxisX, Qt::AlignBottom);
-    this->m_diskChart->addAxis(this->m_diskAxisY, Qt::AlignLeft);
-    this->m_diskReadSeries->attachAxis(this->m_diskAxisX);
-    this->m_diskReadSeries->attachAxis(this->m_diskAxisY);
-    this->m_diskWriteSeries->attachAxis(this->m_diskAxisX);
-    this->m_diskWriteSeries->attachAxis(this->m_diskAxisY);
-
-    this->m_diskChartView = new QChartView(this->m_diskChart);
-    this->m_diskChartView->setRenderHint(QPainter::Antialiasing);
-
-    QVBoxLayout* diskLayout = new QVBoxLayout(this->ui->diskChartWidget);
-    diskLayout->setContentsMargins(0, 0, 0, 0);
-    diskLayout->addWidget(this->m_diskChartView);
+    this->updateButtons();
+    this->m_graphActionsMenu->exec(this->ui->graphActionsButton->mapToGlobal(QPoint(0, this->ui->graphActionsButton->height())));
 }
 
-QChart* PerformanceTabPage::createChart(const QString& title)
+void PerformanceTabPage::onZoomClicked()
 {
-    QChart* chart = new QChart();
-    chart->setTitle(title);
-    chart->setAnimationOptions(QChart::NoAnimation); // Disable for better performance
-    chart->legend()->setVisible(true);
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    return chart;
+    this->m_zoomMenu->exec(this->ui->zoomButton->mapToGlobal(QPoint(0, this->ui->zoomButton->height())));
 }
 
-void PerformanceTabPage::updateMetrics()
+void PerformanceTabPage::onMoveUpClicked()
 {
-    this->fetchMetrics();
-    this->updateCpuChart();
-    this->updateMemoryChart();
-    this->updateNetworkChart();
-    this->updateDiskChart();
+    const int index = this->m_graphList->SelectedGraphIndex();
+    if (index > 0)
+        this->m_graphList->ExchangeGraphs(index, index - 1);
 }
 
-void PerformanceTabPage::fetchMetrics()
+void PerformanceTabPage::onMoveDownClicked()
 {
-    if (this->m_objectData.isEmpty() || !this->m_connection)
-    {
+    const int index = this->m_graphList->SelectedGraphIndex();
+    if (index >= 0 && index < this->m_graphList->Count() - 1)
+        this->m_graphList->ExchangeGraphs(index, index + 1);
+}
+
+void PerformanceTabPage::onGraphSelectionChanged()
+{
+    this->updateButtons();
+}
+
+void PerformanceTabPage::onArchivesUpdated()
+{
+    this->m_dataPlotNav->RefreshXRange(false);
+    this->m_graphList->RefreshGraphs();
+}
+
+void PerformanceTabPage::onConnectionMessageReceived(const QString& messageRef, const QVariantMap& messageData)
+{
+    Q_UNUSED(messageRef);
+    this->checkMessageForGraphs(messageData, true);
+}
+
+void PerformanceTabPage::onConnectionMessageRemoved(const QString& messageRef)
+{
+    if (!this->m_connection)
         return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    const QVariantMap messageData = cache->ResolveObjectData(XenObjectType::Message, messageRef);
+    if (messageData.isEmpty())
+        return;
+
+    this->checkMessageForGraphs(messageData, false);
+}
+
+QList<DataSourceItem> PerformanceTabPage::buildAvailableDataSources() const
+{
+    if (!this->m_availableDataSources.isEmpty())
+        return this->m_availableDataSources;
+
+    if (!this->m_graphList)
+        return {};
+
+    return this->m_graphList->AllDataSourceItems();
+}
+
+void PerformanceTabPage::loadDataSources()
+{
+    if (!this->m_object || !this->m_connection)
+        return;
+
+    ++this->m_dataSourcesLoadToken;
+    const quint64 loadToken = this->m_dataSourcesLoadToken;
+
+    if (this->m_getDataSourcesAction)
+    {
+        disconnect(this->m_getDataSourcesAction, nullptr, this, nullptr);
+        this->m_getDataSourcesAction->Cancel();
+        this->m_getDataSourcesAction = nullptr;
     }
 
-    // Get the object reference (opaque_ref)
-    QString objRef = this->m_objectData.value("OpaqueRef").toString();
-    if (objRef.isEmpty())
+    auto* action = new GetDataSourcesAction(this->m_connection, this->m_objectType, this->m_objectRef, this);
+    this->m_getDataSourcesAction = action;
+
+    connect(action, &GetDataSourcesAction::completed, this, [this, action, loadToken]()
     {
-        return;
+        if (this->m_getDataSourcesAction != action || loadToken != this->m_dataSourcesLoadToken || !this->m_object)
+        {
+            action->deleteLater();
+            return;
+        }
+
+        this->m_availableDataSources = DataSourceItemList::BuildList(this->m_object.data(), action->DataSources());
+        this->m_getDataSourcesAction = nullptr;
+        action->deleteLater();
+    });
+
+    connect(action, &GetDataSourcesAction::failed, this, [this, action](const QString& error)
+    {
+        Q_UNUSED(error);
+        if (this->m_getDataSourcesAction == action)
+            this->m_getDataSourcesAction = nullptr;
+        action->deleteLater();
+    });
+
+    connect(action, &GetDataSourcesAction::cancelled, this, [this, action]()
+    {
+        if (this->m_getDataSourcesAction == action)
+            this->m_getDataSourcesAction = nullptr;
+        action->deleteLater();
+    });
+
+    action->RunAsync();
+}
+
+bool PerformanceTabPage::showGraphDetailsDialog(DesignedGraph& graph, bool editMode)
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(editMode ? tr("Edit Graph") : tr("New Graph"));
+    dialog.resize(900, 560);
+
+    auto* layout = new QVBoxLayout(&dialog);
+    auto* form = new QFormLayout();
+    auto* nameEdit = new QLineEdit(&dialog);
+    nameEdit->setText(graph.DisplayName);
+    form->addRow(tr("Name"), nameEdit);
+    layout->addLayout(form);
+
+    auto* searchEdit = new QLineEdit(&dialog);
+    searchEdit->setPlaceholderText(tr("Search data sources..."));
+    auto* showHidden = new QCheckBox(tr("Show Hidden"), &dialog);
+    auto* showDisabled = new QCheckBox(tr("Show Disabled"), &dialog);
+
+    auto* filterRow = new QWidget(&dialog);
+    auto* filterLayout = new QHBoxLayout(filterRow);
+    filterLayout->setContentsMargins(0, 0, 0, 0);
+    filterLayout->addWidget(searchEdit, 1);
+    filterLayout->addWidget(showHidden);
+    filterLayout->addWidget(showDisabled);
+    layout->addWidget(filterRow);
+
+    auto* sourceTable = new QTableWidget(&dialog);
+    sourceTable->setColumnCount(4);
+    sourceTable->setHorizontalHeaderLabels({ tr("Display"), tr("Color"), tr("Data Source"), tr("Description") });
+    sourceTable->horizontalHeader()->setStretchLastSection(true);
+    sourceTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    sourceTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    sourceTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    sourceTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    sourceTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    sourceTable->setSortingEnabled(true);
+
+    auto* enableButton = new QPushButton(tr("Enable Selected Data Source"), &dialog);
+    enableButton->setEnabled(false);
+
+    layout->addWidget(sourceTable, 1);
+    layout->addWidget(enableButton, 0, Qt::AlignLeft);
+
+    const QList<DataSourceItem> availableRaw = this->buildAvailableDataSources();
+    QMap<QString, DataSourceItem> itemById;
+    for (const DataSourceItem& item : availableRaw)
+        itemById.insert(item.Id, item);
+
+    QSet<QString> selectedIds;
+    for (const DataSourceItem& item : graph.DataSourceItems)
+        selectedIds.insert(item.Id);
+
+    auto updateEnableButtonState = [&]()
+    {
+        const QList<QTableWidgetSelectionRange> ranges = sourceTable->selectedRanges();
+        if (ranges.isEmpty())
+        {
+            enableButton->setEnabled(false);
+            return;
+        }
+
+        const int row = ranges.first().topRow();
+        QTableWidgetItem* item = sourceTable->item(row, 2);
+        if (!item)
+        {
+            enableButton->setEnabled(false);
+            return;
+        }
+
+        const QString id = item->data(Qt::UserRole).toString();
+        enableButton->setEnabled(itemById.contains(id) && !itemById.value(id).Enabled);
+    };
+
+    auto repopulateTable = [&]()
+    {
+        sourceTable->setSortingEnabled(false);
+        sourceTable->setRowCount(0);
+
+        const QString needle = searchEdit->text().trimmed();
+        for (const DataSourceItem& item : itemById)
+        {
+            if (!showHidden->isChecked() && item.Hidden)
+                continue;
+            if (!showDisabled->isChecked() && !item.Enabled)
+                continue;
+
+            const QString displayName = item.FriendlyName.isEmpty() ? item.GetDataSource() : item.FriendlyName;
+            const QString searchable = (displayName + QStringLiteral(" ") + item.GetDataSource()).toLower();
+            if (!needle.isEmpty() && !searchable.contains(needle.toLower()))
+                continue;
+
+            const int row = sourceTable->rowCount();
+            sourceTable->insertRow(row);
+
+            auto* displayItem = new QTableWidgetItem();
+            displayItem->setFlags(displayItem->flags() | Qt::ItemIsUserCheckable);
+            displayItem->setCheckState(selectedIds.contains(item.Id) ? Qt::Checked : Qt::Unchecked);
+            displayItem->setData(Qt::UserRole, item.Id);
+            sourceTable->setItem(row, 0, displayItem);
+
+            auto* colorItem = new QTableWidgetItem(QStringLiteral("    "));
+            colorItem->setData(Qt::UserRole, item.Id);
+            colorItem->setBackground(item.Color);
+            sourceTable->setItem(row, 1, colorItem);
+
+            auto* nameItem = new QTableWidgetItem(displayName);
+            nameItem->setData(Qt::UserRole, item.Id);
+            if (!item.Enabled)
+                nameItem->setForeground(Qt::gray);
+            sourceTable->setItem(row, 2, nameItem);
+
+            auto* descItem = new QTableWidgetItem(item.GetDataSource());
+            if (!item.Enabled)
+                descItem->setForeground(Qt::gray);
+            sourceTable->setItem(row, 3, descItem);
+        }
+
+        sourceTable->setSortingEnabled(true);
+        sourceTable->sortItems(0, Qt::AscendingOrder);
+        updateEnableButtonState();
+    };
+
+    repopulateTable();
+
+    connect(searchEdit, &QLineEdit::textChanged, &dialog, [repopulateTable]() { repopulateTable(); });
+    connect(showHidden, &QCheckBox::toggled, &dialog, [repopulateTable]() { repopulateTable(); });
+    connect(showDisabled, &QCheckBox::toggled, &dialog, [repopulateTable]() { repopulateTable(); });
+    connect(sourceTable, &QTableWidget::itemSelectionChanged, &dialog, updateEnableButtonState);
+    connect(sourceTable, &QTableWidget::itemChanged, &dialog, [&](QTableWidgetItem* item)
+    {
+        if (!item || item->column() != 0)
+            return;
+
+        const QString id = item->data(Qt::UserRole).toString();
+        if (id.isEmpty())
+            return;
+
+        if (item->checkState() == Qt::Checked)
+            selectedIds.insert(id);
+        else
+            selectedIds.remove(id);
+    });
+    connect(sourceTable, &QTableWidget::itemDoubleClicked, &dialog, [&](QTableWidgetItem* item)
+    {
+        if (!item || item->column() != 1)
+            return;
+
+        const QString id = item->data(Qt::UserRole).toString();
+        if (!itemById.contains(id))
+            return;
+
+        const QColor picked = QColorDialog::getColor(itemById.value(id).Color, &dialog, tr("Select Data Source Color"));
+        if (!picked.isValid())
+            return;
+
+        DataSourceItem value = itemById.value(id);
+        value.Color = picked;
+        value.ColorChanged = true;
+        itemById[id] = value;
+        item->setBackground(picked);
+    });
+    connect(enableButton, &QPushButton::clicked, &dialog, [&]()
+    {
+        const QList<QTableWidgetSelectionRange> ranges = sourceTable->selectedRanges();
+        if (ranges.isEmpty())
+            return;
+
+        const int row = ranges.first().topRow();
+        QTableWidgetItem* nameItem = sourceTable->item(row, 2);
+        if (!nameItem)
+            return;
+
+        const QString id = nameItem->data(Qt::UserRole).toString();
+        if (!itemById.contains(id))
+            return;
+
+        const DataSourceItem source = itemById.value(id);
+        if (source.Enabled)
+            return;
+
+        auto* action = new EnableDataSourceAction(this->m_connection,
+                                                  this->m_objectType,
+                                                  this->m_objectRef,
+                                                  source.DataSource.NameLabel,
+                                                  source.FriendlyName.isEmpty() ? source.GetDataSource() : source.FriendlyName,
+                                                  &dialog);
+        action->RunSync(this->m_connection->GetSession());
+        const QList<QVariantMap> reloaded = action->DataSources();
+        action->deleteLater();
+
+        if (!reloaded.isEmpty())
+        {
+            const QList<DataSourceItem> refreshed = DataSourceItemList::BuildList(this->m_object.data(), reloaded);
+            this->m_availableDataSources = refreshed;
+            QMap<QString, DataSourceItem> refreshedById;
+            for (const DataSourceItem& item : refreshed)
+            {
+                DataSourceItem updated = item;
+                if (itemById.contains(item.Id) && itemById.value(item.Id).ColorChanged)
+                {
+                    updated.Color = itemById.value(item.Id).Color;
+                    updated.ColorChanged = true;
+                }
+                refreshedById[item.Id] = updated;
+            }
+            itemById = refreshedById;
+            repopulateTable();
+        }
+    });
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttons);
+
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() != QDialog::Accepted)
+        return false;
+
+    graph.DisplayName = nameEdit->text().trimmed();
+    graph.DataSourceItems.clear();
+    for (const QString& id : selectedIds)
+    {
+        if (itemById.contains(id))
+            graph.DataSourceItems.append(itemById.value(id));
     }
 
-    XenAPI::Session* session = this->m_connection->GetSession();
-    if (!session || !session->IsLoggedIn())
-    {
-        return;
-    }
+    return !graph.DataSourceItems.isEmpty();
+}
 
-    // For VMs
+void PerformanceTabPage::updateButtons()
+{
+    const int index = this->m_graphList->SelectedGraphIndex();
+    this->ui->moveUpButton->setEnabled(index > 0);
+    this->ui->moveDownButton->setEnabled(index >= 0 && index < this->m_graphList->Count() - 1);
+}
+
+void PerformanceTabPage::loadEvents()
+{
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    const QList<QVariantMap> messages = cache->GetAllData(XenObjectType::Message);
+    for (const QVariantMap& messageData : messages)
+        this->checkMessageForGraphs(messageData, true);
+}
+
+void PerformanceTabPage::checkMessageForGraphs(const QVariantMap& messageData, bool add)
+{
+    const QString messageType = messageData.value(QStringLiteral("name")).toString();
+    if (!isGraphMessageType(messageType))
+        return;
+
+    if (messageData.value(QStringLiteral("cls")).toString().toLower() != QStringLiteral("vm"))
+        return;
+
+    const QString messageVmUuid = messageData.value(QStringLiteral("obj_uuid")).toString();
+    if (messageVmUuid.isEmpty())
+        return;
+
+    bool applies = false;
+    QString vmName;
+
     if (this->m_objectType == XenObjectType::VM)
     {
-        // Query CPU usage data source
-        double cpuUsage = XenAPI::VM::query_data_source(session, objRef, "cpu");
-        if (cpuUsage >= 0.0)
+        applies = (this->m_object->GetUUID() == messageVmUuid);
+        if (applies && this->m_object)
+            vmName = this->m_object->GetName();
+    } else if (this->m_objectType == XenObjectType::Host)
+    {
+        QSharedPointer<Host> host = this->m_connection->GetCache()->ResolveObject<Host>(this->m_objectRef);
+        if (host)
         {
-            this->addDataPoint("cpu", cpuUsage);
-        }
-
-        // Query memory usage - try memory_internal_free first (guest agent provides this)
-        double memoryInternalFree = XenAPI::VM::query_data_source(session, objRef, "memory_internal_free");
-        if (memoryInternalFree >= 0.0)
-        {
-            // memory_internal_free is in KB, convert to percentage
-            // We need memory_target to calculate percentage
-            qint64 memoryTarget = this->m_objectData.value("memory_target", 0).toLongLong();
-            if (memoryTarget > 0)
+            const QList<QSharedPointer<VM>> resident = host->GetResidentVMs();
+            for (const QSharedPointer<VM>& vm : resident)
             {
-                // memoryInternalFree is in KB, memoryTarget is in bytes
-                double memoryUsedKB = (memoryTarget / 1024.0) - memoryInternalFree;
-                double memUsagePercent = (memoryUsedKB * 100.0) / (memoryTarget / 1024.0);
-                this->addDataPoint("memory", qMax(0.0, qMin(100.0, memUsagePercent)));
-            }
-        } else
-        {
-            // Fallback: use static memory values from object data
-            qint64 memoryActual = this->m_objectData.value("memory_actual", 0).toLongLong();
-            qint64 memoryTarget = this->m_objectData.value("memory_target", 1).toLongLong();
-            if (memoryTarget > 0)
-            {
-                qreal memUsagePercent = (memoryActual * 100.0) / memoryTarget;
-                this->addDataPoint("memory", memUsagePercent);
+                if (vm && vm->GetUUID() == messageVmUuid)
+                {
+                    applies = true;
+                    vmName = vm->GetName();
+                    break;
+                }
             }
         }
-
-        // Query network I/O - sum of all network interfaces
-        // XenServer provides per-VIF data sources like "vif_0_rx", "vif_0_tx"
-        // For simplicity, query generic network metrics if available
-        double networkRead = XenAPI::VM::query_data_source(session, objRef, "vif_0_rx");
-        double networkWrite = XenAPI::VM::query_data_source(session, objRef, "vif_0_tx");
-        if (networkRead >= 0.0)
-        {
-            this->addDataPoint("network_read", networkRead / 1024.0); // Convert to KB/s
-        }
-        if (networkWrite >= 0.0)
-        {
-            this->addDataPoint("network_write", networkWrite / 1024.0);
-        }
-
-        // Query disk I/O operations
-        double diskRead = XenAPI::VM::query_data_source(session, objRef, "vbd_0_read");
-        double diskWrite = XenAPI::VM::query_data_source(session, objRef, "vbd_0_write");
-        if (diskRead >= 0.0)
-        {
-            this->addDataPoint("disk_read", diskRead);
-        }
-        if (diskWrite >= 0.0)
-        {
-            this->addDataPoint("disk_write", diskWrite);
-        }
-    }
-    // For Hosts
-    else if (this->m_objectType == XenObjectType::Host)
-    {
-        // Query host CPU usage
-        double cpuUsage = XenAPI::Host::query_data_source(session, objRef, "cpu_avg");
-        if (cpuUsage >= 0.0)
-        {
-            this->addDataPoint("cpu", cpuUsage * 100.0); // Convert to percentage
-        }
-
-        // Query host memory usage
-        double memoryFree = XenAPI::Host::query_data_source(session, objRef, "memory_free_kib");
-        if (memoryFree >= 0.0)
-        {
-            qint64 memoryTotal = this->m_objectData.value("memory_total", 1).toLongLong();
-            if (memoryTotal > 0)
-            {
-                double memoryTotalKB = memoryTotal / 1024.0;
-                double memoryUsedKB = memoryTotalKB - memoryFree;
-                double memUsagePercent = (memoryUsedKB * 100.0) / memoryTotalKB;
-                this->addDataPoint("memory", qMax(0.0, qMin(100.0, memUsagePercent)));
-            }
-        }
-
-        // Query host network I/O (aggregate of all PIFs)
-        double networkRead = XenAPI::Host::query_data_source(session, objRef, "pif_eth0_rx");
-        double networkWrite = XenAPI::Host::query_data_source(session, objRef, "pif_eth0_tx");
-        if (networkRead >= 0.0)
-        {
-            this->addDataPoint("network_read", networkRead / 1024.0); // Convert to KB/s
-        }
-        if (networkWrite >= 0.0)
-        {
-            this->addDataPoint("network_write", networkWrite / 1024.0);
-        }
-
-        // Query host disk I/O
-        double diskRead = XenAPI::Host::query_data_source(session, objRef, "io_throughput_read");
-        double diskWrite = XenAPI::Host::query_data_source(session, objRef, "io_throughput_write");
-        if (diskRead >= 0.0)
-        {
-            this->addDataPoint("disk_read", diskRead);
-        }
-        if (diskWrite >= 0.0)
-        {
-            this->addDataPoint("disk_write", diskWrite);
-        }
     }
 
-    // Update current stats labels
-    QList<qreal> cpuData = this->m_metricsHistory.value("cpu");
-    if (!cpuData.isEmpty())
-    {
-        this->ui->cpuCurrentLabel->setText(QString("%1%").arg(cpuData.last(), 0, 'f', 1));
-    }
-
-    QList<qreal> memData = this->m_metricsHistory.value("memory");
-    if (!memData.isEmpty())
-    {
-        this->ui->memoryCurrentLabel->setText(QString("%1%").arg(memData.last(), 0, 'f', 1));
-    }
-}
-
-void PerformanceTabPage::addDataPoint(const QString& metric, qreal value)
-{
-    QList<qreal>& history = this->m_metricsHistory[metric];
-    history.append(value);
-
-    // Keep only the last N data points
-    while (history.size() > this->m_maxDataPoints)
-    {
-        history.removeFirst();
-    }
-}
-
-void PerformanceTabPage::updateCpuChart()
-{
-    QList<qreal> cpuData = this->m_metricsHistory.value("cpu");
-    if (cpuData.isEmpty())
+    if (!applies)
         return;
 
-    QVector<QPointF> points;
-    for (int i = 0; i < cpuData.size(); ++i)
-    {
-        points.append(QPointF(i, cpuData[i]));
-    }
+    if (vmName.isEmpty())
+        vmName = messageVmUuid;
 
-    this->m_cpuSeries->replace(points);
+    const QDateTime timestamp = parseMessageTimestampLocal(messageData.value(QStringLiteral("timestamp")), this->m_connection);
+    const qint64 ticks = timestamp.isValid() ? timestamp.toMSecsSinceEpoch() : 0;
 
-    // Update X-axis range
-    if (cpuData.size() > 1)
-    {
-        this->m_cpuAxisX->setRange(0, cpuData.size() - 1);
-    }
+    DataEvent event(ticks, 0, messageType, messageVmUuid, vmName);
+    if (add)
+        this->m_dataEventList->AddEvent(event);
+    else
+        this->m_dataEventList->RemoveEvent(event);
 }
 
-void PerformanceTabPage::updateMemoryChart()
+void PerformanceTabPage::disconnectConnectionSignals()
 {
-    QList<qreal> memData = this->m_metricsHistory.value("memory");
-    if (memData.isEmpty())
+    if (!this->m_connection)
         return;
 
-    QVector<QPointF> points;
-    for (int i = 0; i < memData.size(); ++i)
-    {
-        points.append(QPointF(i, memData[i]));
-    }
-
-    this->m_memorySeries->replace(points);
-
-    // Update X-axis range
-    if (memData.size() > 1)
-    {
-        this->m_memoryAxisX->setRange(0, memData.size() - 1);
-    }
+    disconnect(this->m_connection, &XenConnection::MessageReceived, this, &PerformanceTabPage::onConnectionMessageReceived);
+    disconnect(this->m_connection, &XenConnection::MessageRemoved, this, &PerformanceTabPage::onConnectionMessageRemoved);
 }
 
-void PerformanceTabPage::updateNetworkChart()
+void PerformanceTabPage::connectConnectionSignals()
 {
-    QList<qreal> readData = this->m_metricsHistory.value("network_read");
-    QList<qreal> writeData = this->m_metricsHistory.value("network_write");
+    if (!this->m_connection)
+        return;
 
-    if (!readData.isEmpty())
-    {
-        QVector<QPointF> readPoints;
-        for (int i = 0; i < readData.size(); ++i)
-        {
-            readPoints.append(QPointF(i, readData[i]));
-        }
-        this->m_networkReadSeries->replace(readPoints);
-
-        if (readData.size() > 1)
-        {
-            this->m_networkAxisX->setRange(0, readData.size() - 1);
-        }
-    }
-
-    if (!writeData.isEmpty())
-    {
-        QVector<QPointF> writePoints;
-        for (int i = 0; i < writeData.size(); ++i)
-        {
-            writePoints.append(QPointF(i, writeData[i]));
-        }
-        this->m_networkWriteSeries->replace(writePoints);
-    }
-
-    // Auto-adjust Y-axis based on max value
-    qreal maxVal = 0;
-    for (qreal val : readData)
-        maxVal = qMax(maxVal, val);
-    for (qreal val : writeData)
-        maxVal = qMax(maxVal, val);
-    if (maxVal > 0)
-    {
-        this->m_networkAxisY->setRange(0, maxVal * 1.2); // 20% padding
-    }
+    connect(this->m_connection, &XenConnection::MessageReceived, this, &PerformanceTabPage::onConnectionMessageReceived, Qt::UniqueConnection);
+    connect(this->m_connection, &XenConnection::MessageRemoved, this, &PerformanceTabPage::onConnectionMessageRemoved, Qt::UniqueConnection);
 }
 
-void PerformanceTabPage::updateDiskChart()
+void PerformanceTabPage::initializeVisibleContent()
 {
-    QList<qreal> readData = this->m_metricsHistory.value("disk_read");
-    QList<qreal> writeData = this->m_metricsHistory.value("disk_write");
+    if (!this->m_pageVisible || !this->m_object)
+        return;
 
-    if (!readData.isEmpty())
+    if (!this->m_needsVisibleInitialization && this->m_archiveMaintainer)
     {
-        QVector<QPointF> readPoints;
-        for (int i = 0; i < readData.size(); ++i)
-        {
-            readPoints.append(QPointF(i, readData[i]));
-        }
-        this->m_diskReadSeries->replace(readPoints);
-
-        if (readData.size() > 1)
-        {
-            this->m_diskAxisX->setRange(0, readData.size() - 1);
-        }
+        this->m_archiveMaintainer->SetDataSourceIds(this->m_graphList->DisplayedUuids());
+        this->m_archiveMaintainer->Start();
+        this->m_dataEventList->ClearEvents();
+        this->loadEvents();
+        this->connectConnectionSignals();
+        return;
     }
 
-    if (!writeData.isEmpty())
+    if (this->m_archiveMaintainer)
     {
-        QVector<QPointF> writePoints;
-        for (int i = 0; i < writeData.size(); ++i)
-        {
-            writePoints.append(QPointF(i, writeData[i]));
-        }
-        this->m_diskWriteSeries->replace(writePoints);
+        this->m_graphList->SetArchiveMaintainer(nullptr);
+        this->m_dataPlotNav->SetArchiveMaintainer(nullptr);
+        this->m_archiveMaintainer->Stop();
+        this->m_archiveMaintainer->deleteLater();
+        this->m_archiveMaintainer = nullptr;
     }
 
-    // Auto-adjust Y-axis based on max value
-    qreal maxVal = 0;
-    for (qreal val : readData)
-        maxVal = qMax(maxVal, val);
-    for (qreal val : writeData)
-        maxVal = qMax(maxVal, val);
-    if (maxVal > 0)
-    {
-        this->m_diskAxisY->setRange(0, maxVal * 1.2); // 20% padding
-    }
-}
+    this->loadDataSources();
+    this->m_dataEventList->ClearEvents();
+    this->loadEvents();
+    this->connectConnectionSignals();
 
-void PerformanceTabPage::onTimeRangeChanged(int index)
-{
-    // Adjust max data points based on time range
-    switch (index)
-    {
-    case 0: // 1 minute
-        this->m_maxDataPoints = 60;
-        break;
-    case 1: // 5 minutes
-        this->m_maxDataPoints = 300;
-        break;
-    case 2: // 10 minutes
-        this->m_maxDataPoints = 600;
-        break;
-    case 3: // 1 hour
-        this->m_maxDataPoints = 3600;
-        break;
-    default:
-        this->m_maxDataPoints = 60;
-    }
+    this->m_archiveMaintainer = new ArchiveMaintainer(this->m_object.data(), this);
+    this->m_graphList->SetArchiveMaintainer(this->m_archiveMaintainer);
+    this->m_dataPlotNav->SetArchiveMaintainer(this->m_archiveMaintainer);
+    connect(this->m_archiveMaintainer, &ArchiveMaintainer::ArchivesUpdated, this, &PerformanceTabPage::onArchivesUpdated, Qt::UniqueConnection);
+    this->m_archiveMaintainer->SetDataSourceIds(this->m_graphList->DisplayedUuids());
+    this->m_archiveMaintainer->Start();
 
-    this->clearHistory();
-}
-
-void PerformanceTabPage::clearHistory()
-{
-    this->m_metricsHistory.clear();
-
-    // Clear all chart series
-    if (this->m_cpuSeries)
-        this->m_cpuSeries->clear();
-    if (this->m_memorySeries)
-        this->m_memorySeries->clear();
-    if (this->m_networkReadSeries)
-        this->m_networkReadSeries->clear();
-    if (this->m_networkWriteSeries)
-        this->m_networkWriteSeries->clear();
-    if (this->m_diskReadSeries)
-        this->m_diskReadSeries->clear();
-    if (this->m_diskWriteSeries)
-        this->m_diskWriteSeries->clear();
-
-    // Reset axis ranges to defaults
-    if (this->m_cpuAxisX)
-        this->m_cpuAxisX->setRange(0, 60);
-    if (this->m_memoryAxisX)
-        this->m_memoryAxisX->setRange(0, 60);
-    if (this->m_networkAxisX)
-        this->m_networkAxisX->setRange(0, 60);
-    if (this->m_diskAxisX)
-        this->m_diskAxisX->setRange(0, 60);
+    this->m_needsVisibleInitialization = false;
 }

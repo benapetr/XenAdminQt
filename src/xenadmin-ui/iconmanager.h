@@ -49,6 +49,18 @@ class PIF;
 class IconManager
 {
     public:
+        enum class EventIconType
+        {
+            Unknown,
+            VmStarted,
+            VmShutdown,
+            VmRebooted,
+            VmResumed,
+            VmSuspended,
+            VmCrashed,
+            VmCloned
+        };
+
         static IconManager& instance();
 
         // Icon retrieval methods
@@ -73,6 +85,7 @@ class IconManager
         QIcon GetCancelledIcon() const;
         QIcon GetInProgressIcon() const;
         QIcon GetNotStartedIcon() const;
+        QIcon GetEventIcon(EventIconType type) const;
 
     private:
         IconManager();

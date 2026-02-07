@@ -32,6 +32,36 @@
 #include "../xenapi/xenapi_Host.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QRegularExpression>
+
+namespace
+{
+    bool hasExplicitTimeZoneSuffix(const QString& value)
+    {
+        const QString trimmed = value.trimmed();
+        if (trimmed.isEmpty())
+            return false;
+
+        if (trimmed.endsWith(QLatin1Char('Z'), Qt::CaseInsensitive))
+            return true;
+
+        static const QRegularExpression kOffsetSuffix(QStringLiteral(R"(([+-]\d{2}:?\d{2})$)"));
+        return kOffsetSuffix.match(trimmed).hasMatch();
+    }
+
+    bool looksLikeZuluTimestamp(const QString& value)
+    {
+        return value.trimmed().endsWith(QLatin1Char('Z'), Qt::CaseInsensitive);
+    }
+
+    QDateTime reinterpretAsUtc(const QDateTime& value)
+    {
+        if (!value.isValid())
+            return value;
+
+        return QDateTime(value.date(), value.time(), Qt::UTC);
+    }
+}
 
 using namespace XenAPI;
 
@@ -239,20 +269,26 @@ void XenHeartbeat::getServerTime()
 
     // Try ISO 8601 first (native XenAPI format)
     const QString serverTimeStr = serverTimeVar.toString();
+    const bool hasExplicitTz = hasExplicitTimeZoneSuffix(serverTimeStr);
     serverTime = QDateTime::fromString(serverTimeStr, Qt::ISODate);
     if (!serverTime.isValid())
     {
         // Some servers use compact Zulu format: 20250204T120102Z
-        serverTime = QDateTime::fromString(serverTimeStr, "yyyyMMddTHHmmssZ");
+        serverTime = QDateTime::fromString(serverTimeStr, QStringLiteral("yyyyMMddTHHmmss'Z'"));
     }
     if (!serverTime.isValid())
     {
         // Servers can also return ISO without separators: 20251128T11:57:56Z
-        serverTime = QDateTime::fromString(serverTimeStr, "yyyyMMdd'T'HH:mm:ss'Z'");
+        serverTime = QDateTime::fromString(serverTimeStr, QStringLiteral("yyyyMMdd'T'HH:mm:ss'Z'"));
     }
     if (serverTime.isValid())
     {
-        serverTime = serverTime.toUTC();
+        // Xen API times represent UTC values. If timezone is absent (or parser treated trailing 'Z'
+        // as a plain literal), interpret fields directly as UTC to avoid client-local skew.
+        if (!hasExplicitTz || (looksLikeZuluTimestamp(serverTimeStr) && serverTime.timeSpec() == Qt::LocalTime))
+            serverTime = reinterpretAsUtc(serverTime);
+        else
+            serverTime = serverTime.toUTC();
         parsed = true;
     }
 

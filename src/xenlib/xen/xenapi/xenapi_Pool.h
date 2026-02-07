@@ -175,6 +175,16 @@ namespace XenAPI
             static void set_tags(Session* session, const QString& pool, const QStringList& tags);
 
             /**
+             * @brief Set GUI configuration map on pool
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param guiConfig GUI configuration dictionary
+             *
+             * Matches C# Pool.set_gui_config()
+             */
+            static void set_gui_config(Session* session, const QString& pool, const QVariantMap& guiConfig);
+
+            /**
              * @brief Set migration compression flag
              * @param session Active XenSession
              * @param pool Pool opaque reference

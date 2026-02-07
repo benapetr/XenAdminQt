@@ -1164,6 +1164,9 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
         
         if (currentPage)
         {
+            if (!this->m_currentObject.isNull() && currentPage->IsDirty())
+                currentPage->SetObject(this->m_currentObject);
+
             // Handle console tabs specially - need to switch console to current object
             // Reference: C# TheTabControl_SelectedIndexChanged - console logic
             ConsoleTabPage* consoleTab = qobject_cast<ConsoleTabPage*>(currentPage);
@@ -1294,6 +1297,9 @@ void MainWindow::onTabChanged(int index)
     {
         QWidget* currentWidget = this->ui->mainTabWidget->widget(index);
         BaseTabPage* currentPage = qobject_cast<BaseTabPage*>(currentWidget);
+
+        if (currentPage && !this->m_currentObject.isNull() && currentPage->IsDirty())
+            currentPage->SetObject(this->m_currentObject);
 
         // Check if this is the regular console tab (VM/Host consoles)
         // Reference: C# TheTabControl_SelectedIndexChanged lines 1652-1667
@@ -2125,16 +2131,23 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
         return;
 
     // If the changed object is the currently displayed one, refresh the tabs
-    if (!this->m_currentObject.isNull() && objectType == this->m_currentObject->GetObjectTypeName() && objectRef == this->m_currentObject->OpaqueRef())
+    if (!this->m_currentObject.isNull()
+        && connection == this->m_currentObject->GetConnection()
+        && objectType == this->m_currentObject->GetObjectTypeName()
+        && objectRef == this->m_currentObject->OpaqueRef())
     {
-        // Update tab pages with new data
+        BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(this->ui->mainTabWidget->currentWidget());
+
+        // Mark all tabs dirty, but immediately refresh only the visible tab.
         for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
         {
             BaseTabPage* tabPage = qobject_cast<BaseTabPage*>(this->ui->mainTabWidget->widget(i));
-            if (tabPage)
-            {
+            if (!tabPage)
+                continue;
+
+            tabPage->MarkDirty();
+            if (tabPage == currentTab)
                 tabPage->SetObject(this->m_currentObject);
-            }
         }
         this->updateToolbarsAndMenus();
     }

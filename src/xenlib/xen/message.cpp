@@ -26,6 +26,8 @@
  */
 
 #include "message.h"
+#include "network/connection.h"
+#include <QSet>
 
 Message::Message(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
@@ -58,7 +60,44 @@ QDateTime Message::Timestamp() const
     return this->property("timestamp").toDateTime();
 }
 
+QDateTime Message::TimestampLocal() const
+{
+    QDateTime timestamp = this->Timestamp();
+    if (!timestamp.isValid())
+        return timestamp;
+
+    XenConnection* connection = this->GetConnection();
+    if (connection)
+    {
+        timestamp = timestamp.addSecs(connection->GetServerTimeOffsetSeconds());
+    }
+
+    return timestamp.toLocalTime();
+}
+
 QString Message::Body() const
 {
     return this->stringProperty("body");
+}
+
+bool Message::ShowOnGraphs() const
+{
+    const QString type = this->Name().toUpper();
+    static const QSet<QString> graphTypes =
+    {
+        QStringLiteral("VM_CLONED"),
+        QStringLiteral("VM_CRASHED"),
+        QStringLiteral("VM_REBOOTED"),
+        QStringLiteral("VM_RESUMED"),
+        QStringLiteral("VM_SHUTDOWN"),
+        QStringLiteral("VM_STARTED"),
+        QStringLiteral("VM_SUSPENDED")
+    };
+
+    return graphTypes.contains(type);
+}
+
+bool Message::IsSquelched() const
+{
+    return this->Name().toUpper() == QStringLiteral("HA_POOL_OVERCOMMITTED");
 }

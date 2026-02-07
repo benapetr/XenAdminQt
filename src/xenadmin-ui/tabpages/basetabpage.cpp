@@ -39,19 +39,62 @@ BaseTabPage::~BaseTabPage()
 
 void BaseTabPage::SetObject(QSharedPointer<XenObject> object)
 {
-    this->removeObject();
+    const bool hadObject = !this->m_object.isNull();
+    const bool hasNewObject = !object.isNull();
+    const bool sameObject = hadObject
+                            && hasNewObject
+                            && this->m_connection == object->GetConnection()
+                            && this->m_objectType == object->GetObjectType()
+                            && this->m_objectRef == object->OpaqueRef();
+
+    if (!hasNewObject)
+    {
+        if (hadObject)
+            this->removeObject();
+
+        this->m_object.clear();
+        this->m_objectData.clear();
+        this->m_objectRef.clear();
+        this->m_objectType = XenObjectType::Null;
+        this->m_connection = nullptr;
+        this->m_isDirty = false;
+        return;
+    }
+
+    if (sameObject)
+    {
+        this->m_object = object;
+        this->m_objectData = object->GetData();
+        this->updateObject();
+
+        if (this->m_isDirty)
+            this->refreshContent();
+
+        this->m_isDirty = false;
+        return;
+    }
+
+    if (hadObject)
+        this->removeObject();
 
     this->m_object = object;
+    this->m_objectData = object->GetData();
+    this->m_objectRef = object->OpaqueRef();
+    this->m_objectType = object->GetObjectType();
+    this->m_connection = object->GetConnection();
+    this->updateObject();
+    this->refreshContent();
+    this->m_isDirty = false;
+}
 
-    if (object)
-    {
-        this->m_objectData = object->GetData();
-        this->m_objectRef = object->OpaqueRef();
-        this->m_objectType = object->GetObjectType();
-        this->m_connection = object->GetConnection();
-        this->updateObject();
-        this->refreshContent();
-    }
+void BaseTabPage::MarkDirty()
+{
+    this->m_isDirty = true;
+}
+
+bool BaseTabPage::IsDirty() const
+{
+    return this->m_isDirty;
 }
 
 void BaseTabPage::OnPageShown()

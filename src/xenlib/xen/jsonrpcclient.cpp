@@ -29,10 +29,161 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonArray>
+#include <QtCore/QMetaType>
 #include <QtCore/QDebug>
+#include <cmath>
+#include <cstring>
 
 namespace Xen
 {
+    namespace
+    {
+        constexpr const char* kJsonNonFiniteInf = "__XEN_JSON_NONFINITE_INF__";
+        constexpr const char* kJsonNonFiniteNegInf = "__XEN_JSON_NONFINITE_NEG_INF__";
+        constexpr const char* kJsonNonFiniteNaN = "__XEN_JSON_NONFINITE_NAN__";
+
+        bool isJsonTokenBoundary(char c)
+        {
+            switch (c)
+            {
+                case '\0':
+                case ' ':
+                case '\t':
+                case '\r':
+                case '\n':
+                case ',':
+                case ':':
+                case '[':
+                case ']':
+                case '{':
+                case '}':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        bool matchTokenAt(const QByteArray& json, int index, const char* token)
+        {
+            const int tokenLength = static_cast<int>(std::strlen(token));
+            if (index < 0 || index + tokenLength > json.size())
+                return false;
+
+            if (std::memcmp(json.constData() + index, token, tokenLength) != 0)
+                return false;
+
+            const char prev = index > 0 ? json.at(index - 1) : '\0';
+            const char next = (index + tokenLength < json.size()) ? json.at(index + tokenLength) : '\0';
+            return isJsonTokenBoundary(prev) && isJsonTokenBoundary(next);
+        }
+
+        QByteArray normalizeNonFiniteJsonNumbers(const QByteArray& json, bool* changed)
+        {
+            if (changed)
+                *changed = false;
+
+            QByteArray output;
+            output.reserve(json.size() + 64);
+
+            bool inString = false;
+            bool escape = false;
+
+            for (int i = 0; i < json.size();)
+            {
+                const char c = json.at(i);
+
+                if (inString)
+                {
+                    output.append(c);
+                    if (escape)
+                    {
+                        escape = false;
+                    } else if (c == '\\')
+                    {
+                        escape = true;
+                    } else if (c == '"')
+                    {
+                        inString = false;
+                    }
+                    ++i;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = true;
+                    output.append(c);
+                    ++i;
+                    continue;
+                }
+
+                auto appendReplacement = [&](const char* token, const char* replacement) -> bool
+                {
+                    if (!matchTokenAt(json, i, token))
+                        return false;
+
+                    output.append('"');
+                    output.append(replacement);
+                    output.append('"');
+                    i += static_cast<int>(std::strlen(token));
+                    if (changed)
+                        *changed = true;
+                    return true;
+                };
+
+                if (appendReplacement("-Infinity", kJsonNonFiniteNegInf)
+                    || appendReplacement("Infinity", kJsonNonFiniteInf)
+                    || appendReplacement("NaN", kJsonNonFiniteNaN))
+                {
+                    continue;
+                }
+
+                output.append(c);
+                ++i;
+            }
+
+            return output;
+        }
+
+        QVariant denormalizeNonFiniteVariant(const QVariant& value)
+        {
+            const int typeId = value.userType();
+
+            if (typeId == QMetaType::QString)
+            {
+                const QString str = value.toString();
+                if (str == QLatin1String(kJsonNonFiniteInf))
+                    return QVariant(std::numeric_limits<double>::infinity());
+                if (str == QLatin1String(kJsonNonFiniteNegInf))
+                    return QVariant(-std::numeric_limits<double>::infinity());
+                if (str == QLatin1String(kJsonNonFiniteNaN))
+                    return QVariant(std::numeric_limits<double>::quiet_NaN());
+                return value;
+            }
+
+            if (typeId == QMetaType::QVariantMap)
+            {
+                const QVariantMap source = value.toMap();
+                QVariantMap converted;
+                for (auto it = source.constBegin(); it != source.constEnd(); ++it)
+                    converted.insert(it.key(), denormalizeNonFiniteVariant(it.value()));
+                return converted;
+            }
+
+            if (typeId == QMetaType::QVariantList)
+            {
+                const QVariantList source = value.toList();
+                QVariantList converted;
+                converted.reserve(source.size());
+                for (const QVariant& item : source)
+                    converted.append(denormalizeNonFiniteVariant(item));
+                return converted;
+            }
+
+            return value;
+        }
+    }
+
     // Static error storage
     QString JsonRpcClient::s_lastError;
 
@@ -68,8 +219,25 @@ namespace Xen
         s_lastError.clear();
 
         // Parse JSON
+        QByteArray payload = json;
         QJsonParseError parseError;
-        QJsonDocument doc = QJsonDocument::fromJson(json, &parseError);
+        QJsonDocument doc = QJsonDocument::fromJson(payload, &parseError);
+
+        if (parseError.error != QJsonParseError::NoError)
+        {
+            bool changed = false;
+            const QByteArray normalized = normalizeNonFiniteJsonNumbers(payload, &changed);
+            if (changed)
+            {
+                payload = normalized;
+                doc = QJsonDocument::fromJson(payload, &parseError);
+                if (parseError.error != QJsonParseError::NoError)
+                {
+                    qWarning() << "JsonRpcClient: non-finite normalization attempted but parse still failed:"
+                               << parseError.errorString() << "at offset" << parseError.offset;
+                }
+            }
+        }
 
         if (parseError.error != QJsonParseError::NoError)
         {
@@ -155,7 +323,7 @@ namespace Xen
                     // Return the Value field (convert JSON to QVariant)
                     if (resultObj.contains("Value"))
                     {
-                        return resultObj["Value"].toVariant();
+                        return denormalizeNonFiniteVariant(resultObj["Value"].toVariant());
                     } else
                     {
                         // Some methods return void - return empty map
@@ -183,11 +351,11 @@ namespace Xen
             }
 
             // No Status field - this is a normal successful response, return as-is
-            return result.toVariant();
+            return denormalizeNonFiniteVariant(result.toVariant());
         }
 
         // Direct result (string, number, array, etc.)
-        return result.toVariant();
+        return denormalizeNonFiniteVariant(result.toVariant());
     }
 
     QString JsonRpcClient::lastError()

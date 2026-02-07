@@ -73,6 +73,8 @@ class BaseTabPage : public QWidget
          * Set the XenLib object for this tab page
          */
         virtual void SetObject(QSharedPointer<XenObject> object);
+        void MarkDirty();
+        bool IsDirty() const;
 
         /**
          * Called when the tab page becomes visible.
@@ -115,6 +117,7 @@ class BaseTabPage : public QWidget
         QSharedPointer<XenObject> m_object;
         QVariantMap m_objectData;
         XenConnection* m_connection = nullptr;
+        bool m_isDirty = false;
 
         /**
          * Refresh the tab page content with current object data.

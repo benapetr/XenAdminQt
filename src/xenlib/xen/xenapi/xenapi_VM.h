@@ -30,6 +30,7 @@
 
 #include "../../xenlib_global.h"
 #include <QtCore/QHash>
+#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
@@ -312,6 +313,36 @@ namespace XenAPI
              * Matches C# VM.query_data_source()
              */
             static double query_data_source(Session* session, const QString& vm, const QString& data_source);
+
+            /**
+             * @brief Get available data sources for a VM
+             * @param session Active Xen session
+             * @param vm VM opaque reference
+             * @return List of data source records
+             *
+             * Matches C# VM.get_data_sources()
+             */
+            static QList<QVariantMap> get_data_sources(Session* session, const QString& vm);
+
+            /**
+             * @brief Enable recording of a VM data source
+             * @param session Active Xen session
+             * @param vm VM opaque reference
+             * @param data_source Data source name
+             *
+             * Matches C# VM.record_data_source()
+             */
+            static void record_data_source(Session* session, const QString& vm, const QString& data_source);
+
+            /**
+             * @brief Forget archived records for a VM data source
+             * @param session Active Xen session
+             * @param vm VM opaque reference
+             * @param data_source Data source name
+             *
+             * Matches C# VM.forget_data_source_archives()
+             */
+            static void forget_data_source_archives(Session* session, const QString& vm, const QString& data_source);
 
             /**
              * @brief Set the suspend VDI for a suspended VM

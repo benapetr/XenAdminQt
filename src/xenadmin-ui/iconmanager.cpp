@@ -430,6 +430,30 @@ QIcon IconManager::GetNotStartedIcon() const
     return this->m_notStartedIcon;
 }
 
+QIcon IconManager::GetEventIcon(EventIconType type) const
+{
+    switch (type)
+    {
+        case EventIconType::VmStarted:
+            return QIcon(QStringLiteral(":/icons/start_vm.png"));
+        case EventIconType::VmShutdown:
+            return QIcon(QStringLiteral(":/icons/shutdown.png"));
+        case EventIconType::VmRebooted:
+            return QIcon(QStringLiteral(":/icons/reboot.png"));
+        case EventIconType::VmResumed:
+            return QIcon(QStringLiteral(":/icons/resume.png"));
+        case EventIconType::VmSuspended:
+            return QIcon(QStringLiteral(":/icons/suspend.png"));
+        case EventIconType::VmCrashed:
+            return this->GetErrorIcon();
+        case EventIconType::VmCloned:
+            return this->GetSuccessIcon();
+        case EventIconType::Unknown:
+        default:
+            return QIcon();
+    }
+}
+
 // Helper methods
 QIcon IconManager::createStatusIcon(const QColor& color, const QString& symbol) const
 {

@@ -29,6 +29,7 @@
 #include "../session.h"
 #include "../api.h"
 #include "../failure.h"
+#include "../jsonrpcclient.h"
 #include <stdexcept>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -160,6 +161,61 @@ namespace XenAPI
         QByteArray request = api.BuildJsonRpcCall("host.query_data_source", params);
         QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toDouble();
+    }
+
+    QList<QVariantMap> Host::get_data_sources(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.get_data_sources", params);
+        QByteArray response = session->SendApiRequest(request);
+        QVariant result = api.ParseJsonRpcResponse(response);
+        const QString parseError = Xen::JsonRpcClient::lastError();
+        if (!parseError.isEmpty())
+            throw std::runtime_error(parseError.toStdString());
+
+        if (!result.canConvert<QVariantList>())
+            throw std::runtime_error("Unexpected response type for host.get_data_sources");
+
+        QList<QVariantMap> dataSources;
+        for (const QVariant& item : result.toList())
+        {
+            dataSources.append(item.toMap());
+        }
+        return dataSources;
+    }
+
+    void Host::record_data_source(Session* session, const QString& host, const QString& data_source)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.record_data_source", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
+    void Host::forget_data_source_archives(Session* session, const QString& host, const QString& data_source)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.forget_data_source_archives", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Host::set_name_label(Session* session, const QString& host, const QString& value)
