@@ -28,6 +28,7 @@
 #include "command.h"
 #include "../mainwindow.h"
 #include "../selectionmanager.h"
+#include "../operations/operationmanager.h"
 #include "operations/multipleactionlauncher.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
@@ -207,6 +208,15 @@ QList<QSharedPointer<XenObject>> Command::getSelectedObjects() const
 
 void Command::RunMultipleActions(const QList<AsyncOperation*>& actions, const QString& title, const QString& startDescription, const QString& endDescription, bool runActionsInParallel)
 {
+    OperationManager* manager = OperationManager::instance();
+    for (AsyncOperation* action : actions)
+    {
+        if (!action)
+            continue;
+
+        manager->RegisterOperation(action);
+    }
+
     MultipleActionLauncher launcher(actions, title, startDescription, endDescription, runActionsInParallel, nullptr);
     launcher.Run();
 }

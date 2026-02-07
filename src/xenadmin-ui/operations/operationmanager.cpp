@@ -26,16 +26,13 @@
  */
 
 #include <QDebug>
-#include <QDebug>
 #include <QCoreApplication>
 #include <QUuid>
-#include <QDebug>
 #include <utility>
 #include "operationmanager.h"
 #include "actions/meddlingaction.h"
 #include "../actions/meddlingactionmanager.h"
 #include "../mainwindow.h"
-
 
 OperationManager* OperationManager::s_instance = nullptr;
 

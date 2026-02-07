@@ -68,6 +68,11 @@ class IconManager
         QIcon GetConnectedIcon() const;
         QIcon GetDisconnectedIcon() const;
         QIcon GetConnectingIcon() const;
+        QIcon GetSuccessIcon() const;
+        QIcon GetErrorIcon() const;
+        QIcon GetCancelledIcon() const;
+        QIcon GetInProgressIcon() const;
+        QIcon GetNotStartedIcon() const;
 
     private:
         IconManager();
@@ -88,6 +93,11 @@ class IconManager
         QIcon m_connectedIcon;
         QIcon m_disconnectedIcon;
         QIcon m_connectingIcon;
+        QIcon m_successIcon;
+        QIcon m_errorIcon;
+        QIcon m_cancelledIcon;
+        QIcon m_inProgressIcon;
+        QIcon m_notStartedIcon;
 };
 
 #endif // ICONMANAGER_H

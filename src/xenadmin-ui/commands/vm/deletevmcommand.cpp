@@ -281,8 +281,7 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
             nullptr);
 
         OperationManager::instance()->RegisterOperation(multi);
-        connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
-        multi->RunAsync();
+        multi->RunAsync(true);
     }
 
     if (!cantRunReasons.isEmpty())

@@ -31,6 +31,7 @@
 #include "notificationsbasepage.h"
 #include "operations/operationmanager.h"
 #include <QTableWidgetItem>
+#include <QIcon>
 #include <xen/asyncoperation.h>
 
 namespace Ui {
@@ -140,6 +141,7 @@ class EventsPage : public NotificationsBasePage
          * Get status text for operation state.
          */
         QString getStatusText(AsyncOperation::OperationState state) const;
+        QIcon getStatusIcon(AsyncOperation::OperationState state) const;
 
         /**
          * Update button states based on selection.

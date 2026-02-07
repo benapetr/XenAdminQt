@@ -42,6 +42,11 @@ IconManager::IconManager()
     this->m_connectedIcon = QIcon(":/tree-icons/host.png");
     this->m_disconnectedIcon = QIcon(":/tree-icons/host_disconnected.png");
     this->m_connectingIcon = this->createStatusIcon(QColor(255, 165, 0)); // Orange for connecting
+    this->m_successIcon = QIcon(":/icons/tick_16.png");
+    this->m_errorIcon = QIcon(":/icons/error_16.png");
+    this->m_cancelledIcon = QIcon(":/icons/cancelled_action_16.png");
+    this->m_inProgressIcon = QIcon(":/tree-icons/spinning_frame_0.png");
+    this->m_notStartedIcon = QIcon(":/icons/empty_icon.png");
 }
 
 IconManager& IconManager::instance()
@@ -398,6 +403,31 @@ QIcon IconManager::GetDisconnectedIcon() const
 QIcon IconManager::GetConnectingIcon() const
 {
     return this->m_connectingIcon;
+}
+
+QIcon IconManager::GetSuccessIcon() const
+{
+    return this->m_successIcon;
+}
+
+QIcon IconManager::GetErrorIcon() const
+{
+    return this->m_errorIcon;
+}
+
+QIcon IconManager::GetCancelledIcon() const
+{
+    return this->m_cancelledIcon;
+}
+
+QIcon IconManager::GetInProgressIcon() const
+{
+    return this->m_inProgressIcon;
+}
+
+QIcon IconManager::GetNotStartedIcon() const
+{
+    return this->m_notStartedIcon;
 }
 
 // Helper methods

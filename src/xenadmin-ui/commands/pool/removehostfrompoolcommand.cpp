@@ -116,8 +116,7 @@ void RemoveHostFromPoolCommand::Run()
                                "The host will become a standalone server and will need to be rebooted.\n"
                                "All running VMs on this host will be shut down.")
                            .arg(hostName, poolName);
-    }
-    else
+    } else
     {
         confirmation = QString("Are you sure you want to eject the selected hosts from the pool '%1'?")
                            .arg(poolName);
@@ -156,7 +155,7 @@ void RemoveHostFromPoolCommand::Run()
 
         EjectHostFromPoolAction* action = new EjectHostFromPoolAction(pool, host, nullptr);
 
-        connect(action, &AsyncOperation::completed, this, [action, this, newConnection, hostname, port]()
+        connect(action, &AsyncOperation::completed, this, [action, newConnection, hostname, port]()
         {
             if (newConnection)
                 RemoveHostFromPoolCommand::scheduleReconnect(MainWindow::instance(), newConnection, hostname, port);
@@ -252,9 +251,7 @@ void RemoveHostFromPoolCommand::scheduleReconnect(MainWindow* mainWindow, XenCon
         }
 
         QMetaObject::invokeMethod(mainWindow, [mainWindow, hostname]() {
-            QMessageBox::critical(mainWindow,
-                                  "Reconnect Failed",
-                                  QString("Failed to reconnect to '%1' after removing it from the pool.").arg(hostname));
+            QMessageBox::critical(mainWindow, "Reconnect Failed", QString("Failed to reconnect to '%1' after removing it from the pool.").arg(hostname));
         }, Qt::QueuedConnection);
     });
 

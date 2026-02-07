@@ -27,6 +27,7 @@
 
 #include "eventspage.h"
 #include "ui_eventspage.h"
+#include "../iconmanager.h"
 #include "operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include <QDebug>
@@ -228,6 +229,7 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
     // Column 1: Status icon/text
     QTableWidgetItem* statusItem = new QTableWidgetItem(this->getStatusText(record->state));
     statusItem->setData(Qt::UserRole, QVariant::fromValue(record));
+    statusItem->setIcon(this->getStatusIcon(record->state));
     this->ui->eventsTable->setItem(row, 1, statusItem);
 
     // Column 2: Message/Title
@@ -277,6 +279,26 @@ QString EventsPage::getStatusText(AsyncOperation::OperationState state) const
     }
 }
 
+QIcon EventsPage::getStatusIcon(AsyncOperation::OperationState state) const
+{
+    // Mirror C# HistoryPage visual cues using XenAdmin status icons.
+    switch (state)
+    {
+        case AsyncOperation::Completed:
+            return IconManager::instance().GetSuccessIcon();
+        case AsyncOperation::Failed:
+            return IconManager::instance().GetErrorIcon();
+        case AsyncOperation::Cancelled:
+            return IconManager::instance().GetCancelledIcon();
+        case AsyncOperation::Running:
+            return IconManager::instance().GetInProgressIcon();
+        case AsyncOperation::NotStarted:
+            return IconManager::instance().GetNotStartedIcon();
+        default:
+            return IconManager::instance().GetNotStartedIcon();
+    }
+}
+
 int EventsPage::findRowFromRecord(OperationManager::OperationRecord* record)
 {
     // C# Reference: HistoryPage.FindRowFromAction() line 281
@@ -307,7 +329,10 @@ void EventsPage::updateRecordRow(OperationManager::OperationRecord* record)
     // Update status
     QTableWidgetItem* statusItem = this->ui->eventsTable->item(row, 1);
     if (statusItem)
+    {
         statusItem->setText(this->getStatusText(record->state));
+        statusItem->setIcon(this->getStatusIcon(record->state));
+    }
 
     // Update message if it changed
     QTableWidgetItem* messageItem = this->ui->eventsTable->item(row, 2);

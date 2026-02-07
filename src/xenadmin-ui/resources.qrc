@@ -40,6 +40,8 @@
         <file alias="grapharea.png">images/grapharea.png</file>
         <file alias="graphline.png">images/graphline.png</file>
         <file alias="tick_16.png">images/tick_16.png</file>
+        <file alias="error_16.png">images/000_error_h32bit_16.png</file>
+        <file alias="cancelled_action_16.png">images/cancelled_action_16.png</file>
         <file alias="console_16.png">images/console_16.png</file>
         <file alias="save_16.png">images/save_16.png</file>
         <file alias="network_16.png">images/network_16.png</file>
