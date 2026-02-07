@@ -12,11 +12,35 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QCheckBox" name="checkBoxAutoBoot">
-     <property name="text">
-      <string>Start VM automatically on server boot</string>
-     </property>
-    </widget>
+    <layout class="QVBoxLayout" name="layoutAutoBootInfo">
+     <item>
+      <widget class="QCheckBox" name="checkBoxAutoBoot">
+       <property name="text">
+        <string>Start VM automatically on server boot</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelAutoBootInfo">
+       <property name="text">
+        <string>This setting applies when the host is configured to start VMs automatically.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelAutoBootHAWarning">
+       <property name="text">
+        <string>Warning: automatic startup may be affected by high availability settings.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBoxBootOrder">

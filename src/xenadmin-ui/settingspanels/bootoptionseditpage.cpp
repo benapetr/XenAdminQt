@@ -95,6 +95,9 @@ BootOptionsEditPage::BootOptionsEditPage(QWidget* parent)
 {
     this->ui->setupUi(this);
 
+    this->ui->labelAutoBootInfo->setVisible(false);
+    this->ui->labelAutoBootHAWarning->setVisible(false);
+
     connect(this->ui->buttonUp, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveUpClicked);
     connect(this->ui->buttonDown, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveDownClicked);
     connect(this->ui->listWidgetBootOrder, &QListWidget::currentRowChanged, this, &BootOptionsEditPage::onSelectionChanged);
