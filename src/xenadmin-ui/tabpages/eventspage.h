@@ -32,6 +32,7 @@
 #include "operations/operationmanager.h"
 #include <QTableWidgetItem>
 #include <QIcon>
+#include <QPoint>
 #include <xen/asyncoperation.h>
 
 namespace Ui {
@@ -60,7 +61,7 @@ class EventsPage : public NotificationsBasePage
         ~EventsPage();
 
         // NotificationsBasePage overrides
-        NavigationPane::NotificationsSubMode notificationsSubMode() const override
+        NavigationPane::NotificationsSubMode GetNotificationsSubMode() const override
         {
             return NavigationPane::Events;
         }
@@ -80,6 +81,7 @@ class EventsPage : public NotificationsBasePage
         void deregisterEventHandlers() override;
 
     private slots:
+        void onEventsContextMenuRequested(const QPoint& pos);
         void onFilterStatusChanged();
         void onFilterLocationChanged();
         void onFilterDatesChanged();
@@ -159,6 +161,12 @@ class EventsPage : public NotificationsBasePage
         QString buildRecordDescription(OperationManager::OperationRecord* record) const;
         QString buildRecordDetails(OperationManager::OperationRecord* record) const;
         QString formatElapsedTime(OperationManager::OperationRecord* record) const;
+        QList<OperationManager::OperationRecord*> selectedCompletedRecords(int fallbackRow = -1) const;
+        void dismissRecords(const QList<OperationManager::OperationRecord*>& records,
+                            bool confirm,
+                            const QString& title,
+                            const QString& text);
+        void copyRowsToClipboard(const QList<int>& rows) const;
 
         // Slots for OperationManager events
         void onOperationAdded(OperationManager::OperationRecord* record);

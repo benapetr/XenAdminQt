@@ -1204,7 +1204,7 @@ QByteArray XenConnection::SendRequest(const QByteArray& data)
     // This prevents spurious "Unknown request ID" warnings for sync calls like EventPoller
     int requestId = this->d->worker->QueueRequest(data, false);
 
-    qDebug() << "Created sync request with ID: " << requestId;
+    //qDebug() << "Created sync request with ID: " << requestId;
 
     // Wait for response (blocking)
     // Use a 60s wait to accommodate long-poll calls like event.from (server timeout is 30s)

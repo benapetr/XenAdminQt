@@ -44,6 +44,12 @@
 #include <QLabel>
 #include <QTime>
 #include <QStringList>
+#include <QToolButton>
+#include <QMenu>
+#include <QClipboard>
+#include <QApplication>
+#include <QItemSelectionModel>
+#include <algorithm>
 
 // Register OperationRecord pointer as a metatype so it can be used in QVariant
 Q_DECLARE_METATYPE(OperationManager::OperationRecord*)
@@ -62,6 +68,7 @@ EventsPage::EventsPage(QWidget* parent) : NotificationsBasePage(parent), ui(new 
     this->ui->eventsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // Message column
     this->ui->eventsTable->setWordWrap(true);
     this->ui->eventsTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    this->ui->eventsTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // Connect toolbar actions
     connect(this->ui->actionFilterStatus, &QAction::triggered, this, &EventsPage::onFilterStatusChanged);
@@ -77,6 +84,7 @@ EventsPage::EventsPage(QWidget* parent) : NotificationsBasePage(parent), ui(new 
     connect(this->ui->eventsTable, &QTableWidget::cellDoubleClicked, this, &EventsPage::onEventsTableCellDoubleClicked);
     connect(this->ui->eventsTable, &QTableWidget::itemSelectionChanged, this, &EventsPage::onEventsTableSelectionChanged);
     connect(this->ui->eventsTable->horizontalHeader(), &QHeaderView::sectionClicked, this, &EventsPage::onEventsTableHeaderClicked);
+    connect(this->ui->eventsTable, &QWidget::customContextMenuRequested, this, &EventsPage::onEventsContextMenuRequested);
 
     this->updateButtons();
 
@@ -132,6 +140,12 @@ void EventsPage::buildRowList()
     if (!this->isVisible())
         return;
 
+    const bool sortingEnabled = this->ui->eventsTable->isSortingEnabled();
+    const int sortColumn = this->ui->eventsTable->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder sortOrder = this->ui->eventsTable->horizontalHeader()->sortIndicatorOrder();
+    if (sortingEnabled)
+        this->ui->eventsTable->setSortingEnabled(false);
+
     this->ui->eventsTable->setRowCount(0);
 
     // Get all operations from OperationManager
@@ -152,6 +166,12 @@ void EventsPage::buildRowList()
     for (auto* record : filteredRecords)
     {
         this->createRecordRow(record);
+    }
+
+    if (sortingEnabled)
+    {
+        this->ui->eventsTable->setSortingEnabled(true);
+        this->ui->eventsTable->sortItems(sortColumn, sortOrder);
     }
 
     this->updateButtons();
@@ -245,10 +265,40 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
     dateItem->setData(Qt::UserRole, QVariant::fromValue(record));
     this->ui->eventsTable->setItem(row, 4, dateItem);
 
-    // Column 5: Actions (placeholder for now)
+    // Column 5: Actions
     QTableWidgetItem* actionsItem = new QTableWidgetItem("");
     actionsItem->setData(Qt::UserRole, QVariant::fromValue(record));
     this->ui->eventsTable->setItem(row, 5, actionsItem);
+
+    QToolButton* actionBtn = new QToolButton(this->ui->eventsTable);
+    actionBtn->setText(tr("Actions"));
+    actionBtn->setPopupMode(QToolButton::InstantPopup);
+
+    QMenu* actionMenu = new QMenu(actionBtn);
+    QAction* copyAction = actionMenu->addAction(tr("Copy"));
+    QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
+    dismissAction->setEnabled(record->state == AsyncOperation::Completed);
+
+    connect(copyAction, &QAction::triggered, this, [this, record]()
+    {
+        if (!record)
+            return;
+        const int currentRow = this->findRowFromRecord(record);
+        if (currentRow >= 0)
+            this->copyRowsToClipboard(QList<int>() << currentRow);
+    });
+    connect(dismissAction, &QAction::triggered, this, [this, record]()
+    {
+        if (!record || record->state != AsyncOperation::Completed)
+            return;
+        this->dismissRecords(QList<OperationManager::OperationRecord*>() << record,
+                             true,
+                             tr("Dismiss Event"),
+                             tr("Are you sure you want to dismiss this completed event?"));
+    });
+
+    actionBtn->setMenu(actionMenu);
+    this->ui->eventsTable->setCellWidget(row, 5, actionBtn);
 }
 
 QString EventsPage::getStatusText(AsyncOperation::OperationState state) const
@@ -802,52 +852,61 @@ void EventsPage::onDismissAll()
 void EventsPage::onDismissSelected()
 {
     // C# Reference: HistoryPage.tsmiDismissSelected_Click() line 464
-    QList<OperationManager::OperationRecord*> selectedRecords;
-    
-    // Get selected rows
-    QList<QTableWidgetItem*> selectedItems = this->ui->eventsTable->selectedItems();
-    QSet<int> selectedRows;
-    
-    for (auto* item : selectedItems)
-    {
-        selectedRows.insert(item->row());
-    }
-    
-    if (selectedRows.isEmpty())
-        return;
-    
-    // Collect completed operations from selected rows
-    for (int row : selectedRows)
-    {
-        QTableWidgetItem* item = this->ui->eventsTable->item(row, 0);
-        if (item)
-        {
-            auto* record = item->data(Qt::UserRole).value<OperationManager::OperationRecord*>();
-            if (record && record->state == AsyncOperation::Completed)
-                selectedRecords.append(record);
-        }
-    }
-    
+    QList<OperationManager::OperationRecord*> selectedRecords = this->selectedCompletedRecords();
     if (selectedRecords.isEmpty())
     {
         QMessageBox::information(this, tr("Dismiss Selected"),
                                tr("No completed events are selected."));
         return;
     }
-    
-    // Confirm dismissal
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle(tr("Dismiss Selected Events"));
-    msgBox.setText(tr("Are you sure you want to dismiss the selected completed events?"));
-    msgBox.setIcon(QMessageBox::Question);
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox.setDefaultButton(QMessageBox::No);
-    
-    if (msgBox.exec() != QMessageBox::Yes)
+
+    this->dismissRecords(selectedRecords,
+                         true,
+                         tr("Dismiss Selected Events"),
+                         tr("Are you sure you want to dismiss the selected completed events?"));
+}
+
+void EventsPage::onEventsContextMenuRequested(const QPoint& pos)
+{
+    const QModelIndex index = this->ui->eventsTable->indexAt(pos);
+    if (index.isValid() && !this->ui->eventsTable->selectionModel()->isRowSelected(index.row(), QModelIndex()))
+    {
+        this->ui->eventsTable->clearSelection();
+        this->ui->eventsTable->selectRow(index.row());
+    }
+
+    const QModelIndexList selectedRowIndexes = this->ui->eventsTable->selectionModel()->selectedRows();
+    QList<int> selectedRows;
+    selectedRows.reserve(selectedRowIndexes.size());
+    for (const QModelIndex& rowIndex : selectedRowIndexes)
+        selectedRows.append(rowIndex.row());
+
+    QList<OperationManager::OperationRecord*> completedRecords =
+        this->selectedCompletedRecords(index.isValid() ? index.row() : -1);
+
+    QMenu menu(this->ui->eventsTable);
+    QAction* copyAction = menu.addAction(tr("Copy"));
+    QAction* dismissAction = menu.addAction(tr("Dismiss"));
+    copyAction->setEnabled(!selectedRows.isEmpty());
+    dismissAction->setEnabled(!completedRecords.isEmpty());
+
+    QAction* chosen = menu.exec(this->ui->eventsTable->viewport()->mapToGlobal(pos));
+    if (!chosen)
         return;
-    
-    // Remove the selected records
-    OperationManager::instance()->RemoveRecords(selectedRecords);
+
+    if (chosen == copyAction)
+    {
+        this->copyRowsToClipboard(selectedRows);
+        return;
+    }
+
+    if (chosen == dismissAction)
+    {
+        const QString text = completedRecords.size() == 1
+                                 ? tr("Are you sure you want to dismiss 1 selected completed event?")
+                                 : tr("Are you sure you want to dismiss %1 selected completed events?").arg(completedRecords.size());
+        this->dismissRecords(completedRecords, true, tr("Dismiss Selected Events"), text);
+    }
 }
 
 void EventsPage::onEventsTableCellClicked(int row, int column)
@@ -925,4 +984,87 @@ void EventsPage::onNewOperation(AsyncOperation* operation)
     // The OperationManager already handles adding operations to its records list
     // and will emit recordAdded signal, so we don't need to do anything here
     Q_UNUSED(operation);
+}
+
+QList<OperationManager::OperationRecord*> EventsPage::selectedCompletedRecords(int fallbackRow) const
+{
+    QList<OperationManager::OperationRecord*> records;
+    QSet<OperationManager::OperationRecord*> seen;
+
+    auto appendFromRow = [&](int row)
+    {
+        if (row < 0 || row >= this->ui->eventsTable->rowCount())
+            return;
+
+        QTableWidgetItem* item = this->ui->eventsTable->item(row, 0);
+        if (!item)
+            return;
+
+        auto* record = item->data(Qt::UserRole).value<OperationManager::OperationRecord*>();
+        if (!record || record->state != AsyncOperation::Completed)
+            return;
+
+        if (seen.contains(record))
+            return;
+
+        seen.insert(record);
+        records.append(record);
+    };
+
+    const QModelIndexList selectedRows = this->ui->eventsTable->selectionModel()->selectedRows();
+    for (const QModelIndex& index : selectedRows)
+        appendFromRow(index.row());
+
+    if (records.isEmpty() && fallbackRow >= 0)
+        appendFromRow(fallbackRow);
+
+    return records;
+}
+
+void EventsPage::dismissRecords(const QList<OperationManager::OperationRecord*>& records,
+                                bool confirm,
+                                const QString& title,
+                                const QString& text)
+{
+    if (records.isEmpty())
+        return;
+
+    if (confirm)
+    {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(title);
+        msgBox.setText(text);
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+
+        if (msgBox.exec() != QMessageBox::Yes)
+            return;
+    }
+
+    OperationManager::instance()->RemoveRecords(records);
+}
+
+void EventsPage::copyRowsToClipboard(const QList<int>& rows) const
+{
+    if (rows.isEmpty())
+        return;
+
+    QList<int> sortedRows = rows;
+    std::sort(sortedRows.begin(), sortedRows.end());
+
+    QStringList lines;
+    for (int row : sortedRows)
+    {
+        QStringList cells;
+        // Status, Message, Location, Date (skip expander + actions columns)
+        for (int col = 1; col <= 4; ++col)
+        {
+            QTableWidgetItem* item = this->ui->eventsTable->item(row, col);
+            cells.append(item ? item->text() : QString());
+        }
+        lines.append(cells.join('\t'));
+    }
+
+    QApplication::clipboard()->setText(lines.join('\n'));
 }

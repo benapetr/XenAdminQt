@@ -55,19 +55,19 @@ class NotificationsBasePage : public QWidget
          * Show this notification page and refresh its content.
          * C# Reference: NotificationsBasePage.ShowPage() line 48
          */
-        void showPage();
+        void ShowPage();
 
         /**
          * Hide this notification page and deregister event handlers.
          * C# Reference: NotificationsBasePage.HidePage() line 56
          */
-        void hidePage();
+        void HidePage();
 
         /**
          * Get the notifications sub-mode this page represents.
          * C# Reference: NotificationsBasePage.NotificationsSubMode line 63
          */
-        virtual NavigationPane::NotificationsSubMode notificationsSubMode() const = 0;
+        virtual NavigationPane::NotificationsSubMode GetNotificationsSubMode() const = 0;
 
         /**
          * Get the help ID for context-sensitive help.

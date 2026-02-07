@@ -33,9 +33,11 @@
 #include <QDateTime>
 #include <QSet>
 #include <QStringList>
+#include <QList>
 
-namespace Ui {
-class AlertSummaryPage;
+namespace Ui
+{
+    class AlertSummaryPage;
 }
 
 class AlertSummaryPage : public NotificationsBasePage
@@ -46,7 +48,7 @@ class AlertSummaryPage : public NotificationsBasePage
         explicit AlertSummaryPage(QWidget* parent = nullptr);
         ~AlertSummaryPage();
 
-        NavigationPane::NotificationsSubMode notificationsSubMode() const override
+        NavigationPane::NotificationsSubMode GetNotificationsSubMode() const override
         {
             return NavigationPane::Alerts;
         }
@@ -61,6 +63,7 @@ class AlertSummaryPage : public NotificationsBasePage
 
     private slots:
         void onExpanderClicked(int row, int column);
+        void onAlertsContextMenuRequested(const QPoint& pos);
         void onFilterBySeverity();
         void onFilterByServer();
         void onFilterByDate();
@@ -83,6 +86,9 @@ class AlertSummaryPage : public NotificationsBasePage
         void buildAlertList();
         bool filterAlert(XenLib::Alert* alert) const;
         QIcon getExpanderIcon(const QString& alertUuid) const;
+        QList<XenLib::Alert*> selectedAlerts(int fallbackRow = -1) const;
+        void dismissAlerts(const QList<XenLib::Alert*>& alerts, bool confirm, const QString& title, const QString& text);
+        void copyRowsToClipboard(const QList<int>& rows) const;
 };
 
 #endif // ALERTSUMMARYPAGE_H

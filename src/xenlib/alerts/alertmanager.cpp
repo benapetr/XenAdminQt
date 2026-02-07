@@ -128,7 +128,7 @@ Alert* AlertManager::FindAlert(const QString& uuid) const
     return nullptr;
 }
 
-Alert* AlertManager::findAlert(const std::function<bool(Alert*)>& predicate) const
+Alert* AlertManager::FindAlert(const std::function<bool(Alert*)>& predicate) const
 {
     QMutexLocker locker(&this->m_mutex);
     for (Alert* alert : this->m_alerts)

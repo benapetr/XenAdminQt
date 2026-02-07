@@ -25,11 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "alertsummarypage.h"
-#include "ui_alertsummarypage.h"
-#include "xenlib/alerts/alertmanager.h"
-#include "xenlib/alerts/alert.h"
-#include <QDebug>
 #include <QPushButton>
 #include <QToolButton>
 #include <QMenu>
@@ -42,6 +37,15 @@
 #include <QDateEdit>
 #include <QDialogButtonBox>
 #include <QMessageBox>
+#include <QClipboard>
+#include <QApplication>
+#include <QHeaderView>
+#include <QItemSelectionModel>
+#include <algorithm>
+#include "alertsummarypage.h"
+#include "ui_alertsummarypage.h"
+#include "xenlib/alerts/alertmanager.h"
+#include "xenlib/alerts/alert.h"
 
 using namespace XenLib;
 
@@ -50,14 +54,14 @@ AlertSummaryPage::AlertSummaryPage(QWidget* parent) : NotificationsBasePage(pare
     this->ui->setupUi(this);
     this->ui->alertsTable->sortByColumn(4, Qt::DescendingOrder);
     this->ui->alertsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    this->ui->alertsTable->setContextMenuPolicy(Qt::CustomContextMenu);
     
     // Connect table cell clicks for expand/collapse (C# Reference: GridViewAlerts_CellClick)
     connect(this->ui->alertsTable, &QTableWidget::cellClicked, this, &AlertSummaryPage::onExpanderClicked);
+    connect(this->ui->alertsTable, &QWidget::customContextMenuRequested, this, &AlertSummaryPage::onAlertsContextMenuRequested);
     
     // Connect to AlertManager signals
     connect(AlertManager::instance(), &AlertManager::collectionChanged, this, &AlertSummaryPage::buildAlertList);
-    
-    qDebug() << "AlertSummaryPage initialized with AlertManager integration";
 }
 
 AlertSummaryPage::~AlertSummaryPage()
@@ -68,9 +72,7 @@ AlertSummaryPage::~AlertSummaryPage()
 bool AlertSummaryPage::GetFilterIsOn() const
 {
     // C# Reference: AlertSummaryPage.cs FilterAlert() line 283
-    return !this->m_severityFilters.isEmpty() || 
-           !this->m_serverFilters.isEmpty() || 
-           this->m_dateFilterEnabled;
+    return !this->m_severityFilters.isEmpty() || !this->m_serverFilters.isEmpty() || this->m_dateFilterEnabled;
 }
 
 void AlertSummaryPage::refreshPage()
@@ -92,7 +94,13 @@ void AlertSummaryPage::buildAlertList()
 {
     if (!this->isVisible())
         return;
-        
+
+    const bool sortingEnabled = this->ui->alertsTable->isSortingEnabled();
+    const int sortColumn = this->ui->alertsTable->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder sortOrder = this->ui->alertsTable->horizontalHeader()->sortIndicatorOrder();
+    if (sortingEnabled)
+        this->ui->alertsTable->setSortingEnabled(false);
+
     this->ui->alertsTable->setUpdatesEnabled(false);
     this->ui->alertsTable->setRowCount(0);
     
@@ -165,11 +173,13 @@ void AlertSummaryPage::buildAlertList()
         actionBtn->setMenu(actionMenu);
         this->ui->alertsTable->setCellWidget(row, 5, actionBtn);
     }
-    
+
     this->ui->alertsTable->setUpdatesEnabled(true);
-    
-    qDebug() << "AlertSummaryPage: Displaying" << filteredAlerts.count() 
-             << "of" << alerts.count() << "alerts";
+    if (sortingEnabled)
+    {
+        this->ui->alertsTable->setSortingEnabled(true);
+        this->ui->alertsTable->sortItems(sortColumn, sortOrder);
+    }
 }
 
 bool AlertSummaryPage::filterAlert(Alert* alert) const
@@ -247,6 +257,48 @@ void AlertSummaryPage::onExpanderClicked(int row, int column)
     
     // Rebuild list to show/hide description
     this->buildAlertList();
+}
+
+void AlertSummaryPage::onAlertsContextMenuRequested(const QPoint& pos)
+{
+    const QModelIndex index = this->ui->alertsTable->indexAt(pos);
+    if (index.isValid() && !this->ui->alertsTable->selectionModel()->isRowSelected(index.row(), QModelIndex()))
+    {
+        this->ui->alertsTable->clearSelection();
+        this->ui->alertsTable->selectRow(index.row());
+    }
+
+    const QModelIndexList selectedRowIndexes = this->ui->alertsTable->selectionModel()->selectedRows();
+    QList<int> selectedRows;
+    selectedRows.reserve(selectedRowIndexes.size());
+    for (const QModelIndex& rowIndex : selectedRowIndexes)
+        selectedRows.append(rowIndex.row());
+
+    QList<Alert*> alerts = this->selectedAlerts(index.isValid() ? index.row() : -1);
+
+    QMenu menu(this->ui->alertsTable);
+    QAction* copyAction = menu.addAction(tr("Copy"));
+    QAction* dismissAction = menu.addAction(tr("Dismiss"));
+    copyAction->setEnabled(!selectedRows.isEmpty());
+    dismissAction->setEnabled(!alerts.isEmpty());
+
+    QAction* chosen = menu.exec(this->ui->alertsTable->viewport()->mapToGlobal(pos));
+    if (!chosen)
+        return;
+
+    if (chosen == copyAction)
+    {
+        this->copyRowsToClipboard(selectedRows);
+        return;
+    }
+
+    if (chosen == dismissAction)
+    {
+        const QString text = alerts.size() == 1
+                                 ? tr("Are you sure you want to dismiss 1 selected alert?")
+                                 : tr("Are you sure you want to dismiss %1 selected alert(s)?").arg(alerts.size());
+        this->dismissAlerts(alerts, true, tr("Dismiss Selected Alerts"), text);
+    }
 }
 
 void AlertSummaryPage::onFilterBySeverity()
@@ -496,58 +548,104 @@ void AlertSummaryPage::onDismissAll()
         QMessageBox::Yes | QMessageBox::No
     );
     
-    if (reply == QMessageBox::Yes)
-    {
-        for (Alert* alert : alerts)
-        {
-            alert->Dismiss();
-            AlertManager::instance()->RemoveAlert(alert);
-        }
-    }
+    if (reply != QMessageBox::Yes)
+        return;
+
+    this->dismissAlerts(alerts, false, QString(), QString());
 }
 
 void AlertSummaryPage::onDismissSelected()
 {
-    // C# Reference: tsbtnDismissAll similar pattern
-    QList<QTableWidgetItem*> selectedItems = this->ui->alertsTable->selectedItems();
-    if (selectedItems.isEmpty())
+    QList<Alert*> alertsToDismiss = this->selectedAlerts();
+    if (alertsToDismiss.isEmpty())
         return;
-    
-    // Get unique rows
-    QSet<int> selectedRows;
-    for (QTableWidgetItem* item : selectedItems)
+
+    this->dismissAlerts(alertsToDismiss,
+                        true,
+                        tr("Dismiss Selected Alerts"),
+                        tr("Are you sure you want to dismiss %1 selected alert(s)?").arg(alertsToDismiss.size()));
+}
+
+QList<Alert*> AlertSummaryPage::selectedAlerts(int fallbackRow) const
+{
+    QList<Alert*> alerts;
+    QSet<QString> seen;
+
+    auto appendFromRow = [&](int row)
     {
-        selectedRows.insert(item->row());
-    }
-    
-    if (selectedRows.isEmpty())
+        if (row < 0 || row >= this->ui->alertsTable->rowCount())
+            return;
+
+        QTableWidgetItem* item = this->ui->alertsTable->item(row, 0);
+        if (!item)
+            return;
+
+        Alert* alert = item->data(Qt::UserRole).value<Alert*>();
+        if (!alert)
+            return;
+
+        if (seen.contains(alert->GetUUID()))
+            return;
+
+        seen.insert(alert->GetUUID());
+        alerts.append(alert);
+    };
+
+    const QModelIndexList selectedRows = this->ui->alertsTable->selectionModel()->selectedRows();
+    for (const QModelIndex& index : selectedRows)
+        appendFromRow(index.row());
+
+    if (alerts.isEmpty() && fallbackRow >= 0)
+        appendFromRow(fallbackRow);
+
+    return alerts;
+}
+
+void AlertSummaryPage::dismissAlerts(const QList<Alert*>& alerts, bool confirm, const QString& title, const QString& text)
+{
+    if (alerts.isEmpty())
         return;
-    
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this,
-        tr("Dismiss Selected Alerts"),
-        tr("Are you sure you want to dismiss %1 selected alert(s)?").arg(selectedRows.count()),
-        QMessageBox::Yes | QMessageBox::No
-    );
-    
-    if (reply == QMessageBox::Yes)
+
+    if (confirm)
     {
-        QList<Alert*> alertsToDismiss;
-        for (int row : selectedRows)
-        {
-            QTableWidgetItem* item = this->ui->alertsTable->item(row, 0);
-            if (item)
-            {
-                Alert* alert = item->data(Qt::UserRole).value<Alert*>();
-                if (alert)
-                    alertsToDismiss.append(alert);
-            }
-        }
-        
-        for (Alert* alert : alertsToDismiss)
-        {
-            alert->Dismiss();
-            AlertManager::instance()->RemoveAlert(alert);
-        }
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            title,
+            text,
+            QMessageBox::Yes | QMessageBox::No
+        );
+
+        if (reply != QMessageBox::Yes)
+            return;
     }
+
+    for (Alert* alert : alerts)
+    {
+        alert->Dismiss();
+        AlertManager::instance()->RemoveAlert(alert);
+    }
+}
+
+void AlertSummaryPage::copyRowsToClipboard(const QList<int>& rows) const
+{
+    if (rows.isEmpty())
+        return;
+
+    QList<int> sortedRows = rows;
+    std::sort(sortedRows.begin(), sortedRows.end());
+
+    QStringList lines;
+    for (int row : sortedRows)
+    {
+        QStringList cells;
+        // Severity, Message, Location, Date (skip expander + actions columns)
+        for (int col = 1; col <= 4; ++col)
+        {
+            QTableWidgetItem* item = this->ui->alertsTable->item(row, col);
+            cells.append(item ? item->text() : QString());
+        }
+        lines.append(cells.join('\t'));
+    }
+
+    QApplication::clipboard()->setText(lines.join('\n'));
 }

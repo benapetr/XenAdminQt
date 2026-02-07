@@ -58,7 +58,7 @@ void MetricUpdater::start()
     if (this->m_running)
         return;
 
-    qDebug() << "MetricUpdater: Starting metric updates";
+    //qDebug() << "MetricUpdater: Starting metric updates";
     this->m_running = true;
     this->m_paused = false;
 
@@ -74,7 +74,7 @@ void MetricUpdater::stop()
     if (!this->m_running)
         return;
 
-    qDebug() << "MetricUpdater: Stopping metric updates";
+    //qDebug() << "MetricUpdater: Stopping metric updates";
     this->m_running = false;
     this->m_paused = false;
     this->m_updateTimer->stop();
@@ -88,7 +88,7 @@ void MetricUpdater::pause()
     if (!this->m_running)
         return;
 
-    qDebug() << "MetricUpdater: Pausing updates";
+    //qDebug() << "MetricUpdater: Pausing updates";
     this->m_paused = true;
     this->m_updateTimer->stop();
 }
@@ -98,7 +98,7 @@ void MetricUpdater::resume()
     if (!this->m_running || !this->m_paused)
         return;
 
-    qDebug() << "MetricUpdater: Resuming updates";
+    //qDebug() << "MetricUpdater: Resuming updates";
     this->m_paused = false;
 
     // Immediate update after resume
@@ -112,7 +112,7 @@ void MetricUpdater::prod()
     if (!this->m_running)
         return;
 
-    qDebug() << "MetricUpdater: Forcing immediate update";
+    //qDebug() << "MetricUpdater: Forcing immediate update";
 
     // Reset timer and trigger immediate update
     this->m_updateTimer->stop();
@@ -172,7 +172,7 @@ void MetricUpdater::fetchRrdData()
         return;
     }
 
-    qDebug() << "MetricUpdater: Fetching RRD data from:" << url;
+    //qDebug() << "MetricUpdater: Fetching RRD data from:" << url;
 
     // Create network request
     QNetworkRequest request(url);
@@ -353,7 +353,7 @@ void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
         this->m_metricsCache = newMetrics;
     }
 
-    qDebug() << "MetricUpdater: Updated metrics for" << newMetrics.size() << "objects";
+    //qDebug() << "MetricUpdater: Updated metrics for" << newMetrics.size() << "objects";
     emit metricsUpdated();
 }
 
@@ -383,7 +383,7 @@ void MetricUpdater::onNetworkReplyFinished(QNetworkReply* reply)
     }
 
     QByteArray data = reply->readAll();
-    qDebug() << "MetricUpdater: Received" << data.size() << "bytes (took" << elapsed << "ms)";
+    //qDebug() << "MetricUpdater: Received" << data.size() << "bytes (took" << elapsed << "ms)";
 
     if (data.isEmpty())
     {
@@ -391,7 +391,7 @@ void MetricUpdater::onNetworkReplyFinished(QNetworkReply* reply)
         return;
     }
 
-    qDebug() << "MetricUpdater: RRD response head:" << QString::fromUtf8(data.left(200));
+    //qDebug() << "MetricUpdater: RRD response head:" << QString::fromUtf8(data.left(200));
 
     this->onRrdDataReceived(data);
 }

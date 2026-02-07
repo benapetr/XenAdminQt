@@ -48,6 +48,7 @@
 #include <QDateTime>
 #include <QDockWidget>
 #include <QCursor>
+#include <QSet>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -1657,7 +1658,7 @@ void MainWindow::onNavigationModeChanged(int mode)
         {
             if (page->isVisible())
             {
-                page->hidePage();
+                page->HidePage();
             }
         }
 
@@ -1744,13 +1745,13 @@ void MainWindow::onNotificationsSubModeChanged(int subMode)
     // C# Reference: foreach (var page in _notificationPages)
     for (NotificationsBasePage* page : this->m_notificationPages)
     {
-        if (page->notificationsSubMode() == mode)
+        if (page->GetNotificationsSubMode() == mode)
         {
-            page->showPage(); // C# ShowPage()
+            page->ShowPage(); // C# ShowPage()
         }
         else if (page->isVisible())
         {
-            page->hidePage(); // C# HidePage()
+            page->HidePage(); // C# HidePage()
         }
     }
 
@@ -2157,6 +2158,23 @@ void MainWindow::onMessageReceived(const QString& messageRef, const QVariantMap&
     // Use factory method to create appropriate alert type
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (!connection)
+        return;
+
+    const QString messageType = messageData.value("name").toString().toUpper();
+
+    // Match C# MainWindow.MessageCollectionChanged:
+    // - Do not show graph-only messages in Alerts (VM_STARTED, etc.)
+    // - Do not show squelched HA_POOL_OVERCOMMITTED (HA_POOL_DROP_IN_PLAN_EXISTS_FOR is shown instead)
+    static const QSet<QString> graphOnlyMessages = {
+        "VM_CLONED",
+        "VM_CRASHED",
+        "VM_REBOOTED",
+        "VM_RESUMED",
+        "VM_SHUTDOWN",
+        "VM_STARTED",
+        "VM_SUSPENDED"
+    };
+    if (graphOnlyMessages.contains(messageType) || messageType == "HA_POOL_OVERCOMMITTED")
         return;
 
     XenLib::Alert* alert = XenLib::MessageAlert::ParseMessage(connection, messageData);

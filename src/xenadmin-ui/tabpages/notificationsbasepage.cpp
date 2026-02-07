@@ -37,7 +37,7 @@ NotificationsBasePage::~NotificationsBasePage()
 {
 }
 
-void NotificationsBasePage::showPage()
+void NotificationsBasePage::ShowPage()
 {
     // C# Reference: NotificationsBasePage.ShowPage() line 48
     this->setVisible(true);
@@ -45,7 +45,7 @@ void NotificationsBasePage::showPage()
     this->registerEventHandlers();
 }
 
-void NotificationsBasePage::hidePage()
+void NotificationsBasePage::HidePage()
 {
     // C# Reference: NotificationsBasePage.HidePage() line 56
     this->setVisible(false);

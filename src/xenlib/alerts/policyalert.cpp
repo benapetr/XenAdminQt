@@ -31,8 +31,7 @@
 
 using namespace XenLib;
 
-PolicyAlert::PolicyAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
-      m_policyType(PolicyAlertType::Info)
+PolicyAlert::PolicyAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData), m_policyType(PolicyAlertType::Info)
 {
     this->parsePolicyMessage();
 }
@@ -46,8 +45,7 @@ void PolicyAlert::parsePolicyMessage()
     this->m_policyName = tr("Snapshot Schedule");
     
     // Determine alert type from priority
-    this->m_policyType = this->policyTypeFromPriority(
-        this->m_messageData.value("priority").toInt());
+    this->m_policyType = this->policyTypeFromPriority(this->m_messageData.value("priority").toInt());
     
     QString msgType = this->GetMessageType();
     QString body = this->GetMessageBody();
@@ -60,13 +58,11 @@ void PolicyAlert::parsePolicyMessage()
         {
             this->m_title = tr("Snapshot completed for policy '%1'").arg(this->m_policyName);
             this->m_description = this->m_title;
-        }
-        else if (msgType == "VMSS_SNAPSHOT_MISSED_EVENT")
+        } else if (msgType == "VMSS_SNAPSHOT_MISSED_EVENT")
         {
             this->m_title = tr("Snapshot missed for policy '%1'").arg(this->m_policyName);
             this->m_description = tr("The snapshot schedule '%1' missed its scheduled time.").arg(this->m_policyName);
-        }
-        else
+        } else
         {
             this->m_title = tr("Policy event: %1").arg(msgType);
             this->m_description = body;
@@ -105,16 +101,12 @@ void PolicyAlert::parsePolicyMessage()
     if (!vmFailures.isEmpty())
     {
         this->m_title = tr("Snapshot failed for %1 VM(s)").arg(vmFailures.count());
-        this->m_description = tr("Policy '%1' failed:\n%2")
-            .arg(this->m_policyName)
-            .arg(vmFailures.join("\n"));
-    }
-    else
+        this->m_description = tr("Policy '%1' failed:\n%2").arg(this->m_policyName).arg(vmFailures.join("\n"));
+    } else
     {
         // Generic failure message
         this->m_title = tr("Snapshot failed");
-        this->m_description = tr("Policy '%1' failed: %2")
-            .arg(this->m_policyName, body);
+        this->m_description = tr("Policy '%1' failed: %2").arg(this->m_policyName, body);
     }
 }
 

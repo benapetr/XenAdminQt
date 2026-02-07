@@ -315,10 +315,10 @@ void EventPoller::pollEvents()
         QVariantList events = result["events"].toList();
 
         // Only log event count if there are actual events
-        if (!events.isEmpty())
-        {
-            qDebug() << "EventPoller: Received" << events.size() << "events";
-        }
+        //if (!events.isEmpty())
+        //{
+        //    qDebug() << "EventPoller: Received" << events.size() << "events";
+        //}
 
         foreach (const QVariant& eventVar, events)
         {

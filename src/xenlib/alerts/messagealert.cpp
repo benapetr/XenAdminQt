@@ -147,7 +147,7 @@ void MessageAlert::RemoveAlert(const QString& messageRef)
     // C# Reference: MessageAlert.cs line 447 - RemoveWithMessage()
     // Find and remove alert associated with this message opaque_ref
     
-    Alert* alert = AlertManager::instance()->findAlert([messageRef](Alert* a)
+    Alert* alert = AlertManager::instance()->FindAlert([messageRef](Alert* a)
     {
         MessageAlert* msgAlert = dynamic_cast<MessageAlert*>(a);
         if (!msgAlert)

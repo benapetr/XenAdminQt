@@ -61,7 +61,7 @@ class XENLIB_EXPORT AlertManager : public QObject
 
         // C# Reference: Alert.cs line 83 - FindAlert
         Alert* FindAlert(const QString& uuid) const;
-        Alert* findAlert(const std::function<bool(Alert*)>& predicate) const;
+        Alert* FindAlert(const std::function<bool(Alert*)>& predicate) const;
         int FindAlertIndex(const std::function<bool(Alert*)>& predicate) const;
 
         // C# Reference: Alert.cs line 123 - AlertCount
