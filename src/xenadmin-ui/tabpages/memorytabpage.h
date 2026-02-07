@@ -74,9 +74,15 @@ class MemoryTabPage : public BaseTabPage
 
     protected:
         void refreshContent() override;
+        void removeObject() override;
+        void updateObject() override;
 
     private slots:
         void onEditButtonClicked();
+        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
+        void onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref);
+        void onCacheBulkUpdateComplete(const QString& type, int count);
+        void onCacheCleared();
 
     private:
         Ui::MemoryTabPage* ui;

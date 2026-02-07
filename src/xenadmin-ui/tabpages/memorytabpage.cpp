@@ -52,6 +52,33 @@ MemoryTabPage::~MemoryTabPage()
     delete this->ui;
 }
 
+void MemoryTabPage::removeObject()
+{
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    disconnect(cache, &XenCache::objectChanged, this, &MemoryTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::objectRemoved, this, &MemoryTabPage::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::bulkUpdateComplete, this, &MemoryTabPage::onCacheBulkUpdateComplete);
+    disconnect(cache, &XenCache::cacheCleared, this, &MemoryTabPage::onCacheCleared);
+}
+
+void MemoryTabPage::updateObject()
+{
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    connect(cache, &XenCache::objectChanged, this, &MemoryTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::objectRemoved, this, &MemoryTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::bulkUpdateComplete, this, &MemoryTabPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
+    connect(cache, &XenCache::cacheCleared, this, &MemoryTabPage::onCacheCleared, Qt::UniqueConnection);
+}
+
 bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Memory tab is applicable to VMs, Hosts, and Pools
@@ -366,7 +393,8 @@ void MemoryTabPage::populatePoolMemory()
 
     XenCache* cache = pool->GetCache();
     QList<QSharedPointer<Host>> hosts = cache ? cache->GetAll<Host>(XenObjectType::Host) : QList<QSharedPointer<Host>>();
-    std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& left, const QSharedPointer<Host>& right) {
+    std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& left, const QSharedPointer<Host>& right)
+    {
         QString leftName = left ? left->GetName() : QString();
         QString rightName = right ? right->GetName() : QString();
         return QString::compare(leftName, rightName, Qt::CaseInsensitive) < 0;
@@ -384,6 +412,107 @@ void MemoryTabPage::populatePoolMemory()
     }
 
     this->ui->vmListLayout->addStretch();
+}
+
+void MemoryTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+{
+    if (this->m_connection != connection)
+        return;
+
+    if (this->m_objectType == XenObjectType::VM)
+    {
+        if (type == "vm" && ref == this->m_objectRef)
+        {
+            this->refreshContent();
+            return;
+        }
+
+        QSharedPointer<VM> vm = this->GetVM();
+        if (vm && type == "vm_metrics" && ref == vm->MetricsRef())
+        {
+            this->refreshContent();
+            return;
+        }
+    } else if (this->m_objectType == XenObjectType::Host)
+    {
+        if (type == "host" && ref == this->m_objectRef)
+        {
+            this->refreshContent();
+            return;
+        }
+
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+        if (host && type == "host_metrics" && ref == host->GetMetricsRef())
+        {
+            this->refreshContent();
+            return;
+        }
+
+        if (type == "vm" || type == "vm_metrics")
+        {
+            this->refreshContent();
+            return;
+        }
+    } else if (this->m_objectType == XenObjectType::Pool)
+    {
+        if (type == "pool" && ref == this->m_objectRef)
+        {
+            this->refreshContent();
+            return;
+        }
+
+        if (type == "host" || type == "host_metrics" || type == "vm" || type == "vm_metrics")
+        {
+            this->refreshContent();
+            return;
+        }
+    }
+}
+
+void MemoryTabPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+{
+    Q_UNUSED(ref);
+
+    if (this->m_connection != connection)
+        return;
+
+    if (this->m_objectType == XenObjectType::VM)
+    {
+        if (type == "vm_metrics" || type == "vm")
+            this->refreshContent();
+    } else if (this->m_objectType == XenObjectType::Host)
+    {
+        if (type == "host" || type == "host_metrics" || type == "vm" || type == "vm_metrics")
+            this->refreshContent();
+    } else if (this->m_objectType == XenObjectType::Pool)
+    {
+        if (type == "pool" || type == "host" || type == "host_metrics" || type == "vm" || type == "vm_metrics")
+            this->refreshContent();
+    }
+}
+
+void MemoryTabPage::onCacheBulkUpdateComplete(const QString& type, int count)
+{
+    Q_UNUSED(count);
+
+    if (this->m_objectType == XenObjectType::VM)
+    {
+        if (type == "vm" || type == "vm_metrics")
+            this->refreshContent();
+    } else if (this->m_objectType == XenObjectType::Host)
+    {
+        if (type == "host" || type == "host_metrics" || type == "vm" || type == "vm_metrics")
+            this->refreshContent();
+    } else if (this->m_objectType == XenObjectType::Pool)
+    {
+        if (type == "pool" || type == "host" || type == "host_metrics" || type == "vm" || type == "vm_metrics")
+            this->refreshContent();
+    }
+}
+
+void MemoryTabPage::onCacheCleared()
+{
+    this->refreshContent();
 }
 
 void MemoryTabPage::clearVmListLayout()
