@@ -30,9 +30,8 @@
 #include <QUuid>
 #include <utility>
 #include "operationmanager.h"
-#include "actions/meddlingaction.h"
-#include "../actions/meddlingactionmanager.h"
-#include "../mainwindow.h"
+#include "xenlib/xen/actions/meddlingaction.h"
+#include "xenlib/xen/actions/meddlingactionmanager.h"
 
 OperationManager* OperationManager::s_instance = nullptr;
 
@@ -177,11 +176,7 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
 
     const QString displayError = record->shortErrorMessage.isEmpty() ? record->errorMessage : record->shortErrorMessage;
     if (!displayError.isEmpty())
-    {
-        MainWindow* mainWindow = MainWindow::instance();
-        if (mainWindow)
-            mainWindow->ShowStatusMessage(QString("%1 failed: %2").arg(record->title, displayError), 10000);
-    }
+        emit this->statusMessage(QString("%1 failed: %2").arg(record->title, displayError), 10000);
 
     emit this->recordUpdated(record);
 }

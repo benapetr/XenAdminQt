@@ -71,7 +71,9 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         static int GetTotalActionsCount() { return AsyncOperation::totalActions; }
 
         explicit AsyncOperation(XenConnection* connection, const QString& title, const QString& description = QString(), QObject* parent = nullptr);
+        explicit AsyncOperation(XenConnection* connection, const QString& title, const QString& description, bool suppressHistory, QObject* parent = nullptr);
         explicit AsyncOperation(const QString& title, const QString& description = QString(), QObject* parent = nullptr);
+        explicit AsyncOperation(const QString& title, const QString& description, bool suppressHistory, QObject* parent = nullptr);
         virtual ~AsyncOperation();
 
         // Core properties
@@ -154,7 +156,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
 
         // History suppression (for internal/composite operations)
         bool SuppressHistory() const;
-        void SetSuppressHistory(bool suppress);
 
         // Safe exit flag (can XenCenter exit while this operation is running?)
         bool IsSafeToExit() const;

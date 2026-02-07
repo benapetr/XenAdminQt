@@ -32,7 +32,6 @@
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include <QMessageBox>
 
 ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
@@ -120,9 +119,6 @@ void ForgetSRCommand::Run()
 
     // Create and run forget action
     ForgetSrAction* action = new ForgetSrAction(conn, srRef, srName, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [srName, action]()

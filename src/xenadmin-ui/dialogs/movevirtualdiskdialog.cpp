@@ -32,7 +32,6 @@
 #include "xen/sr.h"
 #include "xencache.h"
 #include "xen/actions/vdi/movevirtualdiskaction.h"
-#include "../operations/operationmanager.h"
 #include "../controls/srpicker.h"
 #include <QMessageBox>
 
@@ -160,7 +159,6 @@ void MoveVirtualDiskDialog::onMoveButtonClicked()
 void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, const QString& targetSRName)
 {
     // Create move operations
-    OperationManager* opManager = OperationManager::instance();
 
     if (this->m_vdiRefs.count() == 1)
     {
@@ -177,7 +175,6 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         action->SetTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
         action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
-        opManager->RegisterOperation(action);
         action->RunAsync(true);
     } else
     {
@@ -195,7 +192,6 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
             action->SetTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
             action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
-            opManager->RegisterOperation(action);
             action->RunAsync(true);
         }
     }

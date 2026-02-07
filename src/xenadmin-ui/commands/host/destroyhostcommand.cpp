@@ -27,7 +27,6 @@
 
 #include "destroyhostcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/actions/host/destroyhostaction.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
@@ -118,7 +117,6 @@ void DestroyHostCommand::Run()
 
         DestroyHostAction* action = new DestroyHostAction(host, nullptr);
         action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
-        OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
         MainWindow::instance()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
     }

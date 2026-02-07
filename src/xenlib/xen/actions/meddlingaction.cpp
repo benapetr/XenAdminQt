@@ -33,10 +33,9 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 
-MeddlingAction::MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask, QObject* parent) : AsyncOperation(connection, "Task", QString(), parent), m_isOurTask(isOurTask)
+MeddlingAction::MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask, QObject* parent) : AsyncOperation(connection, "Task", QString(), false, parent), m_isOurTask(isOurTask)
 {
     this->SetRelatedTaskRef(taskRef);
-    this->SetSuppressHistory(false); // Meddling operations appear in history
     this->SetCanCancel(isOurTask);   // Can only cancel our own tasks
     this->SetSafeToExit(true);       // Safe to exit - we're just monitoring
 

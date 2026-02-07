@@ -28,7 +28,7 @@
 #include "closexencenterwarningdialog.h"
 #include "ui_closexencenterwarningdialog.h"
 #include "operations/operationmanager.h"
-#include "actions/meddlingaction.h"
+#include "xenlib/xen/actions/meddlingaction.h"
 #include "xenlib/xen/network/connection.h"
 #include <QCoreApplication>
 

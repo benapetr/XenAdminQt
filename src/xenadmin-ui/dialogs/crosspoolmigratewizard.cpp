@@ -47,7 +47,6 @@
 #include "crosspoolmigratewizard_intrapoolcopypage.h"
 #include "ui_crosspoolmigratewizard.h"
 #include "../mainwindow.h"
-#include "../operations/operationmanager.h"
 #include "../commands/vm/vmoperationhelpers.h"
 #include "../controls/srpicker.h"
 #include "../widgets/wizardnavigationpane.h"
@@ -767,7 +766,6 @@ void CrossPoolMigrateWizard::accept()
             if (this->isCopyCloneSelected())
             {
                 VMCloneAction* action = new VMCloneAction(vmItem, this->copyName(), this->copyDescription(), nullptr);
-                OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync(true);
             }
             else
@@ -777,7 +775,6 @@ void CrossPoolMigrateWizard::accept()
                 if (sr && sr->IsValid())
                 {
                     VMCopyAction* action = new VMCopyAction(vmItem, QSharedPointer<Host>(), sr, this->copyName(), this->copyDescription(), nullptr);
-                    OperationManager::instance()->RegisterOperation(action);
                     action->RunAsync(true);
                 }
             }
@@ -866,7 +863,6 @@ void CrossPoolMigrateWizard::accept()
                 QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>(this->m_targetHostRef);
 
                 VMMoveAction* action = new VMMoveAction(vm, storageMap, hostObj, nullptr);
-                OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync(true);
             }
         } else
@@ -919,11 +915,9 @@ void CrossPoolMigrateWizard::accept()
                     true,
                     nullptr);
 
-                OperationManager::instance()->RegisterOperation(multi);
                 multi->RunAsync(true);
             } else if (migrateAction)
             {
-                OperationManager::instance()->RegisterOperation(migrateAction);
                 migrateAction->RunAsync(true);
             }
         }

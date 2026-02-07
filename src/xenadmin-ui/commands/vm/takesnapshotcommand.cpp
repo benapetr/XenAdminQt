@@ -28,7 +28,6 @@
 #include "takesnapshotcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "../../dialogs/vmsnapshotdialog.h"
 #include "../../ConsoleView/ConsolePanel.h"
 #include "xenlib/xen/vm.h"
@@ -218,9 +217,6 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
     VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, MainWindow::instance());
-
-    // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     QPointer<TakeSnapshotCommand> self(this);

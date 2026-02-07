@@ -27,7 +27,6 @@
 
 #include "destroysrcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xencache.h"
@@ -88,9 +87,6 @@ void DestroySRCommand::Run()
 
     // Create and run destroy action
     DestroySrAction* action = new DestroySrAction(conn, srRef, srName, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [srName, action]()

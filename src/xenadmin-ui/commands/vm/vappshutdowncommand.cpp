@@ -33,12 +33,10 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "../../selectionmanager.h"
 #include <QMessageBox>
 
-VappShutDownCommand::VappShutDownCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+VappShutDownCommand::VappShutDownCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -223,7 +221,6 @@ void VappShutDownCommand::Run()
                         continue;
 
                     ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, appliance->OpaqueRef(), MainWindow::instance());
-                    OperationManager::instance()->RegisterOperation(action);
                     connect(action, &AsyncOperation::completed, action, [=]()
                     {
                         if (action->GetState() == AsyncOperation::Completed)
@@ -289,7 +286,6 @@ void VappShutDownCommand::Run()
                     return;
 
                 ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, MainWindow::instance());
-                OperationManager::instance()->RegisterOperation(action);
                 connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
                 {
                     if (action->GetState() == AsyncOperation::Completed)
@@ -385,9 +381,6 @@ void VappShutDownCommand::Run()
 
     // Create and start action (uses clean shutdown by default)
     ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, MainWindow::instance());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
     connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()

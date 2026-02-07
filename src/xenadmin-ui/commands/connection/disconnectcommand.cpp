@@ -30,7 +30,7 @@
 #include "../../dialogs/warningdialogs/closexencenterwarningdialog.h"
 #include "xen/network/connection.h"
 #include "operations/operationmanager.h"
-#include "actions/meddlingaction.h"
+#include "xenlib/xen/actions/meddlingaction.h"
 #include <QMetaObject>
 #include <QProgressDialog>
 #include <QCoreApplication>

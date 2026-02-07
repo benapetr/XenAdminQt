@@ -46,6 +46,7 @@ HEADERS += \
     alerts/alarmmessagealert.h \
     alerts/policyalert.h \
     alerts/certificatealert.h \
+    operations/operationmanager.h \
     operations/multipleaction.h \
     operations/multipleactionlauncher.h \
     operations/parallelaction.h \
@@ -231,6 +232,8 @@ HEADERS += \
     xen/actions/vif/plugvifaction.h \
     xen/actions/vif/unplugvifaction.h \
     xen/actions/vif/updatevifaction.h \
+    xen/actions/meddlingaction.h \
+    xen/actions/meddlingactionmanager.h \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
     vmhelpers.h \
@@ -275,6 +278,7 @@ SOURCES += \
     alerts/alarmmessagealert.cpp \
     alerts/policyalert.cpp \
     alerts/certificatealert.cpp \
+    operations/operationmanager.cpp \
     operations/multipleaction.cpp \
     operations/multipleactionlauncher.cpp \
     operations/parallelaction.cpp \
@@ -454,6 +458,8 @@ SOURCES += \
     xen/actions/vif/plugvifaction.cpp \
     xen/actions/vif/unplugvifaction.cpp \
     xen/actions/vif/updatevifaction.cpp \
+    xen/actions/meddlingaction.cpp \
+    xen/actions/meddlingactionmanager.cpp \
     xen/actions/delegatedasyncoperation.cpp \
     utils/encryption.cpp \
     network/comparableaddress.cpp \

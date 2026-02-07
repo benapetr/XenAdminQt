@@ -27,7 +27,6 @@
 
 #include "poweronhostcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/host/hostpoweronaction.h"
 #include <QMessageBox>
@@ -87,8 +86,6 @@ void PowerOnHostCommand::Run()
         }
 
         HostPowerOnAction* action = new HostPowerOnAction(host, nullptr);
-
-        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
         {

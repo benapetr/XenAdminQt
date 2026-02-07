@@ -28,7 +28,6 @@
 #include "reverttosnapshotcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/vm/vmsnapshotrevertaction.h"
@@ -212,9 +211,6 @@ void RevertToSnapshotCommand::revertToSnapshot()
     // Create VMSnapshotRevertAction (matches C# VMSnapshotRevertAction pattern)
     // Action handles VM power cycle tracking and is cancellable
     VMSnapshotRevertAction* action = new VMSnapshotRevertAction(snapshot, MainWindow::instance());
-
-    // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     QString snapshotUuid = this->m_snapshotUuid;

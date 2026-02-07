@@ -27,7 +27,6 @@
 
 #include "trimsrcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/sr.h"
@@ -101,9 +100,6 @@ void TrimSRCommand::Run()
 
     // Create and run trim action
     SrTrimAction* action = new SrTrimAction(conn, sr, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [srName, action, sr]()

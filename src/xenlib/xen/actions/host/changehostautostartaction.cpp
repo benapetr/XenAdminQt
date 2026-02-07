@@ -37,7 +37,7 @@
 using namespace XenAPI;
 
 ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host, bool enable, bool suppressHistory, QObject* parent)
-    : AsyncOperation(QObject::tr("Change VM Autostart"), QObject::tr("Changing VM autostart setting..."), parent),
+    : AsyncOperation(QObject::tr("Change VM Autostart"), QObject::tr("Changing VM autostart setting..."), suppressHistory, parent),
       m_host(host), m_enableAutostart_(enable)
 {
     if (!this->m_host || !this->m_host->IsValid())
@@ -50,7 +50,6 @@ ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host, 
     }
     this->AddApiMethodToRoleCheck("pool.get_all");
     this->AddApiMethodToRoleCheck("pool.set_other_config");
-    this->SetSuppressHistory(suppressHistory);
 }
 
 void ChangeHostAutostartAction::run()

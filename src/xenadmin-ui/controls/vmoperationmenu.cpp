@@ -27,7 +27,6 @@
 
 #include "vmoperationmenu.h"
 #include "../mainwindow.h"
-#include "../operations/operationmanager.h"
 #include "../commands/vm/vmoperationhelpers.h"
 #include "../commands/vm/crosspoolmigratecommand.h"
 #include "../dialogs/commanderrordialog.h"
@@ -841,7 +840,6 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
         if (!action)
             continue;
 
-        OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
     }
 }

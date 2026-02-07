@@ -25,6 +25,30 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QApplication>
+#include <QMessageBox>
+#include <QProgressBar>
+#include <QLabel>
+#include <QTreeWidgetItem>
+#include <QItemSelectionModel>
+#include <QHeaderView>
+#include <QProgressDialog>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QFont>
+#include <QMenu>
+#include <QAction>
+#include <QToolButton>
+#include <QToolBar>
+#include <QDebug>
+#include <QCloseEvent>
+#include <QShortcut>
+#include <QLineEdit>
+#include <QDateTime>
+#include <QDockWidget>
+#include <QCursor>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "dialogs/addserverdialog.h"
@@ -71,7 +95,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "operations/operationmanager.h"
-#include "actions/meddlingaction.h"
+#include "xenlib/xen/actions/meddlingaction.h"
 #include "commands/contextmenubuilder.h"
 
 // Polymorphic commands (handle VMs and Hosts)
@@ -168,30 +192,7 @@
 #include "commands/network/networkpropertiescommand.h"
 
 #include "controls/vmoperationmenu.h"
-#include "actions/meddlingactionmanager.h"
-#include <QApplication>
-#include <QMessageBox>
-#include <QProgressBar>
-#include <QLabel>
-#include <QTreeWidgetItem>
-#include <QItemSelectionModel>
-#include <QHeaderView>
-#include <QProgressDialog>
-#include <QTimer>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QFont>
-#include <QMenu>
-#include <QAction>
-#include <QToolButton>
-#include <QToolBar>
-#include <QDebug>
-#include <QCloseEvent>
-#include <QShortcut>
-#include <QLineEdit>
-#include <QDateTime>
-#include <QDockWidget>
-#include <QCursor>
+#include "xenlib/xen/actions/meddlingactionmanager.h"
 #include "titlebar.h"
 
 MainWindow *MainWindow::g_instance = nullptr;
@@ -248,6 +249,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
     connect(OperationManager::instance(), &OperationManager::newOperation, this, &MainWindow::onNewOperation);
+    connect(OperationManager::instance(), &OperationManager::statusMessage, this, &MainWindow::ShowStatusMessage);
 
     this->m_titleBar->Clear(); // Start with empty title
 

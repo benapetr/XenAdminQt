@@ -124,10 +124,7 @@ SOURCES += \
     dialogs/restoresession/changemainpassworddialog.cpp \
     dialogs/restoresession/entermainpassworddialog.cpp \
     dialogs/restoresession/setmainpassworddialog.cpp \
-    operations/operationmanager.cpp \
     selectionmanager.cpp \
-    actions/meddlingaction.cpp \
-    actions/meddlingactionmanager.cpp \
     commands/command.cpp \
     commands/contextmenubuilder.cpp \
     commands/connection/cancelhostconnectioncommand.cpp \
@@ -400,9 +397,6 @@ HEADERS += \
     dialogs/restoresession/changemainpassworddialog.h \
     dialogs/restoresession/entermainpassworddialog.h \
     dialogs/restoresession/setmainpassworddialog.h \
-    operations/operationmanager.h \
-    actions/meddlingaction.h \
-    actions/meddlingactionmanager.h \
     commands/command.h \
     commands/contextmenubuilder.h \
     commands/connection/disconnectcommand.h \

@@ -184,10 +184,10 @@ AsyncOperation* LogDestinationEditPage::SaveSettings()
             : AsyncOperation(conn,
                              QObject::tr("Change Log Destination"),
                              QObject::tr("Changing log destination settings..."),
+                             true,
                              parent),
               m_hostRef(hostRef)
         {
-            SetSuppressHistory(true);
         }
 
     protected:

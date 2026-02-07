@@ -27,7 +27,6 @@
 
 #include "deletevmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "../../dialogs/confirmvmdeletedialog.h"
 #include "../../dialogs/commanderrordialog.h"
 #include "xencache.h"
@@ -253,7 +252,6 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
         QPointer<MainWindow> mw = MainWindow::instance();
         const QString vmName = deletableVms.first()->GetName();
 
-        OperationManager::instance()->RegisterOperation(action);
         connect(action, &AsyncOperation::completed, mw, [action, mw, vmName]()
         {
             if (mw)
@@ -280,7 +278,6 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, b
             false,
             nullptr);
 
-        OperationManager::instance()->RegisterOperation(multi);
         multi->RunAsync(true);
     }
 

@@ -35,15 +35,13 @@
 using namespace XenAPI;
 
 GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object, const QString& oldFolder, const QString& newFolder, const QStringList& oldTags, const QStringList& newTags, bool suppressHistory, QObject* parent)
-    : AsyncOperation(object->GetConnection(), tr("Update Properties"), tr("Updating folder and tag properties..."), parent), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
+    : AsyncOperation(object->GetConnection(), tr("Update Properties"), tr("Updating folder and tag properties..."), suppressHistory, parent), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
 {
     this->m_object = object;
 
     // Sort tags for efficient comparison (matches C# BinarySearch approach)
     this->m_oldTags.sort();
     this->m_newTags.sort();
-
-    this->SetSuppressHistory(suppressHistory);
 
     // RBAC permission checks (matching C# implementation)
     // C# checks: folder operations + tag operations

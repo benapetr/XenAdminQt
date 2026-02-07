@@ -26,7 +26,6 @@
  */
 
 #include "hawizard.h"
-#include "../operations/operationmanager.h"
 #include "../dialogs/actionprogressdialog.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
@@ -384,9 +383,6 @@ void HAWizard::accept()
         this->m_ntol,
         this->m_vmStartupOptions,
         this);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Show progress dialog
     ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);

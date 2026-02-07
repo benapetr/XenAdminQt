@@ -26,7 +26,6 @@
  */
 
 #include "editvmhaprioritiesdialog.h"
-#include "../operations/operationmanager.h"
 #include "../dialogs/actionprogressdialog.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
@@ -425,9 +424,6 @@ void EditVmHaPrioritiesDialog::accept()
 
     // Create and run SetHaPrioritiesAction
     SetHaPrioritiesAction* action = new SetHaPrioritiesAction(this->m_pool, vmOptions, newNtol, this);
-
-    // Register with OperationManager
-    OperationManager::instance()->RegisterOperation(action);
 
     // Show progress dialog
     ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);

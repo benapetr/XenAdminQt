@@ -27,7 +27,6 @@
 
 #include "deletevirtualdiskcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vm.h"
@@ -89,9 +88,6 @@ void DeleteVirtualDiskCommand::Run()
     DestroyDiskAction* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(),
         hasAttachedVBDs, // Allow deletion even if attached (action will detach first)
         nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [vdiName, vdiType, action]() 

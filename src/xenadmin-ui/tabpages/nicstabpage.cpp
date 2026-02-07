@@ -41,7 +41,6 @@
 #include "xenlib/xen/actions/network/destroybondaction.h"
 #include "nicstabpage.h"
 #include "ui_nicstabpage.h"
-#include "operations/operationmanager.h"
 #include "commands/host/rescanpifscommand.h"
 #include "../dialogs/bondpropertiesdialog.h"
 
@@ -361,7 +360,6 @@ void NICsTabPage::onCreateBondClicked()
             hashingAlgorithm,
             this);
 
-        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, this, [this, bondMode, action]()
         {
@@ -437,7 +435,6 @@ void NICsTabPage::onDeleteBondClicked()
         try
         {
             DestroyBondAction* action = new DestroyBondAction(connection, bondRef, this);
-            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, this, [this, action]()
             {

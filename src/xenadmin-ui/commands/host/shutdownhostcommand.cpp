@@ -27,7 +27,6 @@
 
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/host/shutdownhostaction.h"
@@ -132,8 +131,6 @@ void ShutdownHostCommand::Run()
             };
 
             ShutdownHostAction* action = new ShutdownHostAction(host, ntolPrompt, nullptr);
-
-            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {

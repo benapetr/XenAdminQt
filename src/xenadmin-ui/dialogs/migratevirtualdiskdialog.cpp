@@ -30,7 +30,6 @@
 #include "xen/vdi.h"
 #include "xen/sr.h"
 #include "xen/actions/vdi/migratevirtualdiskaction.h"
-#include "../operations/operationmanager.h"
 #include "../controls/srpicker.h"
 
 MigrateVirtualDiskDialog::MigrateVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent)
@@ -62,7 +61,6 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
 
     // Create migrate operations using MigrateVirtualDiskAction
     // This uses VDI.async_pool_migrate instead of copy+delete
-    OperationManager* opManager = OperationManager::instance();
 
     if (this->m_vdiRefs.count() == 1)
     {
@@ -77,7 +75,6 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
         action->SetTitle(QString("Migrating virtual disk '%1' to '%2'") .arg(vdiName) .arg(resolvedTargetName));
         action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
-        opManager->RegisterOperation(action);
         action->RunAsync(true);
     } else
     {
@@ -95,7 +92,6 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
             action->SetTitle(QString("Migrating virtual disk '%1' to '%2'").arg(vdiName).arg(resolvedTargetName));
             action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
-            opManager->RegisterOperation(action);
             action->RunAsync(true);
         }
     }

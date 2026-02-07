@@ -27,7 +27,6 @@
 
 #include "hadisablecommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/pool/disablehaaction.h"
@@ -75,9 +74,6 @@ void HADisableCommand::Run()
     }
 
     DisableHAAction* action = new DisableHAAction(pool, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signals
     connect(action, &AsyncOperation::completed, [poolName, action]()

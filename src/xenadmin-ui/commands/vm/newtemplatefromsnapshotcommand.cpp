@@ -31,7 +31,6 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QInputDialog>
 
@@ -127,9 +126,6 @@ void NewTemplateFromSnapshotCommand::Run()
 
     // Create VMCloneAction
     VMCloneAction* action = new VMCloneAction(snapshot, templateName, description, MainWindow::instance());
-
-    // Register with OperationManager
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal
     connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()

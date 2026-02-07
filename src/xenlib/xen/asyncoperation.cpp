@@ -34,6 +34,7 @@
 #include "vm.h"
 #include "sr.h"
 #include "failure.h"
+#include "xenlib/operations/operationmanager.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QTimer>
@@ -52,13 +53,24 @@ int AsyncOperation::totalActions = 0;
 // AsyncOperation Implementation
 
 AsyncOperation::AsyncOperation(XenConnection* connection, const QString& title, const QString& description, QObject* parent)
-    : QObject(parent), m_connection(connection), m_title(title), m_description(description), m_session(nullptr), m_state(NotStarted), m_safeToExit(true)
+    : AsyncOperation(connection, title, description, false, parent)
+{
+}
+
+AsyncOperation::AsyncOperation(XenConnection* connection, const QString& title, const QString& description, bool suppressHistory, QObject* parent)
+    : QObject(parent), m_connection(connection), m_title(title), m_description(description), m_session(nullptr), m_state(NotStarted), m_suppressHistory(suppressHistory), m_safeToExit(true)
 {
     AsyncOperation::totalActions++;
+    OperationManager::instance()->RegisterOperation(this);
 }
 
 AsyncOperation::AsyncOperation(const QString& title, const QString& description, QObject* parent)
-    : AsyncOperation(nullptr, title, description, parent)
+    : AsyncOperation(nullptr, title, description, false, parent)
+{
+}
+
+AsyncOperation::AsyncOperation(const QString& title, const QString& description, bool suppressHistory, QObject* parent)
+    : AsyncOperation(nullptr, title, description, suppressHistory, parent)
 {
 }
 
@@ -453,12 +465,6 @@ bool AsyncOperation::SuppressHistory() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_suppressHistory;
-}
-
-void AsyncOperation::SetSuppressHistory(bool suppress)
-{
-    QMutexLocker locker(&this->m_mutex);
-    this->m_suppressHistory = suppress;
 }
 
 // Safe exit flag

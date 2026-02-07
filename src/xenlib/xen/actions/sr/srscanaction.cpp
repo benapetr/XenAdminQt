@@ -42,14 +42,13 @@ SrScanAction::SrScanAction(XenConnection* connection,
     : AsyncOperation(connection,
                      QString("Scanning %1 filer %2").arg(type).arg(hostname),
                      QString("Scanning for %1 storage on %2").arg(type).arg(hostname),
+                     true,
                      parent),
       m_type(type),
       m_hostname(hostname),
       m_username(username),
       m_password(password)
 {
-    // Won't appear in history (matches C# SuppressHistory = true)
-    this->SetSuppressHistory(true);
 }
 
 void SrScanAction::run()

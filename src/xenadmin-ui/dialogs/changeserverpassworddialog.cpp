@@ -32,7 +32,6 @@
 #include "xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/host/changehostpasswordaction.h"
-#include "operations/operationmanager.h"
 #include <QPushButton>
 #include <QStyle>
 
@@ -102,7 +101,6 @@ void ChangeServerPasswordDialog::onAccepted()
     }
 
     ChangeHostPasswordAction* action = new ChangeHostPasswordAction(this->m_connection, this->ui->oldPassBox->text(), this->ui->newPassBox->text(), nullptr);
-    OperationManager::instance()->RegisterOperation(action);
     action->RunAsync(true);
 
     this->accept();

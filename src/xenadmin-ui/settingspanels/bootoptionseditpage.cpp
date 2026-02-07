@@ -246,6 +246,7 @@ AsyncOperation* BootOptionsEditPage::SaveSettings()
                 : AsyncOperation(vm ? vm->GetConnection() : nullptr,
                                  QObject::tr("Change Boot Options"),
                                  QObject::tr("Changing boot configuration..."),
+                                 true,
                                  parent),
                   m_vm(vm),
                   m_autoBoot(autoBoot),
@@ -261,7 +262,6 @@ AsyncOperation* BootOptionsEditPage::SaveSettings()
                 AddApiMethodToRoleCheck("VM.set_PV_args");
                 AddApiMethodToRoleCheck("VM.set_PV_bootloader");
                 AddApiMethodToRoleCheck("VBD.set_bootable");
-                this->SetSuppressHistory(true);
             }
 
         protected:

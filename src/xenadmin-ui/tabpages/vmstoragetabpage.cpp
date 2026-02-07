@@ -51,7 +51,6 @@
 #include "dialogs/actionprogressdialog.h"
 #include "settingsmanager.h"
 #include "../widgets/isodropdownbox.h"
-#include "../operations/operationmanager.h"
 #include "operations/multipleaction.h"
 #include <QTableWidgetItem>
 #include <QSignalBlocker>
@@ -597,7 +596,6 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
         this->m_currentVBDRef, // VBD ref
         this);
 
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect to completion signals
     connect(action, &AsyncOperation::completed, this, [this, action]() {

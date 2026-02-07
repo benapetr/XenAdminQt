@@ -40,6 +40,7 @@ VMEnlightenmentAction::VMEnlightenmentAction(QSharedPointer<VM> vm,
                                              QObject* parent)
     : AsyncOperation(enable ? tr("Enable VM Enlightenment") : tr("Disable VM Enlightenment"),
                      enable ? tr("Enabling Windows guest enlightenment...") : tr("Disabling Windows guest enlightenment..."),
+                     suppressHistory,
                      parent),
       m_vm(vm),
       m_enable(enable)
@@ -51,7 +52,6 @@ VMEnlightenmentAction::VMEnlightenmentAction(QSharedPointer<VM> vm,
     }
 
     this->AddApiMethodToRoleCheck("host.call_plugin");
-    this->SetSuppressHistory(suppressHistory);
 }
 
 QSharedPointer<Host> VMEnlightenmentAction::resolveTargetHost() const

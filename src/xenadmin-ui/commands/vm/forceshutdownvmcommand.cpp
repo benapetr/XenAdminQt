@@ -27,7 +27,6 @@
 
 #include "forceshutdownvmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
@@ -88,7 +87,6 @@ void ForceShutdownVMCommand::Run()
         }
 
         VMHardShutdown* action = new VMHardShutdown(vm, MainWindow::instance());
-        OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
     };
 

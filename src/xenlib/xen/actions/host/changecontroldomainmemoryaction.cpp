@@ -36,11 +36,11 @@ ChangeControlDomainMemoryAction::ChangeControlDomainMemoryAction(QSharedPointer<
     : AsyncOperation(host ? host->GetConnection() : nullptr,
                      QString("Changing control domain memory for %1").arg(host ? host->GetName() : "host"),
                      "Waiting...",
+                     suppressHistory,
                      parent),
       m_host(host),
       m_memory(memory)
 {
-    this->SetSuppressHistory(suppressHistory);
     this->setAppliesToFromObject(this->m_host);
     this->AddApiMethodToRoleCheck("vm.set_memory");
 }

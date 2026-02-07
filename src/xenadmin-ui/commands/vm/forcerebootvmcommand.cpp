@@ -27,7 +27,6 @@
 
 #include "forcerebootvmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
@@ -121,7 +120,6 @@ void ForceRebootVMCommand::Run()
         }
 
         VMHardReboot* action = new VMHardReboot(vm, MainWindow::instance());
-        OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
     };
 

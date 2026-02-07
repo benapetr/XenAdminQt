@@ -27,7 +27,6 @@
 
 #include "deletepoolcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/destroypoolaction.h"
@@ -124,9 +123,6 @@ void DeletePoolCommand::Run()
 
     // Create and run destroy pool action
     DestroyPoolAction* action = new DestroyPoolAction(pool, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [poolName, action]()

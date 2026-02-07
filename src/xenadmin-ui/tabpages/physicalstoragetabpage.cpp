@@ -48,7 +48,6 @@
 #include "../commands/storage/trimsrcommand.h"
 #include "../commands/storage/detachsrcommand.h"
 #include "../commands/storage/storagepropertiescommand.h"
-#include "../operations/operationmanager.h"
 #include "xenlib/operations/parallelaction.h"
 
 PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
@@ -513,7 +512,6 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
             continue;
 
         SrTrimAction* action = new SrTrimAction(conn, sr, nullptr);
-        OperationManager::instance()->RegisterOperation(action);
         actions.append(action);
     }
 
@@ -537,7 +535,6 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
             false,
             ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
             this);
-        OperationManager::instance()->RegisterOperation(groupedAction);
     }
 
     ActionProgressDialog dialog(groupedAction, this);

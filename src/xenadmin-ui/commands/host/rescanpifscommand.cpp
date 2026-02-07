@@ -27,7 +27,6 @@
 
 #include "rescanpifscommand.h"
 #include "../../mainwindow.h"
-#include "operations/operationmanager.h"
 #include "xenlib/xen/actions/network/rescanpifsaction.h"
 #include "xenlib/xen/host.h"
 #include <QMessageBox>
@@ -57,8 +56,6 @@ void RescanPIFsCommand::Run()
     action->SetTitle(tr("Rescanning network interfaces"));
     action->SetDescription(tr("Rescanning network interfaces on host '%1'...").arg(hostName));
 
-    OperationManager* opManager = OperationManager::instance();
-    opManager->RegisterOperation(action);
     action->RunAsync(true);
 
     MainWindow::instance()->ShowStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);

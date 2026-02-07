@@ -27,7 +27,6 @@
 
 #include "convertvmtotemplatecommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmtotemplateaction.h"
@@ -81,9 +80,6 @@ void ConvertVMToTemplateCommand::Run()
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
         VMToTemplateAction* action = new VMToTemplateAction(vm, MainWindow::instance());
-
-        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, [vmName, action]()

@@ -26,13 +26,11 @@
  */
 
 #include "detachvirtualdiskcommand.h"
-#include "deactivatevbdcommand.h"
 #include "xen/vbd.h"
 #include "xen/vdi.h"
 #include "xen/vm.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include <QMessageBox>
 
 DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
@@ -218,7 +216,6 @@ void DetachVirtualDiskCommand::Run()
         DetachVirtualDiskAction* action = new DetachVirtualDiskAction(vdi->OpaqueRef(), vm.data(), nullptr);
 
         // Register with OperationManager for history tracking
-        OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal
         QString vmName = vm->GetName();

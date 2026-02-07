@@ -34,7 +34,6 @@
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QVariantList>
 
@@ -126,7 +125,6 @@ void DisableChangedBlockTrackingCommand::Run()
     if (actions.count() == 1)
     {
         // Single action - register and run
-        OperationManager::instance()->RegisterOperation(actions.first());
         actions.first()->RunAsync(true);
     } else
     {
@@ -141,7 +139,6 @@ void DisableChangedBlockTrackingCommand::Run()
             false, // runInParallel
             0,     // timeout
             nullptr);
-        OperationManager::instance()->RegisterOperation(parallelOp);
         parallelOp->RunAsync(true);
     }
 }

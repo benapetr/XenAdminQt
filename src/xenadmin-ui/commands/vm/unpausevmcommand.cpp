@@ -27,7 +27,6 @@
 
 #include "unpausevmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmpauseaction.h"
@@ -86,9 +85,6 @@ void UnpauseVMCommand::Run()
 
         // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
         VMUnpause* action = new VMUnpause(vm, MainWindow::instance());
-
-        // Register with OperationManager for history tracking
-        OperationManager::instance()->RegisterOperation(action);
 
         // Run action asynchronously (no modal dialog for unpause)
         action->RunAsync(true);

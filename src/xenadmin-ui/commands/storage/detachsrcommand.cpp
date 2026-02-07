@@ -31,7 +31,6 @@
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "../../dialogs/commanderrordialog.h"
 #include "xenlib/operations/multipleaction.h"
 #include <QMessageBox>
@@ -196,8 +195,6 @@ void DetachSRCommand::Run()
 
         DetachSrAction* action = new DetachSrAction(conn, srRef, srName, false, nullptr);
 
-        OperationManager::instance()->RegisterOperation(action);
-
         QPointer<MainWindow> mainWindow = MainWindow::instance();
         connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]()
         {
@@ -243,7 +240,6 @@ void DetachSRCommand::Run()
         false,
         false,
         nullptr);
-    OperationManager::instance()->RegisterOperation(multi);
     connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
     connect(multi, &AsyncOperation::failed, multi, &QObject::deleteLater);
     multi->RunAsync();

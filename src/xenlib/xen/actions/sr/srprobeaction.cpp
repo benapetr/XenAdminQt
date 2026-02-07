@@ -40,6 +40,7 @@ SrProbeAction::SrProbeAction(XenConnection* connection,
     : AsyncOperation(connection,
                      QString("Scanning for %1 SRs").arg(srType),
                      QString("Scanning storage..."),
+                     true,
                      parent),
       m_host(host),
       m_srType(srType),
@@ -71,8 +72,6 @@ SrProbeAction::SrProbeAction(XenConnection* connection,
 
     this->SetDescription(QString("Scanning %1 storage on %2").arg(srType).arg(target));
 
-    // Won't appear in history (matches C# SuppressHistory = true)
-    this->SetSuppressHistory(true);
 }
 
 void SrProbeAction::run()

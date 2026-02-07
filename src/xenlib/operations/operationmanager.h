@@ -90,6 +90,7 @@ class OperationManager : public QObject
 
         // Equivalent to C# ActionBase.NewAction event
         void newOperation(AsyncOperation* operation);
+        void statusMessage(const QString& message, int timeoutMs);
 
     private:
         explicit OperationManager(QObject* parent = nullptr);

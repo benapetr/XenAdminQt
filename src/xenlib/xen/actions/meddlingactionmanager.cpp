@@ -25,22 +25,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDebug>
+#include <QUuid>
+#include <QDateTime>
 #include "meddlingactionmanager.h"
-#include <QDebug>
 #include "meddlingaction.h"
-#include <QDebug>
-#include <xen/network/connection.h>
-#include <xen/session.h>
-#include <xen/api.h>
-#include <QtCore/QDebug>
-#include <QtCore/QUuid>
-#include <QtCore/QDateTime>
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/api.h"
 
 // Initialize static member
 QString MeddlingActionManager::s_applicationUuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
-MeddlingActionManager::MeddlingActionManager(QObject* parent)
-    : QObject(parent)
+MeddlingActionManager::MeddlingActionManager(QObject* parent) : QObject(parent)
 {
 }
 
@@ -95,7 +92,7 @@ void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
             continue;
 
         // Categorize and potentially create MeddlingAction
-        categorizeTask(connection, taskRef, taskData);
+        this->categorizeTask(connection, taskRef, taskData);
     }
 
     qDebug() << "MeddlingActionManager: Rehydration complete."
@@ -114,7 +111,7 @@ void MeddlingActionManager::handleTaskAdded(XenConnection* connection, const QSt
 
     qDebug() << "MeddlingActionManager: New task added:" << taskRef;
 
-    categorizeTask(connection, taskRef, taskData);
+    this->categorizeTask(connection, taskRef, taskData);
 }
 
 void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData)

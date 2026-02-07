@@ -28,7 +28,6 @@
 #include "reboothostcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/commanderrordialog.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/host.h"
@@ -163,8 +162,6 @@ void RebootHostCommand::Run()
             };
 
             RebootHostAction* action = new RebootHostAction(host, ntolPrompt, nullptr);
-
-            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {

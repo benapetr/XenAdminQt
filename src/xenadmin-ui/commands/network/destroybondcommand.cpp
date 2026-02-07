@@ -27,7 +27,6 @@
 
 #include "destroybondcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/network/destroybondaction.h"
 #include "xenlib/xen/network.h"
@@ -139,9 +138,6 @@ void DestroyBondCommand::Run()
 
     // Create and run destroy bond action
     DestroyBondAction* action = new DestroyBondAction(connection, bondRef, nullptr);
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [bondName, action]()

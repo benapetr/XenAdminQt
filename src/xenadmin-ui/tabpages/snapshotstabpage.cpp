@@ -45,7 +45,7 @@
 #include "../commands/vm/newvmfromsnapshotcommand.h"
 #include "../dialogs/snapshotpropertiesdialog.h"
 #include "../controls/snapshottreeview.h"
-#include "../operations/operationmanager.h"
+#include "xenlib/operations/operationmanager.h"
 #include "xenlib/xen/actions/vm/vmsnapshotdeleteaction.h"
 #include "xenlib/xen/actions/vm/vmsnapshotrevertaction.h"
 #include "xenlib/xen/session.h"
@@ -423,7 +423,6 @@ void SnapshotsTabPage::onDeleteSnapshot()
         }
 
         VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, this);
-        OperationManager::instance()->RegisterOperation(action);
         connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
         action->RunAsync();
     }

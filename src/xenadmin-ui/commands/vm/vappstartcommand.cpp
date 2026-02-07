@@ -33,7 +33,6 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "../../selectionmanager.h"
 #include <QMessageBox>
 
@@ -207,7 +206,6 @@ void VappStartCommand::Run()
                         continue;
 
                     StartApplianceAction* action = new StartApplianceAction(connection, appliance->OpaqueRef(), MainWindow::instance());
-                    OperationManager::instance()->RegisterOperation(action);
                     connect(action, &AsyncOperation::completed, action, [=]()
                     {
                         if (action->GetState() == AsyncOperation::Completed)
@@ -264,7 +262,6 @@ void VappStartCommand::Run()
                     return;
 
                 StartApplianceAction* action = new StartApplianceAction(connection, applianceRef, MainWindow::instance());
-                OperationManager::instance()->RegisterOperation(action);
                 connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()
                 {
                     if (action->GetState() == AsyncOperation::Completed)
@@ -345,9 +342,6 @@ void VappStartCommand::Run()
 
     // Create and start action
     StartApplianceAction* action = new StartApplianceAction(conn, applianceRef, MainWindow::instance());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
     connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()

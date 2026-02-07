@@ -95,9 +95,7 @@ EventsPage::~EventsPage()
 bool EventsPage::GetFilterIsOn() const
 {
     // C# Reference: HistoryPage.FilterIsOn line 175
-    return !this->m_statusFilters.isEmpty() || 
-           !this->m_locationFilters.isEmpty() || 
-           this->m_dateFilterEnabled;
+    return !this->m_statusFilters.isEmpty() || !this->m_locationFilters.isEmpty() || this->m_dateFilterEnabled;
 }
 
 void EventsPage::refreshPage()
@@ -113,12 +111,9 @@ void EventsPage::registerEventHandlers()
     // C# Reference: HistoryPage.RegisterEventHandlers() line 74
     // Connect to OperationManager signals for tracking operation changes
     // C# equivalent: ConnectionsManager.History.CollectionChanged += History_CollectionChanged
-    connect(OperationManager::instance(), &OperationManager::recordAdded,
-            this, &EventsPage::onOperationAdded);
-    connect(OperationManager::instance(), &OperationManager::recordUpdated,
-            this, &EventsPage::onOperationUpdated);
-    connect(OperationManager::instance(), &OperationManager::recordRemoved,
-            this, &EventsPage::onOperationRemoved);
+    connect(OperationManager::instance(), &OperationManager::recordAdded, this, &EventsPage::onOperationAdded);
+    connect(OperationManager::instance(), &OperationManager::recordUpdated, this, &EventsPage::onOperationUpdated);
+    connect(OperationManager::instance(), &OperationManager::recordRemoved, this, &EventsPage::onOperationRemoved);
 }
 
 void EventsPage::deregisterEventHandlers()
@@ -126,12 +121,9 @@ void EventsPage::deregisterEventHandlers()
     // C# Reference: HistoryPage.DeregisterEventHandlers() line 79
     // Disconnect from OperationManager signals
     // C# equivalent: ConnectionsManager.History.CollectionChanged -= History_CollectionChanged
-    disconnect(OperationManager::instance(), &OperationManager::recordAdded,
-               this, &EventsPage::onOperationAdded);
-    disconnect(OperationManager::instance(), &OperationManager::recordUpdated,
-               this, &EventsPage::onOperationUpdated);
-    disconnect(OperationManager::instance(), &OperationManager::recordRemoved,
-               this, &EventsPage::onOperationRemoved);
+    disconnect(OperationManager::instance(), &OperationManager::recordAdded, this, &EventsPage::onOperationAdded);
+    disconnect(OperationManager::instance(), &OperationManager::recordUpdated, this, &EventsPage::onOperationUpdated);
+    disconnect(OperationManager::instance(), &OperationManager::recordRemoved, this, &EventsPage::onOperationRemoved);
 }
 
 void EventsPage::buildRowList()
@@ -404,8 +396,7 @@ void EventsPage::toggleExpandedState(int row)
         messageItem->setText(record->title);
         QIcon contractedIcon(":/icons/contracted_triangle.png");
         expanderItem->setIcon(contractedIcon);
-    }
-    else
+    } else
     {
         // Expand: show full details
         // C# Reference: HistoryPage line 317 - expanderCell.Value = Images.StaticImages.expanded_triangle
@@ -518,16 +509,11 @@ void EventsPage::onFilterStatusChanged()
     QCheckBox* cbNotStarted = new QCheckBox(tr("Not Started"), &dialog);
     
     // Set current filter state
-    cbCompleted->setChecked(this->m_statusFilters.isEmpty() || 
-                           this->m_statusFilters.contains(AsyncOperation::Completed));
-    cbFailed->setChecked(this->m_statusFilters.isEmpty() || 
-                        this->m_statusFilters.contains(AsyncOperation::Failed));
-    cbRunning->setChecked(this->m_statusFilters.isEmpty() || 
-                         this->m_statusFilters.contains(AsyncOperation::Running));
-    cbCancelled->setChecked(this->m_statusFilters.isEmpty() || 
-                           this->m_statusFilters.contains(AsyncOperation::Cancelled));
-    cbNotStarted->setChecked(this->m_statusFilters.isEmpty() || 
-                            this->m_statusFilters.contains(AsyncOperation::NotStarted));
+    cbCompleted->setChecked(this->m_statusFilters.isEmpty() || this->m_statusFilters.contains(AsyncOperation::Completed));
+    cbFailed->setChecked(this->m_statusFilters.isEmpty() || this->m_statusFilters.contains(AsyncOperation::Failed));
+    cbRunning->setChecked(this->m_statusFilters.isEmpty() || this->m_statusFilters.contains(AsyncOperation::Running));
+    cbCancelled->setChecked(this->m_statusFilters.isEmpty() || this->m_statusFilters.contains(AsyncOperation::Cancelled));
+    cbNotStarted->setChecked(this->m_statusFilters.isEmpty() || this->m_statusFilters.contains(AsyncOperation::NotStarted));
     
     layout->addWidget(cbCompleted);
     layout->addWidget(cbFailed);
@@ -703,32 +689,27 @@ void EventsPage::onFilterDatesChanged()
         if (rbShowAll->isChecked())
         {
             this->m_dateFilterEnabled = false;
-        }
-        else if (rbLast24Hours->isChecked())
+        } else if (rbLast24Hours->isChecked())
         {
             this->m_dateFilterEnabled = true;
             this->m_dateFilterFrom = now.addDays(-1);
             this->m_dateFilterTo = now;
-        }
-        else if (rbLast3Days->isChecked())
+        } else if (rbLast3Days->isChecked())
         {
             this->m_dateFilterEnabled = true;
             this->m_dateFilterFrom = now.addDays(-3);
             this->m_dateFilterTo = now;
-        }
-        else if (rbLast7Days->isChecked())
+        } else if (rbLast7Days->isChecked())
         {
             this->m_dateFilterEnabled = true;
             this->m_dateFilterFrom = now.addDays(-7);
             this->m_dateFilterTo = now;
-        }
-        else if (rbLast30Days->isChecked())
+        } else if (rbLast30Days->isChecked())
         {
             this->m_dateFilterEnabled = true;
             this->m_dateFilterFrom = now.addDays(-30);
             this->m_dateFilterTo = now;
-        }
-        else if (rbCustom->isChecked())
+        } else if (rbCustom->isChecked())
         {
             this->m_dateFilterEnabled = true;
             this->m_dateFilterFrom = QDateTime(dateFrom->date(), QTime(0, 0, 0));
@@ -773,8 +754,7 @@ void EventsPage::onDismissAll()
                 if (record && record->state == AsyncOperation::Completed)
                     recordsToDismiss.append(record);
             }
-        }
-        else if (clicked == dismissFilteredBtn)
+        } else if (clicked == dismissFilteredBtn)
         {
             // Dismiss only visible filtered completed operations
             for (int row = 0; row < this->ui->eventsTable->rowCount(); ++row)
@@ -787,13 +767,11 @@ void EventsPage::onDismissAll()
                         recordsToDismiss.append(record);
                 }
             }
-        }
-        else
+        } else
         {
             return;  // User cancelled
         }
-    }
-    else
+    } else
     {
         // No filter active - confirm dismissing all completed events
         QMessageBox msgBox(this);

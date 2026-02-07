@@ -27,7 +27,6 @@
 
 #include "hostmaintenancemodecommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
@@ -131,8 +130,6 @@ void HostMaintenanceModeCommand::Run()
 
             EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(), ntolPrompt, nullptr, nullptr);
 
-            OperationManager::instance()->RegisterOperation(action);
-
             connect(action, &AsyncOperation::completed, mw, [mw, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
@@ -187,8 +184,6 @@ void HostMaintenanceModeCommand::Run()
             };
 
             EnableHostAction* action = new EnableHostAction(host, false, ntolIncreasePrompt, nullptr);
-
-            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {

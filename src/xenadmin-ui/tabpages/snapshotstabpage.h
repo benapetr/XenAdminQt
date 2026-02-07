@@ -30,8 +30,8 @@
 
 #include "basetabpage.h"
 #include "../controls/snapshottreeview.h"
-#include "../operations/operationmanager.h"
-#include "xen/asyncoperation.h"
+#include "xenlib/operations/operationmanager.h"
+#include "xenlib/xen/asyncoperation.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -91,10 +91,7 @@ class SnapshotsTabPage : public BaseTabPage
         void refreshVmssPanel();
         bool shouldShowSnapshot(const QSharedPointer<VM>& snapshot) const;
         bool isScheduledSnapshot(const QSharedPointer<VM>& snapshot) const;
-        void buildSnapshotTree(const QString& snapshotRef,
-                               SnapshotIcon* parentIcon,
-                               const QHash<QString, QSharedPointer<VM>>& snapshots,
-                               const QMultiHash<QString, QString>& childrenByParent);
+        void buildSnapshotTree(const QString& snapshotRef, SnapshotIcon* parentIcon, const QHash<QString, QSharedPointer<VM>>& snapshots, const QMultiHash<QString, QString>& childrenByParent);
         void updateDetailsPanel(bool force = false);
         void showDisabledDetails();
         void showDetailsForSnapshot(const QSharedPointer<VM>& snapshot, bool force);

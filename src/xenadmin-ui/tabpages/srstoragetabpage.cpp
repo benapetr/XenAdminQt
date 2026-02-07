@@ -37,7 +37,6 @@
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
-#include "xenlib/xen/xenapi/xenapi_VDI.h"
 #include "xenlib/xen/actions/sr/srrefreshaction.h"
 #include "xenlib/xen/actions/vdi/destroydiskaction.h"
 #include "xenlib/xen/sr.h"
@@ -46,7 +45,6 @@
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
-#include "../operations/operationmanager.h"
 
 namespace
 {
@@ -270,7 +268,6 @@ void SrStorageTabPage::onRescanButtonClicked()
         return;
 
     SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
-    OperationManager::instance()->RegisterOperation(action);
     action->RunAsync();
 
     this->requestSrRefresh(2000);
@@ -413,7 +410,6 @@ void SrStorageTabPage::requestSrRefresh(int delayMs)
     auto request = [this]()
     {
         SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
-        OperationManager::instance()->RegisterOperation(action);
         action->RunAsync();
     };
 

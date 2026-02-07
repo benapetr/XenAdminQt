@@ -27,13 +27,10 @@
 
 #include "vmrecoverymodecommand.h"
 #include "xenlib/xen/actions/vm/hvmbootaction.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 
-VMRecoveryModeCommand::VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+VMRecoveryModeCommand::VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
@@ -59,9 +56,6 @@ void VMRecoveryModeCommand::Run()
 
     // Create HVMBootAction
     HVMBootAction* action = new HVMBootAction(vm, MainWindow::instance());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
 
     // Run action asynchronously
     action->RunAsync();

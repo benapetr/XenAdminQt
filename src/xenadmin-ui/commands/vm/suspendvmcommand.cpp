@@ -30,7 +30,6 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
-#include "../../operations/operationmanager.h"
 #include <QMessageBox>
 
 namespace
@@ -69,7 +68,7 @@ bool SuspendVMCommand::CanRun() const
 
 void SuspendVMCommand::Run()
 {
-    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    auto runForVm = [](const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return;
@@ -84,9 +83,6 @@ void SuspendVMCommand::Run()
 
         // Create VMSuspendAction (parent is MainWindow to prevent premature deletion)
         VMSuspendAction* action = new VMSuspendAction(vm, MainWindow::instance());
-
-        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->RegisterOperation(action);
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals

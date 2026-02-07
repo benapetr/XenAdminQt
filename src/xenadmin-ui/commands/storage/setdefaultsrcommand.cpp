@@ -27,7 +27,6 @@
 
 #include "setdefaultsrcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xen/pool.h"
 #include "xen/sr.h"
 #include "xen/actions/pool/setsrasdefaultaction.h"
@@ -109,7 +108,6 @@ void SetDefaultSRCommand::Run()
         }
 
         SetSrAsDefaultAction* action = new SetSrAsDefaultAction(pool, srRef, nullptr);
-        OperationManager::instance()->RegisterOperation(action);
 
         this->m_pendingSrName = srName;
         connect(action, &AsyncOperation::completed, this, &SetDefaultSRCommand::onSetDefaultCompleted);

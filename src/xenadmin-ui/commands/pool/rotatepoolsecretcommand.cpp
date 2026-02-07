@@ -31,7 +31,6 @@
 #include "xen/network/connection.h"
 #include "xen/pool.h"
 #include "xen/host.h"
-#include "operations/operationmanager.h"
 #include "xen/actions/pool/rotatepoolsecretaction.h"
 #include <QMessageBox>
 #include <QCheckBox>
@@ -167,9 +166,6 @@ void RotatePoolSecretCommand::Run()
 
     action->SetTitle(tr("Rotating pool secret"));
     action->SetDescription(tr("Rotating secret for pool '%1'...").arg(poolName));
-
-    OperationManager* opManager = OperationManager::instance();
-    opManager->RegisterOperation(action);
     action->RunAsync(true);
 
     MainWindow::instance()->ShowStatusMessage(tr("Pool secret rotation started"), 3000);

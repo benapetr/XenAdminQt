@@ -27,8 +27,6 @@
 
 #include "pausevmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmpauseaction.h"
 #include <QMessageBox>
@@ -83,9 +81,6 @@ void PauseVMCommand::Run()
 
         // Create VMPause action (parent is MainWindow to prevent premature deletion)
         VMPause* action = new VMPause(vm, MainWindow::instance());
-
-        // Register with OperationManager for history tracking
-        OperationManager::instance()->RegisterOperation(action);
 
         // Run action asynchronously (no modal dialog for pause)
         action->RunAsync(true);
