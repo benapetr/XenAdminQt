@@ -69,7 +69,6 @@
 #include "tabpages/cvmconsoletabpage.h"
 #include "tabpages/snapshotstabpage.h"
 #include "tabpages/performancetabpage.h"
-#include "tabpages/bootoptionstab.h"
 #include "tabpages/memorytabpage.h"
 #include "tabpages/searchtabpage.h"
 #include "tabpages/alertsummarypage.h"
@@ -310,7 +309,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Order matches C# MainWindow.Designer.cs lines 326-345
     // Note: We don't implement all C# tabs yet (Home, Ballooning, HA, WLB, AD, GPU, Docker, USB)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
-    // Ballooning - not implemented yet
     // Console tabs are added below after initialization
     this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
     this->m_tabPages.append(new SrStorageTabPage()); // C#: TabPageSR (for SRs)
@@ -325,8 +323,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // GPU - not implemented yet
     // Docker pages - not implemented yet
     // USB - not implemented yet
-    this->m_tabPages.append(new MemoryTabPage());  // Custom Qt tab (not in C# as separate tab)
-    this->m_tabPages.append(new BootOptionsTab()); // Custom Qt tab (not in C# as separate tab)
+    this->m_tabPages.append(new MemoryTabPage());  // In C# this is called "Ballooning"
 
     // Create console tab and wire up ConsolePanel (matches C# AddTabContents line 186)
     ConsoleTabPage* consoleTab = new ConsoleTabPage();
@@ -946,7 +943,6 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     BaseTabPage* nicsTab = nullptr;
     BaseTabPage* performanceTab = nullptr;
     BaseTabPage* snapshotsTab = nullptr;
-    BaseTabPage* bootTab = nullptr;
     BaseTabPage* consoleTab = nullptr;
     BaseTabPage* cvmConsoleTab = nullptr;
     BaseTabPage* searchTab = nullptr;
@@ -981,9 +977,6 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
                 break;
             case BaseTabPage::Type::Snapshots:
                 snapshotsTab = tab;
-                break;
-            case BaseTabPage::Type::BootOptions:
-                bootTab = tab;
                 break;
             case BaseTabPage::Type::Console:
                 consoleTab = tab;
@@ -1020,7 +1013,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
         if (performanceTab)
             newTabs.append(performanceTab);
     }
-    // VM tab order: General, Memory, Storage, Networking, Snapshots, Boot Options, Console, Performance
+    // VM tab order: General, Memory, Storage, Networking, Snapshots, Console, Performance
     // C# Reference: TabPageBallooning is shown for VMs (MainWindow.cs line 1328)
     else if (isVM)
     {
@@ -1034,8 +1027,6 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(networkTab);
         if (snapshotsTab)
             newTabs.append(snapshotsTab);
-        if (bootTab)
-            newTabs.append(bootTab);
         if (consoleTab)
             newTabs.append(consoleTab);
         if (performanceTab)

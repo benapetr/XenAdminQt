@@ -241,7 +241,6 @@ SOURCES += \
     tabpages/cvmconsoletabpage.cpp \
     tabpages/snapshotstabpage.cpp \
     tabpages/performancetabpage.cpp \
-    tabpages/bootoptionstab.cpp \
     tabpages/memorytabpage.cpp \
     tabpages/searchtabpage.cpp \
     tabpages/notificationsbasepage.cpp \
@@ -513,7 +512,6 @@ HEADERS += \
     tabpages/cvmconsoletabpage.h \
     tabpages/snapshotstabpage.h \
     tabpages/performancetabpage.h \
-    tabpages/bootoptionstab.h \
     tabpages/memorytabpage.h \
     tabpages/searchtabpage.h \
     tabpages/notificationsbasepage.h \
