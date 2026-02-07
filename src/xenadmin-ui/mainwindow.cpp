@@ -3473,6 +3473,7 @@ void MainWindow::refreshVmMenu()
 
 void MainWindow::on_actionCheck_for_leaks_triggered()
 {
-    QMessageBox::information(this, "Leaks", "Total actions: " + QString::number(AsyncOperation::GetTotalActionsCount()) + "\n"
-                                            "Total objects: " + QString::number(XenObject::GetTotalObjectsCount()));
+    QMessageBox::information(this, "Number of objects in memory", "Total actions: " + QString::number(AsyncOperation::GetTotalActionsCount()) + "\n"
+                                                                  "Total objects: " + QString::number(XenObject::GetTotalObjectsCount()) + "\n\n"
+                                                                  "Note: there is a leak only if these numbers keep growing significantly over time, it's normal for them to be non-zero");
 }
