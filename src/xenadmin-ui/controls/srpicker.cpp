@@ -28,6 +28,7 @@
 #include "srpicker.h"
 #include "ui_srpicker.h"
 #include "xencache.h"
+#include "../settingsmanager.h"
 #include "xen/network/connection.h"
 #include "xen/actions/sr/srrefreshaction.h"
 #include "xen/pbd.h"
@@ -521,6 +522,15 @@ bool SrPicker::isValidSR(const QSharedPointer<SR>& sr) const
 {
     // Don't show ISO SRs
     if (!sr || sr->ContentType() == "iso")
+        return false;
+
+    if (sr->IsHidden() && !SettingsManager::instance().getShowHiddenObjects())
+        return false;
+
+    if (this->m_usage != LunPerVDI && sr->HBALunPerVDI())
+        return false;
+
+    if (!this->supportsVdiCreate(sr))
         return false;
 
     // Basic filtering - individual items handle enable/disable logic

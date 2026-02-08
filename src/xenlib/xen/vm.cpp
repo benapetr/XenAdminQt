@@ -1101,12 +1101,63 @@ bool VM::HasAtLeastOneDisk() const
 
 QString VM::GetHomeRef() const
 {
-    // Return affinity host if set, otherwise resident host
+    if (this->IsSnapshot())
+    {
+        QSharedPointer<VM> parent = this->SnapshotOf();
+        return parent ? parent->GetHomeRef() : QString();
+    }
+
+    if (this->IsTemplate())
+        return QString();
+
+    const QString powerState = this->GetPowerState();
+    if (powerState == "Running" || powerState == "Paused")
+        return this->GetResidentOnRef();
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QString();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QString();
+
+    QList<QSharedPointer<VBD>> vbds = this->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
+    {
+        if (!vbd || !vbd->IsValid())
+            continue;
+
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi || !vdi->IsValid() || vdi->Missing() || !vdi->Managed())
+            continue;
+
+        QSharedPointer<SR> sr = vdi->GetSR();
+        if (!sr || !sr->IsValid())
+            continue;
+
+        if (sr->IsShared())
+            continue;
+
+        QStringList pbdRefs = sr->GetPBDRefs();
+        if (pbdRefs.size() != 1)
+            continue;
+
+        QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRefs.first());
+        QString hostRef = pbdData.value("host").toString();
+        if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+            return hostRef;
+    }
+
     QString affinity = this->GetAffinityRef();
     if (!affinity.isEmpty() && affinity != XENOBJECT_NULL)
-        return affinity;
+    {
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, affinity);
+        if (host && host->IsLive())
+            return affinity;
+    }
 
-    return this->GetResidentOnRef();
+    return QString();
 }
 
 qint64 VM::UserVersion() const
