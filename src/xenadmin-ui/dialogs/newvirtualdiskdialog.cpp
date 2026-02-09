@@ -50,6 +50,22 @@ NewVirtualDiskDialog::NewVirtualDiskDialog(XenConnection* connection, const QStr
     this->init();
 }
 
+NewVirtualDiskDialog::NewVirtualDiskDialog(QSharedPointer<SR> sr, QWidget* parent) : QDialog(parent), ui(new Ui::NewVirtualDiskDialog)
+{
+    if (!sr)
+    {
+        this->m_connection = nullptr;
+    } else
+    {
+        this->m_connection = sr->GetConnection();
+        this->m_initialSrRef = sr->OpaqueRef();
+    }
+
+    this->m_pickerUsage = SrPicker::InstallFromTemplate;
+    this->m_initialName = tr("New virtual disk");
+    this->init();
+}
+
 NewVirtualDiskDialog::NewVirtualDiskDialog(QSharedPointer<VM> vm, QWidget *parent) : QDialog(parent), ui(new Ui::NewVirtualDiskDialog)
 {
     if (!vm)
@@ -118,7 +134,7 @@ void NewVirtualDiskDialog::populateSRList()
     if (homeHost.isEmpty() && !this->m_vm.isNull())
         homeHost = this->m_vm->GetHomeRef();
 
-    this->ui->srPicker->Populate(SrPicker::VM, this->m_connection, homeHost, this->m_initialSrRef, QStringList());
+    this->ui->srPicker->Populate(this->m_pickerUsage, this->m_connection, homeHost, this->m_initialSrRef, QStringList());
     this->ui->rescanButton->setEnabled(this->ui->srPicker->CanBeScanned());
 }
 
@@ -324,8 +340,7 @@ void NewVirtualDiskDialog::setDialogMode(DialogMode mode)
     {
         this->setWindowTitle(tr("Edit Virtual Disk"));
         this->ui->addButton->setText(tr("OK"));
-    }
-    else
+    } else
     {
         this->setWindowTitle(tr("Add Virtual Disk"));
         this->ui->addButton->setText(tr("&Add"));
@@ -340,10 +355,7 @@ void NewVirtualDiskDialog::setWizardContext(const QString& vmName, const QString
     this->updateDefaultName();
 }
 
-void NewVirtualDiskDialog::setInitialDisk(const QString& name,
-                                          const QString& description,
-                                          qint64 sizeBytes,
-                                          const QString& srRef)
+void NewVirtualDiskDialog::setInitialDisk(const QString& name, const QString& description, qint64 sizeBytes, const QString& srRef)
 {
     this->m_initialName = name;
     this->m_initialDescription = description;

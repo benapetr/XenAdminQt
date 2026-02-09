@@ -32,8 +32,10 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include "controls/srpicker.h"
 
 class VM;
+class SR;
 
 namespace Ui
 {
@@ -54,6 +56,7 @@ class NewVirtualDiskDialog : public QDialog
         };
 
         explicit NewVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
+        explicit NewVirtualDiskDialog(QSharedPointer<SR> sr, QWidget* parent = nullptr);
         explicit NewVirtualDiskDialog(QSharedPointer<VM> vm, QWidget* parent = nullptr);
         ~NewVirtualDiskDialog();
 
@@ -94,6 +97,7 @@ class NewVirtualDiskDialog : public QDialog
         QSharedPointer<VM> m_vm;
         QVariantMap m_vmData;
         QString m_homeHostRef;
+        SrPicker::SRPickerType m_pickerUsage = SrPicker::VM;
         QString m_vmNameOverride;
         QStringList m_usedDevices;
         QString m_initialName;

@@ -39,17 +39,17 @@
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/actions/vm/changevmisoaction.h"
-#include "xen/actions/vdi/creatediskaction.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "xen/actions/vdi/destroydiskaction.h"
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xen/actions/delegatedasyncoperation.h"
-#include "dialogs/newvirtualdiskdialog.h"
 #include "dialogs/attachvirtualdiskdialog.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
+#include "commands/storage/addvirtualdiskcommand.h"
 #include "settingsmanager.h"
+#include "mainwindow.h"
 #include "../widgets/isodropdownbox.h"
 #include "operations/multipleaction.h"
 #include <QTableWidgetItem>
@@ -1369,103 +1369,12 @@ void VMStorageTabPage::onAddButtonClicked()
     if (!this->m_vm)
         return;
 
-    if (!this->m_vm->GetConnection())
-    {
-        QMessageBox::warning(this, "Error", "No connection available.");
+    AddVirtualDiskCommand command(MainWindow::instance(), this);
+    command.SetSelectionOverride(QList<QSharedPointer<XenObject>>{this->m_vm});
+    if (!command.CanRun())
         return;
-    }
+    command.Run();
 
-    // Open New Virtual Disk Dialog
-    NewVirtualDiskDialog dialog(this->m_vm, this);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-
-    // Get parameters from dialog
-    QString srRef = dialog.getSelectedSR();
-    QString name = dialog.getVDIName();
-    QString description = dialog.getVDIDescription();
-    qint64 size = dialog.getSize();
-    QString devicePosition = dialog.getDevicePosition();
-    QString mode = dialog.getMode();
-    bool bootable = dialog.isBootable();
-
-    // Build VDI record
-    QVariantMap vdiRecord;
-    vdiRecord["name_label"] = name;
-    vdiRecord["name_description"] = description;
-    vdiRecord["SR"] = srRef;
-    vdiRecord["virtual_size"] = QString::number(size);
-    vdiRecord["type"] = "user";
-    vdiRecord["sharable"] = false;
-    vdiRecord["read_only"] = false;
-    vdiRecord["other_config"] = QVariantMap();
-
-    // Create VDI using CreateDiskAction
-    qDebug() << "Creating VDI:" << name << "size:" << size << "in SR:" << srRef;
-
-    CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, this->m_vm->GetConnection(), this);
-
-    ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, this);
-    qDebug() << "[StorageTabPage] Executing create dialog for VDI...";
-    int dialogResult = createDialog->exec();
-    qDebug() << "[StorageTabPage] Create dialog exec() returned:" << dialogResult
-             << "QDialog::Accepted=" << QDialog::Accepted
-             << "QDialog::Rejected=" << QDialog::Rejected;
-
-    if (dialogResult != QDialog::Accepted)
-    {
-        qWarning() << "[StorageTabPage] Dialog was rejected!";
-        QMessageBox::warning(this, "Failed", "Failed to create virtual disk.");
-        delete createDialog;
-        return;
-    }
-
-    qDebug() << "[StorageTabPage] Dialog was accepted, getting VDI ref...";
-    QString vdiRef = createAction->GetResult();
-    delete createDialog;
-
-    if (vdiRef.isEmpty())
-    {
-        qWarning() << "[StorageTabPage] VDI ref is empty!";
-        QMessageBox::warning(this, "Failed", "Failed to create virtual disk.");
-        return;
-    }
-
-    qDebug() << "VDI created:" << vdiRef << "Now attaching to VM...";
-
-    // Create VBD and attach to VM using VbdCreateAndPlugAction
-
-    QVariantMap vbdRecord;
-    vbdRecord["VM"] = this->m_vm->OpaqueRef();
-    vbdRecord["VDI"] = vdiRef;
-    vbdRecord["userdevice"] = devicePosition;
-    vbdRecord["bootable"] = bootable;
-    vbdRecord["mode"] = mode;
-    vbdRecord["type"] = "Disk";
-    vbdRecord["unpluggable"] = true;
-    vbdRecord["empty"] = false;
-    vbdRecord["other_config"] = QVariantMap();
-    vbdRecord["qos_algorithm_type"] = "";
-    vbdRecord["qos_algorithm_params"] = QVariantMap();
-
-    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, name, false, this);
-
-    ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this);
-    if (attachDialog->exec() != QDialog::Accepted)
-    {
-        QMessageBox::warning(this, "Warning", "Virtual disk created but failed to attach to VM.\nYou can attach it manually from the Attach menu.");
-        delete attachDialog;
-        // VDI was created, so refresh anyway
-        refreshVmRecord(this->m_connection, this->m_objectRef);
-        return;
-    }
-
-    delete attachDialog;
-
-    qDebug() << "VBD created and attached successfully";
-    QMessageBox::information(this, "Success", "Virtual disk created and attached successfully.");
-
-    // Refresh to show new disk
     refreshVmRecord(this->m_connection, this->m_objectRef);
 }
 

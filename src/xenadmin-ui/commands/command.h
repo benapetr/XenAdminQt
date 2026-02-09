@@ -89,6 +89,11 @@ class Command : public QObject
         }
 
         /**
+         * @brief Override selection for this command (used for explicit selections)
+         */
+        void SetSelectionOverride(const QList<QSharedPointer<XenObject>>& objects);
+
+        /**
          * @brief Set the selection context
          */
         void SetSelection(const QStringList& selection)
@@ -133,11 +138,6 @@ class Command : public QObject
          // remove - GetObject() does same
          */
         QSharedPointer<XenObject> getSelectedObject() const;
-
-        /**
-         * @brief Override selection for this command (used for explicit selections)
-         */
-        void SetSelectionOverride(const QList<QSharedPointer<XenObject>>& objects);
 
         /**
          * @brief Get selected objects (override or SelectionManager)

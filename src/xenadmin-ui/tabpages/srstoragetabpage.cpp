@@ -45,6 +45,8 @@
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
+#include "commands/storage/addvirtualdiskcommand.h"
+#include "mainwindow.h"
 
 namespace
 {
@@ -275,7 +277,15 @@ void SrStorageTabPage::onRescanButtonClicked()
 
 void SrStorageTabPage::onAddButtonClicked()
 {
-    QMessageBox::information(this, tr("New Virtual Disk"), tr("New disk wizard should be triggered by MainWindow."));
+    QSharedPointer<SR> sr = this->GetSR();
+    if (!sr)
+        return;
+
+    AddVirtualDiskCommand command(MainWindow::instance(), this);
+    command.SetSelectionOverride(QList<QSharedPointer<XenObject>>{sr});
+    if (!command.CanRun())
+        return;
+    command.Run();
 }
 
 void SrStorageTabPage::onMoveButtonClicked()

@@ -25,18 +25,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "addvirtualdiskcommand.h"
+#include <QMessageBox>
 #include <QDebug>
+#include "addvirtualdiskcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newvirtualdiskdialog.h"
 #include "../../dialogs/actionprogressdialog.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vdi/creatediskaction.h"
-#include "xen/actions/vbd/vbdcreateandplugaction.h"
-#include "xen/sr.h"
-#include <QMessageBox>
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vdi/creatediskaction.h"
+#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
+#include "xenlib/xen/sr.h"
 
 AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -71,10 +71,7 @@ void AddVirtualDiskCommand::Run()
 
         if (currentVBDs >= maxVBDs)
         {
-            QMessageBox::warning(
-                MainWindow::instance(),
-                tr("Cannot Add Disk"),
-                tr("The maximum number of virtual disks (%1) has been reached for this VM.").arg(maxVBDs));
+            QMessageBox::warning(MainWindow::instance(), tr("Cannot Add Disk"), tr("The maximum number of virtual disks (%1) has been reached for this VM.").arg(maxVBDs));
             return;
         }
 
@@ -122,11 +119,6 @@ void AddVirtualDiskCommand::Run()
         ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, MainWindow::instance());
         qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
         int createResult = createDialog->exec();
-        qDebug() << "[AddVirtualDiskCommand] Create dialog result:" << createResult
-                 << "(Accepted=" << QDialog::Accepted << ")";
-        qDebug() << "[AddVirtualDiskCommand] CreateAction state:"
-                 << "hasError=" << createAction->HasError()
-                 << "errorMessage=" << createAction->GetErrorMessage();
 
         if (createResult != QDialog::Accepted)
         {
@@ -176,9 +168,7 @@ void AddVirtualDiskCommand::Run()
         if (attachResult != QDialog::Accepted)
         {
             qWarning() << "[AddVirtualDiskCommand] VBD attachment failed or cancelled";
-            QMessageBox::warning(MainWindow::instance(), tr("Warning"),
-                                 tr("Virtual disk created but failed to attach to VM.\n"
-                                    "You can attach it manually from the Attach menu."));
+            QMessageBox::warning(MainWindow::instance(), tr("Warning"), tr("Virtual disk created but failed to attach to VM.\nYou can attach it manually from the Attach menu."));
             delete attachDialog;
             return;
         }
@@ -189,9 +179,65 @@ void AddVirtualDiskCommand::Run()
         MainWindow::instance()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
     } else if (objectType == XenObjectType::SR)
     {
-        // For SR, we need to create a disk without a specific VM
-        // This is typically not used in the Qt version, but we show a message
-        QMessageBox::information(MainWindow::instance(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
+        QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(object);
+        if (!sr)
+            return;
+
+        qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for SR:" << objectRef;
+        NewVirtualDiskDialog dialog(sr, MainWindow::instance());
+        if (dialog.exec() != QDialog::Accepted)
+        {
+            qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";
+            return;
+        }
+
+        QString srRef = dialog.getSelectedSR();
+        QString name = dialog.getVDIName();
+        QString description = dialog.getVDIDescription();
+        qint64 size = dialog.getSize();
+
+        qDebug() << "[AddVirtualDiskCommand] VDI parameters:";
+        qDebug() << "  SR:" << srRef;
+        qDebug() << "  Name:" << name;
+        qDebug() << "  Size:" << size;
+
+        QVariantMap vdiRecord;
+        vdiRecord["name_label"] = name;
+        vdiRecord["name_description"] = description;
+        vdiRecord["SR"] = srRef;
+        vdiRecord["virtual_size"] = QString::number(size);
+        vdiRecord["type"] = "user";
+        vdiRecord["sharable"] = false;
+        vdiRecord["read_only"] = false;
+        vdiRecord["other_config"] = QVariantMap();
+
+        qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
+        CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, sr->GetConnection(), this);
+
+        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, MainWindow::instance());
+        qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
+        int createResult = createDialog->exec();
+
+        if (createResult != QDialog::Accepted)
+        {
+            qWarning() << "[AddVirtualDiskCommand] VDI creation failed or cancelled";
+            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
+            delete createDialog;
+            return;
+        }
+
+        QString vdiRef = createAction->GetResult();
+        qDebug() << "[AddVirtualDiskCommand] VDI created successfully, ref:" << vdiRef;
+        delete createDialog;
+
+        if (vdiRef.isEmpty())
+        {
+            qWarning() << "[AddVirtualDiskCommand] VDI ref is empty despite success";
+            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
+            return;
+        }
+
+        MainWindow::instance()->ShowStatusMessage(tr("Virtual disk created successfully"), 5000);
     }
 }
 
