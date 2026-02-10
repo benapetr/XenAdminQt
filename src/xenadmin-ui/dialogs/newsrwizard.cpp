@@ -25,23 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "newsrwizard.h"
-#include "ui_newsrwizard.h"
-
-#include "../mainwindow.h"
-#include "../widgets/wizardnavigationpane.h"
-#include "../../xenlib/xencache.h"
-#include "xen/network/connection.h"
-#include "../../xenlib/xen/actions/sr/srcreateaction.h"
-#include "../../xenlib/xen/actions/sr/srintroduceaction.h"
-#include "../../xenlib/xen/actions/sr/srreattachaction.h"
-#include "../../xenlib/xen/actions/delegatedasyncoperation.h"
-#include "../../xenlib/operations/parallelaction.h"
-#include "../../xenlib/xen/host.h"
-#include "../../xenlib/xen/sr.h"
-#include "../../xenlib/xen/xenapi/xenapi_SR.h"
-#include "actionprogressdialog.h"
-
 #include <QButtonGroup>
 #include <QDateTime>
 #include <QFileDialog>
@@ -60,7 +43,24 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 
-#include "../../xenlib/xen/network/connectionsmanager.h"
+#include "newsrwizard.h"
+#include "ui_newsrwizard.h"
+
+#include "../mainwindow.h"
+#include "../widgets/wizardnavigationpane.h"
+#include "actionprogressdialog.h"
+
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/sr/srcreateaction.h"
+#include "xenlib/xen/actions/sr/srintroduceaction.h"
+#include "xenlib/xen/actions/sr/srreattachaction.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
+#include "xenlib/operations/parallelaction.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/xenapi/xenapi_SR.h"
+#include "xenlib/xen/network/connectionsmanager.h"
 
 NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
     : QWizard(parent),

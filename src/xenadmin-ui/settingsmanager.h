@@ -130,6 +130,16 @@ class SettingsManager : public QObject
         void SetFillAreaUnderGraphs(bool fill);
         bool GetRememberLastSelectedTab() const;
         void SetRememberLastSelectedTab(bool remember);
+        
+        // Confirmation settings
+        bool GetDoNotConfirmDismissAlerts() const;
+        void SetDoNotConfirmDismissAlerts(bool doNotConfirm);
+        bool GetDoNotConfirmDismissUpdates() const;
+        void SetDoNotConfirmDismissUpdates(bool doNotConfirm);
+        bool GetDoNotConfirmDismissEvents() const;
+        void SetDoNotConfirmDismissEvents(bool doNotConfirm);
+        bool GetIgnoreOvfValidationWarnings() const;
+        void SetIgnoreOvfValidationWarnings(bool ignoreWarnings);
 
         // Tree view settings
         enum TreeViewMode
@@ -230,6 +240,10 @@ class SettingsManager : public QObject
         int m_graphUpdateInterval;
         bool m_fillAreaUnderGraphs;
         bool m_rememberLastSelectedTab;
+        bool m_doNotConfirmDismissAlerts;
+        bool m_doNotConfirmDismissUpdates;
+        bool m_doNotConfirmDismissEvents;
+        bool m_ignoreOvfValidationWarnings;
         TreeViewMode m_treeViewMode;
         QStringList m_expandedTreeItems;
         bool m_debugConsoleVisible;

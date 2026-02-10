@@ -100,6 +100,10 @@ void SettingsManager::Load()
     this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
     this->m_fillAreaUnderGraphs = this->m_settings->value("Display/FillAreaUnderGraphs", false).toBool();
     this->m_rememberLastSelectedTab = this->m_settings->value("Display/RememberLastSelectedTab", true).toBool();
+    this->m_doNotConfirmDismissAlerts = this->m_settings->value("Confirmation/DoNotConfirmDismissAlerts", false).toBool();
+    this->m_doNotConfirmDismissUpdates = this->m_settings->value("Confirmation/DoNotConfirmDismissUpdates", false).toBool();
+    this->m_doNotConfirmDismissEvents = this->m_settings->value("Confirmation/DoNotConfirmDismissEvents", false).toBool();
+    this->m_ignoreOvfValidationWarnings = this->m_settings->value("Confirmation/IgnoreOvfValidationWarnings", false).toBool();
     this->m_treeViewMode = static_cast<TreeViewMode>(this->m_settings->value("TreeView/mode", Infrastructure).toInt());
     this->m_expandedTreeItems = this->m_settings->value("TreeView/expandedItems").toStringList();
     this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
@@ -143,6 +147,10 @@ void SettingsManager::Save()
     this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
     this->m_settings->setValue("Display/FillAreaUnderGraphs", this->m_fillAreaUnderGraphs);
     this->m_settings->setValue("Display/RememberLastSelectedTab", this->m_rememberLastSelectedTab);
+    this->m_settings->setValue("Confirmation/DoNotConfirmDismissAlerts", this->m_doNotConfirmDismissAlerts);
+    this->m_settings->setValue("Confirmation/DoNotConfirmDismissUpdates", this->m_doNotConfirmDismissUpdates);
+    this->m_settings->setValue("Confirmation/DoNotConfirmDismissEvents", this->m_doNotConfirmDismissEvents);
+    this->m_settings->setValue("Confirmation/IgnoreOvfValidationWarnings", this->m_ignoreOvfValidationWarnings);
     this->m_settings->setValue("TreeView/mode", static_cast<int>(this->m_treeViewMode));
     this->m_settings->setValue("TreeView/expandedItems", this->m_expandedTreeItems);
     this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
@@ -568,6 +576,50 @@ void SettingsManager::SetRememberLastSelectedTab(bool remember)
 {
     this->m_rememberLastSelectedTab = remember;
     emit settingsChanged("Display/RememberLastSelectedTab");
+}
+
+bool SettingsManager::GetDoNotConfirmDismissAlerts() const
+{
+    return this->m_doNotConfirmDismissAlerts;
+}
+
+void SettingsManager::SetDoNotConfirmDismissAlerts(bool doNotConfirm)
+{
+    this->m_doNotConfirmDismissAlerts = doNotConfirm;
+    emit settingsChanged("Confirmation/DoNotConfirmDismissAlerts");
+}
+
+bool SettingsManager::GetDoNotConfirmDismissUpdates() const
+{
+    return this->m_doNotConfirmDismissUpdates;
+}
+
+void SettingsManager::SetDoNotConfirmDismissUpdates(bool doNotConfirm)
+{
+    this->m_doNotConfirmDismissUpdates = doNotConfirm;
+    emit settingsChanged("Confirmation/DoNotConfirmDismissUpdates");
+}
+
+bool SettingsManager::GetDoNotConfirmDismissEvents() const
+{
+    return this->m_doNotConfirmDismissEvents;
+}
+
+void SettingsManager::SetDoNotConfirmDismissEvents(bool doNotConfirm)
+{
+    this->m_doNotConfirmDismissEvents = doNotConfirm;
+    emit settingsChanged("Confirmation/DoNotConfirmDismissEvents");
+}
+
+bool SettingsManager::GetIgnoreOvfValidationWarnings() const
+{
+    return this->m_ignoreOvfValidationWarnings;
+}
+
+void SettingsManager::SetIgnoreOvfValidationWarnings(bool ignoreWarnings)
+{
+    this->m_ignoreOvfValidationWarnings = ignoreWarnings;
+    emit settingsChanged("Confirmation/IgnoreOvfValidationWarnings");
 }
 
 // Tree view settings

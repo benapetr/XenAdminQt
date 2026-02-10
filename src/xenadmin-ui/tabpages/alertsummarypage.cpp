@@ -44,6 +44,7 @@
 #include <algorithm>
 #include "alertsummarypage.h"
 #include "ui_alertsummarypage.h"
+#include "../settingsmanager.h"
 #include "xenlib/alerts/alertmanager.h"
 #include "xenlib/alerts/alert.h"
 
@@ -161,10 +162,12 @@ void AlertSummaryPage::buildAlertList()
         
         // Dismiss action (always available)
         QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
-        connect(dismissAction, &QAction::triggered, this, [alert]()
+        connect(dismissAction, &QAction::triggered, this, [this, alert]()
         {
-            alert->Dismiss();
-            AlertManager::instance()->RemoveAlert(alert);
+            this->dismissAlerts(QList<Alert*>() << alert,
+                               true,
+                               tr("Dismiss Alert"),
+                               tr("Are you sure you want to dismiss this alert?"));
         });
         
         // TODO: Add Fix/Help/Web Console actions based on alert type
@@ -540,18 +543,62 @@ void AlertSummaryPage::onDismissAll()
     
     if (alerts.isEmpty())
         return;
-    
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this,
-        tr("Dismiss All Alerts"),
-        tr("Are you sure you want to dismiss all %1 alerts?").arg(alerts.count()),
-        QMessageBox::Yes | QMessageBox::No
-    );
-    
-    if (reply != QMessageBox::Yes)
-        return;
 
-    this->dismissAlerts(alerts, false, QString(), QString());
+    QList<Alert*> alertsToDismiss = alerts;
+
+    if (this->GetFilterIsOn())
+    {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(tr("Dismiss Alerts"));
+        msgBox.setText(tr("Do you want to dismiss all alerts, or only the filtered visible alerts?"));
+        msgBox.setIcon(QMessageBox::Question);
+
+        QPushButton* dismissAllBtn = msgBox.addButton(tr("Dismiss All"), QMessageBox::YesRole);
+        QPushButton* dismissFilteredBtn = msgBox.addButton(tr("Dismiss Filtered"), QMessageBox::NoRole);
+        msgBox.addButton(QMessageBox::Cancel);
+
+        msgBox.exec();
+
+        QAbstractButton* clicked = msgBox.clickedButton();
+        if (clicked == dismissAllBtn)
+        {
+            alertsToDismiss = alerts;
+        }
+        else if (clicked == dismissFilteredBtn)
+        {
+            alertsToDismiss.clear();
+            QSet<QString> seen;
+            for (int row = 0; row < this->ui->alertsTable->rowCount(); ++row)
+            {
+                QTableWidgetItem* item = this->ui->alertsTable->item(row, 0);
+                if (!item)
+                    continue;
+
+                Alert* alert = item->data(Qt::UserRole).value<Alert*>();
+                if (!alert)
+                    continue;
+
+                const QString uuid = alert->GetUUID();
+                if (seen.contains(uuid))
+                    continue;
+
+                seen.insert(uuid);
+                alertsToDismiss.append(alert);
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        this->dismissAlerts(alertsToDismiss, false, QString(), QString());
+        return;
+    }
+
+    this->dismissAlerts(alertsToDismiss,
+                        true,
+                        tr("Dismiss All Alerts"),
+                        tr("Are you sure you want to dismiss all %1 alerts?").arg(alertsToDismiss.count()));
 }
 
 void AlertSummaryPage::onDismissSelected()
@@ -606,7 +653,7 @@ void AlertSummaryPage::dismissAlerts(const QList<Alert*>& alerts, bool confirm, 
     if (alerts.isEmpty())
         return;
 
-    if (confirm)
+    if (confirm && !SettingsManager::instance().GetDoNotConfirmDismissAlerts())
     {
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,

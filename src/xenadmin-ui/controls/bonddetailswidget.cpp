@@ -25,12 +25,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bonddetailswidget.h"
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QSet>
 #include <QSignalBlocker>
 #include <algorithm>
+
+#include "bonddetailswidget.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
@@ -447,8 +448,7 @@ void BondDetailsWidget::updateMtuBounds()
     {
         this->ui.bondMtuSpin->setEnabled(false);
         this->ui.bondMtuInfoLabel->setText(tr("Allowed MTU value: %1").arg(minMtu));
-    }
-    else
+    } else
     {
         this->ui.bondMtuSpin->setEnabled(true);
         this->ui.bondMtuInfoLabel->setText(tr("Allowed MTU range: %1 to %2").arg(minMtu).arg(maxMtu));

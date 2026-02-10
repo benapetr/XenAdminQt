@@ -28,6 +28,7 @@
 #include "eventspage.h"
 #include "ui_eventspage.h"
 #include "../iconmanager.h"
+#include "../settingsmanager.h"
 #include "operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include <QDebug>
@@ -823,16 +824,19 @@ void EventsPage::onDismissAll()
         }
     } else
     {
-        // No filter active - confirm dismissing all completed events
-        QMessageBox msgBox(this);
-        msgBox.setWindowTitle(tr("Dismiss All Events"));
-        msgBox.setText(tr("Are you sure you want to dismiss all completed events?"));
-        msgBox.setIcon(QMessageBox::Question);
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Cancel);
-        
-        if (msgBox.exec() != QMessageBox::Yes)
-            return;
+        if (!SettingsManager::instance().GetDoNotConfirmDismissEvents())
+        {
+            // No filter active - confirm dismissing all completed events
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle(tr("Dismiss All Events"));
+            msgBox.setText(tr("Are you sure you want to dismiss all completed events?"));
+            msgBox.setIcon(QMessageBox::Question);
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+            msgBox.setDefaultButton(QMessageBox::Cancel);
+
+            if (msgBox.exec() != QMessageBox::Yes)
+                return;
+        }
         
         // Dismiss all completed operations
         for (auto* record : allRecords)
@@ -1029,7 +1033,7 @@ void EventsPage::dismissRecords(const QList<OperationManager::OperationRecord*>&
     if (records.isEmpty())
         return;
 
-    if (confirm)
+    if (confirm && !SettingsManager::instance().GetDoNotConfirmDismissEvents())
     {
         QMessageBox msgBox(this);
         msgBox.setWindowTitle(title);

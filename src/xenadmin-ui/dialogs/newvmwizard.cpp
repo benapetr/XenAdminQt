@@ -25,29 +25,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDebug>
+#include <QtWidgets>
+#include <QHeaderView>
+#include <QDomDocument>
+#include <algorithm>
+
 #include "newvmwizard.h"
 #include "ui_newvmwizard.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/xenapi/xenapi_VM.h"
-#include "actionprogressdialog.h"
-#include "xen/actions/vm/createvmaction.h"
-#include "xen/host.h"
-#include "xen/vm.h"
-#include "xen/sr.h"
 #include "newvirtualdiskdialog.h"
-#include "xenlib/vmhelpers.h"
+#include "actionprogressdialog.h"
 #include "vifdialog.h"
 #include "newsrwizard.h"
 #include "mainwindow.h"
 #include "../widgets/wizardnavigationpane.h"
 #include "../widgets/isodropdownbox.h"
 #include "../settingsmanager.h"
-#include <QDebug>
-#include <QtWidgets>
-#include <QHeaderView>
-#include <QDomDocument>
-#include <algorithm>
+
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/actions/vm/createvmaction.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/vmhelpers.h"
 
 NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent) : QWizard(parent), m_connection(connection), ui(new Ui::NewVMWizard)
 {
