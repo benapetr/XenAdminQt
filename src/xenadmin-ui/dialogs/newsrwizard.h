@@ -39,6 +39,10 @@ class MainWindow;
 class WizardNavigationPane;
 class XenConnection;
 class SR;
+class Host;
+class AsyncOperation;
+class QGroupBox;
+class QRadioButton;
 
 namespace Ui
 {
@@ -95,6 +99,8 @@ class NewSRWizard : public QWizard
             QString nameDescription;
             QString eth;
             bool poolMetadataDetected;
+            QString existingSrUuid;
+            QVariantMap existingSrConfiguration;
         };
 
         explicit NewSRWizard(XenConnection* connection, MainWindow* parent = nullptr);
@@ -183,6 +189,34 @@ class NewSRWizard : public QWizard
         void onPageChanged(int pageId);
 
     private:
+        enum class ActionMode
+        {
+            Create,
+            Introduce,
+            Reattach
+        };
+
+        struct PlannedAction
+        {
+            ActionMode mode = ActionMode::Create;
+            QSharedPointer<Host> coordinatorHost;
+            QSharedPointer<SR> srToReattach;
+            QString srUuid;
+            QString srName;
+            QString srDescription;
+            QString srType;
+            QString contentType;
+            QVariantMap deviceConfig;
+            QVariantMap smConfig;
+        };
+
+        enum class ExistingSrDecision
+        {
+            Cancel,
+            Reattach,
+            Format
+        };
+
         void setupPages();
         void setupNavigationPane();
         void initializeTypePage();
@@ -209,6 +243,21 @@ class NewSRWizard : public QWizard
         void applyReattachDefaults(const QSharedPointer<SR>& srToReattach);
         void setSrTypeSelection(SRType srType, bool lockTypes);
         QList<FibreChannelDevice> getSelectedFibreDevices() const;
+        bool runProbeExtWithProgress(const QString& title, const QString& masterRef, const QVariantMap& deviceConfig, const QString& srType, QVariantList& probeResult, QString& errorMessage);
+        QList<PlannedAction> buildPlannedActions(const QSharedPointer<Host>& coordinatorHost, QString& error) const;
+        AsyncOperation* createActionFromPlan(const PlannedAction& plan) const;
+        QString getExistingSRRefByUuid(const QString& srUuid) const;
+        bool shouldUseIntroduce(const QString& srUuid) const;
+        QString getLocalSrTypeString() const;
+        QString getSelectedBlockSrType() const;
+        QString getAlternativeBlockSrType(const QString& srType) const;
+        bool isSrUuidInAnyConnectedPool(const QString& srUuid, XenConnection** outConnection = nullptr, QString* outName = nullptr) const;
+        ExistingSrDecision askExistingSrDecision(const QString& title, const QString& details, bool foundExisting, bool allowFormat, bool showRepeatCheckbox, bool& repeatForRemaining) const;
+        bool evaluateIscsiProbeDecision();
+        bool evaluateFibreProbeDecision();
+        QList<QVariantMap> probeForExistingSrs(const QVariantMap& deviceConfig, QString& usedSrType, QString& error) const;
+        static QVariantMap normalizeProbeConfig(const QVariantMap& config);
+        void clearPlannedProbeSelections();
 
         QString getSRTypeString() const;
         QString getContentType() const;
@@ -219,10 +268,10 @@ class NewSRWizard : public QWizard
         MainWindow* m_mainWindow;
         XenConnection* m_connection;
         Ui::NewSRWizard* ui;
-        WizardNavigationPane* m_navigationPane;
-        QButtonGroup* m_typeButtonGroup;
+        WizardNavigationPane* m_navigationPane = nullptr;
+        QButtonGroup* m_typeButtonGroup = nullptr;
 
-        SRType m_selectedSRType;
+        SRType m_selectedSRType = SRType::NFS;
         QString m_srName;
         QString m_srDescription;
 
@@ -230,7 +279,7 @@ class NewSRWizard : public QWizard
         QString m_serverPath;
         QString m_username;
         QString m_password;
-        int m_port;
+        int m_port = 2049;
 
         QString m_localPath;
         QString m_localFilesystem;
@@ -238,7 +287,7 @@ class NewSRWizard : public QWizard
         QString m_iscsiTarget;
         QString m_iscsiTargetIQN;
         QString m_iscsiLUN;
-        bool m_iscsiUseChap;
+        bool m_iscsiUseChap = false;
         QString m_iscsiChapUsername;
         QString m_iscsiChapPassword;
 
@@ -248,9 +297,18 @@ class NewSRWizard : public QWizard
         QList<ISCSILunInfo> m_discoveredLuns;
         QList<FibreChannelDevice> m_discoveredFibreDevices;
         QMap<QString, QString> m_foundSRs;
+        QVariantMap m_iscsiProbeSelectedConfig;
+        QList<FibreChannelDevice> m_plannedFibreDevices;
+        bool m_hasPlannedFibreDevices = false;
+        bool m_hasEvaluatedProbeDecisions = false;
 
         QString m_reattachSrRef;
-        bool m_forceReattach;
+        bool m_forceReattach = false;
+        QSharedPointer<SR> m_srToReattach;
+
+        QGroupBox* m_provisioningGroup = nullptr;
+        QRadioButton* m_standardProvisioningRadio = nullptr;
+        QRadioButton* m_gfs2ProvisioningRadio = nullptr;
 };
 
 #endif // NEWSRWIZARD_H

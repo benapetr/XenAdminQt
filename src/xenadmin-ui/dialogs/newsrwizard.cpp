@@ -33,7 +33,10 @@
 #include "../../xenlib/xencache.h"
 #include "xen/network/connection.h"
 #include "../../xenlib/xen/actions/sr/srcreateaction.h"
+#include "../../xenlib/xen/actions/sr/srintroduceaction.h"
 #include "../../xenlib/xen/actions/sr/srreattachaction.h"
+#include "../../xenlib/xen/actions/delegatedasyncoperation.h"
+#include "../../xenlib/operations/parallelaction.h"
 #include "../../xenlib/xen/host.h"
 #include "../../xenlib/xen/sr.h"
 #include "../../xenlib/xen/xenapi/xenapi_SR.h"
@@ -46,22 +49,24 @@
 #include <QListWidgetItem>
 #include <QMessageBox>
 #include <QProgressBar>
+#include <QCheckBox>
+#include <QGroupBox>
+#include <QRadioButton>
+#include <QVBoxLayout>
 #include <QStorageInfo>
 #include <QTextEdit>
 #include <QTextStream>
 #include <QVector>
+#include <QPushButton>
+#include <QSignalBlocker>
+
+#include "../../xenlib/xen/network/connectionsmanager.h"
 
 NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
     : QWizard(parent),
       m_mainWindow(parent),
       m_connection(connection),
-      ui(new Ui::NewSRWizard),
-      m_navigationPane(nullptr),
-      m_typeButtonGroup(nullptr),
-      m_selectedSRType(SRType::NFS),
-      m_port(2049),
-      m_iscsiUseChap(false),
-      m_forceReattach(false)
+      ui(new Ui::NewSRWizard)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(tr("New Storage Repository"));
@@ -169,6 +174,25 @@ void NewSRWizard::initializeConfigurationPage()
     this->connect(this->ui->clearAllFibreButton, &QPushButton::clicked, this, &NewSRWizard::onClearAllFibreDevices);
     this->connect(this->ui->fibreDevicesList, &QListWidget::itemSelectionChanged, this, &NewSRWizard::onFibreDeviceSelectionChanged);
 
+    // C# has a dedicated provisioning page for iSCSI/HBA (default SR type vs clustered gfs2).
+    // Keep the same behavior in Qt using an inline group on the configuration page.
+    this->m_provisioningGroup = new QGroupBox(tr("Provisioning"), this->ui->pageConfiguration);
+    this->m_standardProvisioningRadio = new QRadioButton(tr("Standard storage (default)"), this->m_provisioningGroup);
+    this->m_gfs2ProvisioningRadio = new QRadioButton(tr("Clustered storage (gfs2)"), this->m_provisioningGroup);
+    this->m_standardProvisioningRadio->setChecked(true);
+
+    auto* provisioningLayout = new QVBoxLayout(this->m_provisioningGroup);
+    provisioningLayout->addWidget(this->m_standardProvisioningRadio);
+    provisioningLayout->addWidget(this->m_gfs2ProvisioningRadio);
+
+    if (auto* configLayout = qobject_cast<QVBoxLayout*>(this->ui->pageConfiguration->layout()))
+    {
+        configLayout->insertWidget(0, this->m_provisioningGroup);
+    }
+
+    this->connect(this->m_standardProvisioningRadio, &QRadioButton::toggled, this, &NewSRWizard::onConfigurationChanged);
+    this->connect(this->m_gfs2ProvisioningRadio, &QRadioButton::toggled, this, &NewSRWizard::onConfigurationChanged);
+
     this->resetISCSIState();
     this->resetFibreState();
     this->updateNetworkReattachUI(false);
@@ -210,6 +234,7 @@ void NewSRWizard::onSRTypeChanged()
 {
     if (!this->m_typeButtonGroup)
         return;
+    this->clearPlannedProbeSelections();
 
     int id = this->m_typeButtonGroup->checkedId();
     if (id < 0)
@@ -277,6 +302,7 @@ void NewSRWizard::onNameTextChanged()
 
 void NewSRWizard::onConfigurationChanged()
 {
+    this->clearPlannedProbeSelections();
     if (QWizardPage* configPage = this->page(Page_Configuration))
         emit configPage->completeChanged();
 }
@@ -308,6 +334,7 @@ bool NewSRWizard::validateNamePage() const
 
 bool NewSRWizard::validateConfigurationPage() const
 {
+    NewSRWizard* self = const_cast<NewSRWizard*>(this);
     switch (this->m_selectedSRType)
     {
         case SRType::NFS:
@@ -316,12 +343,16 @@ bool NewSRWizard::validateConfigurationPage() const
         case SRType::CIFS_ISO:
             return this->validateNetworkConfig();
         case SRType::iSCSI:
-            return this->validateISCSIConfig();
+            if (!this->validateISCSIConfig())
+                return false;
+            return self->evaluateIscsiProbeDecision();
         case SRType::LocalStorage:
             return this->validateLocalConfig();
         case SRType::HBA:
         case SRType::FCoE:
-            return this->validateFibreConfig();
+            if (!this->validateFibreConfig())
+                return false;
+            return self->evaluateFibreProbeDecision();
     }
     return false;
 }
@@ -398,9 +429,9 @@ void NewSRWizard::collectConfiguration()
     this->m_iscsiChapUsername = this->ui->iscsiChapUsernameLineEdit->text().trimmed();
     this->m_iscsiChapPassword = this->ui->iscsiChapPasswordLineEdit->text();
 
-    if (this->m_forceReattach && !this->m_reattachSrRef.isEmpty())
+    if (this->m_forceReattach && this->m_srToReattach)
     {
-        this->m_selectedSRUuid = this->m_reattachSrRef;
+        this->m_selectedSRUuid = this->m_srToReattach ? this->m_srToReattach->GetUUID() : QString();
     } else if (this->ui->reattachExistingSRRadio->isChecked() && this->ui->existingSRsList->currentItem())
     {
         this->m_selectedSRUuid = this->ui->existingSRsList->currentItem()->data(Qt::UserRole).toString();
@@ -419,6 +450,15 @@ void NewSRWizard::updateNavigationSelection()
 void NewSRWizard::updateConfigurationSection()
 {
     this->hideAllConfigurations();
+    this->clearPlannedProbeSelections();
+
+    if (this->m_provisioningGroup)
+    {
+        const bool showProvisioning = this->m_selectedSRType == SRType::iSCSI || this->m_selectedSRType == SRType::HBA;
+        this->m_provisioningGroup->setVisible(showProvisioning);
+        if (!showProvisioning && this->m_standardProvisioningRadio)
+            this->m_standardProvisioningRadio->setChecked(true);
+    }
 
     switch (this->m_selectedSRType)
     {
@@ -478,10 +518,6 @@ bool NewSRWizard::validateNetworkConfig() const
         return false;
 
     if (this->ui->serverLineEdit->text().trimmed().isEmpty() || this->ui->serverPathLineEdit->text().trimmed().isEmpty())
-        return false;
-
-    if ((this->m_selectedSRType == SRType::CIFS || this->m_selectedSRType == SRType::CIFS_ISO) &&
-        this->ui->usernameLineEdit->text().trimmed().isEmpty())
         return false;
 
     return true;
@@ -573,6 +609,7 @@ void NewSRWizard::applyReattachDefaults(const QSharedPointer<SR>& srToReattach)
     if (!srToReattach)
         return;
 
+    this->m_srToReattach = srToReattach;
     this->m_forceReattach = true;
     this->m_reattachSrRef = srToReattach->OpaqueRef();
 
@@ -689,32 +726,57 @@ void NewSRWizard::onTestConnection()
         return;
     }
 
-    deviceConfig["server"] = server;
-    deviceConfig["serverpath"] = serverPath;
-
-    if (this->m_selectedSRType == SRType::CIFS || this->m_selectedSRType == SRType::CIFS_ISO)
+    if (this->m_selectedSRType == SRType::NFS)
     {
-        deviceConfig["type"] = "cifs";
+        deviceConfig["server"] = server;
+        deviceConfig["serverpath"] = serverPath;
+        deviceConfig["probeversion"] = "";
+    } else if (this->m_selectedSRType == SRType::CIFS)
+    {
+        deviceConfig["server"] = server;
+        deviceConfig["serverpath"] = serverPath;
         if (!this->ui->usernameLineEdit->text().isEmpty())
             deviceConfig["username"] = this->ui->usernameLineEdit->text().trimmed();
         if (!this->ui->passwordLineEdit->text().isEmpty())
             deviceConfig["password"] = this->ui->passwordLineEdit->text();
+    } else if (this->m_selectedSRType == SRType::NFS_ISO)
+    {
+        QString location = serverPath;
+        if (!location.startsWith(":") && !location.startsWith("/"))
+            location.prepend('/');
+        deviceConfig["location"] = QString("%1:%2").arg(server, location);
+        deviceConfig["type"] = "nfs_iso";
+    } else if (this->m_selectedSRType == SRType::CIFS_ISO)
+    {
+        QString location = serverPath;
+        if (!location.startsWith("//"))
+        {
+            const QString normalizedPath = location.startsWith("/") ? location.mid(1) : location;
+            location = QString("//%1/%2").arg(server, normalizedPath);
+        }
+        deviceConfig["location"] = location;
+        deviceConfig["type"] = "cifs";
+        if (!this->ui->usernameLineEdit->text().isEmpty())
+            deviceConfig["username"] = this->ui->usernameLineEdit->text().trimmed();
+        if (!this->ui->passwordLineEdit->text().isEmpty())
+            deviceConfig["cifspassword"] = this->ui->passwordLineEdit->text();
     }
 
-    if (this->m_selectedSRType == SRType::NFS || this->m_selectedSRType == SRType::NFS_ISO)
-        deviceConfig["probeversion"] = "";
+    QString srTypeStr = "nfs";
+    if (this->m_selectedSRType == SRType::CIFS)
+        srTypeStr = "smb";
+    else if (this->m_selectedSRType == SRType::NFS_ISO || this->m_selectedSRType == SRType::CIFS_ISO)
+        srTypeStr = "iso";
 
-    QString srTypeStr = (this->m_selectedSRType == SRType::NFS || this->m_selectedSRType == SRType::NFS_ISO) ? "nfs" : "cifs";
-
-    try
+    QVariantList probeResult;
+    QString probeError;
+    if (this->runProbeExtWithProgress(tr("Testing Storage Connection"),
+                                      masterRef,
+                                      deviceConfig,
+                                      srTypeStr,
+                                      probeResult,
+                                      probeError))
     {
-        QVariantList probeResult = XenAPI::SR::probe_ext(
-            this->m_connection->GetSession(),
-            masterRef,
-            deviceConfig,
-            srTypeStr,
-            QVariantMap());
-
         this->m_foundSRs.clear();
         this->ui->existingSRsList->clear();
 
@@ -746,9 +808,9 @@ void NewSRWizard::onTestConnection()
                 this->ui->existingSRsList->addItem(item);
             }
         }
-    } catch (const std::exception& ex)
+    } else
     {
-        this->ui->connectionStatusLabel->setText(tr("Connection failed: %1").arg(QString::fromUtf8(ex.what())));
+        this->ui->connectionStatusLabel->setText(tr("Connection failed: %1").arg(probeError));
         this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
         this->updateNetworkReattachUI(false);
     }
@@ -780,6 +842,7 @@ void NewSRWizard::onBrowseLocalPath()
 
 void NewSRWizard::onCreateNewSRToggled(bool checked)
 {
+    this->clearPlannedProbeSelections();
     if (checked)
         this->ui->existingSRsList->clearSelection();
     this->onConfigurationChanged();
@@ -787,6 +850,7 @@ void NewSRWizard::onCreateNewSRToggled(bool checked)
 
 void NewSRWizard::onExistingSRSelected()
 {
+    this->clearPlannedProbeSelections();
     if (this->ui->existingSRsList->currentItem())
         this->ui->reattachExistingSRRadio->setChecked(true);
     this->onConfigurationChanged();
@@ -794,13 +858,63 @@ void NewSRWizard::onExistingSRSelected()
 
 void NewSRWizard::onChapToggled(bool checked)
 {
+    this->clearPlannedProbeSelections();
     this->ui->iscsiChapUsernameLineEdit->setEnabled(checked);
     this->ui->iscsiChapPasswordLineEdit->setEnabled(checked);
     this->onConfigurationChanged();
 }
 
+bool NewSRWizard::runProbeExtWithProgress(const QString& title,
+                                          const QString& masterRef,
+                                          const QVariantMap& deviceConfig,
+                                          const QString& srType,
+                                          QVariantList& probeResult,
+                                          QString& errorMessage)
+{
+    probeResult.clear();
+    errorMessage.clear();
+
+    QSharedPointer<QVariantList> result(new QVariantList());
+    QSharedPointer<QString> probeError(new QString());
+
+    auto* action = new DelegatedAsyncOperation(
+        this->m_connection,
+        title,
+        tr("Scanning storage..."),
+        [masterRef, deviceConfig, srType, result, probeError](DelegatedAsyncOperation* op)
+        {
+            try
+            {
+                *result = XenAPI::SR::probe_ext(op->GetSession(),
+                                                masterRef,
+                                                deviceConfig,
+                                                srType,
+                                                QVariantMap());
+            } catch (const std::exception& ex)
+            {
+                *probeError = QString::fromUtf8(ex.what());
+                throw std::runtime_error(probeError->toStdString());
+            }
+        },
+        this);
+
+    ActionProgressDialog progressDialog(action, this);
+    progressDialog.setWindowTitle(title);
+    progressDialog.exec();
+
+    if (action->HasError())
+    {
+        errorMessage = probeError->isEmpty() ? action->GetErrorMessage() : *probeError;
+        return false;
+    }
+
+    probeResult = *result;
+    return true;
+}
+
 void NewSRWizard::onScanISCSITarget()
 {
+    this->clearPlannedProbeSelections();
     QString target = this->ui->iscsiTargetLineEdit->text().trimmed();
     if (target.isEmpty())
     {
@@ -840,24 +954,26 @@ void NewSRWizard::onScanISCSITarget()
     this->ui->iscsiTargetLineEdit->setEnabled(false);
     this->ui->scanISCSIButton->setText(tr("Scanning..."));
 
-    try
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
     {
-        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
-            throw std::runtime_error("Not connected to XenServer");
+        this->ui->scanISCSIButton->setEnabled(true);
+        this->ui->iscsiTargetLineEdit->setEnabled(true);
+        this->ui->scanISCSIButton->setText(tr("Scan Target"));
+        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan iSCSI target:\n\nNo pool found"));
+        return;
+    }
+    const QString masterRef = pools.first().value("master").toString();
 
-        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-        if (pools.isEmpty())
-            throw std::runtime_error("No pool found");
-
-        QString masterRef = pools.first().value("master").toString();
-
-        QVariantList probeResult = XenAPI::SR::probe_ext(
-            this->m_connection->GetSession(),
-            masterRef,
-            deviceConfig,
-            "lvmoiscsi",
-            QVariantMap());
-
+    QVariantList probeResult;
+    QString probeError;
+    if (this->runProbeExtWithProgress(tr("Scanning iSCSI Target"),
+                                      masterRef,
+                                      deviceConfig,
+                                      this->getSelectedBlockSrType(),
+                                      probeResult,
+                                      probeError))
+    {
         this->m_discoveredIqns.clear();
         this->ui->iscsiIqnComboBox->clear();
 
@@ -896,12 +1012,12 @@ void NewSRWizard::onScanISCSITarget()
             if (this->m_discoveredIqns.size() == 1)
                 this->ui->iscsiIqnComboBox->setCurrentIndex(0);
         }
-    } catch (const std::exception& ex)
+    } else
     {
         this->ui->iscsiIqnComboBox->clear();
         this->ui->iscsiIqnComboBox->addItem(tr("Scan failed"));
         this->ui->iscsiIqnComboBox->setEnabled(false);
-        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan iSCSI target:\n\n%1").arg(ex.what()));
+        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan iSCSI target:\n\n%1").arg(probeError));
     }
 
     this->ui->scanISCSIButton->setEnabled(true);
@@ -912,6 +1028,7 @@ void NewSRWizard::onScanISCSITarget()
 
 void NewSRWizard::onISCSIIqnSelected(int index)
 {
+    this->clearPlannedProbeSelections();
     if (index < 0 || index >= this->m_discoveredIqns.size())
     {
         this->ui->iscsiLunComboBox->clear();
@@ -937,24 +1054,28 @@ void NewSRWizard::onISCSIIqnSelected(int index)
     this->ui->iscsiIqnComboBox->setEnabled(false);
     this->ui->scanISCSIButton->setEnabled(false);
 
-    try
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
     {
-        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
-            throw std::runtime_error("Not connected to XenServer");
+        this->ui->iscsiIqnComboBox->setEnabled(true);
+        this->ui->scanISCSIButton->setEnabled(true);
+        this->ui->iscsiLunComboBox->clear();
+        this->ui->iscsiLunComboBox->addItem(tr("Scan failed"));
+        this->ui->iscsiLunComboBox->setEnabled(false);
+        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan for LUNs:\n\nNo pool found"));
+        return;
+    }
+    const QString masterRef = pools.first().value("master").toString();
 
-        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-        if (pools.isEmpty())
-            throw std::runtime_error("No pool found");
-
-        QString masterRef = pools.first().value("master").toString();
-
-        QVariantList probeResult = XenAPI::SR::probe_ext(
-            this->m_connection->GetSession(),
-            masterRef,
-            deviceConfig,
-            "lvmoiscsi",
-            QVariantMap());
-
+    QVariantList probeResult;
+    QString probeError;
+    if (this->runProbeExtWithProgress(tr("Scanning iSCSI LUNs"),
+                                      masterRef,
+                                      deviceConfig,
+                                      this->getSelectedBlockSrType(),
+                                      probeResult,
+                                      probeError))
+    {
         this->m_discoveredLuns.clear();
         this->ui->iscsiLunComboBox->clear();
 
@@ -997,12 +1118,12 @@ void NewSRWizard::onISCSIIqnSelected(int index)
             if (this->m_discoveredLuns.size() == 1)
                 this->ui->iscsiLunComboBox->setCurrentIndex(0);
         }
-    } catch (const std::exception& ex)
+    } else
     {
         this->ui->iscsiLunComboBox->clear();
         this->ui->iscsiLunComboBox->addItem(tr("Scan failed"));
         this->ui->iscsiLunComboBox->setEnabled(false);
-        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan for LUNs:\n\n%1").arg(ex.what()));
+        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan for LUNs:\n\n%1").arg(probeError));
     }
 
     this->ui->iscsiIqnComboBox->setEnabled(true);
@@ -1012,42 +1133,90 @@ void NewSRWizard::onISCSIIqnSelected(int index)
 
 void NewSRWizard::onISCSILunSelected(int)
 {
+    this->clearPlannedProbeSelections();
     this->onConfigurationChanged();
 }
 
 void NewSRWizard::onScanFibreDevices()
 {
+    this->clearPlannedProbeSelections();
     this->ui->scanFibreButton->setEnabled(false);
     this->ui->scanFibreButton->setText(tr("Scanning..."));
     this->ui->fibreStatusLabel->setVisible(false);
 
-    try
+    if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
     {
-        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
-            throw std::runtime_error("Not connected to XenServer");
+        this->ui->fibreStatusLabel->setText(tr("Scan failed: Not connected to XenServer"));
+        this->ui->fibreStatusLabel->setStyleSheet("QLabel { color: red; }");
+        this->ui->fibreStatusLabel->setVisible(true);
+        this->ui->scanFibreButton->setEnabled(true);
+        this->ui->scanFibreButton->setText(tr("Scan for Devices"));
+        return;
+    }
 
-        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-        if (pools.isEmpty())
-            throw std::runtime_error("No pool found");
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
+    {
+        this->ui->fibreStatusLabel->setText(tr("Scan failed: No pool found"));
+        this->ui->fibreStatusLabel->setStyleSheet("QLabel { color: red; }");
+        this->ui->fibreStatusLabel->setVisible(true);
+        this->ui->scanFibreButton->setEnabled(true);
+        this->ui->scanFibreButton->setText(tr("Scan for Devices"));
+        return;
+    }
 
-        QString masterRef = pools.first().value("master").toString();
-        QString srTypeStr = (this->m_selectedSRType == SRType::HBA) ? "lvmohba" : "lvmofcoe";
+    const QString masterRef = pools.first().value("master").toString();
+    const QString srTypeStr = (this->m_selectedSRType == SRType::HBA) ? this->getSelectedBlockSrType() : "lvmofcoe";
 
-        QVariantMap deviceConfig;
-        if (this->m_selectedSRType == SRType::FCoE)
-            deviceConfig["provider"] = "fcoe";
+    QVariantMap deviceConfig;
+    if (this->m_selectedSRType == SRType::FCoE)
+        deviceConfig["provider"] = "fcoe";
 
-        QVariantList probeResult = XenAPI::SR::probe_ext(
-            this->m_connection->GetSession(),
-            masterRef,
-            deviceConfig,
-            srTypeStr,
-            QVariantMap());
+    QSharedPointer<QVariantList> probeResult(new QVariantList());
+    QSharedPointer<QString> probeError(new QString());
 
+    auto* action = new DelegatedAsyncOperation(
+        this->m_connection,
+        tr("Scanning Fibre Channel devices"),
+        tr("Scanning storage devices..."),
+        [masterRef, srTypeStr, deviceConfig, probeResult, probeError](DelegatedAsyncOperation* op)
+        {
+            try
+            {
+                *probeResult = XenAPI::SR::probe_ext(op->GetSession(),
+                                                     masterRef,
+                                                     deviceConfig,
+                                                     srTypeStr,
+                                                     QVariantMap());
+            } catch (const std::exception& ex)
+            {
+                *probeError = QString::fromUtf8(ex.what());
+                throw std::runtime_error(probeError->toStdString());
+            }
+        },
+        this);
+
+    ActionProgressDialog progressDialog(action, this);
+    progressDialog.setWindowTitle(tr("Scanning for Devices"));
+    progressDialog.exec();
+
+    if (action->HasError())
+    {
+        const QString err = probeError->isEmpty() ? action->GetErrorMessage() : *probeError;
+        this->ui->fibreStatusLabel->setText(tr("Scan failed: %1").arg(err));
+        this->ui->fibreStatusLabel->setStyleSheet("QLabel { color: red; }");
+        this->ui->fibreStatusLabel->setVisible(true);
+        this->ui->selectAllFibreButton->setEnabled(false);
+        this->ui->clearAllFibreButton->setEnabled(false);
+        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan for Fibre Channel devices:\n\n%1").arg(err));
+        this->m_discoveredFibreDevices.clear();
+        this->ui->fibreDevicesList->clear();
+    } else
+    {
         this->m_discoveredFibreDevices.clear();
         this->ui->fibreDevicesList->clear();
 
-        for (const QVariant& resultVar : probeResult)
+        for (const QVariant& resultVar : *probeResult)
         {
             QVariantMap result = resultVar.toMap();
             QVariantMap config = result.value("configuration").toMap();
@@ -1066,6 +1235,8 @@ void NewSRWizard::onScanFibreDevices()
             device.nameDescription = config.value("name_description").toString();
             device.eth = config.value("eth").toString();
             device.poolMetadataDetected = config.value("pool_metadata_detected", false).toBool();
+            device.existingSrUuid = result.value("uuid").toString();
+            device.existingSrConfiguration = config;
 
             QString sizeStr = config.value("size").toString();
             device.size = config.value("size").toLongLong();
@@ -1111,16 +1282,6 @@ void NewSRWizard::onScanFibreDevices()
             this->ui->selectAllFibreButton->setEnabled(true);
             this->ui->clearAllFibreButton->setEnabled(true);
         }
-    } catch (const std::exception& ex)
-    {
-        this->ui->fibreStatusLabel->setText(tr("Scan failed: %1").arg(ex.what()));
-        this->ui->fibreStatusLabel->setStyleSheet("QLabel { color: red; }");
-        this->ui->fibreStatusLabel->setVisible(true);
-        this->ui->selectAllFibreButton->setEnabled(false);
-        this->ui->clearAllFibreButton->setEnabled(false);
-        QMessageBox::critical(this, tr("Scan Failed"), tr("Failed to scan for Fibre Channel devices:\n\n%1").arg(ex.what()));
-        this->m_discoveredFibreDevices.clear();
-        this->ui->fibreDevicesList->clear();
     }
 
     this->ui->scanFibreButton->setEnabled(true);
@@ -1130,6 +1291,7 @@ void NewSRWizard::onScanFibreDevices()
 
 void NewSRWizard::onFibreDeviceSelectionChanged()
 {
+    this->clearPlannedProbeSelections();
     this->onConfigurationChanged();
 }
 
@@ -1167,6 +1329,626 @@ QList<NewSRWizard::FibreChannelDevice> NewSRWizard::getSelectedFibreDevices() co
     return devices;
 }
 
+QString NewSRWizard::getSelectedBlockSrType() const
+{
+    if (this->m_selectedSRType != SRType::iSCSI && this->m_selectedSRType != SRType::HBA)
+        return this->getSRTypeString();
+
+    if (this->m_gfs2ProvisioningRadio && this->m_gfs2ProvisioningRadio->isChecked())
+        return "gfs2";
+
+    return this->m_selectedSRType == SRType::iSCSI ? "lvmoiscsi" : "lvmohba";
+}
+
+QString NewSRWizard::getAlternativeBlockSrType(const QString& srType) const
+{
+    if (srType == "gfs2")
+    {
+        if (this->m_selectedSRType == SRType::iSCSI)
+            return "lvmoiscsi";
+        if (this->m_selectedSRType == SRType::HBA)
+            return "lvmohba";
+    } else if (srType == "lvmoiscsi" || srType == "lvmohba")
+    {
+        return "gfs2";
+    }
+
+    return QString();
+}
+
+QVariantMap NewSRWizard::normalizeProbeConfig(const QVariantMap& config)
+{
+    QVariantMap normalized = config;
+    if (normalized.contains("scsiid") && !normalized.contains("SCSIid"))
+        normalized["SCSIid"] = normalized.value("scsiid");
+    if (normalized.contains("targetiqn") && !normalized.contains("targetIQN"))
+        normalized["targetIQN"] = normalized.value("targetiqn");
+    return normalized;
+}
+
+void NewSRWizard::clearPlannedProbeSelections()
+{
+    this->m_selectedSRUuid.clear();
+    this->m_iscsiProbeSelectedConfig.clear();
+    this->m_plannedFibreDevices.clear();
+    this->m_hasPlannedFibreDevices = false;
+    this->m_hasEvaluatedProbeDecisions = false;
+}
+
+QList<QVariantMap> NewSRWizard::probeForExistingSrs(const QVariantMap& deviceConfig, QString& usedSrType, QString& error) const
+{
+    QList<QVariantMap> matches;
+    error.clear();
+
+    if (!this->m_connection || !this->m_connection->GetCache())
+    {
+        error = tr("Not connected to XenServer.");
+        return matches;
+    }
+
+    const QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
+    {
+        error = tr("No pool found.");
+        return matches;
+    }
+
+    const QString masterRef = pools.first().value("master").toString();
+    usedSrType = this->getSelectedBlockSrType();
+
+    QVariantList probeResult;
+    QString probeError;
+    if (!const_cast<NewSRWizard*>(this)->runProbeExtWithProgress(tr("Probing Storage"),
+                                                                  masterRef,
+                                                                  deviceConfig,
+                                                                  usedSrType,
+                                                                  probeResult,
+                                                                  probeError))
+    {
+        error = probeError;
+        return matches;
+    }
+
+    for (const QVariant& probeEntry : probeResult)
+    {
+        const QVariantMap map = probeEntry.toMap();
+        if (!map.value("uuid").toString().isEmpty())
+            matches.append(map);
+    }
+
+    if (!matches.isEmpty())
+        return matches;
+
+    const QString altType = this->getAlternativeBlockSrType(usedSrType);
+    if (altType.isEmpty() || this->m_selectedSRType == SRType::FCoE)
+        return matches;
+
+    QVariantList altProbeResult;
+    QString altProbeError;
+    if (!const_cast<NewSRWizard*>(this)->runProbeExtWithProgress(tr("Probing Storage"),
+                                                                  masterRef,
+                                                                  deviceConfig,
+                                                                  altType,
+                                                                  altProbeResult,
+                                                                  altProbeError))
+    {
+        return matches;
+    }
+
+    for (const QVariant& probeEntry : altProbeResult)
+    {
+        const QVariantMap map = probeEntry.toMap();
+        if (!map.value("uuid").toString().isEmpty())
+            matches.append(map);
+    }
+
+    if (!matches.isEmpty())
+        usedSrType = altType;
+
+    return matches;
+}
+
+bool NewSRWizard::isSrUuidInAnyConnectedPool(const QString& srUuid, XenConnection** outConnection, QString* outName) const
+{
+    if (outConnection)
+        *outConnection = nullptr;
+    if (outName)
+        outName->clear();
+
+    if (srUuid.isEmpty())
+        return false;
+
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (!manager)
+        return false;
+
+    const QList<XenConnection*> connections = manager->GetAllConnections();
+    for (XenConnection* connection : connections)
+    {
+        if (!connection || !connection->GetCache())
+            continue;
+
+        const QList<QVariantMap> srs = connection->GetCache()->GetAllData("sr");
+        for (const QVariantMap& srData : srs)
+        {
+            if (srData.value("uuid").toString() != srUuid)
+                continue;
+
+            if (outConnection)
+                *outConnection = connection;
+            if (outName)
+                *outName = srData.value("name_label").toString();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+NewSRWizard::ExistingSrDecision NewSRWizard::askExistingSrDecision(const QString& title,
+                                                                   const QString& details,
+                                                                   bool foundExisting,
+                                                                   bool allowFormat,
+                                                                   bool showRepeatCheckbox,
+                                                                   bool& repeatForRemaining) const
+{
+    QMessageBox msgBox(const_cast<NewSRWizard*>(this));
+    msgBox.setWindowTitle(title);
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(foundExisting ? tr("A storage repository already exists on this device.")
+                                 : tr("No storage repository was found on this device."));
+    msgBox.setInformativeText(details);
+
+    QPushButton* reattachButton = nullptr;
+    if (foundExisting)
+        reattachButton = msgBox.addButton(tr("Reattach"), QMessageBox::AcceptRole);
+    QPushButton* formatButton = nullptr;
+    if (allowFormat)
+        formatButton = msgBox.addButton(tr("Format"), QMessageBox::DestructiveRole);
+    QPushButton* cancelButton = msgBox.addButton(QMessageBox::Cancel);
+    msgBox.setDefaultButton(cancelButton);
+
+    QCheckBox repeatBox(tr("Apply to remaining devices"), &msgBox);
+    if (showRepeatCheckbox)
+        msgBox.setCheckBox(&repeatBox);
+
+    msgBox.exec();
+    repeatForRemaining = showRepeatCheckbox && repeatBox.isChecked();
+
+    if (msgBox.clickedButton() == reattachButton)
+        return ExistingSrDecision::Reattach;
+    if (msgBox.clickedButton() == formatButton)
+        return ExistingSrDecision::Format;
+    return ExistingSrDecision::Cancel;
+}
+
+bool NewSRWizard::evaluateIscsiProbeDecision()
+{
+    if (this->m_hasEvaluatedProbeDecisions && this->m_selectedSRType == SRType::iSCSI)
+        return true;
+
+    QVariantMap deviceConfig = this->getDeviceConfig();
+    QString usedSrType;
+    QString probeError;
+    const QList<QVariantMap> matches = this->probeForExistingSrs(deviceConfig, usedSrType, probeError);
+    if (!probeError.isEmpty())
+    {
+        QMessageBox::critical(this, tr("Probe Failed"), tr("Failed to probe iSCSI LUN:\n\n%1").arg(probeError));
+        return false;
+    }
+
+    if (this->m_forceReattach && this->m_srToReattach)
+    {
+        const QString expectedUuid = this->m_srToReattach->GetUUID();
+        for (const QVariantMap& match : matches)
+        {
+            if (match.value("uuid").toString() == expectedUuid)
+            {
+                this->m_selectedSRUuid = expectedUuid;
+                this->m_iscsiProbeSelectedConfig = normalizeProbeConfig(match.value("configuration").toMap());
+                this->m_hasEvaluatedProbeDecisions = true;
+                return true;
+            }
+        }
+
+        QMessageBox::warning(this,
+                             tr("Incorrect LUN"),
+                             tr("The selected LUN does not contain the expected SR '%1'.")
+                                 .arg(this->m_srToReattach->GetName()));
+        return false;
+    }
+
+    if (matches.isEmpty())
+    {
+        bool repeat = false;
+        const ExistingSrDecision choice = this->askExistingSrDecision(
+            tr("No Existing SR"),
+            tr("The selected LUN does not contain an existing SR.\n\nContinuing will format this LUN and create a new SR."),
+            false,
+            true,
+            false,
+            repeat);
+        if (choice != ExistingSrDecision::Format)
+            return false;
+
+        this->m_selectedSRUuid.clear();
+        this->m_iscsiProbeSelectedConfig.clear();
+        this->m_hasEvaluatedProbeDecisions = true;
+        return true;
+    }
+
+    const QVariantMap existing = matches.first();
+    const QString existingUuid = existing.value("uuid").toString();
+    const QVariantMap existingConfig = normalizeProbeConfig(existing.value("configuration").toMap());
+
+    XenConnection* usedByConnection = nullptr;
+    QString usedByName;
+    const bool inUseAnywhere = this->isSrUuidInAnyConnectedPool(existingUuid, &usedByConnection, &usedByName);
+    const bool inCurrentConnection = inUseAnywhere && usedByConnection == this->m_connection;
+    const bool inOtherConnection = inUseAnywhere && usedByConnection && usedByConnection != this->m_connection;
+
+    if (inCurrentConnection)
+    {
+        QMessageBox::warning(this,
+                             tr("LUN Already In Use"),
+                             tr("The selected LUN already belongs to SR '%1' on this pool.\nChoose another LUN.")
+                                 .arg(usedByName.isEmpty() ? existingUuid : usedByName));
+        return false;
+    }
+
+    const QString details = inOtherConnection
+                                ? tr("SR UUID: %1\nThis SR appears to be attached on another connected pool.\nYou can only reattach it.")
+                                      .arg(existingUuid)
+                                : tr("SR UUID: %1\nChoose whether to reattach the existing SR or format the LUN to create a new one.")
+                                      .arg(existingUuid);
+    bool repeat = false;
+    const ExistingSrDecision choice = this->askExistingSrDecision(tr("Existing SR Found"),
+                                                                   details,
+                                                                   true,
+                                                                   !inOtherConnection,
+                                                                   false,
+                                                                   repeat);
+    if (choice == ExistingSrDecision::Cancel)
+        return false;
+
+    if (choice == ExistingSrDecision::Reattach)
+    {
+        this->m_selectedSRUuid = existingUuid;
+        this->m_iscsiProbeSelectedConfig = existingConfig;
+    } else
+    {
+        this->m_selectedSRUuid.clear();
+        this->m_iscsiProbeSelectedConfig.clear();
+    }
+
+    // Keep selected backend aligned with probe result (C# probe can flip between gfs2/lvmoiscsi).
+    if (this->m_gfs2ProvisioningRadio && this->m_standardProvisioningRadio)
+    {
+        QSignalBlocker blockStd(this->m_standardProvisioningRadio);
+        QSignalBlocker blockGfs2(this->m_gfs2ProvisioningRadio);
+        if (usedSrType == "gfs2")
+            this->m_gfs2ProvisioningRadio->setChecked(true);
+        else
+            this->m_standardProvisioningRadio->setChecked(true);
+    }
+
+    this->m_hasEvaluatedProbeDecisions = true;
+    return true;
+}
+
+bool NewSRWizard::evaluateFibreProbeDecision()
+{
+    QList<FibreChannelDevice> selectedDevices = this->getSelectedFibreDevices();
+    if (selectedDevices.isEmpty())
+        return false;
+
+    QList<FibreChannelDevice> existingCandidates;
+    QList<FibreChannelDevice> emptyCandidates;
+
+    for (FibreChannelDevice device : selectedDevices)
+    {
+        QVariantMap probeConfig;
+        probeConfig["SCSIid"] = device.scsiId;
+        if (this->m_selectedSRType == SRType::FCoE)
+            probeConfig["path"] = device.path;
+
+        QString usedType;
+        QString probeError;
+        const QList<QVariantMap> matches = this->probeForExistingSrs(probeConfig, usedType, probeError);
+        if (!probeError.isEmpty())
+        {
+            QMessageBox::critical(this,
+                                  tr("Probe Failed"),
+                                  tr("Failed to probe Fibre Channel device %1:\n\n%2").arg(device.scsiId, probeError));
+            return false;
+        }
+
+        if (!matches.isEmpty())
+        {
+            const QVariantMap existing = matches.first();
+            device.existingSrUuid = existing.value("uuid").toString();
+            device.existingSrConfiguration = normalizeProbeConfig(existing.value("configuration").toMap());
+            existingCandidates.append(device);
+
+            if (this->m_gfs2ProvisioningRadio && this->m_standardProvisioningRadio)
+            {
+                QSignalBlocker blockStd(this->m_standardProvisioningRadio);
+                QSignalBlocker blockGfs2(this->m_gfs2ProvisioningRadio);
+                if (usedType == "gfs2")
+                    this->m_gfs2ProvisioningRadio->setChecked(true);
+                else
+                    this->m_standardProvisioningRadio->setChecked(true);
+            }
+        } else
+        {
+            device.existingSrUuid.clear();
+            device.existingSrConfiguration.clear();
+            emptyCandidates.append(device);
+        }
+    }
+
+    QList<FibreChannelDevice> finalPlans;
+    bool repeat = false;
+    ExistingSrDecision repeatedChoice = ExistingSrDecision::Cancel;
+
+    for (int i = 0; i < existingCandidates.size(); ++i)
+    {
+        FibreChannelDevice device = existingCandidates.at(i);
+        XenConnection* usedByConnection = nullptr;
+        QString usedByName;
+        const bool inUseAnywhere = this->isSrUuidInAnyConnectedPool(device.existingSrUuid, &usedByConnection, &usedByName);
+        const bool inCurrentConnection = inUseAnywhere && usedByConnection == this->m_connection;
+        const bool inOtherConnection = inUseAnywhere && usedByConnection && usedByConnection != this->m_connection;
+
+        if (inCurrentConnection)
+        {
+            QMessageBox::warning(this,
+                                 tr("Device Already In Use"),
+                                 tr("Device %1 is already used by SR '%2' on this pool.")
+                                     .arg(device.scsiId, usedByName.isEmpty() ? device.existingSrUuid : usedByName));
+            return false;
+        }
+
+        ExistingSrDecision decision = repeatedChoice;
+        if (!repeat)
+        {
+            const QString details =
+                inOtherConnection
+                    ? tr("Device: %1\nExisting SR UUID: %2\nThis SR is attached on another connected pool.\nYou can only reattach it.")
+                          .arg(device.scsiId, device.existingSrUuid)
+                    : tr("Device: %1\nExisting SR UUID: %2\nChoose reattach or format.")
+                          .arg(device.scsiId, device.existingSrUuid);
+            decision = this->askExistingSrDecision(tr("Existing SR Found"),
+                                                   details,
+                                                   true,
+                                                   !inOtherConnection,
+                                                   (i + 1) < existingCandidates.size(),
+                                                   repeat);
+            repeatedChoice = decision;
+        }
+
+        if (decision == ExistingSrDecision::Cancel)
+            return false;
+
+        if (decision == ExistingSrDecision::Format)
+        {
+            device.existingSrUuid.clear();
+            device.existingSrConfiguration.clear();
+        }
+        finalPlans.append(device);
+    }
+
+    repeat = false;
+    repeatedChoice = ExistingSrDecision::Cancel;
+    for (int i = 0; i < emptyCandidates.size(); ++i)
+    {
+        FibreChannelDevice device = emptyCandidates.at(i);
+        ExistingSrDecision decision = repeatedChoice;
+        if (!repeat)
+        {
+            const QString details =
+                tr("Device: %1\nNo existing SR was found.\nFormatting will create a new SR on this LUN.")
+                    .arg(device.scsiId);
+            decision = this->askExistingSrDecision(tr("No Existing SR"),
+                                                   details,
+                                                   false,
+                                                   true,
+                                                   (i + 1) < emptyCandidates.size(),
+                                                   repeat);
+            repeatedChoice = decision;
+        }
+
+        if (decision != ExistingSrDecision::Format)
+            return false;
+
+        finalPlans.append(device);
+    }
+
+    this->m_plannedFibreDevices = finalPlans;
+    this->m_hasPlannedFibreDevices = true;
+    this->m_hasEvaluatedProbeDecisions = true;
+    return !this->m_plannedFibreDevices.isEmpty();
+}
+
+QList<NewSRWizard::PlannedAction> NewSRWizard::buildPlannedActions(const QSharedPointer<Host>& coordinatorHost, QString& error) const
+{
+    QList<PlannedAction> plans;
+    error.clear();
+
+    if (!coordinatorHost)
+    {
+        error = tr("No coordinator host is available.");
+        return plans;
+    }
+
+    const QString defaultType = this->getSRTypeString();
+    const QString defaultContentType = this->getContentType();
+    const QVariantMap defaultDeviceConfig = this->getDeviceConfig();
+    const QVariantMap defaultSmConfig = this->getSMConfig();
+
+    auto appendPlan = [&](const QString& srUuid, const QVariantMap& deviceConfig, const QVariantMap& smConfig, const QString& forcedType = QString())
+    {
+        PlannedAction plan;
+        plan.coordinatorHost = coordinatorHost;
+        plan.srName = this->m_srName;
+        plan.srDescription = this->m_srDescription;
+        plan.srType = forcedType.isEmpty() ? defaultType : forcedType;
+        plan.contentType = defaultContentType;
+        plan.deviceConfig = deviceConfig;
+        plan.smConfig = smConfig;
+        plan.srUuid = srUuid;
+
+        if (srUuid.isEmpty())
+        {
+            plan.mode = ActionMode::Create;
+        } else if (this->shouldUseIntroduce(srUuid))
+        {
+            plan.mode = ActionMode::Introduce;
+        } else
+        {
+            plan.mode = ActionMode::Reattach;
+            if (this->m_srToReattach && this->m_srToReattach->GetUUID() == srUuid)
+            {
+                plan.srToReattach = this->m_srToReattach;
+            } else
+            {
+                const QString srRef = this->getExistingSRRefByUuid(srUuid);
+                if (!srRef.isEmpty())
+                {
+                    plan.srToReattach = QSharedPointer<SR>(new SR(this->m_connection, srRef, const_cast<NewSRWizard*>(this)));
+                }
+            }
+        }
+
+        plans.append(plan);
+    };
+
+    if (this->m_selectedSRType == SRType::HBA || this->m_selectedSRType == SRType::FCoE)
+    {
+        const QList<FibreChannelDevice> selectedDevices =
+            this->m_hasPlannedFibreDevices ? this->m_plannedFibreDevices : this->getSelectedFibreDevices();
+        if (selectedDevices.isEmpty())
+        {
+            error = tr("Select at least one Fibre Channel device.");
+            return plans;
+        }
+
+        for (const FibreChannelDevice& device : selectedDevices)
+        {
+            QVariantMap deviceConfig;
+            deviceConfig["SCSIid"] = device.scsiId;
+            if (this->m_selectedSRType == SRType::FCoE)
+            {
+                deviceConfig["path"] = device.path;
+            }
+
+            // If probe found an existing SR on this LUN, prefer its device config/uuid.
+            const QString existingUuid = device.existingSrUuid.trimmed();
+            if (!device.existingSrConfiguration.isEmpty())
+                deviceConfig = device.existingSrConfiguration;
+            if (deviceConfig.isEmpty())
+            {
+                deviceConfig["SCSIid"] = device.scsiId;
+                if (this->m_selectedSRType == SRType::FCoE)
+                    deviceConfig["path"] = device.path;
+            }
+
+            appendPlan(existingUuid, deviceConfig, defaultSmConfig);
+        }
+
+        return plans;
+    }
+
+    if (!this->m_selectedSRUuid.isEmpty())
+    {
+        appendPlan(this->m_selectedSRUuid, defaultDeviceConfig, defaultSmConfig);
+    } else
+    {
+        appendPlan(QString(), defaultDeviceConfig, defaultSmConfig);
+    }
+
+    return plans;
+}
+
+AsyncOperation* NewSRWizard::createActionFromPlan(const PlannedAction& plan) const
+{
+    switch (plan.mode)
+    {
+        case ActionMode::Create:
+            return new SrCreateAction(this->m_connection,
+                                      plan.coordinatorHost,
+                                      plan.srName,
+                                      plan.srDescription,
+                                      plan.srType,
+                                      plan.contentType,
+                                      plan.deviceConfig,
+                                      plan.smConfig,
+                                      const_cast<NewSRWizard*>(this));
+        case ActionMode::Introduce:
+            return new SrIntroduceAction(this->m_connection,
+                                         plan.srUuid,
+                                         plan.srName,
+                                         plan.srDescription,
+                                         plan.srType,
+                                         plan.contentType,
+                                         plan.deviceConfig,
+                                         const_cast<NewSRWizard*>(this));
+        case ActionMode::Reattach:
+            if (!plan.srToReattach)
+                return nullptr;
+            return new SrReattachAction(plan.srToReattach,
+                                        plan.srName,
+                                        plan.srDescription,
+                                        plan.deviceConfig,
+                                        const_cast<NewSRWizard*>(this));
+    }
+
+    return nullptr;
+}
+
+QString NewSRWizard::getExistingSRRefByUuid(const QString& srUuid) const
+{
+    if (!this->m_connection || !this->m_connection->GetCache() || srUuid.isEmpty())
+        return QString();
+
+    const QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
+    for (const QVariantMap& srData : allSRs)
+    {
+        if (srData.value("uuid").toString() != srUuid)
+            continue;
+
+        QString srRef = srData.value("ref").toString();
+        if (srRef.isEmpty())
+            srRef = srData.value("opaque_ref").toString();
+        return srRef;
+    }
+
+    return QString();
+}
+
+bool NewSRWizard::shouldUseIntroduce(const QString& srUuid) const
+{
+    if (srUuid.isEmpty())
+        return false;
+
+    if (!this->m_srToReattach)
+        return true;
+
+    return this->m_srToReattach->GetConnection() != this->m_connection;
+}
+
+QString NewSRWizard::getLocalSrTypeString() const
+{
+    const QString fs = this->m_localFilesystem.trimmed().toLower();
+    if (fs == "xfs")
+        return "xfs";
+    if (fs == "lvm")
+        return "lvm";
+
+    // ext3/ext4 and generic ext map to "ext", same as C# local storage type.
+    return "ext";
+}
+
 void NewSRWizard::updateSummary()
 {
     QString summary;
@@ -1200,6 +1982,11 @@ void NewSRWizard::updateSummary()
             stream << QString("<b>Filesystem:</b> %1<br>").arg(this->m_localFilesystem);
             break;
         case SRType::iSCSI:
+            if (this->m_provisioningGroup && this->m_provisioningGroup->isVisible())
+                stream << QString("<b>Provisioning:</b> %1<br>")
+                              .arg(this->m_gfs2ProvisioningRadio && this->m_gfs2ProvisioningRadio->isChecked()
+                                       ? tr("Clustered (gfs2)")
+                                       : tr("Standard"));
             stream << QString("<b>Target:</b> %1<br>").arg(this->m_iscsiTarget);
             stream << QString("<b>Target IQN:</b> %1<br>").arg(this->m_iscsiTargetIQN);
             stream << QString("<b>LUN:</b> %1<br>").arg(this->m_iscsiLUN);
@@ -1208,6 +1995,11 @@ void NewSRWizard::updateSummary()
             break;
         case SRType::HBA:
         case SRType::FCoE:
+            if (this->m_provisioningGroup && this->m_provisioningGroup->isVisible())
+                stream << QString("<b>Provisioning:</b> %1<br>")
+                              .arg(this->m_gfs2ProvisioningRadio && this->m_gfs2ProvisioningRadio->isChecked()
+                                       ? tr("Clustered (gfs2)")
+                                       : tr("Standard"));
             stream << tr("<b>Configuration:</b> Selected Fibre Channel devices will be used.<br>");
             break;
     }
@@ -1234,62 +2026,95 @@ void NewSRWizard::accept()
     }
 
     QString masterRef = pools.first().value("master").toString();
-    QVariantMap deviceConfig = this->getDeviceConfig();
-    QVariantMap smConfig = this->getSMConfig();
-    QString srTypeStr = this->getSRTypeString();
-    QString contentType = this->getContentType();
 
     QSharedPointer<Host> coordinatorHost(new Host(this->m_connection, masterRef, this));
 
-    AsyncOperation* srAction = nullptr;
-    if (this->m_selectedSRUuid.isEmpty())
+    QString planningError;
+    const QList<PlannedAction> plans = this->buildPlannedActions(coordinatorHost, planningError);
+    if (!planningError.isEmpty() || plans.isEmpty())
     {
-        srAction = new SrCreateAction(
-            this->m_connection,
-            coordinatorHost,
-            this->m_srName,
-            this->m_srDescription,
-            srTypeStr,
-            contentType,
-            deviceConfig,
-            smConfig,
-            this);
-    } else
-    {
-        QSharedPointer<SR> srToReattach = QSharedPointer<SR>(new SR(this->m_connection, this->m_selectedSRUuid, this));
-        srAction = new SrReattachAction(
-            srToReattach,
-            this->m_srName,
-            this->m_srDescription,
-            deviceConfig,
-            this);
+        QMessageBox::critical(this,
+                              tr("Error"),
+                              planningError.isEmpty() ? tr("No storage operation can be started with current selection.")
+                                                      : planningError);
+        return;
     }
 
-    ActionProgressDialog* progressDialog = new ActionProgressDialog(srAction, this);
-    progressDialog->setWindowTitle(this->m_selectedSRUuid.isEmpty() ? tr("Creating Storage Repository") : tr("Reattaching Storage Repository"));
-
-    this->connect(srAction, &AsyncOperation::completed, this, [this, srAction, progressDialog]()
+    QList<AsyncOperation*> actions;
+    actions.reserve(plans.size());
+    for (const PlannedAction& plan : plans)
     {
-        if (srAction->IsCompleted() && !srAction->HasError())
+        AsyncOperation* action = this->createActionFromPlan(plan);
+        if (!action)
         {
-            QString successMsg = this->m_selectedSRUuid.isEmpty()
-                                     ? tr("Storage Repository '%1' has been created successfully.")
-                                     : tr("Storage Repository '%1' has been reattached successfully.");
-            QMessageBox::information(this, tr("Success"), successMsg.arg(this->m_srName));
-            progressDialog->accept();
-            QDialog::accept();
-        } else
-        {
-            QMessageBox::critical(this, tr("Error"),
-                                  tr("Failed to %1 Storage Repository:\n\n%2")
-                                      .arg(this->m_selectedSRUuid.isEmpty() ? tr("create") : tr("reattach"))
-                                      .arg(srAction->GetErrorMessage()));
-            progressDialog->reject();
+            qDeleteAll(actions);
+            QMessageBox::critical(this, tr("Error"), tr("Failed to prepare storage operation."));
+            return;
         }
-    });
+        actions.append(action);
+    }
 
-    srAction->RunAsync();
-    progressDialog->exec();
+    AsyncOperation* rootAction = nullptr;
+    if (actions.size() == 1)
+    {
+        rootAction = actions.first();
+    } else
+    {
+        rootAction = new ParallelAction(tr("Creating Storage Repositories"),
+                                        tr("Creating storage repositories..."),
+                                        tr("Storage repository operations completed"),
+                                        actions,
+                                        this->m_connection,
+                                        false,
+                                        true,
+                                        ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
+                                        this);
+    }
+
+    ActionProgressDialog progressDialog(rootAction, this);
+    if (plans.size() == 1)
+    {
+        switch (plans.first().mode)
+        {
+            case ActionMode::Create:
+                progressDialog.setWindowTitle(tr("Creating Storage Repository"));
+                break;
+            case ActionMode::Introduce:
+                progressDialog.setWindowTitle(tr("Introducing Storage Repository"));
+                break;
+            case ActionMode::Reattach:
+                progressDialog.setWindowTitle(tr("Reattaching Storage Repository"));
+                break;
+        }
+    } else
+    {
+        progressDialog.setWindowTitle(tr("Creating Storage Repositories"));
+    }
+
+    const int dialogResult = progressDialog.exec();
+    Q_UNUSED(dialogResult);
+
+    if (rootAction->IsCompleted() && !rootAction->HasError())
+    {
+        const QString successMsg = plans.size() == 1
+                                       ? (plans.first().mode == ActionMode::Create
+                                              ? tr("Storage Repository '%1' has been created successfully.")
+                                              : (plans.first().mode == ActionMode::Introduce
+                                                     ? tr("Storage Repository '%1' has been introduced successfully.")
+                                                     : tr("Storage Repository '%1' has been reattached successfully.")))
+                                             .arg(this->m_srName)
+                                       : tr("%1 storage repository operations finished successfully.").arg(plans.size());
+        QMessageBox::information(this, tr("Success"), successMsg);
+        QDialog::accept();
+        return;
+    }
+
+    if (rootAction->HasError())
+    {
+        QMessageBox::critical(this,
+                              tr("Error"),
+                              tr("Failed to complete storage operation:\n\n%1").arg(rootAction->GetErrorMessage()));
+    }
 }
 
 QString NewSRWizard::getSRTypeString() const
@@ -1299,26 +2124,32 @@ QString NewSRWizard::getSRTypeString() const
         case SRType::NFS:
             return "nfs";
         case SRType::iSCSI:
-            return "lvmoiscsi";
+            return this->getSelectedBlockSrType();
         case SRType::LocalStorage:
-            return "ext";
+            return this->getLocalSrTypeString();
         case SRType::CIFS:
-            return "cifs";
+            return "smb";
         case SRType::HBA:
-            return "lvmohba";
+            return this->getSelectedBlockSrType();
         case SRType::FCoE:
             return "lvmofcoe";
         case SRType::NFS_ISO:
-            return "nfs";
         case SRType::CIFS_ISO:
-            return "cifs";
+            return "iso";
     }
     return "nfs";
 }
 
 QString NewSRWizard::getContentType() const
 {
-    return (this->m_selectedSRType == SRType::NFS_ISO || this->m_selectedSRType == SRType::CIFS_ISO) ? "iso" : "user";
+    switch (this->m_selectedSRType)
+    {
+        case SRType::NFS_ISO:
+        case SRType::CIFS_ISO:
+            return "iso";
+        default:
+            return QString();
+    }
 }
 
 QVariantMap NewSRWizard::getDeviceConfig() const
@@ -1333,15 +2164,52 @@ QVariantMap NewSRWizard::getDeviceConfig() const
             break;
         case SRType::CIFS:
         case SRType::CIFS_ISO:
-            config["server"] = this->m_server;
-            config["serverpath"] = this->m_serverPath;
-            config["type"] = "cifs";
-            if (!this->m_username.isEmpty())
-                config["username"] = this->m_username;
-            if (!this->m_password.isEmpty())
-                config["password"] = this->m_password;
+        {
+            if (this->m_selectedSRType == SRType::CIFS_ISO)
+            {
+                QString sharePath = this->m_serverPath;
+                if (!sharePath.startsWith("//"))
+                {
+                    const QString normalizedPath = sharePath.startsWith("/") ? sharePath.mid(1) : sharePath;
+                    sharePath = QString("//%1/%2").arg(this->m_server, normalizedPath);
+                }
+                config["location"] = sharePath;
+                config["type"] = "cifs";
+
+                // ISO shares can optionally point to a sub-path via iso_path.
+                const QStringList bits = sharePath.split("/", Qt::SkipEmptyParts);
+                if (bits.size() > 2)
+                {
+                    config["location"] = QString("//%1/%2").arg(bits[0], bits[1]);
+                    config["iso_path"] = QString("/") + bits.mid(2).join("/");
+                }
+
+                if (!this->m_username.isEmpty())
+                    config["username"] = this->m_username;
+                if (!this->m_password.isEmpty())
+                    config["cifspassword"] = this->m_password;
+            } else
+            {
+                config["server"] = this->m_server;
+                config["serverpath"] = this->m_serverPath;
+                if (!this->m_username.isEmpty())
+                    config["username"] = this->m_username;
+                if (!this->m_password.isEmpty())
+                    config["password"] = this->m_password;
+            }
             break;
+        }
         case SRType::iSCSI:
+            if (!this->m_iscsiProbeSelectedConfig.isEmpty() && !this->m_selectedSRUuid.isEmpty())
+            {
+                config = normalizeProbeConfig(this->m_iscsiProbeSelectedConfig);
+                if (this->m_iscsiUseChap)
+                {
+                    config["chapuser"] = this->m_iscsiChapUsername;
+                    config["chappassword"] = this->m_iscsiChapPassword;
+                }
+                break;
+            }
             config["target"] = this->m_iscsiTarget;
             config["targetIQN"] = this->m_iscsiTargetIQN;
             if (this->m_iscsiTarget.contains(":"))
@@ -1369,15 +2237,31 @@ QVariantMap NewSRWizard::getDeviceConfig() const
             break;
         case SRType::HBA:
         case SRType::FCoE:
-            // Fibre Channel configurations are populated by SR backend
+            // Per-device configs are built in buildPlannedActions().
             break;
     }
+
+    if (this->m_selectedSRType == SRType::NFS_ISO)
+    {
+        QString location = this->m_serverPath;
+        if (!location.startsWith(":") && !location.startsWith("/"))
+            location.prepend('/');
+        config["location"] = QString("%1:%2").arg(this->m_server, location);
+        config["type"] = "nfs_iso";
+    }
+
     return config;
 }
 
 QVariantMap NewSRWizard::getSMConfig() const
 {
-    return QVariantMap();
+    QVariantMap smConfig;
+    if (this->m_selectedSRType == SRType::NFS_ISO)
+        smConfig["iso_type"] = "nfs_iso";
+    else if (this->m_selectedSRType == SRType::CIFS_ISO)
+        smConfig["iso_type"] = "cifs";
+
+    return smConfig;
 }
 
 QString NewSRWizard::formatSRTypeString(SRType srType) const
