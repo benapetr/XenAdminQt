@@ -77,13 +77,13 @@ QueryScope* TreeSearch::GetTreeSearchScope()
 
     SettingsManager& settings = SettingsManager::instance();
 
-    if (settings.getDefaultTemplatesVisible())
+    if (settings.GetDefaultTemplatesVisible())
         types |= ObjectTypes::DefaultTemplate;
 
-    if (settings.getUserTemplatesVisible())
+    if (settings.GetUserTemplatesVisible())
         types |= ObjectTypes::UserTemplate;
 
-    if (settings.getLocalSRsVisible())
+    if (settings.GetLocalSRsVisible())
         types |= ObjectTypes::LocalSR;
 
     return new QueryScope(types);

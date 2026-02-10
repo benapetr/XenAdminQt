@@ -52,7 +52,7 @@ AddServerDialog::AddServerDialog(XenConnection* connection, bool changedPass, QW
 
     this->ui->ServerNameComboBox->setEditable(true);
 
-    QStringList history = SettingsManager::instance().getServerHistory();
+    QStringList history = SettingsManager::instance().GetServerHistory();
     history.removeDuplicates();
     std::sort(history.begin(), history.end(), [](const QString& a, const QString& b) {
         return a.toLower() < b.toLower();

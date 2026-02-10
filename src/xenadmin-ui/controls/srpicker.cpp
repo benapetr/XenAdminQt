@@ -524,7 +524,7 @@ bool SrPicker::isValidSR(const QSharedPointer<SR>& sr) const
     if (!sr || sr->ContentType() == "iso")
         return false;
 
-    if (sr->IsHidden() && !SettingsManager::instance().getShowHiddenObjects())
+    if (sr->IsHidden() && !SettingsManager::instance().GetShowHiddenObjects())
         return false;
 
     if (this->m_usage != LunPerVDI && sr->HBALunPerVDI())

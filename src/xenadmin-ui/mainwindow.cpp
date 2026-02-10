@@ -1094,8 +1094,7 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 {
     QString objectType = xen_obj->GetObjectTypeName();
     SettingsManager& settings = SettingsManager::instance();
-    const bool rememberLastSelectedTab =
-        settings.GetValue("Display/RememberLastSelectedTab", true).toBool();
+    const bool rememberLastSelectedTab = settings.GetRememberLastSelectedTab();
 
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
@@ -1276,8 +1275,7 @@ void MainWindow::updatePlaceholderVisibility()
 void MainWindow::onTabChanged(int index)
 {
     SettingsManager& settings = SettingsManager::instance();
-    const bool rememberLastSelectedTab =
-        settings.GetValue("Display/RememberLastSelectedTab", true).toBool();
+    const bool rememberLastSelectedTab = settings.GetRememberLastSelectedTab();
 
     // Notify the previous tab that it's being hidden
     static int previousIndex = -1;
@@ -1465,14 +1463,14 @@ void MainWindow::saveSettings()
     SettingsManager& settings = SettingsManager::instance();
 
     // Save window geometry and state
-    settings.saveMainWindowGeometry(saveGeometry());
-    settings.saveMainWindowState(saveState());
-    settings.saveSplitterState(ui->centralSplitter->saveState());
+    settings.SaveMainWindowGeometry(saveGeometry());
+    settings.SaveMainWindowState(saveState());
+    settings.SaveSplitterState(ui->centralSplitter->saveState());
 
     // Save debug console visibility
     if (this->m_debugWindow)
     {
-        settings.setDebugConsoleVisible(this->m_debugWindow->isVisible());
+        settings.SetDebugConsoleVisible(this->m_debugWindow->isVisible());
     }
 
     // Save expanded tree items
@@ -1491,7 +1489,7 @@ void MainWindow::saveSettings()
         }
         ++it;
     }
-    settings.setExpandedTreeItems(expandedItems);
+    settings.SetExpandedTreeItems(expandedItems);
 
     settings.Sync();
     qDebug() << "Settings saved to:" << settings.GetValue("").toString();
@@ -1508,26 +1506,26 @@ void MainWindow::loadSettings()
     SettingsManager& settings = SettingsManager::instance();
 
     // Restore window geometry and state
-    QByteArray geometry = settings.loadMainWindowGeometry();
+    QByteArray geometry = settings.LoadMainWindowGeometry();
     if (!geometry.isEmpty())
     {
         restoreGeometry(geometry);
     }
 
-    QByteArray state = settings.loadMainWindowState();
+    QByteArray state = settings.LoadMainWindowState();
     if (!state.isEmpty())
     {
         restoreState(state);
     }
 
-    QByteArray splitterState = settings.loadSplitterState();
+    QByteArray splitterState = settings.LoadSplitterState();
     if (!splitterState.isEmpty())
     {
         this->ui->centralSplitter->restoreState(splitterState);
     }
 
     // Restore debug console visibility
-    if (settings.getDebugConsoleVisible() && this->m_debugWindow)
+    if (settings.GetDebugConsoleVisible() && this->m_debugWindow)
     {
         this->m_debugWindow->show();
     }
@@ -1688,25 +1686,25 @@ void MainWindow::onNavigationModeChanged(int mode)
 
 void MainWindow::onViewTemplatesToggled(bool checked)
 {
-    SettingsManager::instance().setDefaultTemplatesVisible(checked);
+    SettingsManager::instance().SetDefaultTemplatesVisible(checked);
     this->onViewSettingsChanged();
 }
 
 void MainWindow::onViewCustomTemplatesToggled(bool checked)
 {
-    SettingsManager::instance().setUserTemplatesVisible(checked);
+    SettingsManager::instance().SetUserTemplatesVisible(checked);
     this->onViewSettingsChanged();
 }
 
 void MainWindow::onViewLocalStorageToggled(bool checked)
 {
-    SettingsManager::instance().setLocalSRsVisible(checked);
+    SettingsManager::instance().SetLocalSRsVisible(checked);
     this->onViewSettingsChanged();
 }
 
 void MainWindow::onViewShowHiddenObjectsToggled(bool checked)
 {
-    SettingsManager::instance().setShowHiddenObjects(checked);
+    SettingsManager::instance().SetShowHiddenObjects(checked);
     this->onViewSettingsChanged();
 }
 
@@ -1718,10 +1716,10 @@ void MainWindow::onViewSettingsChanged()
 void MainWindow::applyViewSettingsToMenu()
 {
     SettingsManager& settings = SettingsManager::instance();
-    this->ui->viewTemplatesAction->setChecked(settings.getDefaultTemplatesVisible());
-    this->ui->viewCustomTemplatesAction->setChecked(settings.getUserTemplatesVisible());
-    this->ui->viewLocalStorageAction->setChecked(settings.getLocalSRsVisible());
-    this->ui->viewShowHiddenObjectsAction->setChecked(settings.getShowHiddenObjects());
+    this->ui->viewTemplatesAction->setChecked(settings.GetDefaultTemplatesVisible());
+    this->ui->viewCustomTemplatesAction->setChecked(settings.GetUserTemplatesVisible());
+    this->ui->viewLocalStorageAction->setChecked(settings.GetLocalSRsVisible());
+    this->ui->viewShowHiddenObjectsAction->setChecked(settings.GetShowHiddenObjects());
 }
 
 void MainWindow::updateViewMenu(NavigationPane::NavigationMode mode)
@@ -1919,7 +1917,7 @@ void MainWindow::restoreConnections()
     }
 
     // Load all saved connection profiles
-    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
 
     if (profiles.isEmpty())
     {
@@ -1996,24 +1994,24 @@ void MainWindow::SaveServerList()
 
     if (!saveSession)
     {
-        QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+        QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
         for (const ConnectionProfile& profile : profiles)
         {
-            SettingsManager::instance().removeConnectionProfile(profile.GetName());
+            SettingsManager::instance().RemoveConnectionProfile(profile.GetName());
         }
         SettingsManager::instance().Sync();
         qDebug() << "XenAdmin Qt: Session saving disabled; cleared stored profiles";
         return;
     }
 
-    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
     QMap<QString, ConnectionProfile> existing;
     for (const ConnectionProfile& profile : profiles)
     {
         const QString key = profile.GetHostname() + ":" + QString::number(profile.GetPort());
         existing.insert(key, profile);
         if (!profile.GetName().isEmpty())
-            SettingsManager::instance().removeConnectionProfile(profile.GetName());
+            SettingsManager::instance().RemoveConnectionProfile(profile.GetName());
     }
 
     const QList<XenConnection*> connections = connMgr->GetAllConnections();
@@ -2062,7 +2060,7 @@ void MainWindow::SaveServerList()
         if (!friendlyName.isEmpty())
             profile.SetFriendlyName(friendlyName);
 
-        SettingsManager::instance().saveConnectionProfile(profile);
+        SettingsManager::instance().SaveConnectionProfile(profile);
     }
 
     qDebug() << "XenAdmin Qt: Saved" << connections.size() << "connection profile(s)";
@@ -2083,7 +2081,7 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
         ? hostname
         : QString("%1:%2").arg(hostname).arg(port);
 
-    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
     ConnectionProfile targetProfile;
     bool found = false;
 
@@ -2128,8 +2126,8 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
     if (!poolName.isEmpty())
         targetProfile.SetFriendlyName(poolName);
 
-    SettingsManager::instance().saveConnectionProfile(targetProfile);
-    SettingsManager::instance().updateServerHistory(profileName);
+    SettingsManager::instance().SaveConnectionProfile(targetProfile);
+    SettingsManager::instance().UpdateServerHistory(profileName);
     SettingsManager::instance().Sync();
 }
 

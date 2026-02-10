@@ -413,10 +413,10 @@ void NavigationPane::UpdateSearch()
     // For now, apply view filters and trigger a refresh
     SettingsManager& settings = SettingsManager::instance();
     NavigationView::ViewFilters filters;
-    filters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
-    filters.showUserTemplates = settings.getUserTemplatesVisible();
-    filters.showLocalStorage = settings.getLocalSRsVisible();
-    filters.showHiddenObjects = settings.getShowHiddenObjects();
+    filters.showDefaultTemplates = settings.GetDefaultTemplatesVisible();
+    filters.showUserTemplates = settings.GetUserTemplatesVisible();
+    filters.showLocalStorage = settings.GetLocalSRsVisible();
+    filters.showHiddenObjects = settings.GetShowHiddenObjects();
     this->m_currentNavigationView->SetViewFilters(filters);
     this->m_currentNavigationView->RequestRefreshTreeView();
 }

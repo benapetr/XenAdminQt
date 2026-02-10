@@ -151,7 +151,7 @@ namespace CustomDataGraph
 
     void DataPlot::RefreshData()
     {
-        const bool fillAreas = SettingsManager::instance().GetValue("Display/FillAreaUnderGraphs", false).toBool();
+        const bool fillAreas = SettingsManager::instance().GetFillAreaUnderGraphs();
         if (fillAreas != this->m_fillAreaUnderGraphs)
         {
             this->m_fillAreaUnderGraphs = fillAreas;

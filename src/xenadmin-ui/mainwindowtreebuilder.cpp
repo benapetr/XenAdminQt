@@ -436,7 +436,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
     {
         const QString hostname = connection->GetHostname();
         const int port = connection->GetPort();
-        const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+        const QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
         for (const ConnectionProfile& profile : profiles)
         {
             if (profile.GetHostname() == hostname && profile.GetPort() == port)

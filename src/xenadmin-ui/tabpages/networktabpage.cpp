@@ -441,7 +441,7 @@ void NetworkTabPage::populateNetworksForHost()
 bool NetworkTabPage::shouldShowNetwork(QSharedPointer<Network> network)
 {
     // Match C# Network.Show() behavior
-    const bool showHiddenObjects = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHiddenObjects = SettingsManager::instance().GetShowHiddenObjects();
     return network->Show(showHiddenObjects);
 }
 

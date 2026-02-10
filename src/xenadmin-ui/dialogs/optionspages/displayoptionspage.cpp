@@ -64,13 +64,12 @@ void DisplayOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Graph display type
-    bool fillAreas = settings.GetValue("Display/FillAreaUnderGraphs", false).toBool();
+    const bool fillAreas = settings.GetFillAreaUnderGraphs();
     this->ui->GraphAreasRadioButton->setChecked(fillAreas);
     this->ui->GraphLinesRadioButton->setChecked(!fillAreas);
 
     // Remember last selected tab
-    this->ui->checkBoxStoreTab->setChecked(
-        settings.GetValue("Display/RememberLastSelectedTab", true).toBool());
+    this->ui->checkBoxStoreTab->setChecked(settings.GetRememberLastSelectedTab());
 
     // Show timestamps in updates log
     this->ui->showTimestampsCheckBox->setChecked(
@@ -104,10 +103,10 @@ void DisplayOptionsPage::Save()
     SettingsManager& settings = SettingsManager::instance();
 
     // Graph display type
-    settings.SetValue("Display/FillAreaUnderGraphs", this->ui->GraphAreasRadioButton->isChecked());
+    settings.SetFillAreaUnderGraphs(this->ui->GraphAreasRadioButton->isChecked());
 
     // Remember last selected tab
-    settings.SetValue("Display/RememberLastSelectedTab", this->ui->checkBoxStoreTab->isChecked());
+    settings.SetRememberLastSelectedTab(this->ui->checkBoxStoreTab->isChecked());
 
     // Show timestamps in updates log
     settings.SetValue("Display/ShowTimestampsInUpdatesLog", this->ui->showTimestampsCheckBox->isChecked());

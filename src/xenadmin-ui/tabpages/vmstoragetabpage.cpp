@@ -295,7 +295,7 @@ void VMStorageTabPage::populateVMStorage()
     this->m_storageVbdRefs.clear();
     this->m_storageVdiRefs.clear();
 
-    bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     bool storageLinkColumnVisible = false;
     const QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
     for (const QSharedPointer<VBD>& vbd : vbds)

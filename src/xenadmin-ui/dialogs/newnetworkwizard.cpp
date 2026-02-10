@@ -892,7 +892,7 @@ void NewNetworkWizard::populateExternalNics()
         return;
     }
 
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
     for (const QSharedPointer<PIF>& pif : pifs)
     {
@@ -925,7 +925,7 @@ void NewNetworkWizard::populateChinInterfaces()
     if (!cache)
         return;
 
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     QSet<QString> addedNetworks;
     QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
 

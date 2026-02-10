@@ -186,7 +186,7 @@ void NewVMWizard::loadTemplates()
     this->ui->templateTree->clear();
     this->m_templateItems.clear();
 
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     bool restrictVtpm = false;
     const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>(XenObjectType::Host);
     for (const QSharedPointer<Host>& host : allHosts)
@@ -493,7 +493,7 @@ void NewVMWizard::loadTemplateDevices()
 
     if (isDefaultTemplate)
     {
-        const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+        const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
         QStringList networkRefs = cache->GetAllRefs(XenObjectType::Network);
         int deviceIndex = 0;
 

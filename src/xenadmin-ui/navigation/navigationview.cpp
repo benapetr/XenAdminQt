@@ -59,7 +59,7 @@ QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenC
         : QString("%1:%2").arg(hostname).arg(connection->GetPort());
     QString displayName = hostname;
 
-    const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    const QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
         if (profile.GetHostname() == hostname && profile.GetPort() == connection->GetPort())
@@ -90,10 +90,10 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
     this->m_treeBuilder = new MainWindowTreeBuilder(this->ui->treeWidget, this);
 
     SettingsManager& settings = SettingsManager::instance();
-    this->m_viewFilters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
-    this->m_viewFilters.showUserTemplates = settings.getUserTemplatesVisible();
-    this->m_viewFilters.showLocalStorage = settings.getLocalSRsVisible();
-    this->m_viewFilters.showHiddenObjects = settings.getShowHiddenObjects();
+    this->m_viewFilters.showDefaultTemplates = settings.GetDefaultTemplatesVisible();
+    this->m_viewFilters.showUserTemplates = settings.GetUserTemplatesVisible();
+    this->m_viewFilters.showLocalStorage = settings.GetLocalSRsVisible();
+    this->m_viewFilters.showHiddenObjects = settings.GetShowHiddenObjects();
 
     // Setup debounce timer for cache updates (200ms delay)
     this->m_refreshTimer->setSingleShot(true);
@@ -335,13 +335,13 @@ QueryScope* NavigationView::buildTreeSearchScope() const
 
     SettingsManager& settings = SettingsManager::instance();
 
-    if (settings.getDefaultTemplatesVisible())
+    if (settings.GetDefaultTemplatesVisible())
         types |= ObjectTypes::DefaultTemplate;
 
-    if (settings.getUserTemplatesVisible())
+    if (settings.GetUserTemplatesVisible())
         types |= ObjectTypes::UserTemplate;
 
-    if (settings.getLocalSRsVisible())
+    if (settings.GetLocalSRsVisible())
         types |= ObjectTypes::LocalSR;
 
     return new QueryScope(types);

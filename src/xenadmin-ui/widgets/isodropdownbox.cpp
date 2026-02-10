@@ -92,7 +92,7 @@ void IsoDropDownBox::Refresh()
 
     XenCache* cache = this->m_connection->GetCache();
 
-    bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
 
     QString hostRef;
     QSharedPointer<VM> vm;

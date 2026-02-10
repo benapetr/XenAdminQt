@@ -293,7 +293,7 @@ QList<QSharedPointer<PIF>> NetworkingPropertiesDialog::getKnownPifs(bool include
     if (!connection || !connection->GetCache())
         return result;
 
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     QList<QSharedPointer<Network>> networks = connection->GetCache()->GetAll<Network>();
     QList<QSharedPointer<Network>> filtered;
     for (const QSharedPointer<Network>& network : networks)

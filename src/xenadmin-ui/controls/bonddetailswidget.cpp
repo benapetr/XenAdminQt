@@ -306,7 +306,7 @@ void BondDetailsWidget::populateBondNics()
     QSharedPointer<Pool> pool = this->m_pool;
     QSharedPointer<Host> host = pool ? QSharedPointer<Host>() : this->m_host;
     const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>();
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
     QSet<QString> seenDevices;
 
     for (const QSharedPointer<PIF>& pif : pifs)

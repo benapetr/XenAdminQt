@@ -98,6 +98,8 @@ void SettingsManager::Load()
     this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
     this->m_consoleRefreshInterval = this->m_settings->value("Console/refreshInterval", 5).toInt();
     this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
+    this->m_fillAreaUnderGraphs = this->m_settings->value("Display/FillAreaUnderGraphs", false).toBool();
+    this->m_rememberLastSelectedTab = this->m_settings->value("Display/RememberLastSelectedTab", true).toBool();
     this->m_treeViewMode = static_cast<TreeViewMode>(this->m_settings->value("TreeView/mode", Infrastructure).toInt());
     this->m_expandedTreeItems = this->m_settings->value("TreeView/expandedItems").toStringList();
     this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
@@ -139,6 +141,8 @@ void SettingsManager::Save()
     this->m_settings->setValue("View/localSRsVisible", this->m_localSRsVisible);
     this->m_settings->setValue("Console/refreshInterval", this->m_consoleRefreshInterval);
     this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
+    this->m_settings->setValue("Display/FillAreaUnderGraphs", this->m_fillAreaUnderGraphs);
+    this->m_settings->setValue("Display/RememberLastSelectedTab", this->m_rememberLastSelectedTab);
     this->m_settings->setValue("TreeView/mode", static_cast<int>(this->m_treeViewMode));
     this->m_settings->setValue("TreeView/expandedItems", this->m_expandedTreeItems);
     this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
@@ -175,41 +179,41 @@ void SettingsManager::Save()
 }
 
 // Window state management
-void SettingsManager::saveMainWindowGeometry(const QByteArray& geometry)
+void SettingsManager::SaveMainWindowGeometry(const QByteArray& geometry)
 {
     this->m_settings->setValue("MainWindow/geometry", geometry);
     emit settingsChanged("MainWindow/geometry");
 }
 
-QByteArray SettingsManager::loadMainWindowGeometry() const
+QByteArray SettingsManager::LoadMainWindowGeometry() const
 {
     return this->m_settings->value("MainWindow/geometry").toByteArray();
 }
 
-void SettingsManager::saveMainWindowState(const QByteArray& state)
+void SettingsManager::SaveMainWindowState(const QByteArray& state)
 {
     this->m_settings->setValue("MainWindow/state", state);
     emit settingsChanged("MainWindow/state");
 }
 
-QByteArray SettingsManager::loadMainWindowState() const
+QByteArray SettingsManager::LoadMainWindowState() const
 {
     return this->m_settings->value("MainWindow/state").toByteArray();
 }
 
-void SettingsManager::saveSplitterState(const QByteArray& state)
+void SettingsManager::SaveSplitterState(const QByteArray& state)
 {
     this->m_settings->setValue("MainWindow/splitter", state);
     emit settingsChanged("MainWindow/splitter");
 }
 
-QByteArray SettingsManager::loadSplitterState() const
+QByteArray SettingsManager::LoadSplitterState() const
 {
     return this->m_settings->value("MainWindow/splitter").toByteArray();
 }
 
 // Connection management
-void SettingsManager::saveConnection(const QString& id, const ConnectionInfo& info)
+void SettingsManager::SaveConnection(const QString& id, const ConnectionInfo& info)
 {
     this->m_settings->beginGroup("Connections/" + id);
     this->m_settings->setValue("hostname", info.hostname);
@@ -218,7 +222,7 @@ void SettingsManager::saveConnection(const QString& id, const ConnectionInfo& in
 
     if (info.savePassword && !info.passwordHash.isEmpty())
     {
-        QString encryptedPassword = this->encryptPassword(info.passwordHash);
+        QString encryptedPassword = this->encryptPassword_(info.passwordHash);
         if (encryptedPassword.isEmpty())
         {
             qWarning() << "SettingsManager: Failed to encrypt password for connection" << id << "- keeping existing value";
@@ -242,7 +246,7 @@ void SettingsManager::saveConnection(const QString& id, const ConnectionInfo& in
     emit settingsChanged("Connections/" + id);
 }
 
-QList<SettingsManager::ConnectionInfo> SettingsManager::loadConnections() const
+QList<SettingsManager::ConnectionInfo> SettingsManager::LoadConnections() const
 {
     QList<ConnectionInfo> connections;
 
@@ -262,7 +266,7 @@ QList<SettingsManager::ConnectionInfo> SettingsManager::loadConnections() const
 
         if (info.savePassword && this->m_settings->contains("password"))
         {
-            info.passwordHash = this->decryptPassword(this->m_settings->value("password").toString());
+            info.passwordHash = this->decryptPassword_(this->m_settings->value("password").toString());
         }
 
         info.autoConnect = this->m_settings->value("autoConnect", false).toBool();
@@ -277,34 +281,34 @@ QList<SettingsManager::ConnectionInfo> SettingsManager::loadConnections() const
     return connections;
 }
 
-void SettingsManager::removeConnection(const QString& id)
+void SettingsManager::RemoveConnection(const QString& id)
 {
     this->m_settings->remove("Connections/" + id);
     emit settingsChanged("Connections/" + id);
 }
 
-QString SettingsManager::getLastConnectedServer() const
+QString SettingsManager::GetLastConnectedServer() const
 {
     return this->m_lastConnectedServer;
 }
 
-void SettingsManager::setLastConnectedServer(const QString& id)
+void SettingsManager::SetLastConnectedServer(const QString& id)
 {
     this->m_lastConnectedServer = id;
     emit settingsChanged("General/lastConnectedServer");
 }
 
-QStringList SettingsManager::getServerHistory() const
+QStringList SettingsManager::GetServerHistory() const
 {
     return this->m_serverHistory;
 }
 
-void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
+void SettingsManager::UpdateServerHistory(const QString& hostnameWithPort)
 {
     if (hostnameWithPort.isEmpty())
         return;
 
-    QStringList history = getServerHistory();
+    QStringList history = this->GetServerHistory();
     if (!history.contains(hostnameWithPort))
     {
         while (history.size() >= 20)
@@ -317,7 +321,7 @@ void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
 }
 
 // Connection profiles
-void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
+void SettingsManager::SaveConnectionProfile(const ConnectionProfile& profile)
 {
     if (!profile.IsValid())
         return;
@@ -334,7 +338,7 @@ void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
     // Store password separately if remember password is enabled
     if (profile.RememberPassword() && !profile.GetPassword().isEmpty())
     {
-        QString encryptedPassword = this->encryptPassword(profile.GetPassword());
+        QString encryptedPassword = this->encryptPassword_(profile.GetPassword());
         if (encryptedPassword.isEmpty())
         {
             qWarning() << "SettingsManager: Failed to encrypt password for profile" << profile.GetName()
@@ -355,7 +359,7 @@ void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
     emit settingsChanged("ConnectionProfiles");
 }
 
-QList<ConnectionProfile> SettingsManager::loadConnectionProfiles() const
+QList<ConnectionProfile> SettingsManager::LoadConnectionProfiles() const
 {
     QList<ConnectionProfile> profiles;
 
@@ -380,7 +384,7 @@ QList<ConnectionProfile> SettingsManager::loadConnectionProfiles() const
         if (this->m_settings->contains("password"))
         {
             QString encryptedPassword = this->m_settings->value("password").toString();
-            QString decryptedPassword = this->decryptPassword(encryptedPassword);
+            QString decryptedPassword = this->decryptPassword_(encryptedPassword);
             profile.SetPassword(decryptedPassword);
         }
 
@@ -392,7 +396,7 @@ QList<ConnectionProfile> SettingsManager::loadConnectionProfiles() const
     return profiles;
 }
 
-void SettingsManager::removeConnectionProfile(const QString& name)
+void SettingsManager::RemoveConnectionProfile(const QString& name)
 {
     this->m_settings->beginGroup("ConnectionProfiles");
     this->m_settings->remove(name);
@@ -400,13 +404,13 @@ void SettingsManager::removeConnectionProfile(const QString& name)
     emit settingsChanged("ConnectionProfiles");
 }
 
-ConnectionProfile SettingsManager::getLastConnectionProfile() const
+ConnectionProfile SettingsManager::GetLastConnectionProfile() const
 {
     QString lastName = this->m_settings->value("General/lastConnectionProfile").toString();
     if (lastName.isEmpty())
         return ConnectionProfile();
 
-    QList<ConnectionProfile> profiles = this->loadConnectionProfiles();
+    QList<ConnectionProfile> profiles = this->LoadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
         if (profile.GetName() == lastName)
@@ -416,7 +420,7 @@ ConnectionProfile SettingsManager::getLastConnectionProfile() const
     return ConnectionProfile();
 }
 
-void SettingsManager::setLastConnectionProfile(const QString& name)
+void SettingsManager::SetLastConnectionProfile(const QString& name)
 {
     this->m_settings->setValue("General/lastConnectionProfile", name);
     emit settingsChanged("General/lastConnectionProfile");
@@ -434,226 +438,248 @@ void SettingsManager::SetAutoReconnect(bool autoReconnect)
     emit settingsChanged("Session/AutoReconnect");
 }
 
-bool SettingsManager::getCheckForUpdates() const
+bool SettingsManager::GetCheckForUpdates() const
 {
     return this->m_checkForUpdates;
 }
 
-void SettingsManager::setCheckForUpdates(bool check)
+void SettingsManager::SetCheckForUpdates(bool check)
 {
     this->m_checkForUpdates = check;
     emit settingsChanged("General/checkForUpdates");
 }
 
-QString SettingsManager::getDefaultExportPath() const
+QString SettingsManager::GetDefaultExportPath() const
 {
     return this->m_defaultExportPath;
 }
 
-void SettingsManager::setDefaultExportPath(const QString& path)
+void SettingsManager::SetDefaultExportPath(const QString& path)
 {
     this->m_defaultExportPath = path;
     emit settingsChanged("Paths/defaultExport");
 }
 
-QString SettingsManager::getDefaultImportPath() const
+QString SettingsManager::GetDefaultImportPath() const
 {
     return this->m_defaultImportPath;
 }
 
-void SettingsManager::setDefaultImportPath(const QString& path)
+void SettingsManager::SetDefaultImportPath(const QString& path)
 {
     this->m_defaultImportPath = path;
     emit settingsChanged("Paths/defaultImport");
 }
 
-bool SettingsManager::getConfirmOnExit() const
+bool SettingsManager::GetConfirmOnExit() const
 {
     return this->m_confirmOnExit;
 }
 
-void SettingsManager::setConfirmOnExit(bool confirm)
+void SettingsManager::SetConfirmOnExit(bool confirm)
 {
     this->m_confirmOnExit = confirm;
     emit settingsChanged("General/confirmOnExit");
 }
 
-bool SettingsManager::getShowHiddenObjects() const
+bool SettingsManager::GetShowHiddenObjects() const
 {
     return this->m_showHiddenObjects;
 }
 
-void SettingsManager::setShowHiddenObjects(bool show)
+void SettingsManager::SetShowHiddenObjects(bool show)
 {
     this->m_showHiddenObjects = show;
     emit settingsChanged("View/showHiddenObjects");
 }
 
-bool SettingsManager::getDefaultTemplatesVisible() const
+bool SettingsManager::GetDefaultTemplatesVisible() const
 {
     return this->m_defaultTemplatesVisible;
 }
 
-void SettingsManager::setDefaultTemplatesVisible(bool visible)
+void SettingsManager::SetDefaultTemplatesVisible(bool visible)
 {
     this->m_defaultTemplatesVisible = visible;
     emit settingsChanged("View/defaultTemplatesVisible");
 }
 
-bool SettingsManager::getUserTemplatesVisible() const
+bool SettingsManager::GetUserTemplatesVisible() const
 {
     return this->m_userTemplatesVisible;
 }
 
-void SettingsManager::setUserTemplatesVisible(bool visible)
+void SettingsManager::SetUserTemplatesVisible(bool visible)
 {
     this->m_userTemplatesVisible = visible;
     emit settingsChanged("View/userTemplatesVisible");
 }
 
-bool SettingsManager::getLocalSRsVisible() const
+bool SettingsManager::GetLocalSRsVisible() const
 {
     return this->m_localSRsVisible;
 }
 
-void SettingsManager::setLocalSRsVisible(bool visible)
+void SettingsManager::SetLocalSRsVisible(bool visible)
 {
     this->m_localSRsVisible = visible;
     emit settingsChanged("View/localSRsVisible");
 }
 
-int SettingsManager::getConsoleRefreshInterval() const
+int SettingsManager::GetConsoleRefreshInterval() const
 {
     return this->m_consoleRefreshInterval;
 }
 
-void SettingsManager::setConsoleRefreshInterval(int seconds)
+void SettingsManager::SetConsoleRefreshInterval(int seconds)
 {
     this->m_consoleRefreshInterval = seconds;
     emit settingsChanged("Console/refreshInterval");
 }
 
-int SettingsManager::getGraphUpdateInterval() const
+int SettingsManager::GetGraphUpdateInterval() const
 {
     return this->m_graphUpdateInterval;
 }
 
-void SettingsManager::setGraphUpdateInterval(int seconds)
+void SettingsManager::SetGraphUpdateInterval(int seconds)
 {
     this->m_graphUpdateInterval = seconds;
     emit settingsChanged("Performance/graphUpdateInterval");
 }
 
+bool SettingsManager::GetFillAreaUnderGraphs() const
+{
+    return this->m_fillAreaUnderGraphs;
+}
+
+void SettingsManager::SetFillAreaUnderGraphs(bool fill)
+{
+    this->m_fillAreaUnderGraphs = fill;
+    emit settingsChanged("Display/FillAreaUnderGraphs");
+}
+
+bool SettingsManager::GetRememberLastSelectedTab() const
+{
+    return this->m_rememberLastSelectedTab;
+}
+
+void SettingsManager::SetRememberLastSelectedTab(bool remember)
+{
+    this->m_rememberLastSelectedTab = remember;
+    emit settingsChanged("Display/RememberLastSelectedTab");
+}
+
 // Tree view settings
-SettingsManager::TreeViewMode SettingsManager::getTreeViewMode() const
+SettingsManager::TreeViewMode SettingsManager::GetTreeViewMode() const
 {
     return this->m_treeViewMode;
 }
 
-void SettingsManager::setTreeViewMode(TreeViewMode mode)
+void SettingsManager::SetTreeViewMode(TreeViewMode mode)
 {
     this->m_treeViewMode = mode;
     emit settingsChanged("TreeView/mode");
 }
 
-QStringList SettingsManager::getExpandedTreeItems() const
+QStringList SettingsManager::GetExpandedTreeItems() const
 {
     return this->m_expandedTreeItems;
 }
 
-void SettingsManager::setExpandedTreeItems(const QStringList& items)
+void SettingsManager::SetExpandedTreeItems(const QStringList& items)
 {
     this->m_expandedTreeItems = items;
     emit settingsChanged("TreeView/expandedItems");
 }
 
 // Debug settings
-bool SettingsManager::getDebugConsoleVisible() const
+bool SettingsManager::GetDebugConsoleVisible() const
 {
     return this->m_debugConsoleVisible;
 }
 
-void SettingsManager::setDebugConsoleVisible(bool visible)
+void SettingsManager::SetDebugConsoleVisible(bool visible)
 {
     this->m_debugConsoleVisible = visible;
     emit settingsChanged("Debug/consoleVisible");
 }
 
-int SettingsManager::getLogLevel() const
+int SettingsManager::GetLogLevel() const
 {
     return this->m_logLevel;
 }
 
-void SettingsManager::setLogLevel(int level)
+void SettingsManager::SetLogLevel(int level)
 {
     this->m_logLevel = level;
     emit settingsChanged("Debug/logLevel");
 }
 
 // Network settings
-QString SettingsManager::getProxyServer() const
+QString SettingsManager::GetProxyServer() const
 {
     return this->m_proxyServer;
 }
 
-void SettingsManager::setProxyServer(const QString& server)
+void SettingsManager::SetProxyServer(const QString& server)
 {
     this->m_proxyServer = server;
     emit settingsChanged("Network/proxyServer");
 }
 
-int SettingsManager::getProxyPort() const
+int SettingsManager::GetProxyPort() const
 {
     return this->m_proxyPort;
 }
 
-void SettingsManager::setProxyPort(int port)
+void SettingsManager::SetProxyPort(int port)
 {
     this->m_proxyPort = port;
     emit settingsChanged("Network/proxyPort");
 }
 
-bool SettingsManager::getUseProxy() const
+bool SettingsManager::GetUseProxy() const
 {
     return this->m_useProxy;
 }
 
-void SettingsManager::setUseProxy(bool use)
+void SettingsManager::SetUseProxy(bool use)
 {
     this->m_useProxy = use;
     emit settingsChanged("Network/useProxy");
 }
 
-QString SettingsManager::getProxyUsername() const
+QString SettingsManager::GetProxyUsername() const
 {
     return this->m_proxyUsername;
 }
 
-void SettingsManager::setProxyUsername(const QString& username)
+void SettingsManager::SetProxyUsername(const QString& username)
 {
     this->m_proxyUsername = username;
     emit settingsChanged("Network/proxyUsername");
 }
 
 // Recent files/paths
-QStringList SettingsManager::getRecentExportPaths() const
+QStringList SettingsManager::GetRecentExportPaths() const
 {
     return this->m_recentExportPaths;
 }
 
-void SettingsManager::addRecentExportPath(const QString& path)
+void SettingsManager::AddRecentExportPath(const QString& path)
 {
-    this->addToRecentList("Recent/exportPaths", path);
+    this->addToRecentList_("Recent/exportPaths", path);
 }
 
-QStringList SettingsManager::getRecentImportPaths() const
+QStringList SettingsManager::GetRecentImportPaths() const
 {
     return this->m_recentImportPaths;
 }
 
-void SettingsManager::addRecentImportPath(const QString& path)
+void SettingsManager::AddRecentImportPath(const QString& path)
 {
-    this->addToRecentList("Recent/importPaths", path);
+    this->addToRecentList_("Recent/importPaths", path);
 }
 
 // Miscellaneous
@@ -687,7 +713,7 @@ QString SettingsManager::GetFileName() const
 }
 
 // Helper methods
-QString SettingsManager::encryptPassword(const QString& password) const
+QString SettingsManager::encryptPassword_(const QString& password) const
 {
     // Matches C# Settings.EncryptCredentials() logic at line 560:
     // Uses AES encryption with master password if RequirePass is enabled,
@@ -708,7 +734,7 @@ QString SettingsManager::encryptPassword(const QString& password) const
     return EncryptionUtils::ProtectString(password);
 }
 
-QString SettingsManager::decryptPassword(const QString& encrypted) const
+QString SettingsManager::decryptPassword_(const QString& encrypted) const
 {
     // Matches C# Settings.DecryptCredentials() logic
     
@@ -737,7 +763,7 @@ QString SettingsManager::decryptPassword(const QString& encrypted) const
     return encrypted;
 }
 
-void SettingsManager::addToRecentList(const QString& settingsKey, const QString& path, int maxItems)
+void SettingsManager::addToRecentList_(const QString& settingsKey, const QString& path, int maxItems)
 {
     QStringList* recent = nullptr;
     if (settingsKey == "Recent/exportPaths")

@@ -55,12 +55,12 @@ class SettingsManager : public QObject
         void Save();
 
         // Window state
-        void saveMainWindowGeometry(const QByteArray& geometry);
-        QByteArray loadMainWindowGeometry() const;
-        void saveMainWindowState(const QByteArray& state);
-        QByteArray loadMainWindowState() const;
-        void saveSplitterState(const QByteArray& state);
-        QByteArray loadSplitterState() const;
+        void SaveMainWindowGeometry(const QByteArray& geometry);
+        QByteArray LoadMainWindowGeometry() const;
+        void SaveMainWindowState(const QByteArray& state);
+        QByteArray LoadMainWindowState() const;
+        void SaveSplitterState(const QByteArray& state);
+        QByteArray LoadSplitterState() const;
 
         // Connection settings
         struct ConnectionInfo
@@ -75,55 +75,61 @@ class SettingsManager : public QObject
             qint64 lastConnected;
         };
 
-        void saveConnection(const QString& id, const ConnectionInfo& info);
-        QList<ConnectionInfo> loadConnections() const;
-        void removeConnection(const QString& id);
-        QString getLastConnectedServer() const;
-        void setLastConnectedServer(const QString& id);
+        void SaveConnection(const QString& id, const ConnectionInfo& info);
+        QList<ConnectionInfo> LoadConnections() const;
+        void RemoveConnection(const QString& id);
+        QString GetLastConnectedServer() const;
+        void SetLastConnectedServer(const QString& id);
 
         // Server history (matches C# Settings.UpdateServerHistory)
-        QStringList getServerHistory() const;
-        void updateServerHistory(const QString& hostnameWithPort);
+        QStringList GetServerHistory() const;
+        void UpdateServerHistory(const QString& hostnameWithPort);
 
         // Connection profiles
-        void saveConnectionProfile(const ConnectionProfile& profile);
-        QList<ConnectionProfile> loadConnectionProfiles() const;
-        void removeConnectionProfile(const QString& name);
-        ConnectionProfile getLastConnectionProfile() const;
-        void setLastConnectionProfile(const QString& name);
+        void SaveConnectionProfile(const ConnectionProfile& profile);
+        QList<ConnectionProfile> LoadConnectionProfiles() const;
+        void RemoveConnectionProfile(const QString& name);
+        ConnectionProfile GetLastConnectionProfile() const;
+        void SetLastConnectionProfile(const QString& name);
 
         bool GetAutoReconnect() const;
         void SetAutoReconnect(bool autoReconnect);
 
-        bool getCheckForUpdates() const;
-        void setCheckForUpdates(bool check);
+        bool GetCheckForUpdates() const;
+        void SetCheckForUpdates(bool check);
 
-        QString getDefaultExportPath() const;
-        void setDefaultExportPath(const QString& path);
+        QString GetDefaultExportPath() const;
+        void SetDefaultExportPath(const QString& path);
 
-        QString getDefaultImportPath() const;
-        void setDefaultImportPath(const QString& path);
+        QString GetDefaultImportPath() const;
+        void SetDefaultImportPath(const QString& path);
 
-        bool getConfirmOnExit() const;
-        void setConfirmOnExit(bool confirm);
+        bool GetConfirmOnExit() const;
+        void SetConfirmOnExit(bool confirm);
 
-        bool getShowHiddenObjects() const;
-        void setShowHiddenObjects(bool show);
+        bool GetShowHiddenObjects() const;
+        void SetShowHiddenObjects(bool show);
 
-        bool getDefaultTemplatesVisible() const;
-        void setDefaultTemplatesVisible(bool visible);
+        bool GetDefaultTemplatesVisible() const;
+        void SetDefaultTemplatesVisible(bool visible);
 
-        bool getUserTemplatesVisible() const;
-        void setUserTemplatesVisible(bool visible);
+        bool GetUserTemplatesVisible() const;
+        void SetUserTemplatesVisible(bool visible);
 
-        bool getLocalSRsVisible() const;
-        void setLocalSRsVisible(bool visible);
+        bool GetLocalSRsVisible() const;
+        void SetLocalSRsVisible(bool visible);
 
-        int getConsoleRefreshInterval() const;
-        void setConsoleRefreshInterval(int seconds);
+        int GetConsoleRefreshInterval() const;
+        void SetConsoleRefreshInterval(int seconds);
 
-        int getGraphUpdateInterval() const;
-        void setGraphUpdateInterval(int seconds);
+        int GetGraphUpdateInterval() const;
+        void SetGraphUpdateInterval(int seconds);
+        
+        // Display settings
+        bool GetFillAreaUnderGraphs() const;
+        void SetFillAreaUnderGraphs(bool fill);
+        bool GetRememberLastSelectedTab() const;
+        void SetRememberLastSelectedTab(bool remember);
 
         // Tree view settings
         enum TreeViewMode
@@ -133,38 +139,38 @@ class SettingsManager : public QObject
             Custom
         };
 
-        TreeViewMode getTreeViewMode() const;
-        void setTreeViewMode(TreeViewMode mode);
+        TreeViewMode GetTreeViewMode() const;
+        void SetTreeViewMode(TreeViewMode mode);
 
-        QStringList getExpandedTreeItems() const;
-        void setExpandedTreeItems(const QStringList& items);
+        QStringList GetExpandedTreeItems() const;
+        void SetExpandedTreeItems(const QStringList& items);
 
         // Debug settings
-        bool getDebugConsoleVisible() const;
-        void setDebugConsoleVisible(bool visible);
+        bool GetDebugConsoleVisible() const;
+        void SetDebugConsoleVisible(bool visible);
 
-        int getLogLevel() const;
-        void setLogLevel(int level);
+        int GetLogLevel() const;
+        void SetLogLevel(int level);
 
         // Network settings
-        QString getProxyServer() const;
-        void setProxyServer(const QString& server);
+        QString GetProxyServer() const;
+        void SetProxyServer(const QString& server);
 
-        int getProxyPort() const;
-        void setProxyPort(int port);
+        int GetProxyPort() const;
+        void SetProxyPort(int port);
 
-        bool getUseProxy() const;
-        void setUseProxy(bool use);
+        bool GetUseProxy() const;
+        void SetUseProxy(bool use);
 
-        QString getProxyUsername() const;
-        void setProxyUsername(const QString& username);
+        QString GetProxyUsername() const;
+        void SetProxyUsername(const QString& username);
 
         // Recent files/paths
-        QStringList getRecentExportPaths() const;
-        void addRecentExportPath(const QString& path);
+        QStringList GetRecentExportPaths() const;
+        void AddRecentExportPath(const QString& path);
 
-        QStringList getRecentImportPaths() const;
-        void addRecentImportPath(const QString& path);
+        QStringList GetRecentImportPaths() const;
+        void AddRecentImportPath(const QString& path);
 
         // Miscellaneous
         QVariant GetValue(const QString& key, const QVariant& defaultValue = QVariant()) const;
@@ -222,6 +228,8 @@ class SettingsManager : public QObject
         bool m_localSRsVisible;
         int m_consoleRefreshInterval;
         int m_graphUpdateInterval;
+        bool m_fillAreaUnderGraphs;
+        bool m_rememberLastSelectedTab;
         TreeViewMode m_treeViewMode;
         QStringList m_expandedTreeItems;
         bool m_debugConsoleVisible;
@@ -244,9 +252,9 @@ class SettingsManager : public QObject
         QString m_localKey;
 
         // Helper methods
-        QString encryptPassword(const QString& password) const;
-        QString decryptPassword(const QString& encrypted) const;
-        void addToRecentList(const QString& settingsKey, const QString& path, int maxItems = 10);
+        QString encryptPassword_(const QString& password) const;
+        QString decryptPassword_(const QString& encrypted) const;
+        void addToRecentList_(const QString& settingsKey, const QString& path, int maxItems = 10);
 };
 
 #endif // SETTINGSMANAGER_H

@@ -120,13 +120,13 @@ void RemoveHostCommand::Run()
         connection->EndConnect(true, false);
     }
 
-    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
         if (profile.GetHostname() == connection_hostname && profile.GetPort() == connection->GetPort())
         {
             if (!profile.GetName().isEmpty())
-                SettingsManager::instance().removeConnectionProfile(profile.GetName());
+                SettingsManager::instance().RemoveConnectionProfile(profile.GetName());
         }
     }
 
