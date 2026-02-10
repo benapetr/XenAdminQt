@@ -832,38 +832,103 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
 
     QMenu contextMenu;
 
-    // Always add "Copy" if there's an item
-    QAction* copyAction = nullptr;
-    if (item && !item->text().isEmpty())
+    // Build "Copy" submenu for VM VIF rows
+    if (item && this->m_objectType == XenObjectType::VM)
     {
-        copyAction = contextMenu.addAction(tr("Copy"));
+        int row = item->row();
+
+        // Gather all visible cell texts for "All"
+        QStringList allTexts;
+        for (int col = 1; col < this->ui->networksTable->columnCount(); ++col)
+        {
+            QTableWidgetItem* cellItem = this->ui->networksTable->item(row, col);
+            if (cellItem && !cellItem->text().isEmpty())
+                allTexts.append(cellItem->text());
+        }
+
+        // Get individual field values
+        QTableWidgetItem* macItem = this->ui->networksTable->item(row, 2);
+        QTableWidgetItem* networkItem = this->ui->networksTable->item(row, 4);
+        QString macText = macItem ? macItem->text() : QString();
+        QString networkText = networkItem ? networkItem->text() : QString();
+
+        // Collect IP addresses from guest metrics for the selected VIF
+        QStringList ipAddresses;
+        QSharedPointer<VIF> vif = this->getSelectedVif();
+        if (vif && vif->IsValid())
+            ipAddresses = this->collectVifIPAddresses(vif);
+
+        QMenu* copyMenu = contextMenu.addMenu(tr("Copy"));
+
+        // "All" - copies all visible fields joined
+        QAction* copyAllAction = copyMenu->addAction(tr("All"));
+        connect(copyAllAction, &QAction::triggered, this, [this, allTexts]() { this->copyTextToClipboard(allTexts.join(", ")); });
+
+        // "MAC"
+        QAction* copyMacAction = copyMenu->addAction(tr("MAC"));
+        copyMacAction->setEnabled(!macText.isEmpty());
+        connect(copyMacAction, &QAction::triggered, this, [this, macText]() { this->copyTextToClipboard(macText); });
+
+        // "Network"
+        QAction* copyNetworkAction = copyMenu->addAction(tr("Network"));
+        copyNetworkAction->setEnabled(!networkText.isEmpty());
+        connect(copyNetworkAction, &QAction::triggered, this, [this, networkText]() { this->copyTextToClipboard(networkText); });
+
+        // "IP Address" submenu
+        QMenu* ipMenu = copyMenu->addMenu(tr("IP Address"));
+        if (ipAddresses.isEmpty())
+        {
+            QAction* noIpAction = ipMenu->addAction(tr("(none)"));
+            noIpAction->setEnabled(false);
+        } else
+        {
+            // "All" - copies all IPs joined
+            QAction* copyAllIpAction = ipMenu->addAction(tr("All"));
+            connect(copyAllIpAction, &QAction::triggered, this, [this, ipAddresses]() { this->copyTextToClipboard(ipAddresses.join(", ")); });
+
+            ipMenu->addSeparator();
+
+            // Individual IP addresses
+            for (const QString& ip : ipAddresses)
+            {
+                QAction* ipAction = ipMenu->addAction(ip);
+                connect(ipAction, &QAction::triggered, this, [this, ip]() { this->copyTextToClipboard(ip); });
+            }
+        }
+    } else if (item && !item->text().isEmpty())
+    {
+        // Non-VM mode (Host/Pool): copy the clicked cell's text directly
+        QString cellText = item->text();
+        QAction* copyAction = contextMenu.addAction(tr("Copy"));
+        connect(copyAction, &QAction::triggered, this, [this, cellText]() { this->copyTextToClipboard(cellText); });
     }
 
-    // Add separator
-    if (copyAction)
+    // Add separator before add/edit/remove actions
+    if (!contextMenu.actions().isEmpty())
         contextMenu.addSeparator();
 
     // For VMs: Add/Edit/Remove VIF actions
     // For Host/Pool: Add/Edit/Remove Network actions
-    QAction* addAction = nullptr;
-    QAction* propertiesAction = nullptr;
-    QAction* removeAction = nullptr;
-
     if (this->m_objectType == XenObjectType::VM)
     {
         // VM-specific actions (VIF management)
-        addAction = contextMenu.addAction(tr("Add Interface..."));
+        QAction* addAction = contextMenu.addAction(tr("Add Interface..."));
+        connect(addAction, &QAction::triggered, this, &NetworkTabPage::onAddNetwork);
 
         // Only enable edit/remove if an interface is selected
         if (item)
         {
-            propertiesAction = contextMenu.addAction(tr("Properties..."));
-            removeAction = contextMenu.addAction(tr("Remove Interface"));
+            QAction* propertiesAction = contextMenu.addAction(tr("Properties..."));
+            connect(propertiesAction, &QAction::triggered, this, &NetworkTabPage::onEditNetwork);
+
+            QAction* removeAction = contextMenu.addAction(tr("Remove Interface"));
+            connect(removeAction, &QAction::triggered, this, &NetworkTabPage::onRemoveNetwork);
         }
     } else if (this->m_objectType == XenObjectType::Host || this->m_objectType == XenObjectType::Pool)
     {
         // Host/Pool-specific actions (Network management)
-        addAction = contextMenu.addAction(tr("Add Network..."));
+        QAction* addAction = contextMenu.addAction(tr("Add Network..."));
+        connect(addAction, &QAction::triggered, this, &NetworkTabPage::onAddNetwork);
 
         QString selectedNetworkRef = this->getSelectedNetworkRef();
         if (!selectedNetworkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
@@ -876,31 +941,16 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
 
             if (!isGuestInstaller)
             {
-                propertiesAction = contextMenu.addAction(tr("Properties..."));
-                removeAction = contextMenu.addAction(tr("Remove Network"));
+                QAction* propertiesAction = contextMenu.addAction(tr("Properties..."));
+                connect(propertiesAction, &QAction::triggered, this, &NetworkTabPage::onEditNetwork);
+
+                QAction* removeAction = contextMenu.addAction(tr("Remove Network"));
+                connect(removeAction, &QAction::triggered, this, &NetworkTabPage::onRemoveNetwork);
             }
         }
     }
 
-    // Show menu and handle selection
-    QAction* selectedAction = contextMenu.exec(globalPos);
-
-    if (selectedAction == copyAction)
-    {
-        this->copyToClipboard();
-    } else if (selectedAction == addAction)
-    {
-        // Launch New Network Wizard
-        this->onAddNetwork();
-    } else if (selectedAction == propertiesAction)
-    {
-        // Open network properties dialog
-        this->onEditNetwork();
-    } else if (selectedAction == removeAction)
-    {
-        // Remove network
-        this->onRemoveNetwork();
-    }
+    contextMenu.exec(globalPos);
 }
 
 void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
@@ -913,15 +963,14 @@ void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
     QMenu contextMenu;
 
     // Always add "Copy" if there's an item
-    QAction* copyAction = nullptr;
     if (item && !item->text().isEmpty())
     {
-        copyAction = contextMenu.addAction(tr("Copy"));
-    }
+        QString cellText = item->text();
+        QAction* copyAction = contextMenu.addAction(tr("Copy"));
+        connect(copyAction, &QAction::triggered, this, [this, cellText]() { this->copyTextToClipboard(cellText); });
 
-    // Add separator
-    if (copyAction)
         contextMenu.addSeparator();
+    }
 
     // Add "Configure" action
     QAction* configureAction = contextMenu.addAction(tr("Configure..."));
@@ -932,16 +981,62 @@ void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
         configureAction->setEnabled(false);
     }
 
-    // Show menu and handle selection
-    QAction* selectedAction = contextMenu.exec(globalPos);
+    connect(configureAction, &QAction::triggered, this, &NetworkTabPage::onConfigureClicked);
 
-    if (selectedAction == copyAction)
+    contextMenu.exec(globalPos);
+}
+
+void NetworkTabPage::copyTextToClipboard(const QString& text)
+{
+    if (!text.isEmpty())
+        QApplication::clipboard()->setText(text);
+}
+
+QStringList NetworkTabPage::collectVifIPAddresses(const QSharedPointer<VIF>& vif) const
+{
+    QStringList result;
+
+    if (!vif || !vif->IsValid())
+        return result;
+
+    // Get the VM that owns this VIF
+    QSharedPointer<VM> vm = vif->GetVM();
+    if (!vm || !vm->IsValid())
+        return result;
+
+    // Resolve guest metrics to get network info (IP addresses)
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
+        return result;
+
+    XenCache* cache = vm->GetCache();
+    if (!cache)
+        return result;
+
+    QSharedPointer<VMGuestMetrics> guestMetrics = cache->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+    if (!guestMetrics || !guestMetrics->IsValid())
+        return result;
+
+    QVariantMap networks = guestMetrics->GetNetworks();
+    if (networks.isEmpty())
+        return result;
+
+    // Look for keys like "<device>/ip", "<device>/ipv4/0", "<device>/ipv6/0", etc.
+    QString device = vif->GetDevice();
+    QString devicePrefix = device + "/";
+
+    for (auto it = networks.constBegin(); it != networks.constEnd(); ++it)
     {
-        this->copyToClipboard();
-    } else if (selectedAction == configureAction)
-    {
-        this->onConfigureClicked();
+        const QString& key = it.key();
+        if (key.startsWith(devicePrefix) && key.contains("/ip"))
+        {
+            QString ip = it.value().toString();
+            if (!ip.isEmpty())
+                result.append(ip);
+        }
     }
+
+    return result;
 }
 
 void NetworkTabPage::copyToClipboard()
@@ -964,12 +1059,15 @@ void NetworkTabPage::copyToClipboard()
     if (selectedItems.isEmpty())
         return;
 
-    // Get the first selected item's text
-    QString text = selectedItems.first()->text();
-
-    if (!text.isEmpty())
+    // Find the first selected item with non-empty text
+    // (skip icon columns which have no text)
+    for (QTableWidgetItem* selectedItem : selectedItems)
     {
-        QApplication::clipboard()->setText(text);
+        if (selectedItem && !selectedItem->text().isEmpty())
+        {
+            QApplication::clipboard()->setText(selectedItem->text());
+            return;
+        }
     }
 }
 

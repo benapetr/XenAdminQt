@@ -121,6 +121,8 @@ class NetworkTabPage : public BaseTabPage
         void showNetworksContextMenu(const QPoint& pos);
         void showIPConfigContextMenu(const QPoint& pos);
         void copyToClipboard();
+        void copyTextToClipboard(const QString& text);
+        QStringList collectVifIPAddresses(const QSharedPointer<VIF>& vif) const;
 
         // Network operations (matches C# button click handlers)
         void onAddNetwork();     // AddNetworkButton_Click
