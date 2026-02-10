@@ -156,13 +156,29 @@
     <addaction name="backupToolStripMenuItem"/>
     <addaction name="restoreFromBackupToolStripMenuItem"/>
     <addaction name="separator"/>
+    <addaction name="menuCertificate"/>
     <addaction name="maintenanceModeToolStripMenuItem1"/>
     <addaction name="controlDomainMemoryToolStripMenuItem"/>
+    <addaction name="menuHostPassword"/>
     <addaction name="separator"/>
     <addaction name="destroyServerToolStripMenuItem"/>
     <addaction name="removeHostToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="ServerPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuCertificate">
+    <property name="title">
+     <string>Certificate</string>
+    </property>
+    <addaction name="toolStripMenuItemInstallCertificate"/>
+    <addaction name="toolStripMenuItemResetCertificate"/>
+   </widget>
+   <widget class="QMenu" name="menuHostPassword">
+    <property name="title">
+     <string>Password</string>
+    </property>
+    <addaction name="ChangeRootPasswordToolStripMenuItem"/>
+    <addaction name="forgetSavedPasswordToolStripMenuItem"/>
    </widget>
    <widget class="QMenu" name="menuVM">
     <property name="title">
