@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
     app.setApplicationName(XENADMIN_BRANDING_APP_NAME);
     app.setApplicationVersion(XENADMIN_VERSION);
     app.setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
+    SettingsManager::instance().ApplyProxySettings();
 
     MainWindow w;
     w.show();

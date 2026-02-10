@@ -27,6 +27,7 @@
 
 #include "connectionworker.h"
 #include "certificatemanager.h"
+#include <QCoreApplication>
 #include <QSslConfiguration>
 #include <QElapsedTimer>
 #include <QDebug>
@@ -229,6 +230,7 @@ namespace Xen
     bool ConnectionWorker::connectToHostSync()
     {
         emit ConnectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
+        const int timeoutMs = this->connectionTimeoutMs_();
 
         // Start encrypted connection
         this->m_socket->setPeerVerifyMode(QSslSocket::VerifyNone);
@@ -236,7 +238,7 @@ namespace Xen
 
         // Block this thread (worker thread) until connected
         // Main thread is unaffected
-        if (!this->m_socket->waitForConnected(30000))
+        if (!this->m_socket->waitForConnected(timeoutMs))
         {
             qWarning() << "ConnectionWorker: TCP connection timeout -" << this->m_socket->errorString();
             return false;
@@ -249,13 +251,14 @@ namespace Xen
     bool ConnectionWorker::sslHandshakeSync()
     {
         emit ConnectionProgress("Performing SSL handshake...");
+        const int timeoutMs = this->connectionTimeoutMs_();
 
         // qDebug() << "ConnectionWorker: Waiting for SSL handshake, socket state:" << this->m_socket->state();
         // qDebug() << "ConnectionWorker: Socket encrypted before wait:" << this->m_socket->isEncrypted();
 
         // Wait for SSL handshake to complete
         // The socket is already doing the handshake from connectToHostEncrypted
-        if (!this->m_socket->waitForEncrypted(30000))
+        if (!this->m_socket->waitForEncrypted(timeoutMs))
         {
             qWarning() << "ConnectionWorker: SSL handshake timeout";
             qWarning() << "  - Socket state:" << this->m_socket->state();
@@ -268,6 +271,28 @@ namespace Xen
         // qDebug() << "ConnectionWorker: SSL handshake complete";
         // qDebug() << "ConnectionWorker: Socket encrypted:" << this->m_socket->isEncrypted();
         return true;
+    }
+
+    int ConnectionWorker::connectionTimeoutMs_() const
+    {
+        static constexpr int defaultTimeoutMs = 30000;
+        static constexpr int minTimeoutMs = 1000;
+        static constexpr int maxTimeoutMs = 300000;
+
+        const QCoreApplication* app = QCoreApplication::instance();
+        if (!app)
+            return defaultTimeoutMs;
+
+        bool ok = false;
+        int value = app->property("ConnectionTimeoutMs").toInt(&ok);
+        if (!ok)
+            return defaultTimeoutMs;
+
+        if (value < minTimeoutMs)
+            value = minTimeoutMs;
+        if (value > maxTimeoutMs)
+            value = maxTimeoutMs;
+        return value;
     }
 
     void ConnectionWorker::eventPollLoop()

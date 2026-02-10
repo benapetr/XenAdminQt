@@ -195,6 +195,7 @@ namespace Xen
              * @return true if SSL handshake successful, false otherwise
              */
             bool sslHandshakeSync();
+            int connectionTimeoutMs_() const;
 
             /**
              * @brief Enter event polling loop

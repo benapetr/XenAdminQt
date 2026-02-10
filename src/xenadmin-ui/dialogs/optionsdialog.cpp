@@ -149,6 +149,7 @@ void OptionsDialog::accept()
 
     // Save settings (matches C# Settings.TrySaveSettings())
     SettingsManager::instance().Sync();
+    SettingsManager::instance().ApplyProxySettings();
 
     // Close dialog
     QDialog::accept();

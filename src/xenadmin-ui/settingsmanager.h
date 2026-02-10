@@ -141,6 +141,34 @@ class SettingsManager : public QObject
         bool GetIgnoreOvfValidationWarnings() const;
         void SetIgnoreOvfValidationWarnings(bool ignoreWarnings);
 
+        // Connection/proxy settings
+        enum ProxySetting
+        {
+            DirectConnection = 0,
+            SystemProxy = 1,
+            SpecifiedProxy = 2
+        };
+
+        ProxySetting GetConnectionProxySetting() const;
+        void SetConnectionProxySetting(ProxySetting setting);
+        QString GetConnectionProxyAddress() const;
+        void SetConnectionProxyAddress(const QString& address);
+        int GetConnectionProxyPort() const;
+        void SetConnectionProxyPort(int port);
+        bool GetBypassProxyForServers() const;
+        void SetBypassProxyForServers(bool bypass);
+        bool GetProvideProxyAuthentication() const;
+        void SetProvideProxyAuthentication(bool provide);
+        int GetProxyAuthenticationMethod() const;
+        void SetProxyAuthenticationMethod(int method);
+        QString GetConnectionProxyUsername() const;
+        void SetConnectionProxyUsername(const QString& username);
+        QString GetConnectionProxyPassword() const;
+        void SetConnectionProxyPassword(const QString& password);
+        int GetConnectionTimeoutMs() const;
+        void SetConnectionTimeoutMs(int timeoutMs);
+        void ApplyProxySettings() const;
+
         // Tree view settings
         enum TreeViewMode
         {
@@ -244,6 +272,15 @@ class SettingsManager : public QObject
         bool m_doNotConfirmDismissUpdates;
         bool m_doNotConfirmDismissEvents;
         bool m_ignoreOvfValidationWarnings;
+        ProxySetting m_connectionProxySetting;
+        QString m_connectionProxyAddress;
+        int m_connectionProxyPort;
+        bool m_bypassProxyForServers;
+        bool m_provideProxyAuthentication;
+        int m_proxyAuthenticationMethod;
+        QString m_connectionProxyUsernameProtected;
+        QString m_connectionProxyPasswordProtected;
+        int m_connectionTimeoutMs;
         TreeViewMode m_treeViewMode;
         QStringList m_expandedTreeItems;
         bool m_debugConsoleVisible;

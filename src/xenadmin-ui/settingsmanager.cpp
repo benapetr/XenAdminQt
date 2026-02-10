@@ -34,6 +34,8 @@
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
+#include <QNetworkProxy>
+#include <QNetworkProxyFactory>
 #include <QStandardPaths>
 
 QString SettingsManager::s_configDir;
@@ -104,14 +106,24 @@ void SettingsManager::Load()
     this->m_doNotConfirmDismissUpdates = this->m_settings->value("Confirmation/DoNotConfirmDismissUpdates", false).toBool();
     this->m_doNotConfirmDismissEvents = this->m_settings->value("Confirmation/DoNotConfirmDismissEvents", false).toBool();
     this->m_ignoreOvfValidationWarnings = this->m_settings->value("Confirmation/IgnoreOvfValidationWarnings", false).toBool();
+    this->m_connectionProxySetting = static_cast<ProxySetting>(this->m_settings->value("Connection/ProxySetting", DirectConnection).toInt());
+    this->m_connectionProxyAddress = this->m_settings->value("Connection/ProxyAddress", "").toString();
+    this->m_connectionProxyPort = this->m_settings->value("Connection/ProxyPort", 80).toInt();
+    this->m_bypassProxyForServers = this->m_settings->value("Connection/BypassProxyForServers", false).toBool();
+    this->m_provideProxyAuthentication = this->m_settings->value("Connection/ProvideProxyAuthentication", false).toBool();
+    this->m_proxyAuthenticationMethod = this->m_settings->value("Connection/ProxyAuthenticationMethod", 1).toInt();
+    this->m_connectionProxyUsernameProtected = this->m_settings->value("Connection/ProxyUsername", "").toString();
+    this->m_connectionProxyPasswordProtected = this->m_settings->value("Connection/ProxyPassword", "").toString();
+    this->m_connectionTimeoutMs = this->m_settings->value("Connection/ConnectionTimeout", 20000).toInt();
     this->m_treeViewMode = static_cast<TreeViewMode>(this->m_settings->value("TreeView/mode", Infrastructure).toInt());
     this->m_expandedTreeItems = this->m_settings->value("TreeView/expandedItems").toStringList();
     this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
     this->m_logLevel = this->m_settings->value("Debug/logLevel", 2).toInt();
-    this->m_proxyServer = this->m_settings->value("Network/proxyServer").toString();
-    this->m_proxyPort = this->m_settings->value("Network/proxyPort", 8080).toInt();
-    this->m_useProxy = this->m_settings->value("Network/useProxy", false).toBool();
-    this->m_proxyUsername = this->m_settings->value("Network/proxyUsername").toString();
+    // Backward-compatible mirrors of proxy settings.
+    this->m_proxyServer = this->m_connectionProxyAddress;
+    this->m_proxyPort = this->m_connectionProxyPort;
+    this->m_useProxy = (this->m_connectionProxySetting == SpecifiedProxy);
+    this->m_proxyUsername = EncryptionUtils::UnprotectString(this->m_connectionProxyUsernameProtected);
     this->m_recentExportPaths = this->m_settings->value("Recent/exportPaths").toStringList();
     this->m_recentImportPaths = this->m_settings->value("Recent/importPaths").toStringList();
     this->m_lastConnectedServer = this->m_settings->value("General/lastConnectedServer").toString();
@@ -151,14 +163,24 @@ void SettingsManager::Save()
     this->m_settings->setValue("Confirmation/DoNotConfirmDismissUpdates", this->m_doNotConfirmDismissUpdates);
     this->m_settings->setValue("Confirmation/DoNotConfirmDismissEvents", this->m_doNotConfirmDismissEvents);
     this->m_settings->setValue("Confirmation/IgnoreOvfValidationWarnings", this->m_ignoreOvfValidationWarnings);
+    this->m_settings->setValue("Connection/ProxySetting", static_cast<int>(this->m_connectionProxySetting));
+    this->m_settings->setValue("Connection/ProxyAddress", this->m_connectionProxyAddress);
+    this->m_settings->setValue("Connection/ProxyPort", this->m_connectionProxyPort);
+    this->m_settings->setValue("Connection/BypassProxyForServers", this->m_bypassProxyForServers);
+    this->m_settings->setValue("Connection/ProvideProxyAuthentication", this->m_provideProxyAuthentication);
+    this->m_settings->setValue("Connection/ProxyAuthenticationMethod", this->m_proxyAuthenticationMethod);
+    this->m_settings->setValue("Connection/ProxyUsername", this->m_connectionProxyUsernameProtected);
+    this->m_settings->setValue("Connection/ProxyPassword", this->m_connectionProxyPasswordProtected);
+    this->m_settings->setValue("Connection/ConnectionTimeout", this->m_connectionTimeoutMs);
     this->m_settings->setValue("TreeView/mode", static_cast<int>(this->m_treeViewMode));
     this->m_settings->setValue("TreeView/expandedItems", this->m_expandedTreeItems);
     this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
     this->m_settings->setValue("Debug/logLevel", this->m_logLevel);
-    this->m_settings->setValue("Network/proxyServer", this->m_proxyServer);
-    this->m_settings->setValue("Network/proxyPort", this->m_proxyPort);
-    this->m_settings->setValue("Network/useProxy", this->m_useProxy);
-    this->m_settings->setValue("Network/proxyUsername", this->m_proxyUsername);
+    // Backward-compatible keys.
+    this->m_settings->setValue("Network/proxyServer", this->m_connectionProxyAddress);
+    this->m_settings->setValue("Network/proxyPort", this->m_connectionProxyPort);
+    this->m_settings->setValue("Network/useProxy", this->m_connectionProxySetting == SpecifiedProxy);
+    this->m_settings->setValue("Network/proxyUsername", EncryptionUtils::UnprotectString(this->m_connectionProxyUsernameProtected));
     this->m_settings->setValue("Recent/exportPaths", this->m_recentExportPaths);
     this->m_settings->setValue("Recent/importPaths", this->m_recentImportPaths);
     this->m_settings->setValue("General/lastConnectedServer", this->m_lastConnectedServer);
@@ -622,6 +644,153 @@ void SettingsManager::SetIgnoreOvfValidationWarnings(bool ignoreWarnings)
     emit settingsChanged("Confirmation/IgnoreOvfValidationWarnings");
 }
 
+SettingsManager::ProxySetting SettingsManager::GetConnectionProxySetting() const
+{
+    return this->m_connectionProxySetting;
+}
+
+void SettingsManager::SetConnectionProxySetting(ProxySetting setting)
+{
+    this->m_connectionProxySetting = setting;
+    emit settingsChanged("Connection/ProxySetting");
+}
+
+QString SettingsManager::GetConnectionProxyAddress() const
+{
+    return this->m_connectionProxyAddress;
+}
+
+void SettingsManager::SetConnectionProxyAddress(const QString& address)
+{
+    this->m_connectionProxyAddress = address;
+    this->m_proxyServer = address;
+    emit settingsChanged("Connection/ProxyAddress");
+}
+
+int SettingsManager::GetConnectionProxyPort() const
+{
+    return this->m_connectionProxyPort;
+}
+
+void SettingsManager::SetConnectionProxyPort(int port)
+{
+    this->m_connectionProxyPort = port;
+    this->m_proxyPort = port;
+    emit settingsChanged("Connection/ProxyPort");
+}
+
+bool SettingsManager::GetBypassProxyForServers() const
+{
+    return this->m_bypassProxyForServers;
+}
+
+void SettingsManager::SetBypassProxyForServers(bool bypass)
+{
+    this->m_bypassProxyForServers = bypass;
+    emit settingsChanged("Connection/BypassProxyForServers");
+}
+
+bool SettingsManager::GetProvideProxyAuthentication() const
+{
+    return this->m_provideProxyAuthentication;
+}
+
+void SettingsManager::SetProvideProxyAuthentication(bool provide)
+{
+    this->m_provideProxyAuthentication = provide;
+    emit settingsChanged("Connection/ProvideProxyAuthentication");
+}
+
+int SettingsManager::GetProxyAuthenticationMethod() const
+{
+    return this->m_proxyAuthenticationMethod;
+}
+
+void SettingsManager::SetProxyAuthenticationMethod(int method)
+{
+    this->m_proxyAuthenticationMethod = method;
+    emit settingsChanged("Connection/ProxyAuthenticationMethod");
+}
+
+QString SettingsManager::GetConnectionProxyUsername() const
+{
+    return EncryptionUtils::UnprotectString(this->m_connectionProxyUsernameProtected);
+}
+
+void SettingsManager::SetConnectionProxyUsername(const QString& username)
+{
+    this->m_connectionProxyUsernameProtected = EncryptionUtils::ProtectString(username);
+    this->m_proxyUsername = username;
+    emit settingsChanged("Connection/ProxyUsername");
+}
+
+QString SettingsManager::GetConnectionProxyPassword() const
+{
+    return EncryptionUtils::UnprotectString(this->m_connectionProxyPasswordProtected);
+}
+
+void SettingsManager::SetConnectionProxyPassword(const QString& password)
+{
+    this->m_connectionProxyPasswordProtected = EncryptionUtils::ProtectString(password);
+    emit settingsChanged("Connection/ProxyPassword");
+}
+
+int SettingsManager::GetConnectionTimeoutMs() const
+{
+    return this->m_connectionTimeoutMs;
+}
+
+void SettingsManager::SetConnectionTimeoutMs(int timeoutMs)
+{
+    this->m_connectionTimeoutMs = qMax(1000, timeoutMs);
+    emit settingsChanged("Connection/ConnectionTimeout");
+}
+
+void SettingsManager::ApplyProxySettings() const
+{
+    if (QCoreApplication::instance())
+        QCoreApplication::instance()->setProperty("ConnectionTimeoutMs", this->m_connectionTimeoutMs);
+
+    switch (this->m_connectionProxySetting)
+    {
+    case DirectConnection:
+    {
+        QNetworkProxyFactory::setUseSystemConfiguration(false);
+        QNetworkProxy::setApplicationProxy(QNetworkProxy(QNetworkProxy::NoProxy));
+        break;
+    }
+    case SystemProxy:
+    {
+        QNetworkProxyFactory::setUseSystemConfiguration(true);
+        QNetworkProxy::setApplicationProxy(QNetworkProxy(QNetworkProxy::DefaultProxy));
+        break;
+    }
+    case SpecifiedProxy:
+    {
+        if (this->m_bypassProxyForServers || this->m_connectionProxyAddress.trimmed().isEmpty())
+        {
+            QNetworkProxyFactory::setUseSystemConfiguration(false);
+            QNetworkProxy::setApplicationProxy(QNetworkProxy(QNetworkProxy::NoProxy));
+            break;
+        }
+
+        QNetworkProxy proxy(QNetworkProxy::HttpProxy,
+                            this->m_connectionProxyAddress.trimmed(),
+                            this->m_connectionProxyPort > 0 ? this->m_connectionProxyPort : 80);
+
+        if (this->m_provideProxyAuthentication)
+        {
+            proxy.setUser(this->GetConnectionProxyUsername());
+            proxy.setPassword(this->GetConnectionProxyPassword());
+        }
+
+        QNetworkProxyFactory::setUseSystemConfiguration(false);
+        QNetworkProxy::setApplicationProxy(proxy);
+        break;
+    }
+    }
+}
+
 // Tree view settings
 SettingsManager::TreeViewMode SettingsManager::GetTreeViewMode() const
 {
@@ -671,45 +840,49 @@ void SettingsManager::SetLogLevel(int level)
 // Network settings
 QString SettingsManager::GetProxyServer() const
 {
-    return this->m_proxyServer;
+    return this->m_connectionProxyAddress;
 }
 
 void SettingsManager::SetProxyServer(const QString& server)
 {
     this->m_proxyServer = server;
+    this->m_connectionProxyAddress = server;
     emit settingsChanged("Network/proxyServer");
 }
 
 int SettingsManager::GetProxyPort() const
 {
-    return this->m_proxyPort;
+    return this->m_connectionProxyPort;
 }
 
 void SettingsManager::SetProxyPort(int port)
 {
     this->m_proxyPort = port;
+    this->m_connectionProxyPort = port;
     emit settingsChanged("Network/proxyPort");
 }
 
 bool SettingsManager::GetUseProxy() const
 {
-    return this->m_useProxy;
+    return this->m_connectionProxySetting == SpecifiedProxy;
 }
 
 void SettingsManager::SetUseProxy(bool use)
 {
     this->m_useProxy = use;
+    this->m_connectionProxySetting = use ? SpecifiedProxy : DirectConnection;
     emit settingsChanged("Network/useProxy");
 }
 
 QString SettingsManager::GetProxyUsername() const
 {
-    return this->m_proxyUsername;
+    return this->GetConnectionProxyUsername();
 }
 
 void SettingsManager::SetProxyUsername(const QString& username)
 {
     this->m_proxyUsername = username;
+    this->m_connectionProxyUsernameProtected = EncryptionUtils::ProtectString(username);
     emit settingsChanged("Network/proxyUsername");
 }
 
