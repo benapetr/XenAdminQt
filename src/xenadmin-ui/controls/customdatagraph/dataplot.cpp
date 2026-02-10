@@ -32,9 +32,11 @@
 #include "datakey.h"
 #include "palette.h"
 #include "dataset.h"
+#include "../../settingsmanager.h"
 #include <QtCharts/QChart>
 #include <QtCharts/QChartView>
 #include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QAreaSeries>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QDateTime>
@@ -149,6 +151,32 @@ namespace CustomDataGraph
 
     void DataPlot::RefreshData()
     {
+        const bool fillAreas = SettingsManager::instance().GetValue("Display/FillAreaUnderGraphs", false).toBool();
+        if (fillAreas != this->m_fillAreaUnderGraphs)
+        {
+            this->m_fillAreaUnderGraphs = fillAreas;
+
+            for (QAreaSeries* areaSeries : this->m_areaSeriesById)
+            {
+                if (areaSeries)
+                {
+                    this->m_chart->removeSeries(areaSeries);
+                    areaSeries->deleteLater();
+                }
+            }
+            this->m_areaSeriesById.clear();
+
+            for (QLineSeries* lineSeries : this->m_seriesById)
+            {
+                if (lineSeries)
+                {
+                    this->m_chart->removeSeries(lineSeries);
+                    lineSeries->deleteLater();
+                }
+            }
+            this->m_seriesById.clear();
+        }
+
         this->syncSeries(this->m_dataSourceUUIDs);
 
         if (!this->m_archiveMaintainer || !this->m_dataPlotNav || this->m_dataSourceUUIDs.isEmpty())
@@ -218,11 +246,21 @@ namespace CustomDataGraph
             QPen pen(Palette::GetColour(id));
             pen.setWidthF(1.5);
             series->setPen(pen);
+            const QColor lineColor = Palette::GetColour(id);
 
             if (pointsById.contains(id))
                 series->replace(pointsById.value(id));
             else
                 series->clear();
+
+            QAreaSeries* areaSeries = this->m_areaSeriesById.value(id, nullptr);
+            if (areaSeries)
+            {
+                QColor fillColor = lineColor;
+                fillColor.setAlpha(70);
+                areaSeries->setBrush(fillColor);
+                areaSeries->setPen(pen);
+            }
         }
 
         this->m_axisX->setRange(QDateTime::fromMSecsSinceEpoch(startMs), QDateTime::fromMSecsSinceEpoch(endMs));
@@ -277,6 +315,20 @@ namespace CustomDataGraph
     {
         QSet<QString> wanted = QSet<QString>(dataSourceUuids.begin(), dataSourceUuids.end());
 
+        QList<QString> existingArea = this->m_areaSeriesById.keys();
+        for (const QString& id : existingArea)
+        {
+            if (wanted.contains(id))
+                continue;
+
+            QAreaSeries* areaSeries = this->m_areaSeriesById.take(id);
+            if (areaSeries)
+            {
+                this->m_chart->removeSeries(areaSeries);
+                areaSeries->deleteLater();
+            }
+        }
+
         QList<QString> existing = this->m_seriesById.keys();
         for (const QString& id : existing)
         {
@@ -300,9 +352,24 @@ namespace CustomDataGraph
             QPen pen(Palette::GetColour(id));
             pen.setWidthF(1.5);
             series->setPen(pen);
-            this->m_chart->addSeries(series);
-            series->attachAxis(this->m_axisX);
-            series->attachAxis(this->m_axisY);
+            if (this->m_fillAreaUnderGraphs)
+            {
+                auto* areaSeries = new QAreaSeries(series, nullptr);
+                areaSeries->setParent(this);
+                QColor fillColor = Palette::GetColour(id);
+                fillColor.setAlpha(70);
+                areaSeries->setBrush(fillColor);
+                areaSeries->setPen(pen);
+                this->m_chart->addSeries(areaSeries);
+                areaSeries->attachAxis(this->m_axisX);
+                areaSeries->attachAxis(this->m_axisY);
+                this->m_areaSeriesById.insert(id, areaSeries);
+            } else
+            {
+                this->m_chart->addSeries(series);
+                series->attachAxis(this->m_axisX);
+                series->attachAxis(this->m_axisY);
+            }
             this->m_seriesById.insert(id, series);
         }
     }

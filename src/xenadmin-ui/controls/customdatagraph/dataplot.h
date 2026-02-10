@@ -48,6 +48,7 @@ class QEvent;
         class QDateTimeAxis;
         class QValueAxis;
         class QLineSeries;
+        class QAreaSeries;
     }
 
     // Use QtCharts namespace for Qt5
@@ -56,6 +57,7 @@ class QEvent;
     using QtCharts::QDateTimeAxis;
     using QtCharts::QValueAxis;
     using QtCharts::QLineSeries;
+    using QtCharts::QAreaSeries;
 #else
     // Qt6: Classes are in global namespace
     class QChartView;
@@ -63,6 +65,7 @@ class QEvent;
     class QDateTimeAxis;
     class QValueAxis;
     class QLineSeries;
+    class QAreaSeries;
 #endif
 
 namespace CustomDataGraph
@@ -111,6 +114,8 @@ namespace CustomDataGraph
             bool m_isSelected = false;
             QList<QString> m_dataSourceUUIDs;
             QMap<QString, QLineSeries*> m_seriesById;
+            QMap<QString, QAreaSeries*> m_areaSeriesById;
+            bool m_fillAreaUnderGraphs = false;
 
             void syncSeries(const QList<QString>& dataSourceUuids);
             void applySelectionStyle();

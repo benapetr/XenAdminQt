@@ -1093,6 +1093,9 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
 void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 {
     QString objectType = xen_obj->GetObjectTypeName();
+    SettingsManager& settings = SettingsManager::instance();
+    const bool rememberLastSelectedTab =
+        settings.GetValue("Display/RememberLastSelectedTab", true).toBool();
 
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
@@ -1100,8 +1103,9 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 
     // Get the last selected tab for this object (before adding tabs)
     // C# Reference: MainWindow.cs line 1434 - GetLastSelectedPage(SelectionManager.Selection.First)
-    BaseTabPage::Type rememberedTabType =
-        this->m_selectedTabs.value(xen_obj->OpaqueRef(), BaseTabPage::Type::Unknown);
+    BaseTabPage::Type rememberedTabType = BaseTabPage::Type::Unknown;
+    if (rememberLastSelectedTab)
+        rememberedTabType = this->m_selectedTabs.value(xen_obj->OpaqueRef(), BaseTabPage::Type::Unknown);
     int pageToSelectIndex = -1;
 
     // Block signals during tab reconstruction to prevent premature onTabChanged calls
@@ -1146,7 +1150,7 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 
     // Save the final selection back to the map
     // C# Reference: MainWindow.cs line 1471 - SetLastSelectedPage(SelectionManager.Selection.First, TheTabControl.SelectedTab)
-    if (this->ui->mainTabWidget->currentIndex() >= 0)
+    if (rememberLastSelectedTab && this->ui->mainTabWidget->currentIndex() >= 0)
     {
         BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(
             this->ui->mainTabWidget->currentWidget());
@@ -1271,6 +1275,10 @@ void MainWindow::updatePlaceholderVisibility()
  */
 void MainWindow::onTabChanged(int index)
 {
+    SettingsManager& settings = SettingsManager::instance();
+    const bool rememberLastSelectedTab =
+        settings.GetValue("Display/RememberLastSelectedTab", true).toBool();
+
     // Notify the previous tab that it's being hidden
     static int previousIndex = -1;
     if (previousIndex >= 0 && previousIndex < this->ui->mainTabWidget->count())
@@ -1377,7 +1385,7 @@ void MainWindow::onTabChanged(int index)
 
     // Save the selected tab for the current object (tab memory)
     // Reference: C# SetLastSelectedPage() - stores tab per object
-    if (index >= 0 && !current_ref.isEmpty())
+    if (rememberLastSelectedTab && index >= 0 && !current_ref.isEmpty())
     {
         BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(
             this->ui->mainTabWidget->widget(index));
