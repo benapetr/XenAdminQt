@@ -47,6 +47,11 @@
 #include <QVBoxLayout>
 #include <cmath>
 
+// Qt5/Qt6 compatibility for QtCharts namespace
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+QT_CHARTS_USE_NAMESPACE
+#endif
+
 namespace CustomDataGraph
 {
     DataPlot::DataPlot(QWidget* parent) : QWidget(parent)

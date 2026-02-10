@@ -36,12 +36,34 @@
 
 class QLabel;
 class QVBoxLayout;
-class QChartView;
-class QChart;
-class QDateTimeAxis;
-class QValueAxis;
-class QLineSeries;
 class QEvent;
+
+// Qt5/Qt6 compatibility for QtCharts
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Qt5: Classes are in QtCharts namespace
+    namespace QtCharts
+    {
+        class QChartView;
+        class QChart;
+        class QDateTimeAxis;
+        class QValueAxis;
+        class QLineSeries;
+    }
+
+    // Use QtCharts namespace for Qt5
+    using QtCharts::QChartView;
+    using QtCharts::QChart;
+    using QtCharts::QDateTimeAxis;
+    using QtCharts::QValueAxis;
+    using QtCharts::QLineSeries;
+#else
+    // Qt6: Classes are in global namespace
+    class QChartView;
+    class QChart;
+    class QDateTimeAxis;
+    class QValueAxis;
+    class QLineSeries;
+#endif
 
 namespace CustomDataGraph
 {
