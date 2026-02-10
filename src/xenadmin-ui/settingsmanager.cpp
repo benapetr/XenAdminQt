@@ -99,6 +99,16 @@ void SettingsManager::Load()
     this->m_userTemplatesVisible = this->m_settings->value("View/userTemplatesVisible", true).toBool();
     this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
     this->m_consoleRefreshInterval = this->m_settings->value("Console/refreshInterval", 5).toInt();
+    this->m_consoleFullScreenShortcutKey = this->m_settings->value("Console/FullScreenShortcutKey", 0).toInt();
+    this->m_consoleDockShortcutKey = this->m_settings->value("Console/DockShortcutKey", 1).toInt();
+    this->m_consoleUncaptureShortcutKey = this->m_settings->value("Console/UncaptureShortcutKey", 0).toInt();
+    this->m_consoleWindowsShortcuts = this->m_settings->value("Console/WindowsShortcuts", true).toBool();
+    this->m_consoleReceiveSoundFromRDP = this->m_settings->value("Console/ReceiveSoundFromRDP", false).toBool();
+    this->m_consoleAutoSwitchToRDP = this->m_settings->value("Console/AutoSwitchToRDP", true).toBool();
+    this->m_consoleClipboardAndPrinterRedirection = this->m_settings->value("Console/ClipboardAndPrinterRedirection", true).toBool();
+    this->m_consoleConnectToServerConsole = this->m_settings->value("Console/ConnectToServerConsole", false).toBool();
+    this->m_consolePreserveScaleWhenUndocked = this->m_settings->value("Console/PreserveScaleWhenUndocked", false).toBool();
+    this->m_consolePreserveScaleWhenSwitchBackToVNC = this->m_settings->value("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool();
     this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
     this->m_fillAreaUnderGraphs = this->m_settings->value("Display/FillAreaUnderGraphs", false).toBool();
     this->m_rememberLastSelectedTab = this->m_settings->value("Display/RememberLastSelectedTab", true).toBool();
@@ -156,6 +166,16 @@ void SettingsManager::Save()
     this->m_settings->setValue("View/userTemplatesVisible", this->m_userTemplatesVisible);
     this->m_settings->setValue("View/localSRsVisible", this->m_localSRsVisible);
     this->m_settings->setValue("Console/refreshInterval", this->m_consoleRefreshInterval);
+    this->m_settings->setValue("Console/FullScreenShortcutKey", this->m_consoleFullScreenShortcutKey);
+    this->m_settings->setValue("Console/DockShortcutKey", this->m_consoleDockShortcutKey);
+    this->m_settings->setValue("Console/UncaptureShortcutKey", this->m_consoleUncaptureShortcutKey);
+    this->m_settings->setValue("Console/WindowsShortcuts", this->m_consoleWindowsShortcuts);
+    this->m_settings->setValue("Console/ReceiveSoundFromRDP", this->m_consoleReceiveSoundFromRDP);
+    this->m_settings->setValue("Console/AutoSwitchToRDP", this->m_consoleAutoSwitchToRDP);
+    this->m_settings->setValue("Console/ClipboardAndPrinterRedirection", this->m_consoleClipboardAndPrinterRedirection);
+    this->m_settings->setValue("Console/ConnectToServerConsole", this->m_consoleConnectToServerConsole);
+    this->m_settings->setValue("Console/PreserveScaleWhenUndocked", this->m_consolePreserveScaleWhenUndocked);
+    this->m_settings->setValue("Console/PreserveScaleWhenSwitchBackToVNC", this->m_consolePreserveScaleWhenSwitchBackToVNC);
     this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
     this->m_settings->setValue("Display/FillAreaUnderGraphs", this->m_fillAreaUnderGraphs);
     this->m_settings->setValue("Display/RememberLastSelectedTab", this->m_rememberLastSelectedTab);
@@ -565,6 +585,116 @@ void SettingsManager::SetConsoleRefreshInterval(int seconds)
 {
     this->m_consoleRefreshInterval = seconds;
     emit settingsChanged("Console/refreshInterval");
+}
+
+int SettingsManager::GetConsoleFullScreenShortcutKey() const
+{
+    return this->m_consoleFullScreenShortcutKey;
+}
+
+void SettingsManager::SetConsoleFullScreenShortcutKey(int keyIndex)
+{
+    this->m_consoleFullScreenShortcutKey = keyIndex;
+    emit settingsChanged("Console/FullScreenShortcutKey");
+}
+
+int SettingsManager::GetConsoleDockShortcutKey() const
+{
+    return this->m_consoleDockShortcutKey;
+}
+
+void SettingsManager::SetConsoleDockShortcutKey(int keyIndex)
+{
+    this->m_consoleDockShortcutKey = keyIndex;
+    emit settingsChanged("Console/DockShortcutKey");
+}
+
+int SettingsManager::GetConsoleUncaptureShortcutKey() const
+{
+    return this->m_consoleUncaptureShortcutKey;
+}
+
+void SettingsManager::SetConsoleUncaptureShortcutKey(int keyIndex)
+{
+    this->m_consoleUncaptureShortcutKey = keyIndex;
+    emit settingsChanged("Console/UncaptureShortcutKey");
+}
+
+bool SettingsManager::GetConsoleWindowsShortcuts() const
+{
+    return this->m_consoleWindowsShortcuts;
+}
+
+void SettingsManager::SetConsoleWindowsShortcuts(bool enabled)
+{
+    this->m_consoleWindowsShortcuts = enabled;
+    emit settingsChanged("Console/WindowsShortcuts");
+}
+
+bool SettingsManager::GetConsoleReceiveSoundFromRDP() const
+{
+    return this->m_consoleReceiveSoundFromRDP;
+}
+
+void SettingsManager::SetConsoleReceiveSoundFromRDP(bool enabled)
+{
+    this->m_consoleReceiveSoundFromRDP = enabled;
+    emit settingsChanged("Console/ReceiveSoundFromRDP");
+}
+
+bool SettingsManager::GetConsoleAutoSwitchToRDP() const
+{
+    return this->m_consoleAutoSwitchToRDP;
+}
+
+void SettingsManager::SetConsoleAutoSwitchToRDP(bool enabled)
+{
+    this->m_consoleAutoSwitchToRDP = enabled;
+    emit settingsChanged("Console/AutoSwitchToRDP");
+}
+
+bool SettingsManager::GetConsoleClipboardAndPrinterRedirection() const
+{
+    return this->m_consoleClipboardAndPrinterRedirection;
+}
+
+void SettingsManager::SetConsoleClipboardAndPrinterRedirection(bool enabled)
+{
+    this->m_consoleClipboardAndPrinterRedirection = enabled;
+    emit settingsChanged("Console/ClipboardAndPrinterRedirection");
+}
+
+bool SettingsManager::GetConsoleConnectToServerConsole() const
+{
+    return this->m_consoleConnectToServerConsole;
+}
+
+void SettingsManager::SetConsoleConnectToServerConsole(bool enabled)
+{
+    this->m_consoleConnectToServerConsole = enabled;
+    emit settingsChanged("Console/ConnectToServerConsole");
+}
+
+bool SettingsManager::GetConsolePreserveScaleWhenUndocked() const
+{
+    return this->m_consolePreserveScaleWhenUndocked;
+}
+
+void SettingsManager::SetConsolePreserveScaleWhenUndocked(bool enabled)
+{
+    this->m_consolePreserveScaleWhenUndocked = enabled;
+    emit settingsChanged("Console/PreserveScaleWhenUndocked");
+}
+
+bool SettingsManager::GetConsolePreserveScaleWhenSwitchBackToVNC() const
+{
+    return this->m_consolePreserveScaleWhenSwitchBackToVNC;
+}
+
+void SettingsManager::SetConsolePreserveScaleWhenSwitchBackToVNC(bool enabled)
+{
+    this->m_consolePreserveScaleWhenSwitchBackToVNC = enabled;
+    emit settingsChanged("Console/PreserveScaleWhenSwitchBackToVNC");
 }
 
 int SettingsManager::GetGraphUpdateInterval() const

@@ -61,6 +61,12 @@ QIcon ConsolesOptionsPage::GetImage() const
 void ConsolesOptionsPage::Build()
 {
     // Matches C# ConsolesOptionsPage.Build()
+    const bool rdpSupported =
+#ifdef HAVE_FREERDP
+        true;
+#else
+        false;
+#endif
 
     // Fullscreen shortcut keys
     this->buildKeyCodeListBox();
@@ -74,15 +80,29 @@ void ConsolesOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Windows Remote Desktop console
-    this->ui->WindowsKeyCheckBox->setChecked(settings.GetValue("Console/WindowsShortcuts", true).toBool());
-    this->ui->SoundCheckBox->setChecked(settings.GetValue("Console/ReceiveSoundFromRDP", false).toBool());
-    this->ui->AutoSwitchCheckBox->setChecked(settings.GetValue("Console/AutoSwitchToRDP", true).toBool());
-    this->ui->ClipboardCheckBox->setChecked(settings.GetValue("Console/ClipboardAndPrinterRedirection", true).toBool());
-    this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.GetValue("Console/ConnectToServerConsole", false).toBool());
+    this->ui->WindowsKeyCheckBox->setChecked(settings.GetConsoleWindowsShortcuts());
+    this->ui->SoundCheckBox->setChecked(settings.GetConsoleReceiveSoundFromRDP());
+    this->ui->AutoSwitchCheckBox->setChecked(settings.GetConsoleAutoSwitchToRDP());
+    this->ui->ClipboardCheckBox->setChecked(settings.GetConsoleClipboardAndPrinterRedirection());
+    this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.GetConsoleConnectToServerConsole());
+
+    this->ui->RDPGroupBox->setEnabled(rdpSupported);
+    this->ui->ClipboardCheckBox->setEnabled(rdpSupported);
+    if (!rdpSupported)
+    {
+        const QString reason = tr("RDP options are unavailable because this build was compiled without FreeRDP support.");
+        this->ui->RDPGroupBox->setToolTip(reason);
+        this->ui->ClipboardCheckBox->setToolTip(reason);
+    }
+    else
+    {
+        this->ui->RDPGroupBox->setToolTip(QString());
+        this->ui->ClipboardCheckBox->setToolTip(QString());
+    }
 
     // Console scaling
-    this->ui->PreserveUndockedScaleCheckBox->setChecked(settings.GetValue("Console/PreserveScaleWhenUndocked", false).toBool());
-    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(settings.GetValue("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool());
+    this->ui->PreserveUndockedScaleCheckBox->setChecked(settings.GetConsolePreserveScaleWhenUndocked());
+    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(settings.GetConsolePreserveScaleWhenSwitchBackToVNC());
 }
 
 void ConsolesOptionsPage::buildKeyCodeListBox()
@@ -110,7 +130,7 @@ void ConsolesOptionsPage::selectDockKeyCombo()
 {
     // Matches C# selectDockKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.GetValue("Console/DockShortcutKey", 0).toInt();
+    int index = settings.GetConsoleDockShortcutKey();
     if (index >= 0 && index < this->ui->DockKeyComboBox->count())
         this->ui->DockKeyComboBox->setCurrentIndex(index);
 }
@@ -119,7 +139,7 @@ void ConsolesOptionsPage::selectKeyCombo()
 {
     // Matches C# selectKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.GetValue("Console/FullScreenShortcutKey", 0).toInt();
+    int index = settings.GetConsoleFullScreenShortcutKey();
     if (index >= 0 && index < this->ui->KeyComboListBox->count())
         this->ui->KeyComboListBox->setCurrentIndex(index);
 }
@@ -137,7 +157,7 @@ void ConsolesOptionsPage::selectUncaptureKeyCombo()
 {
     // Matches C# selectUncaptureKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.GetValue("Console/UncaptureShortcutKey", 0).toInt();
+    int index = settings.GetConsoleUncaptureShortcutKey();
     if (index >= 0 && index < this->ui->UncaptureKeyComboBox->count())
         this->ui->UncaptureKeyComboBox->setCurrentIndex(index);
 }
@@ -167,20 +187,29 @@ void ConsolesOptionsPage::Save()
 {
     // Matches C# ConsolesOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();
+    const bool rdpSupported =
+#ifdef HAVE_FREERDP
+        true;
+#else
+        false;
+#endif
 
     // Keyboard shortcuts
-    settings.SetValue("Console/FullScreenShortcutKey", this->ui->KeyComboListBox->currentIndex());
-    settings.SetValue("Console/DockShortcutKey", this->ui->DockKeyComboBox->currentIndex());
-    settings.SetValue("Console/UncaptureShortcutKey", this->ui->UncaptureKeyComboBox->currentIndex());
+    settings.SetConsoleFullScreenShortcutKey(this->ui->KeyComboListBox->currentIndex());
+    settings.SetConsoleDockShortcutKey(this->ui->DockKeyComboBox->currentIndex());
+    settings.SetConsoleUncaptureShortcutKey(this->ui->UncaptureKeyComboBox->currentIndex());
 
     // Windows Remote Desktop
-    settings.SetValue("Console/WindowsShortcuts", this->ui->WindowsKeyCheckBox->isChecked());
-    settings.SetValue("Console/ReceiveSoundFromRDP", this->ui->SoundCheckBox->isChecked());
-    settings.SetValue("Console/AutoSwitchToRDP", this->ui->AutoSwitchCheckBox->isChecked());
-    settings.SetValue("Console/ClipboardAndPrinterRedirection", this->ui->ClipboardCheckBox->isChecked());
-    settings.SetValue("Console/ConnectToServerConsole", this->ui->ConnectToServerConsoleCheckBox->isChecked());
+    if (rdpSupported)
+    {
+        settings.SetConsoleWindowsShortcuts(this->ui->WindowsKeyCheckBox->isChecked());
+        settings.SetConsoleReceiveSoundFromRDP(this->ui->SoundCheckBox->isChecked());
+        settings.SetConsoleAutoSwitchToRDP(this->ui->AutoSwitchCheckBox->isChecked());
+        settings.SetConsoleClipboardAndPrinterRedirection(this->ui->ClipboardCheckBox->isChecked());
+        settings.SetConsoleConnectToServerConsole(this->ui->ConnectToServerConsoleCheckBox->isChecked());
+    }
 
     // Console scaling
-    settings.SetValue("Console/PreserveScaleWhenUndocked", this->ui->PreserveUndockedScaleCheckBox->isChecked());
-    settings.SetValue("Console/PreserveScaleWhenSwitchBackToVNC", this->ui->PreserveVNCConsoleScalingCheckBox->isChecked());
+    settings.SetConsolePreserveScaleWhenUndocked(this->ui->PreserveUndockedScaleCheckBox->isChecked());
+    settings.SetConsolePreserveScaleWhenSwitchBackToVNC(this->ui->PreserveVNCConsoleScalingCheckBox->isChecked());
 }

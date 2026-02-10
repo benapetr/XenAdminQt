@@ -37,6 +37,7 @@
 #include "../commands/vm/startvmcommand.h"
 #include "../commands/vm/resumevmcommand.h"
 #include "../mainwindow.h"
+#include "../settingsmanager.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -237,8 +238,8 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 186-187
     // C#: if (Properties.Settings.Default.AutoSwitchToRDP && RDPEnabled)
     //         vncScreen.AutoSwitchRDPLater = true;
-    QSettings settings;
-    bool autoSwitchToRDP = settings.value("Console/AutoSwitchToRDP", false).toBool();
+    SettingsManager& settings = SettingsManager::instance();
+    bool autoSwitchToRDP = settings.GetConsoleAutoSwitchToRDP();
     if (autoSwitchToRDP && this->hasRDP(vm))
     {
         this->m_vncScreen->setAutoSwitchRDPLater(true);
@@ -420,8 +421,8 @@ void VNCTabView::MaybeScale()
     QSize desktopSize = this->m_vncScreen->desktopSize();
     int contentWidth = this->ui->contentPanel->width();
 
-    QSettings settings;
-    bool preserveScale = settings.value("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool();
+    SettingsManager& settings = SettingsManager::instance();
+    bool preserveScale = settings.GetConsolePreserveScaleWhenSwitchBackToVNC();
 
     // C#: if (vncScreen.DesktopSize.Width > 10 && contentPanel.Width < vncScreen.DesktopSize.Width)
     if (desktopSize.width() > 10 && contentWidth < desktopSize.width())
@@ -551,8 +552,8 @@ void VNCTabView::onGuestMetricsPropertyChanged(const QString& propertyName)
             // C#: if (vncScreen.UseVNC && (tryToConnectRDP || (!vncScreen.UserWantsToSwitchProtocol && AutoSwitchToRDP)))
             if (this->m_vncScreen && this->m_vncScreen->useVNC())
             {
-                QSettings settings;
-                bool autoSwitch = settings.value("Console/AutoSwitchToRDP", true).toBool();
+                SettingsManager& settings = SettingsManager::instance();
+                bool autoSwitch = settings.GetConsoleAutoSwitchToRDP();
 
                 if (this->m_tryToConnectRDP || (!this->m_vncScreen->userWantsToSwitchProtocol() && autoSwitch))
                 {
@@ -652,11 +653,11 @@ void VNCTabView::onScaleCheckBoxChanged(bool checked)
     if (this->m_vncScreen)
         this->m_vncScreen->setFocus();
 
-    // Save scale preference to QSettings
+    // Save scale preference in settings
     // C#: Properties.Settings.Default.PreserveScaleWhenSwitchBackToVNC = checked;
     // Note: In C#, this setting is saved globally and persists across sessions
-    QSettings settings;
-    settings.setValue("Console/PreserveScaleWhenSwitchBackToVNC", checked);
+    SettingsManager& settings = SettingsManager::instance();
+    settings.SetConsolePreserveScaleWhenSwitchBackToVNC(checked);
     qDebug() << "VNCTabView: Saved scale preference:" << checked;
 }
 
@@ -991,8 +992,8 @@ void VNCTabView::onDetectRDP()
         // C#: if (!vncScreen.UserWantsToSwitchProtocol && Properties.Settings.Default.AutoSwitchToRDP)
         if (this->m_vncScreen && !this->m_vncScreen->userWantsToSwitchProtocol())
         {
-            QSettings settings;
-            bool autoSwitchToRDP = settings.value("Console/AutoSwitchToRDP", true).toBool();
+            SettingsManager& settings = SettingsManager::instance();
+            bool autoSwitchToRDP = settings.GetConsoleAutoSwitchToRDP();
             
             if (autoSwitchToRDP && this->m_connection && this->hasRDP(this->m_vm))
             {
@@ -1064,11 +1065,11 @@ void VNCTabView::registerShortcutKeys()
     if (!this->m_vncScreen)
         return;
 
-    QSettings settings;
+    SettingsManager& settings = SettingsManager::instance();
 
     // Fullscreen shortcut
     // C#: Properties.Settings.Default.FullScreenShortcutKey
-    int fullScreenKey = settings.value("Console/FullScreenShortcutKey", 0).toInt();
+    int fullScreenKey = settings.GetConsoleFullScreenShortcutKey();
 
     if (fullScreenKey == 0)
     {
@@ -1100,7 +1101,7 @@ void VNCTabView::registerShortcutKeys()
 
     // Dock/Undock shortcut
     // C#: CA-10943 - Properties.Settings.Default.DockShortcutKey
-    int dockKey = settings.value("Console/DockShortcutKey", 1).toInt();
+    int dockKey = settings.GetConsoleDockShortcutKey();
 
     if (dockKey == 1)
     {
@@ -1125,7 +1126,7 @@ void VNCTabView::registerShortcutKeys()
 
     // Uncapture keyboard and mouse key
     // C#: Properties.Settings.Default.UncaptureShortcutKey
-    int uncaptureKey = settings.value("Console/UncaptureShortcutKey", 0).toInt();
+    int uncaptureKey = settings.GetConsoleUncaptureShortcutKey();
 
     if (uncaptureKey == 0)
     {
@@ -1157,10 +1158,10 @@ void VNCTabView::deregisterShortcutKeys()
     // Since we're clearing all, we can just use clearHandlers()
     // But let's match C# behavior for completeness
 
-    QSettings settings;
-    int fullScreenKey = settings.value("Console/FullScreenShortcutKey", 0).toInt();
-    int dockKey = settings.value("Console/DockShortcutKey", 1).toInt();
-    int uncaptureKey = settings.value("Console/UncaptureShortcutKey", 0).toInt();
+    SettingsManager& settings = SettingsManager::instance();
+    int fullScreenKey = settings.GetConsoleFullScreenShortcutKey();
+    int dockKey = settings.GetConsoleDockShortcutKey();
+    int uncaptureKey = settings.GetConsoleUncaptureShortcutKey();
 
     // C#: Remove shortcuts that are NOT the current setting
     // (This allows changing shortcuts without conflicts)

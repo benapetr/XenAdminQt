@@ -121,6 +121,26 @@ class SettingsManager : public QObject
 
         int GetConsoleRefreshInterval() const;
         void SetConsoleRefreshInterval(int seconds);
+        int GetConsoleFullScreenShortcutKey() const;
+        void SetConsoleFullScreenShortcutKey(int keyIndex);
+        int GetConsoleDockShortcutKey() const;
+        void SetConsoleDockShortcutKey(int keyIndex);
+        int GetConsoleUncaptureShortcutKey() const;
+        void SetConsoleUncaptureShortcutKey(int keyIndex);
+        bool GetConsoleWindowsShortcuts() const;
+        void SetConsoleWindowsShortcuts(bool enabled);
+        bool GetConsoleReceiveSoundFromRDP() const;
+        void SetConsoleReceiveSoundFromRDP(bool enabled);
+        bool GetConsoleAutoSwitchToRDP() const;
+        void SetConsoleAutoSwitchToRDP(bool enabled);
+        bool GetConsoleClipboardAndPrinterRedirection() const;
+        void SetConsoleClipboardAndPrinterRedirection(bool enabled);
+        bool GetConsoleConnectToServerConsole() const;
+        void SetConsoleConnectToServerConsole(bool enabled);
+        bool GetConsolePreserveScaleWhenUndocked() const;
+        void SetConsolePreserveScaleWhenUndocked(bool enabled);
+        bool GetConsolePreserveScaleWhenSwitchBackToVNC() const;
+        void SetConsolePreserveScaleWhenSwitchBackToVNC(bool enabled);
 
         int GetGraphUpdateInterval() const;
         void SetGraphUpdateInterval(int seconds);
@@ -265,6 +285,16 @@ class SettingsManager : public QObject
         bool m_userTemplatesVisible;
         bool m_localSRsVisible;
         int m_consoleRefreshInterval;
+        int m_consoleFullScreenShortcutKey;
+        int m_consoleDockShortcutKey;
+        int m_consoleUncaptureShortcutKey;
+        bool m_consoleWindowsShortcuts;
+        bool m_consoleReceiveSoundFromRDP;
+        bool m_consoleAutoSwitchToRDP;
+        bool m_consoleClipboardAndPrinterRedirection;
+        bool m_consoleConnectToServerConsole;
+        bool m_consolePreserveScaleWhenUndocked;
+        bool m_consolePreserveScaleWhenSwitchBackToVNC;
         int m_graphUpdateInterval;
         bool m_fillAreaUnderGraphs;
         bool m_rememberLastSelectedTab;
