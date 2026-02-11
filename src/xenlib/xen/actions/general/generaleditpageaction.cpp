@@ -29,6 +29,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/api.h"
+#include "xenlib/xen/jsonrpcclient.h"
 #include "xen/xenobject.h"
 #include <QDebug>
 
@@ -160,46 +161,48 @@ void GeneralEditPageAction::run()
 
 void GeneralEditPageAction::setFolderPath(const QString& folderPath)
 {
-    // Folder is stored in other_config["folder"]
-    // C# implementation (simplified):
-    // - Move: Sets other_config["folder"] to new path
-    // - Unfolder: Removes other_config["folder"] key
-
     Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    // Build XenAPI call based on object type
-    // All XenAPI objects support add_to_other_config / remove_from_other_config
-    QString method;
-
-    if (folderPath.isEmpty())
-    {
-        // Remove folder key (unfolder)
-        method = QString("%1.remove_from_other_config").arg(this->m_object->GetObjectTypeName());
-    } else
-    {
-        // Set folder key (move to folder)
-        method = QString("%1.add_to_other_config").arg(this->m_object->GetObjectTypeName());
-    }
-
-    QVariantList params;
-    params << sess->GetSessionID() << this->m_object->OpaqueRef() << "folder";
-
-    if (!folderPath.isEmpty())
-    {
-        params << folderPath;
-    }
-
-    // Execute API call
     XenRpcAPI api(sess);
-    QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = this->GetConnection()->SendRequest(request);
+    const QString objectType = this->m_object->GetObjectTypeName();
 
-    // Parse response (will throw on error)
-    api.ParseJsonRpcResponse(response);
+    auto invokeOtherConfigCall = [&](const QString& method, const QVariantList& params)
+    {
+        const QByteArray request = api.BuildJsonRpcCall(method, params);
+        const QByteArray response = sess->SendApiRequest(QString::fromUtf8(request));
+        if (response.isEmpty())
+            throw std::runtime_error("Empty response from XenAPI");
+        api.ParseJsonRpcResponse(response);
+        const QString rpcError = Xen::JsonRpcClient::lastError();
+        if (!rpcError.isEmpty())
+            throw std::runtime_error(rpcError.toStdString());
+    };
+
+    // Match C# helper semantics: clear existing key first, then add new value.
+    // Removing a missing key is harmless and ignored.
+    try
+    {
+        QVariantList removeParams;
+        removeParams << sess->GetSessionID() << this->m_object->OpaqueRef() << "folder";
+        invokeOtherConfigCall(QString("%1.remove_from_other_config").arg(objectType), removeParams);
+    } catch (const std::exception& e)
+    {
+        const QString message = QString::fromUtf8(e.what());
+        if (!message.contains("MAP_NO_SUCH_KEY", Qt::CaseInsensitive))
+            throw;
+    }
+
+    const QString normalizedFolderPath = folderPath.trimmed();
+    if (!normalizedFolderPath.isEmpty())
+    {
+        QVariantList addParams;
+        addParams << sess->GetSessionID() << this->m_object->OpaqueRef() << "folder" << normalizedFolderPath;
+        invokeOtherConfigCall(QString("%1.add_to_other_config").arg(objectType), addParams);
+    }
 }
 
 void GeneralEditPageAction::removeTag(const QString& tag)
@@ -219,11 +222,16 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
-    QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = this->GetConnection()->SendRequest(request);
+    const QByteArray request = api.BuildJsonRpcCall(method, params);
+    const QByteArray response = sess->SendApiRequest(QString::fromUtf8(request));
+    if (response.isEmpty())
+        throw std::runtime_error("Empty response from XenAPI");
 
     // Parse response (will throw on error)
     api.ParseJsonRpcResponse(response);
+    const QString rpcError = Xen::JsonRpcClient::lastError();
+    if (!rpcError.isEmpty())
+        throw std::runtime_error(rpcError.toStdString());
 }
 
 void GeneralEditPageAction::addTag(const QString& tag)
@@ -243,9 +251,14 @@ void GeneralEditPageAction::addTag(const QString& tag)
     params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
-    QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = this->GetConnection()->SendRequest(request);
+    const QByteArray request = api.BuildJsonRpcCall(method, params);
+    const QByteArray response = sess->SendApiRequest(QString::fromUtf8(request));
+    if (response.isEmpty())
+        throw std::runtime_error("Empty response from XenAPI");
 
     // Parse response (will throw on error)
     api.ParseJsonRpcResponse(response);
+    const QString rpcError = Xen::JsonRpcClient::lastError();
+    if (!rpcError.isEmpty())
+        throw std::runtime_error(rpcError.toStdString());
 }

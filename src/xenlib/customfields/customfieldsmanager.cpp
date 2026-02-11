@@ -27,20 +27,23 @@
 
 #include "customfieldsmanager.h"
 #include "../xen/network/connection.h"
+#include "../xen/network/connectionsmanager.h"
 #include "../xen/pool.h"
 #include "../xencache.h"
+#include "../otherconfig/otherconfigandtagswatcher.h"
 #include <QXmlStreamReader>
 #include <QMutexLocker>
 #include <QDebug>
 
-CustomFieldsManager* CustomFieldsManager::instance_ = nullptr;
+CustomFieldsManager* CustomFieldsManager::m_instance = nullptr;
 
 const QString CustomFieldsManager::CUSTOM_FIELD_BASE_KEY = "XenCenter.CustomFields";
 const QString CustomFieldsManager::CUSTOM_FIELD_DELIM = ".";
 
-CustomFieldsManager::CustomFieldsManager(QObject* parent)
-    : QObject(parent)
+CustomFieldsManager::CustomFieldsManager(QObject* parent) : QObject(parent)
 {
+    QObject::connect(OtherConfigAndTagsWatcher::instance(), &OtherConfigAndTagsWatcher::GuiConfigChanged, this, &CustomFieldsManager::onGuiConfigChanged);
+    this->recalculateCustomFields();
 }
 
 CustomFieldsManager::~CustomFieldsManager()
@@ -49,17 +52,15 @@ CustomFieldsManager::~CustomFieldsManager()
 
 CustomFieldsManager* CustomFieldsManager::instance()
 {
-    if (!instance_)
-    {
-        instance_ = new CustomFieldsManager();
-    }
-    return instance_;
+    if (!m_instance)
+        m_instance = new CustomFieldsManager();
+    return m_instance;
 }
 
 QList<CustomFieldDefinition> CustomFieldsManager::getCustomFields() const
 {
-    QMutexLocker locker(&this->mutex_);
-    return this->allCustomFields_;
+    QMutexLocker locker(&this->m_mutex);
+    return this->m_allCustomFields;
 }
 
 QList<CustomFieldDefinition> CustomFieldsManager::getCustomFields(XenConnection* connection) const
@@ -69,10 +70,10 @@ QList<CustomFieldDefinition> CustomFieldsManager::getCustomFields(XenConnection*
         return QList<CustomFieldDefinition>();
     }
 
-    QMutexLocker locker(&this->mutex_);
-    if (this->customFieldsPerConnection_.contains(connection))
+    QMutexLocker locker(&this->m_mutex);
+    if (this->m_customFieldsPerConnection.contains(connection))
     {
-        return this->customFieldsPerConnection_[connection];
+        return this->m_customFieldsPerConnection[connection];
     }
 
     return QList<CustomFieldDefinition>();
@@ -80,10 +81,10 @@ QList<CustomFieldDefinition> CustomFieldsManager::getCustomFields(XenConnection*
 
 CustomFieldDefinition* CustomFieldsManager::getCustomFieldDefinition(const QString& name) const
 {
-    QMutexLocker locker(&this->mutex_);
-    for (const CustomFieldDefinition& def : this->allCustomFields_)
+    QMutexLocker locker(&this->m_mutex);
+    for (const CustomFieldDefinition& def : this->m_allCustomFields)
     {
-        if (def.getName() == name)
+        if (def.GetName() == name)
         {
             return new CustomFieldDefinition(def);
         }
@@ -93,7 +94,7 @@ CustomFieldDefinition* CustomFieldsManager::getCustomFieldDefinition(const QStri
 
 QString CustomFieldsManager::getCustomFieldKey(const CustomFieldDefinition& definition)
 {
-    return CUSTOM_FIELD_BASE_KEY + CUSTOM_FIELD_DELIM + definition.getName();
+    return CUSTOM_FIELD_BASE_KEY + CUSTOM_FIELD_DELIM + definition.GetName();
 }
 
 bool CustomFieldsManager::hasCustomFields(const QVariantMap& otherConfig, XenConnection* connection)
@@ -124,15 +125,29 @@ void CustomFieldsManager::onGuiConfigChanged()
 
 void CustomFieldsManager::recalculateCustomFields()
 {
-    QMutexLocker locker(&this->mutex_);
+    QMutexLocker locker(&this->m_mutex);
 
-    this->customFieldsPerConnection_.clear();
-    this->allCustomFields_.clear();
+    this->m_customFieldsPerConnection.clear();
+    this->m_allCustomFields.clear();
 
-    // TODO: Get all connections from ConnectionsManager
-    // For now, this is a stub that will be populated when OtherConfigAndTagsWatcher is integrated
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (!manager)
+        return;
 
-    qDebug() << "CustomFieldsManager: recalculateCustomFields() - stub implementation";
+    const QList<XenConnection*> connections = manager->GetAllConnections();
+    for (XenConnection* connection : connections)
+    {
+        if (!connection || !connection->IsConnected())
+            continue;
+
+        const QList<CustomFieldDefinition> fields = this->getCustomFieldsFromGuiConfig(connection);
+        this->m_customFieldsPerConnection.insert(connection, fields);
+        for (const CustomFieldDefinition& field : fields)
+        {
+            if (!this->m_allCustomFields.contains(field))
+                this->m_allCustomFields.append(field);
+        }
+    }
 }
 
 QList<CustomFieldDefinition> CustomFieldsManager::getCustomFieldsFromGuiConfig(XenConnection* connection) const
@@ -192,7 +207,7 @@ QList<CustomFieldDefinition> CustomFieldsManager::parseCustomFieldDefinitions(co
         {
             try
             {
-                definitions.append(CustomFieldDefinition::fromXml(reader));
+                definitions.append(CustomFieldDefinition::FromXml(reader));
             }
             catch (const std::exception& e)
             {

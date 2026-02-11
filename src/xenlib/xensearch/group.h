@@ -156,7 +156,7 @@ namespace XenSearch
             int Compare(const QVariant& one, const QVariant& other) const;
             int CompareGroupKeys(const GroupKey& one, const GroupKey& other) const;
 
-            void FilterAdd(Query* query, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+            void FilterAdd(Query* query, const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn);
 
             Search* search_;
 

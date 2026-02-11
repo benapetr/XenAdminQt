@@ -33,6 +33,9 @@
 #include "globals.h"
 #include "mainwindow.h"
 #include "settingsmanager.h"
+#include "xenlib/otherconfig/otherconfigandtagswatcher.h"
+#include "xenlib/customfields/customfieldsmanager.h"
+#include "xenlib/folders/foldersmanager.h"
 
 int main(int argc, char* argv[])
 {
@@ -72,6 +75,16 @@ int main(int argc, char* argv[])
     app.setApplicationVersion(XENADMIN_VERSION);
     app.setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
     SettingsManager::instance().ApplyProxySettings();
+
+    // C# parity startup services (watchers + folders + custom fields)
+    OtherConfigAndTagsWatcher::instance()->RegisterEventHandlers();
+    FoldersManager::instance()->RegisterEventHandlers();
+    (void)CustomFieldsManager::instance();
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, []()
+    {
+        FoldersManager::instance()->DeregisterEventHandlers();
+        OtherConfigAndTagsWatcher::instance()->DeregisterEventHandlers();
+    });
 
     MainWindow w;
     w.show();

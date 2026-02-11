@@ -81,9 +81,8 @@ namespace XenSearch
 
     QSharedPointer<Group> Group::GetGroupFor(Grouping* grouping, Search* search, Grouping* subgrouping)
     {
-        // TODO: Check if grouping is FolderGrouping when that class exists
-        // if (dynamic_cast<FolderGrouping*>(grouping))
-        //     return QSharedPointer<Group>(new FolderGroup(search, grouping));
+        if (dynamic_cast<FolderGrouping*>(grouping))
+            return QSharedPointer<Group>(new FolderGroup(search, grouping));
         if (subgrouping == nullptr)
             return QSharedPointer<Group>(new LeafGroup(search));
         else
@@ -122,7 +121,7 @@ namespace XenSearch
                     QVariantMap vmData = vmObj->GetData();
                     vmData["__type"] = "vm";
                     if (!vmData.isEmpty() && !Hide("vm", ref, vmData, connection))
-                        group->FilterAdd(search->GetQuery(), "vm", ref, vmData);
+                        group->FilterAdd(search->GetQuery(), "vm", ref, vmData, connection);
                 }
 
                 // Hosts
@@ -135,7 +134,7 @@ namespace XenSearch
                     QVariantMap hostData = hostObj->GetData();
                     hostData["__type"] = "host";
                     if (!hostData.isEmpty() && !Hide("host", ref, hostData, connection))
-                        group->FilterAdd(search->GetQuery(), "host", ref, hostData);
+                        group->FilterAdd(search->GetQuery(), "host", ref, hostData, connection);
                 }
 
                 // SRs
@@ -148,7 +147,7 @@ namespace XenSearch
                     QVariantMap srData = srObj->GetData();
                     srData["__type"] = "sr";
                     if (!srData.isEmpty() && !Hide("sr", ref, srData, connection))
-                        group->FilterAdd(search->GetQuery(), "sr", ref, srData);
+                        group->FilterAdd(search->GetQuery(), "sr", ref, srData, connection);
                 }
 
                 // Networks
@@ -161,7 +160,7 @@ namespace XenSearch
                     QVariantMap networkData = networkObj->GetData();
                     networkData["__type"] = "network";
                     if (!networkData.isEmpty() && !Hide("network", ref, networkData, connection))
-                        group->FilterAdd(search->GetQuery(), "network", ref, networkData);
+                        group->FilterAdd(search->GetQuery(), "network", ref, networkData, connection);
                 }
 
                 // Pools
@@ -174,10 +173,21 @@ namespace XenSearch
                     QVariantMap poolData = poolObj->GetData();
                     poolData["__type"] = "pool";
                     if (!poolData.isEmpty() && !Hide("pool", ref, poolData, connection))
-                        group->FilterAdd(search->GetQuery(), "pool", ref, poolData);
+                        group->FilterAdd(search->GetQuery(), "pool", ref, poolData, connection);
                 }
 
-                // Folders (TODO: implement when folder support is added)
+                // Folders
+                QList<QSharedPointer<XenObject>> folderObjects = cache->GetAll(XenObjectType::Folder);
+                foreach (const QSharedPointer<XenObject>& folderObj, folderObjects)
+                {
+                    if (!folderObj)
+                        continue;
+                    QString ref = folderObj->OpaqueRef();
+                    QVariantMap folderData = folderObj->GetData();
+                    folderData["__type"] = "folder";
+                    if (!folderData.isEmpty() && !Hide("folder", ref, folderData, connection))
+                        group->FilterAdd(search->GetQuery(), "folder", ref, folderData, connection);
+                }
             }
             else
             {
@@ -395,9 +405,9 @@ namespace XenSearch
         return objectType; // Other types sorted alphabetically
     }
 
-    void Group::FilterAdd(Query* query, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+    void Group::FilterAdd(Query* query, const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
-        if (query && !query->match(objectData, objectType, nullptr))
+        if (query && !query->match(objectData, objectType, conn))
             return;
 
         this->Add(objectType, objectRef, objectData);

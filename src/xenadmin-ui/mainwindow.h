@@ -135,6 +135,7 @@ class MainWindow : public QMainWindow
         void onNotificationsSubModeChanged(int subMode);
         void onNavigationPaneTreeViewSelectionChanged();
         void onNavigationPaneTreeNodeRightClicked();
+        void onNavigationPaneDragDropCommandActivated(const QString& commandKey);
 
         // View menu filters (matches C# View menu toggles)
         void onViewTemplatesToggled(bool checked);

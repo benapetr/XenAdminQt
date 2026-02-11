@@ -271,7 +271,8 @@ HEADERS += \
     xen/role.h \
     xen/user.h \
     xen/vbdmetrics.h \
-    otherconfig/otherconfigandtagswatcher.h
+    otherconfig/otherconfigandtagswatcher.h \
+    folders/foldersmanager.h
 
 # Source files
 SOURCES += \
@@ -500,7 +501,8 @@ SOURCES += \
     xen/vbdmetrics.cpp \
     xen/vmguestmetrics.cpp \
     xen/vmmetrics.cpp \
-    otherconfig/otherconfigandtagswatcher.cpp
+    otherconfig/otherconfigandtagswatcher.cpp \
+    folders/foldersmanager.cpp
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

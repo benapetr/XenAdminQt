@@ -84,8 +84,16 @@
 #include "template/deletetemplatecommand.h"
 #include "template/exporttemplatecommand.h"
 #include "network/networkpropertiescommand.h"
+#include "folder/newfoldercommand.h"
+#include "folder/deletefoldercommand.h"
+#include "folder/renamefoldercommand.h"
+#include "folder/removefromfoldercommand.h"
+#include "tag/deletetagcommand.h"
+#include "tag/edittagscommand.h"
+#include "tag/renametagcommand.h"
 #include "../mainwindow.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/folder.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
@@ -93,6 +101,8 @@
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/groupingtag.h"
 #include <QAction>
 #include <QDebug>
 #include <QTreeWidget>
@@ -109,6 +119,7 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         return nullptr;
 
     QVariant data = item->data(0, Qt::UserRole);
+    QVariant groupingTagVar = item->data(0, Qt::UserRole + 3);
     XenObjectType objectType = XenObjectType::Null;
     QString objectRef;
     
@@ -126,13 +137,35 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         objectRef = QString();
     }
 
+    QMenu* menu = new QMenu(parent);
+
+    if (groupingTagVar.canConvert<GroupingTag*>())
+    {
+        GroupingTag* groupingTag = groupingTagVar.value<GroupingTag*>();
+        if (groupingTag && groupingTag->getGrouping())
+        {
+            if (dynamic_cast<TagsGrouping*>(groupingTag->getGrouping()))
+            {
+                this->buildTagGroupingContextMenu(menu, groupingTag);
+                return menu;
+            }
+
+            if (dynamic_cast<FolderGrouping*>(groupingTag->getGrouping()))
+            {
+                this->buildFolderGroupingContextMenu(menu, groupingTag);
+                return menu;
+            }
+        }
+    }
+
     if (objectType == XenObjectType::Null)
+    {
+        delete menu;
         return nullptr;
+    }
 
     QString itemName = item->text(0);
     qDebug() << "ContextMenuBuilder: Building context menu for" << XenObject::TypeToString(objectType) << "item:" << itemName;
-
-    QMenu* menu = new QMenu(parent);
 
     const QString itemType = item->data(0, Qt::UserRole + 1).toString();
     bool isDisconnectedHost = (objectType == XenObjectType::DisconnectedHost || itemType == "disconnected_host");
@@ -190,6 +223,11 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         {
             QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(obj);
             this->buildNetworkContextMenu(menu, network);
+            break;
+        }
+        case XenObjectType::Folder:
+        {
+            this->buildFolderContextMenu(menu, obj);
             break;
         }
         default:
@@ -483,6 +521,16 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    this->addSeparator(menu);
+
+    RemoveFromFolderCommand* removeFromFolderCmd = new RemoveFromFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, removeFromFolderCmd);
+
+    this->addSeparator(menu);
+
     // Properties
     VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vm->OpaqueRef(), this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
@@ -519,6 +567,11 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
     // Delete snapshot
     DeleteSnapshotCommand* deleteCmd = new DeleteSnapshotCommand(this->m_mainWindow, this);
     this->addCommand(menu, deleteCmd);
+
+    this->addSeparator(menu);
+
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
 
     this->addSeparator(menu);
 
@@ -575,6 +628,11 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
         ? static_cast<Command*>(new DeleteVMsAndTemplatesCommand(this->m_mainWindow, this))
         : static_cast<Command*>(new DeleteTemplateCommand(this->m_mainWindow, this));
     this->addCommand(menu, deleteCmd);
+
+    this->addSeparator(menu);
+
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
 
     this->addSeparator(menu);
 
@@ -743,6 +801,16 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
 
     this->addSeparator(menu);
 
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    this->addSeparator(menu);
+
+    RemoveFromFolderCommand* removeFromFolderCmd = new RemoveFromFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, removeFromFolderCmd);
+
+    this->addSeparator(menu);
+
     HostPropertiesCommand* propertiesCmd = new HostPropertiesCommand(this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
@@ -770,6 +838,16 @@ void ContextMenuBuilder::buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr)
 
     DestroySRCommand* destroyCmd = new DestroySRCommand(this->m_mainWindow, this);
     this->addCommand(menu, destroyCmd);
+
+    this->addSeparator(menu);
+
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    this->addSeparator(menu);
+
+    RemoveFromFolderCommand* removeFromFolderCmd = new RemoveFromFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, removeFromFolderCmd);
 
     this->addSeparator(menu);
 
@@ -837,6 +915,16 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
 
     this->addSeparator(menu);
 
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    this->addSeparator(menu);
+
+    RemoveFromFolderCommand* removeFromFolderCmd = new RemoveFromFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, removeFromFolderCmd);
+
+    this->addSeparator(menu);
+
     // Properties
     PoolPropertiesCommand* propertiesCmd = new PoolPropertiesCommand(this->m_mainWindow);
     this->addCommand(menu, propertiesCmd);
@@ -846,9 +934,60 @@ void ContextMenuBuilder::buildNetworkContextMenu(QMenu* menu, QSharedPointer<Net
 {
     Q_UNUSED(network);
 
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    this->addSeparator(menu);
+
+    RemoveFromFolderCommand* removeFromFolderCmd = new RemoveFromFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, removeFromFolderCmd);
+
+    this->addSeparator(menu);
+
     // Properties
     NetworkPropertiesCommand* propertiesCmd = new NetworkPropertiesCommand(this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
+}
+
+void ContextMenuBuilder::buildFolderContextMenu(QMenu* menu, QSharedPointer<XenObject> folderObj)
+{
+    Q_UNUSED(folderObj);
+
+    NewFolderCommand* newFolderCmd = new NewFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, newFolderCmd);
+
+    RenameFolderCommand* renameCmd = new RenameFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, renameCmd);
+
+    DeleteFolderCommand* deleteCmd = new DeleteFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, deleteCmd);
+}
+
+void ContextMenuBuilder::buildTagGroupingContextMenu(QMenu* menu, GroupingTag* groupingTag)
+{
+    Q_UNUSED(groupingTag);
+
+    RenameTagCommand* renameCmd = new RenameTagCommand(this->m_mainWindow, this);
+    this->addCommand(menu, renameCmd);
+
+    DeleteTagCommand* deleteCmd = new DeleteTagCommand(this->m_mainWindow, this);
+    this->addCommand(menu, deleteCmd);
+}
+
+void ContextMenuBuilder::buildFolderGroupingContextMenu(QMenu* menu, GroupingTag* groupingTag)
+{
+    NewFolderCommand* newFolderCmd = new NewFolderCommand(this->m_mainWindow, this);
+    this->addCommand(menu, newFolderCmd);
+
+    const QString group = groupingTag ? groupingTag->getGroup().toString() : QString();
+    if (!group.isEmpty() && group.startsWith('/'))
+    {
+        RenameFolderCommand* renameCmd = new RenameFolderCommand(this->m_mainWindow, this);
+        this->addCommand(menu, renameCmd);
+
+        DeleteFolderCommand* deleteCmd = new DeleteFolderCommand(this->m_mainWindow, this);
+        this->addCommand(menu, deleteCmd);
+    }
 }
 
 void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)

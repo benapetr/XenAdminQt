@@ -28,7 +28,9 @@
 // grouping.cpp - Implementation of grouping algorithms
 #include "grouping.h"
 #include "queryfilter.h"
+#include "queries.h"
 #include "xencache.h"
+#include "../folders/foldersmanager.h"
 #include "xen/sr.h"
 #include "xen/vm.h"
 #include <QDebug>
@@ -37,8 +39,7 @@
 // Base Grouping class
 //==============================================================================
 
-Grouping::Grouping(Grouping* subgrouping)
-    : m_subgrouping(subgrouping)
+Grouping::Grouping(Grouping* subgrouping) : m_subgrouping(subgrouping)
 {
 }
 
@@ -463,4 +464,185 @@ bool HostGrouping::equals(const Grouping* other) const
 {
     // All HostGroupings are equivalent
     return dynamic_cast<const HostGrouping*>(other) != nullptr;
+}
+
+//==============================================================================
+// FolderGrouping - Group by folder ancestry
+//==============================================================================
+
+FolderGrouping::FolderGrouping(Grouping* subgrouping)
+    : Grouping(subgrouping)
+{
+}
+
+QString FolderGrouping::getGroupingName() const
+{
+    return "Folder";
+}
+
+QString FolderGrouping::getGroupName(const QVariant& group) const
+{
+    const QString path = group.toString();
+    if (path == FoldersManager::PATH_SEPARATOR)
+        return "Folders";
+
+    const QStringList parts = FoldersManager::PointToPath(path);
+    return parts.isEmpty() ? "Folders" : parts.last();
+}
+
+QIcon FolderGrouping::getGroupIcon(const QVariant& group) const
+{
+    Q_UNUSED(group);
+    return QIcon(":/resources/folder_16.png");
+}
+
+QVariant FolderGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    if (objectType == "folder")
+    {
+        const QString folderRef = objectData.value("ref").toString();
+        const QString parent = FoldersManager::GetParent(folderRef);
+        if (parent.isEmpty() || parent == FoldersManager::PATH_SEPARATOR)
+            return QVariant();
+        QVariantList list;
+        list.append(parent);
+        return list;
+    }
+
+    const QString path = FoldersManager::FolderPathFromRecord(objectData);
+    if (path.isEmpty())
+        return QVariant();
+
+    const QStringList ancestors = FoldersManager::AncestorFolders(path);
+    if (ancestors.isEmpty())
+        return QVariant();
+
+    QVariantList nested;
+    QVariantList chain;
+    for (const QString& ancestor : ancestors)
+        chain.append(ancestor);
+    nested.append(chain);
+    return nested;
+}
+
+bool FolderGrouping::belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const
+{
+    if (objectType != "folder")
+        return false;
+
+    const QString folderRef = objectData.value("ref").toString();
+    const QString parent = FoldersManager::GetParent(folderRef);
+    return !parent.isEmpty() && parent == FoldersManager::PATH_SEPARATOR;
+}
+
+bool FolderGrouping::equals(const Grouping* other) const
+{
+    return dynamic_cast<const FolderGrouping*>(other) != nullptr;
+}
+
+//==============================================================================
+// TagsGrouping
+//==============================================================================
+
+TagsGrouping::TagsGrouping(Grouping* subgrouping) : Grouping(subgrouping)
+{
+}
+
+QString TagsGrouping::getGroupingName() const
+{
+    return "Tags";
+}
+
+QString TagsGrouping::getGroupName(const QVariant& group) const
+{
+    return group.toString();
+}
+
+QIcon TagsGrouping::getGroupIcon(const QVariant& group) const
+{
+    Q_UNUSED(group);
+    return QIcon(":/resources/tag_16.png");
+}
+
+QVariant TagsGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    Q_UNUSED(objectType);
+    const QVariant tagsValue = objectData.value("tags");
+    if (tagsValue.canConvert<QStringList>())
+    {
+        QVariantList groups;
+        const QStringList tags = tagsValue.toStringList();
+        for (const QString& tag : tags)
+            groups.append(tag);
+        return groups;
+    }
+    if (tagsValue.canConvert<QVariantList>())
+        return tagsValue.toList();
+    return QVariant();
+}
+
+QueryFilter* TagsGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    if (!group.isValid())
+        return nullptr;
+    return new TagQuery(group.toString(), false);
+}
+
+bool TagsGrouping::equals(const Grouping* other) const
+{
+    return dynamic_cast<const TagsGrouping*>(other) != nullptr;
+}
+
+//==============================================================================
+// VAppGrouping
+//==============================================================================
+
+VAppGrouping::VAppGrouping(Grouping* subgrouping) : Grouping(subgrouping)
+{
+}
+
+QString VAppGrouping::getGroupingName() const
+{
+    return "vApps";
+}
+
+QString VAppGrouping::getGroupName(const QVariant& group) const
+{
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return group.toString();
+
+    const QVariantMap applianceData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::VMAppliance, group.toString());
+    if (applianceData.isEmpty())
+        return group.toString();
+    return applianceData.value("name_label").toString();
+}
+
+QIcon VAppGrouping::getGroupIcon(const QVariant& group) const
+{
+    Q_UNUSED(group);
+    return QIcon(":/resources/vapp_16.png");
+}
+
+QVariant VAppGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    if (objectType != "vm")
+        return QVariant();
+    const QString applianceRef = objectData.value("appliance").toString();
+    if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
+        return QVariant();
+    return applianceRef;
+}
+
+QueryFilter* VAppGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    if (!group.isValid())
+        return nullptr;
+    return new XenModelObjectPropertyQuery(XenSearch::PropertyNames::appliance, group.toString(), true);
+}
+
+bool VAppGrouping::equals(const Grouping* other) const
+{
+    return dynamic_cast<const VAppGrouping*>(other) != nullptr;
 }

@@ -207,4 +207,62 @@ class HostGrouping : public Grouping
         XenConnection* m_connection = nullptr;
 };
 
+/**
+ * @brief Grouping by folder ancestry
+ *
+ * C# equivalent: FolderGrouping in GroupingTypes.cs
+ */
+class FolderGrouping : public Grouping
+{
+    public:
+        explicit FolderGrouping(Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
+        bool equals(const Grouping* other) const override;
+};
+
+/**
+ * @brief Grouping by individual tag values
+ */
+class TagsGrouping : public Grouping
+{
+    public:
+        explicit TagsGrouping(Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+};
+
+/**
+ * @brief Grouping by vApp/appliance reference
+ */
+class VAppGrouping : public Grouping
+{
+    public:
+        explicit VAppGrouping(Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+
+        void SetConnection(XenConnection* conn)
+        {
+            m_connection = conn;
+        }
+
+    private:
+        XenConnection* m_connection = nullptr;
+};
+
 #endif // GROUPING_H

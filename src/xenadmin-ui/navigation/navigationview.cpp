@@ -37,6 +37,7 @@
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/queries.h"
 #include "xenadmin-ui/xensearch/treesearch.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
@@ -44,7 +45,12 @@
 #include "xenlib/xen/sr.h"
 #include "../settingsmanager.h"
 #include "../connectionprofile.h"
+#include "xenlib/xensearch/groupingtag.h"
+#include "xenlib/xen/folder.h"
+#include "xenlib/folders/foldersmanager.h"
 #include <QDebug>
+#include <QDropEvent>
+#include <QMimeData>
 
 using namespace XenSearch;
 
@@ -122,6 +128,12 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
     connect(this->ui->treeWidget, &QTreeWidget::itemClicked, this, &NavigationView::treeNodeClicked);
     connect(this->ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &NavigationView::onTreeItemDoubleClicked);
     connect(this->ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &NavigationView::treeNodeRightClicked);
+
+    this->ui->treeWidget->setDragEnabled(true);
+    this->ui->treeWidget->setAcceptDrops(true);
+    this->ui->treeWidget->setDropIndicatorShown(true);
+    this->ui->treeWidget->setDragDropMode(QAbstractItemView::DragDrop);
+    this->ui->treeWidget->viewport()->installEventFilter(this);
 
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
     connect(this->ui->searchLineEdit, &QLineEdit::textChanged, this, &NavigationView::onSearchTextChanged);
@@ -447,41 +459,133 @@ void NavigationView::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
         emit this->connectToServerRequested();
 }
 
+bool NavigationView::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == this->ui->treeWidget->viewport() && event->type() == QEvent::Drop)
+    {
+        this->handleTreeDropEvent(static_cast<QDropEvent*>(event));
+        return true;
+    }
+
+    return QWidget::eventFilter(watched, event);
+}
+
+void NavigationView::handleTreeDropEvent(QDropEvent* dropEvent)
+{
+    if (!dropEvent)
+        return;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QTreeWidgetItem* targetItem = this->ui->treeWidget->itemAt(dropEvent->position().toPoint());
+#else
+    QTreeWidgetItem* targetItem = this->ui->treeWidget->itemAt(dropEvent->pos());
+#endif
+    if (!targetItem)
+    {
+        dropEvent->ignore();
+        return;
+    }
+
+    const QString commandKey = this->buildDragDropCommandKey(targetItem);
+    if (commandKey.isEmpty())
+    {
+        dropEvent->ignore();
+        return;
+    }
+
+    emit this->dragDropCommandActivated(commandKey);
+    dropEvent->acceptProposedAction();
+}
+
+QString NavigationView::buildDragDropCommandKey(QTreeWidgetItem* targetItem) const
+{
+    if (!targetItem)
+        return QString();
+
+    QVariant objVar = targetItem->data(0, Qt::UserRole);
+    if (objVar.canConvert<QSharedPointer<XenObject>>())
+    {
+        QSharedPointer<XenObject> obj = objVar.value<QSharedPointer<XenObject>>();
+        if (obj && obj->GetObjectType() == XenObjectType::Folder)
+            return QStringLiteral("folder:%1").arg(obj->OpaqueRef());
+    }
+
+    QVariant groupTagVar = targetItem->data(0, Qt::UserRole + 3);
+    if (!groupTagVar.canConvert<GroupingTag*>())
+        return QString();
+
+    GroupingTag* groupingTag = groupTagVar.value<GroupingTag*>();
+    if (!groupingTag || !groupingTag->getGrouping())
+        return QString();
+
+    if (dynamic_cast<TagsGrouping*>(groupingTag->getGrouping()))
+    {
+        const QString tag = groupingTag->getGroup().toString().trimmed();
+        if (!tag.isEmpty() && tag.compare(QStringLiteral("Tags"), Qt::CaseInsensitive) != 0)
+            return QStringLiteral("tag:%1").arg(tag);
+        return QString();
+    }
+
+    if (dynamic_cast<FolderGrouping*>(groupingTag->getGrouping()))
+    {
+        const QString path = groupingTag->getGroup().toString().trimmed();
+        if (path.isEmpty())
+            return QString();
+
+        if (path.compare(QStringLiteral("Folders"), Qt::CaseInsensitive) == 0)
+            return QStringLiteral("folder:%1").arg(FoldersManager::PATH_SEPARATOR);
+
+        if (path.startsWith(FoldersManager::PATH_SEPARATOR))
+            return QStringLiteral("folder:%1").arg(path);
+    }
+
+    return QString();
+}
+
 void NavigationView::buildOrganizationTree()
 {
-    // Matches C# OrganizationViewTags/Folders/Fields/Vapps.Populate
-    // This creates tree organized by tags, folders, custom fields, or vApps
+    MainWindowTreeBuilder::NavigationMode mode = MainWindowTreeBuilder::NavigationMode::Tags;
+    Search* baseSearch = nullptr;
+    Query* query = nullptr;
+    Grouping* grouping = nullptr;
 
-    this->ui->treeWidget->clear();
-
-    QString viewName;
     switch (this->m_navigationMode)
     {
         case NavigationPane::Tags:
-            viewName = "Tags View";
+            mode = MainWindowTreeBuilder::NavigationMode::Tags;
+            query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new ListEmptyQuery(PropertyNames::tags, false));
+            grouping = new TagsGrouping(nullptr);
             break;
         case NavigationPane::Folders:
-            viewName = "Folders View";
+            mode = MainWindowTreeBuilder::NavigationMode::Folders;
+            query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new NullPropertyQuery(PropertyNames::folder, false));
+            grouping = new FolderGrouping(nullptr);
             break;
         case NavigationPane::CustomFields:
-            viewName = "Custom Fields View";
+            mode = MainWindowTreeBuilder::NavigationMode::CustomFields;
+            query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new BoolQuery(PropertyNames::has_custom_fields, true));
             break;
         case NavigationPane::vApps:
-            viewName = "vApps View";
+            mode = MainWindowTreeBuilder::NavigationMode::vApps;
+            query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new BoolQuery(PropertyNames::in_any_appliance, true));
+            grouping = new VAppGrouping(nullptr);
             break;
         default:
-            viewName = "Organization View";
-            break;
+            return;
     }
 
-    QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
-    root->setText(0, viewName);
-    root->setExpanded(true);
+    baseSearch = new Search(query, grouping, "", "", false);
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
+    XenConnection* connection = this->primaryConnection();
+    if (VAppGrouping* vappGrouping = dynamic_cast<VAppGrouping*>(effectiveSearch->GetGrouping()))
+        vappGrouping->SetConnection(connection);
 
-    QTreeWidgetItem* placeholder = new QTreeWidgetItem(root);
-    placeholder->setText(0, "(Organization views require connected server)");
+    QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(effectiveSearch, mode, connection);
+    this->m_treeBuilder->RefreshTreeView(root, this->GetSearchText(), mode);
 
-    // TODO: Implement full organization view logic from C# OrganizationView* classes
+    if (effectiveSearch != baseSearch)
+        delete effectiveSearch;
+    delete baseSearch;
 }
 
 // ========== Tree State Preservation Methods (matches C# MainWindowTreeBuilder) ==========

@@ -190,6 +190,15 @@
 // Network commands
 #include "commands/network/newnetworkcommand.h"
 #include "commands/network/networkpropertiescommand.h"
+#include "commands/folder/newfoldercommand.h"
+#include "commands/folder/deletefoldercommand.h"
+#include "commands/folder/renamefoldercommand.h"
+#include "commands/folder/removefromfoldercommand.h"
+#include "commands/folder/dragdropintofoldercommand.h"
+#include "commands/tag/edittagscommand.h"
+#include "commands/tag/deletetagcommand.h"
+#include "commands/tag/renametagcommand.h"
+#include "commands/tag/dragdroptagcommand.h"
 
 #include "controls/vmoperationmenu.h"
 #include "xenlib/xen/actions/meddlingactionmanager.h"
@@ -265,6 +274,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
     connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
     connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
+    connect(this->m_navigationPane, &NavigationPane::dragDropCommandActivated, this, &MainWindow::onNavigationPaneDragDropCommandActivated);
     connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
@@ -828,9 +838,17 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
         }
     }
 
-    // Create Search object for this grouping
-    // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
-    Search* search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
+    // C# parity:
+    // - vApps root/group uses SearchForVappGroup
+    // - folders root/group uses SearchForFolderGroup
+    // - all others use SearchForNonVappGroup
+    Search* search = nullptr;
+    if (dynamic_cast<VAppGrouping*>(groupingTag->getGrouping()))
+        search = Search::SearchForVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
+    else if (dynamic_cast<FolderGrouping*>(groupingTag->getGrouping()))
+        search = Search::SearchForFolderGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
+    else
+        search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
 
     this->m_searchTabPage->SetObject(QSharedPointer<XenObject>(new XenObject(connection, QString())));
     this->m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
@@ -1812,6 +1830,32 @@ void MainWindow::onNavigationPaneTreeNodeRightClicked()
 {
     // Matches C# MainWindow.navigationPane_TreeNodeRightClicked
     // Context menu is already handled via customContextMenuRequested signal
+}
+
+void MainWindow::onNavigationPaneDragDropCommandActivated(const QString& commandKey)
+{
+    if (commandKey.startsWith(QStringLiteral("folder:")))
+    {
+        const QString targetPath = commandKey.mid(QStringLiteral("folder:").size()).trimmed();
+        if (targetPath.isEmpty())
+            return;
+
+        DragDropIntoFolderCommand cmd(this, targetPath, this);
+        if (cmd.CanRun())
+            cmd.Run();
+        return;
+    }
+
+    if (commandKey.startsWith(QStringLiteral("tag:")))
+    {
+        const QString tag = commandKey.mid(QStringLiteral("tag:").size()).trimmed();
+        if (tag.isEmpty())
+            return;
+
+        DragDropTagCommand cmd(this, tag, this);
+        if (cmd.CanRun())
+            cmd.Run();
+    }
 }
 
 void MainWindow::filterTreeItems(QTreeWidgetItem* item, const QString& searchText)
@@ -3321,6 +3365,15 @@ void MainWindow::initializeCommands()
     // Network commands
     this->m_commands["NewNetwork"] = new NewNetworkCommand(this, this);
     this->m_commands["NetworkProperties"] = new NetworkPropertiesCommand(this, this);
+
+    // Folder/tag commands
+    this->m_commands["NewFolder"] = new NewFolderCommand(this, this);
+    this->m_commands["DeleteFolder"] = new DeleteFolderCommand(this, this);
+    this->m_commands["RenameFolder"] = new RenameFolderCommand(this, this);
+    this->m_commands["RemoveFromFolder"] = new RemoveFromFolderCommand(this, this);
+    this->m_commands["EditTags"] = new EditTagsCommand(this, this);
+    this->m_commands["DeleteTag"] = new DeleteTagCommand(this, this);
+    this->m_commands["RenameTag"] = new RenameTagCommand(this, this);
 
     qDebug() << "Initialized" << this->m_commands.size() << "commands";
 }

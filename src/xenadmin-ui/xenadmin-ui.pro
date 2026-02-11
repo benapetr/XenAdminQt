@@ -67,6 +67,8 @@ SOURCES += \
     dialogs/crosspoolmigratewizardpages.cpp \
     dialogs/crosspoolmigratewizard_copymodepage.cpp \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.cpp \
+    dialogs/newtagdialog.cpp \
+    dialogs/folderchangedialog.cpp \
     dialogs/warningdialogs/closexencenterwarningdialog.cpp \
     dialogs/warningdialogs/warningdialog.cpp \
     controls/affinitypicker.cpp \
@@ -242,6 +244,15 @@ SOURCES += \
     commands/network/newnetworkcommand.cpp \
     commands/network/networkpropertiescommand.cpp \
     commands/network/destroybondcommand.cpp \
+    commands/folder/newfoldercommand.cpp \
+    commands/folder/deletefoldercommand.cpp \
+    commands/folder/renamefoldercommand.cpp \
+    commands/folder/removefromfoldercommand.cpp \
+    commands/folder/dragdropintofoldercommand.cpp \
+    commands/tag/edittagscommand.cpp \
+    commands/tag/deletetagcommand.cpp \
+    commands/tag/renametagcommand.cpp \
+    commands/tag/dragdroptagcommand.cpp \
     tabpages/basetabpage.cpp \
     tabpages/generaltabpage.cpp \
     tabpages/physicalstoragetabpage.cpp \
@@ -347,6 +358,8 @@ HEADERS += \
     dialogs/crosspoolmigratewizardpages.h \
     dialogs/crosspoolmigratewizard_copymodepage.h \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.h \
+    dialogs/newtagdialog.h \
+    dialogs/folderchangedialog.h \
     dialogs/warningdialogs/closexencenterwarningdialog.h \
     dialogs/warningdialogs/warningdialog.h \
     network/xenconnectionui.h \
@@ -529,6 +542,15 @@ HEADERS += \
     commands/network/newnetworkcommand.h \
     commands/network/networkpropertiescommand.h \
     commands/network/destroybondcommand.h \
+    commands/folder/newfoldercommand.h \
+    commands/folder/deletefoldercommand.h \
+    commands/folder/renamefoldercommand.h \
+    commands/folder/removefromfoldercommand.h \
+    commands/folder/dragdropintofoldercommand.h \
+    commands/tag/edittagscommand.h \
+    commands/tag/deletetagcommand.h \
+    commands/tag/renametagcommand.h \
+    commands/tag/dragdroptagcommand.h \
     tabpages/basetabpage.h \
     tabpages/generaltabpage.h \
     tabpages/physicalstoragetabpage.h \

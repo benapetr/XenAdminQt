@@ -42,6 +42,7 @@ namespace Ui
 
 class AsyncOperation;
 class GeneralEditPageAction;
+class QPushButton;
 
 /**
  * @brief GeneralEditPage - Edit general properties (name, description, folder, tags)
@@ -95,10 +96,14 @@ class GeneralEditPage : public IEditPage
         void onFolderChanged();
         void onTagsChanged();
         void onIQNChanged();
+        void onChangeFolderClicked();
+        void onEditTagsClicked();
 
     private:
         void repopulate();
-        QStringList parseTagsFromText() const;
+        QStringList collectAllKnownTags() const;
+        void updateFolderDisplay();
+        void updateTagsDisplay();
         bool nameChanged() const;
         bool descriptionChanged() const;
         bool folderChanged() const;
@@ -118,6 +123,12 @@ class GeneralEditPage : public IEditPage
         QString m_originalFolder;
         QStringList m_originalTags;
         QString m_originalIQN;
+
+        QString m_currentFolder;
+        QStringList m_currentTags;
+
+        QPushButton* m_changeFolderButton = nullptr;
+        QPushButton* m_editTagsButton = nullptr;
 };
 
 #endif // GENERALEDITPAGE_H

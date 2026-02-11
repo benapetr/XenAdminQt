@@ -54,16 +54,16 @@ class CustomFieldDefinition
         CustomFieldDefinition(const QString& name, Type type);
 
         // XML serialization
-        static CustomFieldDefinition fromXml(QXmlStreamReader& xml);
-        void toXml(QXmlStreamWriter& xml) const;
+        static CustomFieldDefinition FromXml(QXmlStreamReader& xml);
+        void ToXml(QXmlStreamWriter& xml) const;
 
         // Getters
-        QString getName() const { return this->name_; }
-        Type getType() const { return this->type_; }
+        QString GetName() const { return this->m_name; }
+        Type GetType() const { return this->m_type; }
 
         // Display formatting
-        QString toString() const;
-        QString getTypeString() const;
+        QString ToString() const;
+        QString GetTypeString() const;
 
         // Equality/comparison
         bool operator==(const CustomFieldDefinition& other) const;
@@ -73,14 +73,14 @@ class CustomFieldDefinition
         uint qHash() const;
 
     private:
-        QString name_;
-        Type type_;
+        QString m_name;
+        Type m_type;
 };
 
 // qHash free function for Qt container support
 inline uint qHash(const CustomFieldDefinition& def)
 {
-    return qHash(def.getName());
+    return qHash(def.GetName());
 }
 
 #endif // CUSTOMFIELDDEFINITION_H

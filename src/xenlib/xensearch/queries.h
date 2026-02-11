@@ -48,6 +48,26 @@ namespace XenSearch
                 return objectData.value("uuid");
             case PropertyNames::tags:
                 return objectData.value("tags");
+            case PropertyNames::folder:
+                return objectData.value("other_config").toMap().value("folder");
+            case PropertyNames::folders:
+                {
+                    const QString path = objectData.value("other_config").toMap().value("folder").toString();
+                    if (path.isEmpty())
+                        return QVariantList();
+                    QString normalized = path;
+                    if (!normalized.startsWith('/'))
+                        normalized.prepend('/');
+                    const QStringList parts = normalized.split('/', Qt::SkipEmptyParts);
+                    QVariantList ancestors;
+                    QString current;
+                    for (const QString& part : parts)
+                    {
+                        current += "/" + part;
+                        ancestors.append(current);
+                    }
+                    return ancestors;
+                }
             case PropertyNames::type:
                 return objectData.value("type");
             case PropertyNames::power_state:
@@ -76,6 +96,23 @@ namespace XenSearch
                 return objectData.value("type"); // For SR
             case PropertyNames::read_caching_enabled:
                 return objectData.value("read_caching_enabled");
+            case PropertyNames::in_any_appliance:
+                {
+                    const QString appliance = objectData.value("appliance").toString();
+                    return !appliance.isEmpty() && appliance != "OpaqueRef:NULL";
+                }
+            case PropertyNames::appliance:
+                return objectData.value("appliance");
+            case PropertyNames::has_custom_fields:
+                {
+                    const QVariantMap otherConfig = objectData.value("other_config").toMap();
+                    for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
+                    {
+                        if (it.key().startsWith("XenCenter.CustomFields.") && !it.value().toString().isEmpty())
+                            return true;
+                    }
+                    return false;
+                }
             case PropertyNames::ip_address:
                 {
                     QVariantMap guestMetrics = objectData.value("guest_metrics").toMap();
@@ -99,6 +136,8 @@ namespace XenSearch
             case PropertyNames::description: return "description";
             case PropertyNames::uuid: return "uuid";
             case PropertyNames::tags: return "tags";
+            case PropertyNames::folder: return "folder";
+            case PropertyNames::folders: return "folders";
             case PropertyNames::type: return "type";
             case PropertyNames::power_state: return "power_state";
             case PropertyNames::virtualisation_status: return "virtualisation_status";
@@ -111,6 +150,9 @@ namespace XenSearch
             case PropertyNames::ha_enabled: return "ha_enabled";
             case PropertyNames::sr_type: return "sr_type";
             case PropertyNames::read_caching_enabled: return "read_caching_enabled";
+            case PropertyNames::appliance: return "appliance";
+            case PropertyNames::in_any_appliance: return "in_any_appliance";
+            case PropertyNames::has_custom_fields: return "has_custom_fields";
             case PropertyNames::ip_address: return "ip_address";
             default: return "unknown";
         }

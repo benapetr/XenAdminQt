@@ -27,127 +27,118 @@
 
 #include "otherconfigandtagswatcher.h"
 #include "../xencache.h"
-#include <QDebug>
+#include "../xen/network/connection.h"
+#include "../xen/network/connectionsmanager.h"
 
 OtherConfigAndTagsWatcher* OtherConfigAndTagsWatcher::instance_ = nullptr;
 
-OtherConfigAndTagsWatcher::OtherConfigAndTagsWatcher(QObject* parent)
-    : QObject(parent)
+OtherConfigAndTagsWatcher::OtherConfigAndTagsWatcher(QObject* parent) : QObject(parent)
 {
 }
 
 OtherConfigAndTagsWatcher* OtherConfigAndTagsWatcher::instance()
 {
     if (!instance_)
-    {
         instance_ = new OtherConfigAndTagsWatcher();
-    }
     return instance_;
 }
 
 void OtherConfigAndTagsWatcher::RegisterEventHandlers()
 {
-    // C# equivalent: Subscribes to cache CollectionChanged for all object types
-    // In Qt, XenCache emits objectChanged signal for individual object updates
-    // We connect to this signal to track other_config, tags, and gui_config changes
-    
-    // Note: This is a simplified implementation
-    // Full C# version registers/deregisters handlers per connection
-    // For now, we'll rely on CustomFieldsManager and TagQueryType
-    // to connect directly to cache signals as needed
-    
-    qDebug() << "OtherConfigAndTagsWatcher: Event handlers registered";
+    if (this->handlersRegistered_)
+        return;
+
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    connect(manager, &Xen::ConnectionsManager::connectionAdded, this, &OtherConfigAndTagsWatcher::onConnectionAdded);
+    connect(manager, &Xen::ConnectionsManager::connectionRemoved, this, &OtherConfigAndTagsWatcher::onConnectionRemoved);
+
+    const QList<XenConnection*> connections = manager->GetAllConnections();
+    for (XenConnection* connection : connections)
+        this->onConnectionAdded(connection);
+
+    this->markEventsReadyToFire(true);
+    this->handlersRegistered_ = true;
 }
 
 void OtherConfigAndTagsWatcher::DeregisterEventHandlers()
 {
-    // Clean up connections
-    this->lastOtherConfig_.clear();
-    this->lastTags_.clear();
-    this->lastGuiConfig_.clear();
-    
-    qDebug() << "OtherConfigAndTagsWatcher: Event handlers deregistered";
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    disconnect(manager, &Xen::ConnectionsManager::connectionAdded, this, &OtherConfigAndTagsWatcher::onConnectionAdded);
+    disconnect(manager, &Xen::ConnectionsManager::connectionRemoved, this, &OtherConfigAndTagsWatcher::onConnectionRemoved);
+
+    for (auto it = this->handlers_.begin(); it != this->handlers_.end(); ++it)
+    {
+        disconnect(it->cacheObjectChanged);
+        disconnect(it->xenObjectsUpdated);
+        disconnect(it->stateChanged);
+    }
+    this->handlers_.clear();
+    this->handlersRegistered_ = false;
 }
 
-void OtherConfigAndTagsWatcher::onCacheObjectChanged(const QString& type, const QString& ref, const QVariantMap& data)
+void OtherConfigAndTagsWatcher::onConnectionAdded(XenConnection* connection)
 {
-    // C# equivalent: PropertyChanged<T> handler
-    // Checks for changes to other_config, tags, or gui_config
-    
-    this->checkForChanges(type, ref, data);
+    if (!connection || this->handlers_.contains(connection))
+        return;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return;
+
+    ConnectionHandlers handlers;
+    handlers.cacheObjectChanged = connect(cache, &XenCache::objectChanged, this, &OtherConfigAndTagsWatcher::onCacheObjectChanged);
+    handlers.xenObjectsUpdated = connect(connection, &XenConnection::XenObjectsUpdated, this, &OtherConfigAndTagsWatcher::onConnectionXenObjectsUpdated);
+    handlers.stateChanged = connect(connection, &XenConnection::ConnectionStateChanged, this, &OtherConfigAndTagsWatcher::onConnectionStateChanged);
+    this->handlers_.insert(connection, handlers);
+
+    // On initial connection registration emit all on next batch (C# MarkEventsReadyToFire(true)).
+    this->markEventsReadyToFire(true);
 }
 
-void OtherConfigAndTagsWatcher::checkForChanges(const QString& type, const QString& ref, const QVariantMap& newData)
+void OtherConfigAndTagsWatcher::onConnectionRemoved(XenConnection* connection)
 {
-    // Check other_config
-    if (newData.contains("other_config"))
-    {
-        QVariantMap newOtherConfig = newData.value("other_config").toMap();
-        QString key = type + ":" + ref;
-        
-        if (!this->lastOtherConfig_.contains(key) || this->lastOtherConfig_[key] != newOtherConfig)
-        {
-            this->lastOtherConfig_[key] = newOtherConfig;
-            this->fireOtherConfigEvent_ = true;
-        }
-    }
-    
-    // Check tags
-    if (newData.contains("tags"))
-    {
-        QStringList newTags;
-        QVariant tagsVar = newData.value("tags");
-        
-        if (tagsVar.canConvert<QStringList>())
-        {
-            newTags = tagsVar.toStringList();
-        } else if (tagsVar.canConvert<QVariantList>())
-        {
-            QVariantList tagsList = tagsVar.toList();
-            for (const QVariant& tag : tagsList)
-                newTags.append(tag.toString());
-        }
-        
-        QString key = type + ":" + ref;
-        
-        if (!this->lastTags_.contains(key) || this->lastTags_[key] != newTags)
-        {
-            this->lastTags_[key] = newTags;
-            this->fireTagsEvent_ = true;
-        }
-    }
-    
-    // Check gui_config (pool only)
-    if (type == "pool" && newData.contains("gui_config"))
-    {
-        QVariantMap newGuiConfig = newData.value("gui_config").toMap();
-        
-        if (!this->lastGuiConfig_.contains(ref) || this->lastGuiConfig_[ref] != newGuiConfig)
-        {
-            this->lastGuiConfig_[ref] = newGuiConfig;
-            this->fireGuiConfigEvent_ = true;
-        }
-    }
-    
-    // Emit batched signals
-    // C# version waits for connection_XenObjectsUpdated event
-    // Qt simplified: emit immediately if flags are set
+    if (!connection || !this->handlers_.contains(connection))
+        return;
+
+    const ConnectionHandlers handlers = this->handlers_.take(connection);
+    disconnect(handlers.cacheObjectChanged);
+    disconnect(handlers.xenObjectsUpdated);
+    disconnect(handlers.stateChanged);
+}
+
+void OtherConfigAndTagsWatcher::onConnectionXenObjectsUpdated()
+{
     if (this->fireOtherConfigEvent_)
-    {
         emit OtherConfigChanged();
-        this->fireOtherConfigEvent_ = false;
-    }
-    
     if (this->fireTagsEvent_)
-    {
         emit TagsChanged();
-        this->fireTagsEvent_ = false;
-    }
-    
     if (this->fireGuiConfigEvent_)
-    {
         emit GuiConfigChanged();
-        this->fireGuiConfigEvent_ = false;
+
+    this->markEventsReadyToFire(false);
+}
+
+void OtherConfigAndTagsWatcher::onConnectionStateChanged()
+{
+    // C# parity: on state change, fire all and reset pending flags.
+    emit OtherConfigChanged();
+    emit TagsChanged();
+    emit GuiConfigChanged();
+    this->markEventsReadyToFire(false);
+}
+
+void OtherConfigAndTagsWatcher::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+{
+    Q_UNUSED(ref);
+    Q_UNUSED(connection);
+
+    if (type == "pool")
+        this->fireGuiConfigEvent_ = true;
+
+    if (type == "pool" || type == "host" || type == "vm" || type == "sr" || type == "vdi" || type == "network")
+    {
+        this->fireOtherConfigEvent_ = true;
+        this->fireTagsEvent_ = true;
     }
 }
 

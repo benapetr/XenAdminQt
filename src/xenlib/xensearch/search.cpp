@@ -191,8 +191,9 @@ Search* Search::SearchForFolderGroup(Grouping* grouping, const QVariant& parent,
     // Create query scope (all objects including folders)
     QueryScope* scope = new QueryScope(ObjectTypes::AllIncFolders);
 
-    // Get subquery from grouping (usually null)
-    QueryFilter* filter = new NullQuery();
+    QueryFilter* filter = grouping->getSubquery(parent, group);
+    if (!filter)
+        filter = new NullQuery();
 
     // Create query
     Query* query = new Query(scope, filter);
@@ -218,8 +219,9 @@ Search* Search::SearchForVappGroup(Grouping* grouping, const QVariant& parent, c
     // Create query scope (VM objects only)
     QueryScope* scope = new QueryScope(ObjectTypes::VM);
 
-    // Get subquery from grouping (usually null)
-    QueryFilter* filter = new NullQuery();
+    QueryFilter* filter = grouping->getSubquery(parent, group);
+    if (!filter)
+        filter = new NullQuery();
 
     // Create query
     Query* query = new Query(scope, filter);
@@ -327,6 +329,58 @@ Search* Search::SearchForAllTypes()
     return new Search(query, poolGrouping, "Overview", "", false);
 }
 
+Search* Search::SearchForTag(const QString& tag)
+{
+    Query* query = new Query(nullptr, new TagQuery(tag, false));
+    return new Search(query, nullptr, QString("Objects with tag '%1'").arg(tag), "", false);
+}
+
+Search* Search::SearchForFolder(const QString& path)
+{
+    QueryScope* scope = new QueryScope(ObjectTypes::AllIncFolders);
+    QueryFilter* innerFilter = new StringPropertyQuery(PropertyNames::uuid, path, StringPropertyQuery::MatchType::ExactMatch);
+    QueryFilter* filter = new RecursiveXMOPropertyQuery(PropertyNames::folder, innerFilter);
+    Query* query = new Query(scope, filter);
+    Grouping* grouping = new FolderGrouping(nullptr);
+
+    const QStringList pathParts = path.split('/', Qt::SkipEmptyParts);
+    const QString name = pathParts.isEmpty() ? QStringLiteral("Folders") : pathParts.last();
+    return new Search(query, grouping, name, "", false);
+}
+
+Search* Search::SearchForAllFolders()
+{
+    Query* query = new Query(new QueryScope(ObjectTypes::Folder), nullptr);
+    Grouping* grouping = new FolderGrouping(nullptr);
+    QList<Sort> sorts;
+    sorts.append(Sort("name", true));
+    return new Search(query, grouping, "", "", false, QList<QPair<QString, int>>(), sorts);
+}
+
+Search* Search::SearchForTags()
+{
+    Query* query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new ListEmptyQuery(PropertyNames::tags, false));
+    return new Search(query, nullptr, "", "", false);
+}
+
+Search* Search::SearchForFolders()
+{
+    Query* query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new NullPropertyQuery(PropertyNames::folder, false));
+    return new Search(query, nullptr, "", "", false);
+}
+
+Search* Search::SearchForCustomFields()
+{
+    Query* query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new BoolQuery(PropertyNames::has_custom_fields, true));
+    return new Search(query, nullptr, "", "", false);
+}
+
+Search* Search::SearchForVapps()
+{
+    Query* query = new Query(new QueryScope(ObjectTypes::AllIncFolders), new BoolQuery(PropertyNames::in_any_appliance, true));
+    return new Search(query, nullptr, "", "", false);
+}
+
 Search* Search::AddFullTextFilter(const QString& text) const
 {
     if (text.isEmpty())
@@ -420,6 +474,8 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
                 poolGrouping->SetConnection(connection);
             if (HostGrouping* hostGrouping = dynamic_cast<HostGrouping*>(grouping))
                 hostGrouping->SetConnection(connection);
+            if (VAppGrouping* vappGrouping = dynamic_cast<VAppGrouping*>(grouping))
+                vappGrouping->SetConnection(connection);
             grouping = grouping->getSubgrouping(QVariant());
         }
     };
@@ -589,6 +645,18 @@ QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* co
         } else if (objType == XenObjectType::Network && (types & ObjectTypes::Network) != ObjectTypes::None)
         {
             typeMatches = true;
+        } else if (objType == XenObjectType::VDI && (types & ObjectTypes::VDI) != ObjectTypes::None)
+        {
+            typeMatches = true;
+        } else if (objType == XenObjectType::Folder && (types & ObjectTypes::Folder) != ObjectTypes::None)
+        {
+            typeMatches = true;
+        } else if (objType == XenObjectType::VMAppliance && (types & ObjectTypes::Appliance) != ObjectTypes::None)
+        {
+            typeMatches = true;
+        } else if (objType == XenObjectType::DockerContainer && (types & ObjectTypes::DockerContainer) != ObjectTypes::None)
+        {
+            typeMatches = true;
         }
 
         if (!typeMatches)
@@ -697,6 +765,10 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         groupObjectType = XenObjectType::Pool;
     else if (dynamic_cast<HostGrouping*>(grouping))
         groupObjectType = XenObjectType::Host;
+    else if (dynamic_cast<FolderGrouping*>(grouping))
+        groupObjectType = XenObjectType::Folder;
+    else if (dynamic_cast<VAppGrouping*>(grouping))
+        groupObjectType = XenObjectType::VMAppliance;
 
     auto groupSortKey = [&](const QString& key) -> int {
         if (dynamic_cast<TypeGrouping*>(grouping))

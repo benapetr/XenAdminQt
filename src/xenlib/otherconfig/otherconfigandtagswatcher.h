@@ -31,8 +31,11 @@
 #include "../xenlib_global.h"
 #include <QObject>
 #include <QMap>
+#include <QHash>
 #include <QStringList>
 #include <QVariantMap>
+
+class XenConnection;
 
 /**
  * @brief Watches for changes to other_config, tags, and gui_config across all objects
@@ -104,7 +107,11 @@ signals:
     void GuiConfigChanged();
 
 private slots:
-    void onCacheObjectChanged(const QString& type, const QString& ref, const QVariantMap& data);
+    void onConnectionAdded(XenConnection* connection);
+    void onConnectionRemoved(XenConnection* connection);
+    void onConnectionXenObjectsUpdated();
+    void onConnectionStateChanged();
+    void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
 
 private:
     explicit OtherConfigAndTagsWatcher(QObject* parent = nullptr);
@@ -112,18 +119,22 @@ private:
 
     static OtherConfigAndTagsWatcher* instance_;
 
-    // Batching flags - prevent excessive signals during bulk updates
-    bool fireOtherConfigEvent_ = false;
-    bool fireTagsEvent_ = false;
-    bool fireGuiConfigEvent_ = false;
+    struct ConnectionHandlers
+    {
+        QMetaObject::Connection cacheObjectChanged;
+        QMetaObject::Connection xenObjectsUpdated;
+        QMetaObject::Connection stateChanged;
+    };
 
-    // Previous values for change detection
-    QMap<QString, QVariantMap> lastOtherConfig_;  // ref -> other_config
-    QMap<QString, QStringList> lastTags_;          // ref -> tags
-    QMap<QString, QVariantMap> lastGuiConfig_;     // pool ref -> gui_config
+    QHash<XenConnection*, ConnectionHandlers> handlers_;
+    bool handlersRegistered_ = false;
+
+    // C# parity: pending event flags are set by property changes and emitted on XenObjectsUpdated
+    bool fireOtherConfigEvent_ = true;
+    bool fireTagsEvent_ = true;
+    bool fireGuiConfigEvent_ = true;
 
     void markEventsReadyToFire(bool fire);
-    void checkForChanges(const QString& type, const QString& ref, const QVariantMap& newData);
 };
 
 #endif // OTHERCONFIGANDTAGSWATCHER_H

@@ -477,14 +477,10 @@ bool GroupingControl::XenObjectPropertyGroupingType::IsDescendantOf(const Groupi
 
 Grouping* GroupingControl::FolderGroupingType::GetGroup(Grouping* subgrouping) const
 {
-    // TODO: Implement FolderGrouping class
-    Q_UNUSED(subgrouping);
-    return new TypeGrouping(nullptr);  // Temporary fallback
+    return new FolderGrouping(subgrouping);
 }
 
 bool GroupingControl::FolderGroupingType::ForGrouping(const Grouping* grouping) const
 {
-    // TODO: Implement folder grouping detection
-    Q_UNUSED(grouping);
-    return false;
+    return dynamic_cast<const FolderGrouping*>(grouping) != nullptr;
 }

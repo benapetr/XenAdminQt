@@ -39,6 +39,7 @@
 #include "xen/vmmetrics.h"
 #include "xen/message.h"
 #include "xen/network_sriov.h"
+#include "xen/folder.h"
 #include "xen/pbd.h"
 #include "xen/pci.h"
 #include "xen/pgpu.h"
@@ -609,6 +610,7 @@ QStringList XenCache::GetKnownTypes() const
         this->typeToCacheString(XenObjectType::Bond),
         this->typeToCacheString(XenObjectType::Certificate),
         this->typeToCacheString(XenObjectType::Console),
+        this->typeToCacheString(XenObjectType::Folder),
         this->typeToCacheString(XenObjectType::GPUGroup),
         this->typeToCacheString(XenObjectType::Host),
         this->typeToCacheString(XenObjectType::HostCPU),
@@ -649,6 +651,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(XenObjectType type, cons
         return QSharedPointer<XenObject>(new Certificate(this->m_connection, ref));
     if (type == XenObjectType::Console)
         return QSharedPointer<XenObject>(new Console(this->m_connection, ref));
+    if (type == XenObjectType::Folder)
+        return QSharedPointer<XenObject>(new Folder(this->m_connection, ref));
     if (type == XenObjectType::GPUGroup)
         return QSharedPointer<XenObject>(new GPUGroup(this->m_connection, ref));
     if (type == XenObjectType::Host)

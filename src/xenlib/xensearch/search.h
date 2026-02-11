@@ -312,6 +312,13 @@ class Search
          * @return New Search instance for all object types
          */
         static Search* SearchForAllTypes();
+        static Search* SearchForTag(const QString& tag);
+        static Search* SearchForFolder(const QString& path);
+        static Search* SearchForAllFolders();
+        static Search* SearchForTags();
+        static Search* SearchForFolders();
+        static Search* SearchForCustomFields();
+        static Search* SearchForVapps();
 
         /**
          * @brief Add a text filter that searches relevant fields

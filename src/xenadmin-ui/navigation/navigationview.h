@@ -136,6 +136,10 @@ class NavigationView : public QWidget
         void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
 
     private:
+        bool eventFilter(QObject* watched, QEvent* event) override;
+        void handleTreeDropEvent(class QDropEvent* dropEvent);
+        QString buildDragDropCommandKey(QTreeWidgetItem* targetItem) const;
+
         void buildInfrastructureTree();
         void buildObjectsTree();
         void buildOrganizationTree();

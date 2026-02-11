@@ -29,13 +29,11 @@
 
 const QString CustomFieldDefinition::TAG_NAME = "CustomFieldDefinition";
 
-CustomFieldDefinition::CustomFieldDefinition(const QString& name, Type type)
-    : name_(name)
-    , type_(type)
+CustomFieldDefinition::CustomFieldDefinition(const QString& name, Type type) : m_name(name), m_type(type)
 {
 }
 
-CustomFieldDefinition CustomFieldDefinition::fromXml(QXmlStreamReader& xml)
+CustomFieldDefinition CustomFieldDefinition::FromXml(QXmlStreamReader& xml)
 {
     // Read attributes
     QXmlStreamAttributes attributes = xml.attributes();
@@ -54,29 +52,29 @@ CustomFieldDefinition CustomFieldDefinition::fromXml(QXmlStreamReader& xml)
     return CustomFieldDefinition(name, type);
 }
 
-void CustomFieldDefinition::toXml(QXmlStreamWriter& xml) const
+void CustomFieldDefinition::ToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(TAG_NAME);
-    xml.writeAttribute("name", this->name_);
-    xml.writeAttribute("type", this->type_ == Type::Date ? "Date" : "String");
+    xml.writeAttribute("name", this->m_name);
+    xml.writeAttribute("type", this->m_type == Type::Date ? "Date" : "String");
     xml.writeAttribute("defaultValue", ""); // Legacy compatibility (CA-37473)
     xml.writeEndElement();
 }
 
-QString CustomFieldDefinition::toString() const
+QString CustomFieldDefinition::ToString() const
 {
-    QString typeString = this->getTypeString();
-    return QString("%1 (%2)").arg(this->name_, typeString);
+    QString typeString = this->GetTypeString();
+    return QString("%1 (%2)").arg(this->m_name, typeString);
 }
 
-QString CustomFieldDefinition::getTypeString() const
+QString CustomFieldDefinition::GetTypeString() const
 {
-    return this->type_ == Type::Date ? "Date and Time" : "Text";
+    return this->m_type == Type::Date ? "Date and Time" : "Text";
 }
 
 bool CustomFieldDefinition::operator==(const CustomFieldDefinition& other) const
 {
-    return this->name_ == other.name_ && this->type_ == other.type_;
+    return this->m_name == other.m_name && this->m_type == other.m_type;
 }
 
 bool CustomFieldDefinition::operator!=(const CustomFieldDefinition& other) const
@@ -86,5 +84,5 @@ bool CustomFieldDefinition::operator!=(const CustomFieldDefinition& other) const
 
 uint CustomFieldDefinition::qHash() const
 {
-    return ::qHash(this->name_);
+    return ::qHash(this->m_name);
 }

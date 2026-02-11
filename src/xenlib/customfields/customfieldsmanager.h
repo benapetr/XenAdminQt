@@ -82,16 +82,16 @@ class CustomFieldsManager : public QObject
         explicit CustomFieldsManager(QObject* parent = nullptr);
         ~CustomFieldsManager();
 
-        static CustomFieldsManager* instance_;
+        static CustomFieldsManager* m_instance;
 
         void recalculateCustomFields();
         QList<CustomFieldDefinition> getCustomFieldsFromGuiConfig(XenConnection* connection) const;
         QList<CustomFieldDefinition> parseCustomFieldDefinitions(const QString& xml) const;
 
         // Cache per connection
-        mutable QMutex mutex_;
-        QMap<XenConnection*, QList<CustomFieldDefinition>> customFieldsPerConnection_;
-        QList<CustomFieldDefinition> allCustomFields_;
+        mutable QMutex m_mutex;
+        QMap<XenConnection*, QList<CustomFieldDefinition>> m_customFieldsPerConnection;
+        QList<CustomFieldDefinition> m_allCustomFields;
 };
 
 #endif // CUSTOMFIELDSMANAGER_H

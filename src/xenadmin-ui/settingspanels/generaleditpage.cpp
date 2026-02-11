@@ -28,11 +28,17 @@
 // generaleditpage.cpp - General properties edit page
 #include "generaleditpage.h"
 #include "ui_generaleditpage.h"
+#include "../dialogs/folderchangedialog.h"
+#include "../dialogs/newtagdialog.h"
 #include "xenlib/xen/actions/general/generaleditpageaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/folders/foldersmanager.h"
+#include "xenlib/xencache.h"
+#include <QHBoxLayout>
 #include <QIcon>
-#include <QDebug>
+#include <QPushButton>
 
 GeneralEditPage::GeneralEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::GeneralEditPage)
 {
@@ -41,9 +47,26 @@ GeneralEditPage::GeneralEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui
     // Connect change signals for change tracking
     this->connect(this->ui->txtName, &QLineEdit::textChanged, this, &GeneralEditPage::onNameChanged);
     this->connect(this->ui->txtDescription, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onDescriptionChanged);
-    this->connect(this->ui->cmbFolder, &QComboBox::currentTextChanged, this, &GeneralEditPage::onFolderChanged);
+    this->connect(this->ui->cmbFolder, qOverload<int>(&QComboBox::currentIndexChanged), this, &GeneralEditPage::onFolderChanged);
     this->connect(this->ui->txtTags, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onTagsChanged);
     this->connect(this->ui->txtIQN, &QLineEdit::textChanged, this, &GeneralEditPage::onIQNChanged);
+
+    this->ui->txtTags->setReadOnly(true);
+
+    m_changeFolderButton = new QPushButton(tr("Change..."), this);
+    m_editTagsButton = new QPushButton(tr("Edit..."), this);
+
+    QWidget* folderEditorContainer = new QWidget(this);
+    QHBoxLayout* folderEditorLayout = new QHBoxLayout(folderEditorContainer);
+    folderEditorLayout->setContentsMargins(0, 0, 0, 0);
+    folderEditorLayout->setSpacing(6);
+    folderEditorLayout->addWidget(this->ui->cmbFolder, 1);
+    folderEditorLayout->addWidget(m_changeFolderButton, 0);
+    this->ui->formLayout->setWidget(2, QFormLayout::FieldRole, folderEditorContainer);
+
+    this->ui->formLayout->insertRow(4, QString(), m_editTagsButton);
+    connect(m_changeFolderButton, &QPushButton::clicked, this, &GeneralEditPage::onChangeFolderClicked);
+    connect(m_editTagsButton, &QPushButton::clicked, this, &GeneralEditPage::onEditTagsClicked);
 
     // Hide IQN fields by default (only shown for hosts)
     this->ui->lblIQN->setVisible(false);
@@ -107,9 +130,8 @@ void GeneralEditPage::repopulate()
     // Populate folder from other_config
     QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
     this->m_originalFolder = otherConfig.value("folder").toString();
-    this->ui->cmbFolder->setEditText(this->m_originalFolder);
-
-    // TODO: Populate folder dropdown with available folders from cache
+    this->m_currentFolder = this->m_originalFolder;
+    this->updateFolderDisplay();
 
     // Populate tags
     QVariantList tagsVariant = this->m_objectDataCopy.value("tags").toList();
@@ -119,7 +141,8 @@ void GeneralEditPage::repopulate()
         this->m_originalTags.append(tag.toString());
     }
     this->m_originalTags.sort();
-    this->ui->txtTags->setPlainText(this->m_originalTags.join(", "));
+    this->m_currentTags = this->m_originalTags;
+    this->updateTagsDisplay();
 
     // Show/hide IQN fields for hosts
     if (this->m_objectType == "host")
@@ -177,13 +200,11 @@ AsyncOperation* GeneralEditPage::SaveSettings()
     if (this->nameChanged())
     {
         this->m_objectDataCopy["name_label"] = this->ui->txtName->text();
-        qDebug() << "GeneralEditPage: Name changed to" << this->ui->txtName->text();
     }
 
     if (this->descriptionChanged())
     {
         this->m_objectDataCopy["name_description"] = this->ui->txtDescription->toPlainText();
-        qDebug() << "GeneralEditPage: Description changed";
     }
 
     if (this->iqnChanged() && this->m_objectType == "host")
@@ -192,7 +213,6 @@ AsyncOperation* GeneralEditPage::SaveSettings()
         QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
         otherConfig["iscsi_iqn"] = this->ui->txtIQN->text();
         this->m_objectDataCopy["other_config"] = otherConfig;
-        qDebug() << "GeneralEditPage: IQN changed to" << this->ui->txtIQN->text();
     }
 
     // Step 2: Return action for complex operations (folder, tags)
@@ -203,10 +223,9 @@ AsyncOperation* GeneralEditPage::SaveSettings()
 
     if (this->folderChanged() || this->tagsChanged())
     {
-        QString newFolder = this->ui->cmbFolder->currentText().trimmed();
-        QStringList newTags = this->parseTagsFromText();
-
-        qDebug() << "GeneralEditPage: Creating GeneralEditPageAction - folder:" << newFolder << "tags:" << newTags;
+        const QString newFolder = this->m_currentFolder.trimmed();
+        QStringList newTags = this->m_currentTags;
+        newTags.sort();
 
         return new GeneralEditPageAction(this->m_object, this->m_originalFolder, newFolder, this->m_originalTags, newTags, true);
     }
@@ -274,6 +293,10 @@ void GeneralEditPage::Cleanup()
     this->disconnect(this->ui->cmbFolder, nullptr, this, nullptr);
     this->disconnect(this->ui->txtTags, nullptr, this, nullptr);
     this->disconnect(this->ui->txtIQN, nullptr, this, nullptr);
+    if (m_changeFolderButton)
+        this->disconnect(m_changeFolderButton, nullptr, this, nullptr);
+    if (m_editTagsButton)
+        this->disconnect(m_editTagsButton, nullptr, this, nullptr);
 }
 
 bool GeneralEditPage::HasChanged() const
@@ -294,7 +317,8 @@ void GeneralEditPage::onDescriptionChanged()
 
 void GeneralEditPage::onFolderChanged()
 {
-    // No validation needed for folder
+    const QVariant selectedFolder = this->ui->cmbFolder->currentData();
+    this->m_currentFolder = selectedFolder.toString().trimmed();
 }
 
 void GeneralEditPage::onTagsChanged()
@@ -305,26 +329,6 @@ void GeneralEditPage::onTagsChanged()
 void GeneralEditPage::onIQNChanged()
 {
     this->HideLocalValidationMessages();
-}
-
-QStringList GeneralEditPage::parseTagsFromText() const
-{
-    QString tagsText = this->ui->txtTags->toPlainText();
-    QStringList tags;
-
-    // Split by comma and trim each tag
-    QStringList rawTags = tagsText.split(',', Qt::SkipEmptyParts);
-    for (const QString& tag : rawTags)
-    {
-        QString trimmed = tag.trimmed();
-        if (!trimmed.isEmpty())
-        {
-            tags.append(trimmed);
-        }
-    }
-
-    tags.sort();
-    return tags;
 }
 
 bool GeneralEditPage::nameChanged() const
@@ -339,12 +343,14 @@ bool GeneralEditPage::descriptionChanged() const
 
 bool GeneralEditPage::folderChanged() const
 {
-    return this->ui->cmbFolder->currentText().trimmed() != this->m_originalFolder;
+    return this->m_currentFolder.trimmed() != this->m_originalFolder;
 }
 
 bool GeneralEditPage::tagsChanged() const
 {
-    QStringList currentTags = this->parseTagsFromText();
+    QStringList currentTags = this->m_currentTags;
+    currentTags.removeDuplicates();
+    currentTags.sort();
     return currentTags != this->m_originalTags;
 }
 
@@ -360,4 +366,113 @@ bool GeneralEditPage::iqnChanged() const
 QVariantMap GeneralEditPage::GetModifiedObjectData() const
 {
     return this->m_objectDataCopy;
+}
+
+void GeneralEditPage::onChangeFolderClicked()
+{
+    if (!this->m_object || !this->m_object->GetConnection())
+        return;
+
+    FolderChangeDialog dialog(this->m_object->GetConnection(), this->m_currentFolder, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    if (!dialog.FolderChanged())
+        return;
+
+    this->m_currentFolder = dialog.SelectedFolderPath();
+    this->updateFolderDisplay();
+    onFolderChanged();
+}
+
+void GeneralEditPage::onEditTagsClicked()
+{
+    if (!this->m_object)
+        return;
+
+    NewTagDialog dialog(this);
+    dialog.SetTags(this->collectAllKnownTags(), this->m_currentTags, QStringList());
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    this->m_currentTags = dialog.GetSelectedTags();
+    this->m_currentTags.removeDuplicates();
+    this->m_currentTags.sort();
+    this->updateTagsDisplay();
+    onTagsChanged();
+}
+
+QStringList GeneralEditPage::collectAllKnownTags() const
+{
+    QStringList allTags = this->m_currentTags;
+
+    const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
+    for (XenConnection* connection : connections)
+    {
+        if (!connection || !connection->IsConnected() || !connection->GetCache())
+            continue;
+
+        const QList<QPair<XenObjectType, QString>> searchable = connection->GetCache()->GetXenSearchableObjects();
+        for (const auto& pair : searchable)
+        {
+            if (pair.first == XenObjectType::Folder)
+                continue;
+
+            const QSharedPointer<XenObject> candidate = connection->GetCache()->ResolveObject(pair.first, pair.second);
+            if (!candidate)
+                continue;
+
+            const QStringList tags = candidate->GetTags();
+            for (const QString& tag : tags)
+            {
+                const QString cleaned = tag.trimmed();
+                if (!cleaned.isEmpty())
+                    allTags.append(cleaned);
+            }
+        }
+    }
+
+    allTags.removeDuplicates();
+    allTags.sort();
+    return allTags;
+}
+
+void GeneralEditPage::updateFolderDisplay()
+{
+    this->ui->cmbFolder->blockSignals(true);
+    this->ui->cmbFolder->clear();
+    this->ui->cmbFolder->setEditable(false);
+    this->ui->cmbFolder->addItem(tr("(none)"), QString());
+
+    QStringList availableFolders;
+    if (this->m_object && this->m_object->GetConnection() && this->m_object->GetConnection()->GetCache())
+    {
+        const QStringList refs = this->m_object->GetConnection()->GetCache()->GetAllRefs(XenObjectType::Folder);
+        for (const QString& ref : refs)
+        {
+            if (ref == FoldersManager::PATH_SEPARATOR)
+                continue;
+            availableFolders.append(ref);
+        }
+    }
+
+    availableFolders.removeDuplicates();
+    availableFolders.sort();
+    for (const QString& folderPath : availableFolders)
+        this->ui->cmbFolder->addItem(folderPath, folderPath);
+
+    if (!this->m_currentFolder.isEmpty() && !availableFolders.contains(this->m_currentFolder))
+        this->ui->cmbFolder->addItem(this->m_currentFolder, this->m_currentFolder);
+
+    const int selectedIndex = this->ui->cmbFolder->findData(this->m_currentFolder);
+    this->ui->cmbFolder->setCurrentIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    this->ui->cmbFolder->setEnabled(this->ui->cmbFolder->count() > 1);
+    this->ui->cmbFolder->blockSignals(false);
+}
+
+void GeneralEditPage::updateTagsDisplay()
+{
+    if (this->m_currentTags.isEmpty())
+        this->ui->txtTags->setPlainText(tr("(none)"));
+    else
+        this->ui->txtTags->setPlainText(this->m_currentTags.join(", "));
 }

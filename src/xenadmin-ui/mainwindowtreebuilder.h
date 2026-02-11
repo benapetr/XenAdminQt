@@ -131,13 +131,6 @@ class MainWindowTreeBuilder : public QObject
 
         bool rootExpanded_;
         QObject* highlightedDragTarget_;
-
-        // Organization views (will be implemented later)
-        class OrganizationViewFields* viewFields_;
-        class OrganizationViewFolders* viewFolders_;
-        class OrganizationViewTags* viewTags_;
-        class OrganizationViewObjects* viewObjects_;
-        class OrganizationViewVapps* viewVapps_;
     };
 
     /**

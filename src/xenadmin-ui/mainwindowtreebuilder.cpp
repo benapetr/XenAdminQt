@@ -48,13 +48,6 @@
 #include <QPalette>
 #include <QCollator>
 
-// Forward declarations for organization views (to be implemented)
-class OrganizationViewFields { public: QTreeWidgetItem* rootNode() { return nullptr; } };
-class OrganizationViewFolders { public: QTreeWidgetItem* rootNode() { return nullptr; } };
-class OrganizationViewTags { public: QTreeWidgetItem* rootNode() { return nullptr; } };
-class OrganizationViewObjects { public: QTreeWidgetItem* rootNode() { return nullptr; } };
-class OrganizationViewVapps { public: QTreeWidgetItem* rootNode() { return nullptr; } };
-
 //==============================================================================
 // MainWindowTreeBuilder Implementation
 //==============================================================================
@@ -63,12 +56,7 @@ MainWindowTreeBuilder::MainWindowTreeBuilder(QTreeWidget* treeView, QObject* par
       treeView_(treeView),
       lastSearchMode_(NavigationMode::Infrastructure),
       rootExpanded_(true),
-      highlightedDragTarget_(nullptr),
-      viewFields_(new OrganizationViewFields()),
-      viewFolders_(new OrganizationViewFolders()),
-      viewTags_(new OrganizationViewTags()),
-      viewObjects_(new OrganizationViewObjects()),
-      viewVapps_(new OrganizationViewVapps())
+      highlightedDragTarget_(nullptr)
 {
     Q_ASSERT(treeView);
     
@@ -80,11 +68,6 @@ MainWindowTreeBuilder::MainWindowTreeBuilder(QTreeWidget* treeView, QObject* par
 
 MainWindowTreeBuilder::~MainWindowTreeBuilder()
 {
-    delete this->viewFields_;
-    delete this->viewFolders_;
-    delete this->viewTags_;
-    delete this->viewObjects_;
-    delete this->viewVapps_;
 }
 
 QObject* MainWindowTreeBuilder::GetHighlightedDragTarget() const
@@ -154,27 +137,43 @@ QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, Naviga
             break;
             
         case NavigationMode::Tags:
-            newRootNode = this->viewTags_->rootNode();
+            newRootNode = new QTreeWidgetItem();
+            newRootNode->setText(0, "Tags");
+            if (search && search->GetGrouping())
+                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Tags"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
-            // TODO: viewTags_->populate(search, groupAcceptor);
+            if (search)
+                search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
             
         case NavigationMode::Folders:
-            newRootNode = this->viewFolders_->rootNode();
+            newRootNode = new QTreeWidgetItem();
+            newRootNode->setText(0, "Folders");
+            if (search && search->GetGrouping())
+                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Folders"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
-            // TODO: viewFolders_->populate(search, groupAcceptor);
+            if (search)
+                search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
             
         case NavigationMode::CustomFields:
-            newRootNode = this->viewFields_->rootNode();
+            newRootNode = new QTreeWidgetItem();
+            newRootNode->setText(0, "Custom Fields");
+            if (search && search->GetGrouping())
+                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Custom Fields"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
-            // TODO: viewFields_->populate(search, groupAcceptor);
+            if (search)
+                search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
             
         case NavigationMode::vApps:
-            newRootNode = this->viewVapps_->rootNode();
+            newRootNode = new QTreeWidgetItem();
+            newRootNode->setText(0, "vApps");
+            if (search && search->GetGrouping())
+                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("vApps"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
-            // TODO: viewVapps_->populate(search, groupAcceptor);
+            if (search)
+                search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
             
         case NavigationMode::SavedSearch:
@@ -357,6 +356,8 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
                 node = this->addNetworkNode(network);
             else if (QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(obj))
                 node = this->addVDINode(vdi);
+            else if (QSharedPointer<Folder> folder = qSharedPointerDynamicCast<Folder>(obj))
+                node = this->addFolderNode(folder);
 
             if (!node)
             {
