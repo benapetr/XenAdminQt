@@ -27,7 +27,10 @@
 
 #include "VNCView.h"
 #include "VNCTabView.h"
+#include "xenlib/xencache.h"
 #include "xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/sr.h"
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -43,7 +46,7 @@
  * Reference: XenAdmin/ConsoleView/VNCView.cs lines 64-72
  */
 VNCView::VNCView(QSharedPointer<VM> vm,  const QString& elevatedUsername, const QString& elevatedPassword, QWidget* parent)
-    : QWidget(parent), _oldUndockedSize(QSize()), _oldUndockedLocation(QPoint())
+    : QWidget(parent), m_oldUndockedSize(QSize()), m_oldUndockedLocation(QPoint())
 {
     if (!vm)
         return;
@@ -55,7 +58,7 @@ VNCView::VNCView(QSharedPointer<VM> vm,  const QString& elevatedUsername, const 
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
     // Create VNCTabView (equivalent to C# new VNCTabView(this, source, ...))
-    this->_vncTabView = new VNCTabView(this, vm, elevatedUsername, elevatedPassword, this);
+    this->m_vncTabView = new VNCTabView(this, vm, elevatedUsername, elevatedPassword, this);
 
     // Setup UI
     this->setupUI();
@@ -79,11 +82,11 @@ VNCView::~VNCView()
     this->unregisterEventListeners();
 
     // Cleanup undocked window
-    if (this->_undockedForm)
+    if (this->m_undockedForm)
     {
-        this->_undockedForm->hide();
-        this->_undockedForm->deleteLater();
-        this->_undockedForm = nullptr;
+        this->m_undockedForm->hide();
+        this->m_undockedForm->deleteLater();
+        this->m_undockedForm = nullptr;
     }
 
     // VNCTabView will be deleted by Qt parent-child relationship
@@ -94,23 +97,23 @@ VNCView::~VNCView()
 bool VNCView::IsDocked() const
 {
     // C#: public bool IsDocked => undockedForm == null || !undockedForm.Visible;
-    return this->_undockedForm == nullptr || !this->_undockedForm->isVisible();
+    return this->m_undockedForm == nullptr || !this->m_undockedForm->isVisible();
 }
 
 void VNCView::Pause()
 {
     qDebug() << "VNCView: pause()";
 
-    if (this->_vncTabView)
-        this->_vncTabView->Pause();
+    if (this->m_vncTabView)
+        this->m_vncTabView->Pause();
 }
 
 void VNCView::Unpause()
 {
     qDebug() << "VNCView: unpause()";
 
-    if (this->_vncTabView)
-        this->_vncTabView->Unpause();
+    if (this->m_vncTabView)
+        this->m_vncTabView->Unpause();
 }
 
 void VNCView::DockUnDock()
@@ -123,69 +126,69 @@ void VNCView::DockUnDock()
         qDebug() << "VNCView: Undocking console to separate window";
 
         // Create undocked window if it doesn't exist
-        if (!this->_undockedForm)
+        if (!this->m_undockedForm)
         {
-            this->_undockedForm = new QMainWindow();
-            this->_undockedForm->setWindowTitle(undockedWindowTitle());
+            this->m_undockedForm = new QMainWindow();
+            this->m_undockedForm->setWindowTitle(undockedWindowTitle());
 
             // TODO: Set window icon
             // C#: undockedForm.Icon = Program.MainWindow.Icon;
 
             // Connect close event to re-dock
-            connect(this->_undockedForm, &QMainWindow::destroyed, this, [this]()
+            connect(this->m_undockedForm, &QMainWindow::destroyed, this, [this]()
             {
                 qDebug() << "VNCView: Undocked window destroyed, re-docking";
                 if (!this->IsDocked())
-                    DockUnDock();
+                    this->DockUnDock();
             });
 
             // Handle window state changes (minimize → pause)
-            connect(this->_undockedForm, &QWidget::windowTitleChanged, this, [this]()
+            connect(this->m_undockedForm, &QWidget::windowTitleChanged, this, [this]()
             {
                 // Window state changed
-                Qt::WindowStates state = this->_undockedForm->windowState();
+                Qt::WindowStates state = this->m_undockedForm->windowState();
 
                 if (state & Qt::WindowMinimized)
                 {
                     qDebug() << "VNCView: Undocked window minimized, pausing console";
-                    this->_vncTabView->Pause();
+                    this->m_vncTabView->Pause();
                 } else
                 {
                     qDebug() << "VNCView: Undocked window restored, unpausing console";
-                    this->_vncTabView->Unpause();
+                    this->m_vncTabView->Unpause();
                 }
             });
 
             // C#: Set up Resize event
             // Qt doesn't have ResizeEnd, so we'll use resizeEvent + timer
-            this->_undockedFormResized = false;
+            this->m_undockedFormResized = false;
         }
 
         // Remove VNCTabView from this widget
         QLayout* currentLayout = layout();
         if (currentLayout)
         {
-            currentLayout->removeWidget(this->_vncTabView);
+            currentLayout->removeWidget(this->m_vncTabView);
         } else
         {
-            this->_vncTabView->setParent(nullptr);
+            this->m_vncTabView->setParent(nullptr);
         }
 
         // Add VNCTabView to undocked window
-        this->_undockedForm->setCentralWidget(this->_vncTabView);
+        this->m_undockedForm->setCentralWidget(this->m_vncTabView);
 
         // Save scaled setting
-        this->_oldScaledSetting = this->_vncTabView->IsScaled();
+        this->m_oldScaledSetting = this->m_vncTabView->IsScaled();
 
         // TODO: Show header bar
         // C#: vncTabView.showHeaderBar(!source.is_control_domain, true);
 
         // Calculate size to fit console
-        QSize growSize = this->_vncTabView->GrowToFit();
-        this->_undockedForm->resize(growSize);
+        QSize growSize = this->m_vncTabView->GrowToFit();
+        this->m_undockedForm->resize(growSize);
 
         // Restore previous geometry if available and on-screen
-        if (!this->_oldUndockedSize.isEmpty() && !this->_oldUndockedLocation.isNull())
+        if (!this->m_oldUndockedSize.isEmpty() && !this->m_oldUndockedLocation.isNull())
         {
             // TODO: Check if window is on screen
             // C#: HelpersGUI.WindowIsOnScreen(oldUndockedLocation, oldUndockedSize)
@@ -194,74 +197,74 @@ void VNCView::DockUnDock()
 
             if (isOnScreen)
             {
-                this->_undockedForm->resize(this->_oldUndockedSize);
-                this->_undockedForm->move(this->_oldUndockedLocation);
+                this->m_undockedForm->resize(this->m_oldUndockedSize);
+                this->m_undockedForm->move(this->m_oldUndockedLocation);
             }
         }
 
         // Show undocked window
-        this->_undockedForm->show();
+        this->m_undockedForm->show();
 
         // TODO: Preserve scale setting when undocked
         // C#: if(Properties.Settings.Default.PreserveScaleWhenUndocked)
         //         vncTabView.IsScaled = oldScaledSetting;
 
         // Show find/reattach buttons in this widget
-        this->_findConsoleButton->show();
-        this->_reattachConsoleButton->show();
+        this->m_findConsoleButton->show();
+        this->m_reattachConsoleButton->show();
     } else
     {
         // ========== DOCK ==========
         qDebug() << "VNCView: Docking console back to main window";
 
         // Save undocked window geometry
-        this->_oldUndockedLocation = this->_undockedForm->pos();
-        this->_oldUndockedSize = this->_undockedForm->size();
+        this->m_oldUndockedLocation = this->m_undockedForm->pos();
+        this->m_oldUndockedSize = this->m_undockedForm->size();
 
         // TODO: Restore scale setting when docking
         // C#: if (!Properties.Settings.Default.PreserveScaleWhenUndocked)
         //         vncTabView.IsScaled = oldScaledSetting;
 
         // Hide find/reattach buttons
-        this->_findConsoleButton->hide();
-        this->_reattachConsoleButton->hide();
+        this->m_findConsoleButton->hide();
+        this->m_reattachConsoleButton->hide();
 
         // Hide undocked window
-        this->_undockedForm->hide();
+        this->m_undockedForm->hide();
 
         // TODO: Hide header bar
         // C#: vncTabView.showHeaderBar(true, false);
 
         // Remove VNCTabView from undocked window
-        this->_undockedForm->takeCentralWidget();
+        this->m_undockedForm->takeCentralWidget();
 
         // Add VNCTabView back to this widget
         QLayout* currentLayout = layout();
         if (currentLayout)
         {
-            currentLayout->addWidget(this->_vncTabView);
+            currentLayout->addWidget(this->m_vncTabView);
         } else
         {
             // Create layout if it doesn't exist
             QVBoxLayout* layout = new QVBoxLayout(this);
             layout->setContentsMargins(0, 0, 0, 0);
-            layout->addWidget(this->_vncTabView);
+            layout->addWidget(this->m_vncTabView);
             setLayout(layout);
         }
 
         // Cleanup undocked window
-        this->_undockedForm->deleteLater();
-        this->_undockedForm = nullptr;
+        this->m_undockedForm->deleteLater();
+        this->m_undockedForm = nullptr;
     }
 
     // Update dock button icon/text
-    this->_vncTabView->UpdateDockButton();
+    this->m_vncTabView->UpdateDockButton();
 
     // Update parent minimum size
-    this->_vncTabView->UpdateParentMinimumSize();
+    this->m_vncTabView->UpdateParentMinimumSize();
 
     // Always unpause when docking/undocking (ensure visible console is not paused)
-    this->_vncTabView->Unpause();
+    this->m_vncTabView->Unpause();
 
     // TODO: Focus VNC
     // C#: vncTabView.focus_vnc();
@@ -276,19 +279,19 @@ void VNCView::SendCAD()
 {
     qDebug() << "VNCView: sendCAD()";
 
-    if (this->_vncTabView)
-        this->_vncTabView->SendCAD();
+    if (this->m_vncTabView)
+        this->m_vncTabView->SendCAD();
 }
 
 void VNCView::FocusConsole()
 {
     qDebug() << "VNCView: focusConsole()";
 
-    if (this->_vncTabView)
+    if (this->m_vncTabView)
     {
         // TODO: Implement focus_vnc() in VNCTabView
         // this->_vncTabView->focus_vnc();
-        this->_vncTabView->setFocus();
+        this->m_vncTabView->setFocus();
     }
 }
 
@@ -296,7 +299,7 @@ void VNCView::SwitchIfRequired()
 {
     qDebug() << "VNCView: switchIfRequired()";
 
-    if (this->_vncTabView)
+    if (this->m_vncTabView)
     {
         // TODO: Implement SwitchIfRequired() in VNCTabView
         // this->_vncTabView->SwitchIfRequired();
@@ -307,12 +310,8 @@ QImage VNCView::Snapshot()
 {
     qDebug() << "VNCView: snapshot()";
 
-    if (this->_vncTabView)
-    {
-        // TODO: Implement Snapshot() in VNCTabView
-        // return this->_vncTabView->Snapshot();
-        return QImage();
-    }
+    if (this->m_vncTabView)
+        return this->m_vncTabView->Snapshot();
 
     return QImage();
 }
@@ -321,15 +320,15 @@ void VNCView::RefreshIsoList()
 {
     qDebug() << "VNCView: refreshIsoList()";
 
-    if (this->_vncTabView)
-        this->_vncTabView->SetupCD();
+    if (this->m_vncTabView)
+        this->m_vncTabView->SetupCD();
 }
 
 void VNCView::UpdateRDPResolution(bool fullscreen)
 {
     qDebug() << "VNCView: updateRDPResolution() - fullscreen:" << fullscreen;
 
-    if (this->_vncTabView)
+    if (this->m_vncTabView)
     {
         // TODO: Implement UpdateRDPResolution() in VNCTabView
         // this->_vncTabView->UpdateRDPResolution(fullscreen);
@@ -343,10 +342,34 @@ void VNCView::onVMPropertyChanged(const QString& propertyName)
     qDebug() << "VNCView: onVMPropertyChanged:" << propertyName;
 
     // Update undocked window title if name changed
-    if (propertyName == "name_label" && this->_undockedForm)
+    if (propertyName == "name_label" && this->m_undockedForm)
     {
-        this->_undockedForm->setWindowTitle(undockedWindowTitle());
+        this->m_undockedForm->setWindowTitle(undockedWindowTitle());
     }
+}
+
+void VNCView::onVmDataChanged()
+{
+    if (this->m_undockedForm)
+        this->m_undockedForm->setWindowTitle(undockedWindowTitle());
+}
+
+void VNCView::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
+{
+    Q_UNUSED(objectRef);
+
+    if (!this->m_undockedForm || !this->m_vm)
+        return;
+
+    if (!this->m_vm->GetConnection() || this->m_vm->GetConnection() != connection)
+        return;
+
+    const XenObjectType type = XenCache::TypeFromString(objectType);
+    if (type == XenObjectType::VM
+        || type == XenObjectType::Host
+        || type == XenObjectType::SR
+        || type == XenObjectType::PBD)
+        this->m_undockedForm->setWindowTitle(undockedWindowTitle());
 }
 
 void VNCView::onFindConsoleButtonClicked()
@@ -356,14 +379,14 @@ void VNCView::onFindConsoleButtonClicked()
     // C#: Lines 215-220
     // Bring undocked window to front
 
-    if (!this->IsDocked() && this->_undockedForm)
+    if (!this->IsDocked() && this->m_undockedForm)
     {
-        this->_undockedForm->raise();
-        this->_undockedForm->activateWindow();
+        this->m_undockedForm->raise();
+        this->m_undockedForm->activateWindow();
 
-        if (this->_undockedForm->windowState() & Qt::WindowMinimized)
+        if (this->m_undockedForm->windowState() & Qt::WindowMinimized)
         {
-            this->_undockedForm->setWindowState(Qt::WindowNoState);
+            this->m_undockedForm->setWindowState(Qt::WindowNoState);
         }
     }
 }
@@ -401,17 +424,25 @@ void VNCView::registerEventListeners()
     qDebug() << "VNCView: registerEventListeners()";
 
     // Connect VNCTabView signals (C#: VNCTabView calls parentVNCView.DockUnDock())
-    if (this->_vncTabView)
+    if (this->m_vncTabView)
     {
-        connect(this->_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
+        connect(this->m_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
         // TODO: Implement fullscreen (VNCTabView.toggleFullscreen creates FullScreenForm)
-        connect(this->_vncTabView, &VNCTabView::toggleFullscreenRequested, this, []() {
+        connect(this->m_vncTabView, &VNCTabView::toggleFullscreenRequested, this, []() {
             qWarning() << "VNCView: Fullscreen not yet implemented";
         });
     }
 
-    // TODO: Connect to XenLib VM property change signals
-    // C#: source.PropertyChanged += Server_PropertyChanged;
+    if (this->m_vm)
+        connect(this->m_vm.data(), &XenObject::dataChanged, this, &VNCView::onVmDataChanged);
+
+    if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->GetConnection()->GetCache())
+    {
+        connect(this->m_vm->GetConnection()->GetCache(),
+                &XenCache::objectChanged,
+                this,
+                &VNCView::onCacheObjectChanged);
+    }
 }
 
 void VNCView::unregisterEventListeners()
@@ -419,14 +450,22 @@ void VNCView::unregisterEventListeners()
     qDebug() << "VNCView: unregisterEventListeners()";
 
     // Disconnect VNCTabView signals
-    if (this->_vncTabView)
+    if (this->m_vncTabView)
     {
-        disconnect(this->_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
-        disconnect(this->_vncTabView, &VNCTabView::toggleFullscreenRequested, nullptr, nullptr);
+        disconnect(this->m_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
+        disconnect(this->m_vncTabView, &VNCTabView::toggleFullscreenRequested, nullptr, nullptr);
     }
 
-    // TODO: Disconnect from XenLib VM property change signals
-    // C#: source.PropertyChanged -= Server_PropertyChanged;
+    if (this->m_vm)
+        disconnect(this->m_vm.data(), &XenObject::dataChanged, this, &VNCView::onVmDataChanged);
+
+    if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->GetConnection()->GetCache())
+    {
+        disconnect(this->m_vm->GetConnection()->GetCache(),
+                   &XenCache::objectChanged,
+                   this,
+                   &VNCView::onCacheObjectChanged);
+    }
 }
 
 QString VNCView::undockedWindowTitle() const
@@ -434,15 +473,44 @@ QString VNCView::undockedWindowTitle() const
     // C#: Lines 189-200
     // Return VM name, or "Host: hostname" for control domain, or "SR Driver Domain: srname"
 
-    // TODO: Check if VM is control domain or SR driver domain
-    // C#: if (vm.IsControlDomainZero(out Host host))
-    //         return string.Format(Messages.CONSOLE_HOST, host.Name());
-    // C#: if (vm.IsSrDriverDomain(out SR sr))
-    //         return string.Format(Messages.CONSOLE_SR_DRIVER_DOMAIN, sr.Name());
-
-    // For now, just return VM ref (will be replaced with VM name from XenLib)
     if (!this->m_vm)
-        return "NULL";
+        return tr("Console");
+
+    XenCache* cache = this->m_vm->GetCache();
+    if (cache)
+    {
+        if (this->m_vm->IsControlDomain())
+        {
+            const QString hostRef = this->m_vm->GetResidentOnRef();
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+            {
+                QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
+                if (host && host->IsValid())
+                {
+                    const bool isControlDomainZero =
+                        (host->ControlDomainRef() == this->m_vm->OpaqueRef()) || (this->m_vm->Domid() == 0);
+                    if (isControlDomainZero)
+                        return tr("Host: %1").arg(host->GetName());
+                }
+            }
+        }
+
+        const QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+        for (const QSharedPointer<SR>& sr : srs)
+        {
+            if (!sr || !sr->IsValid())
+                continue;
+
+            QString driverDomainRef;
+            if (sr->HasDriverDomain(&driverDomainRef) && driverDomainRef == this->m_vm->OpaqueRef())
+                return tr("SR Driver Domain: %1").arg(sr->GetName());
+        }
+    }
+
+    const QString vmName = this->m_vm->GetName();
+    if (!vmName.isEmpty())
+        return vmName;
+
     return QString("Console: %1").arg(this->m_vm->OpaqueRef());
 }
 
@@ -456,7 +524,7 @@ void VNCView::setupUI()
     mainLayout->setSpacing(4);
 
     // Add VNCTabView (fills most of the space)
-    mainLayout->addWidget(this->_vncTabView, 1);
+    mainLayout->addWidget(this->m_vncTabView, 1);
 
     // Create button layout for find/reattach buttons
     QHBoxLayout* buttonLayout = new QHBoxLayout();
@@ -464,21 +532,21 @@ void VNCView::setupUI()
     buttonLayout->setContentsMargins(8, 4, 8, 8);
 
     // Create "Find Console" button
-    this->_findConsoleButton = new QPushButton(tr("Find Console"), this);
-    this->_findConsoleButton->setToolTip(tr("Bring the undocked console window to front"));
-    this->_findConsoleButton->hide(); // Hidden when docked
-    connect(this->_findConsoleButton, &QPushButton::clicked, this, &VNCView::onFindConsoleButtonClicked);
+    this->m_findConsoleButton = new QPushButton(tr("Find Console"), this);
+    this->m_findConsoleButton->setToolTip(tr("Bring the undocked console window to front"));
+    this->m_findConsoleButton->hide(); // Hidden when docked
+    connect(this->m_findConsoleButton, &QPushButton::clicked, this, &VNCView::onFindConsoleButtonClicked);
 
     // Create "Reattach Console" button
-    this->_reattachConsoleButton = new QPushButton(tr("Reattach Console"), this);
-    this->_reattachConsoleButton->setToolTip(tr("Dock the console back to the main window"));
-    this->_reattachConsoleButton->hide(); // Hidden when docked
-    connect(this->_reattachConsoleButton, &QPushButton::clicked, this, &VNCView::onReattachConsoleButtonClicked);
+    this->m_reattachConsoleButton = new QPushButton(tr("Reattach Console"), this);
+    this->m_reattachConsoleButton->setToolTip(tr("Dock the console back to the main window"));
+    this->m_reattachConsoleButton->hide(); // Hidden when docked
+    connect(this->m_reattachConsoleButton, &QPushButton::clicked, this, &VNCView::onReattachConsoleButtonClicked);
 
     // Add buttons to layout
     buttonLayout->addStretch();
-    buttonLayout->addWidget(this->_findConsoleButton);
-    buttonLayout->addWidget(this->_reattachConsoleButton);
+    buttonLayout->addWidget(this->m_findConsoleButton);
+    buttonLayout->addWidget(this->m_reattachConsoleButton);
 
     // Add button layout to main layout
     mainLayout->addLayout(buttonLayout);

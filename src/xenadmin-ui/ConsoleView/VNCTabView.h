@@ -47,6 +47,7 @@
 #include <QWidget>
 #include <QSize>
 #include <QString>
+#include <QImage>
 #include <QTimer>
 #include <QMenu>
 #include "ConsoleKeyHandler.h"
@@ -173,6 +174,7 @@ class VNCTabView : public QWidget
          * Reference: VNCTabView.cs lines 1269-1273
          */
         void SendCAD();
+        QImage Snapshot() const;
 
         /**
          * @brief Update parent VNCView minimum size based on content

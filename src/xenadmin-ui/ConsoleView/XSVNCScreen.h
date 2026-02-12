@@ -506,6 +506,9 @@ class XSVNCScreen : public QWidget
          * Equivalent to C#: accessed under lock
          */
         QTcpSocket* getPendingVNCConnection();
+        QTcpSocket* takePendingVNCConnection();
+
+        QString currentConnectionSessionId();
 
         /**
          * @brief Check if source VM/Host has RDP capability

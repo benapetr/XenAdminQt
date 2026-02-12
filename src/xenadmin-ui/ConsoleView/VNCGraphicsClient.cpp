@@ -74,7 +74,7 @@ VNCGraphicsClient::~VNCGraphicsClient()
     this->disconnect(QApplication::clipboard(), &QClipboard::dataChanged,
                this, &VNCGraphicsClient::onClipboardChanged);
 
-    this->disconnectAndDispose();
+    this->DisconnectAndDispose();
 
     // Cleanup back buffer (matches C# lock(_backBuffer) block in Dispose)
     QMutexLocker locker(&this->_backBufferMutex);
@@ -85,17 +85,17 @@ VNCGraphicsClient::~VNCGraphicsClient()
 // IRemoteConsole Interface Implementation
 //=============================================================================
 
-ConsoleKeyHandler* VNCGraphicsClient::keyHandler() const
+ConsoleKeyHandler* VNCGraphicsClient::KeyHandler() const
 {
     return this->_keyHandler;
 }
 
-void VNCGraphicsClient::setKeyHandler(ConsoleKeyHandler* handler)
+void VNCGraphicsClient::SetKeyHandler(ConsoleKeyHandler* handler)
 {
     this->_keyHandler = handler;
 }
 
-void VNCGraphicsClient::activate()
+void VNCGraphicsClient::Activate()
 {
     // Only grab focus if we're actually connected
     if (this->_connected && this->_state == Normal)
@@ -105,7 +105,7 @@ void VNCGraphicsClient::activate()
     }
 }
 
-void VNCGraphicsClient::disconnectAndDispose()
+void VNCGraphicsClient::DisconnectAndDispose()
 {
     // Matches C# Disconnect() method
     this->_connected = false;
@@ -138,14 +138,14 @@ void VNCGraphicsClient::disconnectAndDispose()
     update();
 }
 
-void VNCGraphicsClient::pause()
+void VNCGraphicsClient::Pause()
 {
     // Matches C# Pause() in IRemoteConsole
     this->_helperIsPaused = true;
     this->_updateTimer->stop();
 }
 
-void VNCGraphicsClient::unpause()
+void VNCGraphicsClient::Unpause()
 {
     // Matches C# UnPause() in IRemoteConsole
     this->_helperIsPaused = false;
@@ -156,7 +156,7 @@ void VNCGraphicsClient::unpause()
     update();
 }
 
-void VNCGraphicsClient::sendCAD()
+void VNCGraphicsClient::SendCAD()
 {
     // Matches C# SendCAD() method
     if (!this->_connected)
@@ -174,24 +174,24 @@ void VNCGraphicsClient::sendCAD()
     sendKeyEvent(0xFFE3, false); // Left Control up
 }
 
-QImage VNCGraphicsClient::snapshot()
+QImage VNCGraphicsClient::Snapshot()
 {
     // Matches C# Snapshot() method
     QMutexLocker locker(&this->_backBufferMutex);
     return this->_backBuffer.copy();
 }
 
-void VNCGraphicsClient::setSendScanCodes(bool value)
+void VNCGraphicsClient::SetSendScanCodes(bool value)
 {
     this->_sendScanCodes = value;
 }
 
-bool VNCGraphicsClient::scaling() const
+bool VNCGraphicsClient::IsScaling() const
 {
     return this->_scaling;
 }
 
-void VNCGraphicsClient::setScaling(bool value)
+void VNCGraphicsClient::SetScaling(bool value)
 {
     // Matches C# Scaling property setter
     if (this->_scaling != value)
@@ -202,26 +202,26 @@ void VNCGraphicsClient::setScaling(bool value)
     }
 }
 
-void VNCGraphicsClient::setDisplayBorder(bool value)
+void VNCGraphicsClient::SetDisplayBorder(bool value)
 {
     this->_displayBorder = value;
     update();
 }
 
-QSize VNCGraphicsClient::desktopSize() const
+QSize VNCGraphicsClient::DesktopSize() const
 {
     // Matches C# DesktopSize property
     return QSize(this->_fbWidth, this->_fbHeight);
 }
 
-void VNCGraphicsClient::setDesktopSize(const QSize& size)
+void VNCGraphicsClient::SetDesktopSize(const QSize& size)
 {
     // Desktop size is set by server during initialization
     // This method exists for interface compatibility
     Q_UNUSED(size);
 }
 
-QRect VNCGraphicsClient::consoleBounds() const
+QRect VNCGraphicsClient::ConsoleBounds() const
 {
     // Matches C# ConsoleBounds property
     return rect();
@@ -241,7 +241,7 @@ void VNCGraphicsClient::connect(QTcpSocket* stream, const QString& password)
     if (this->_connected && this->_vncStream)
     {
         qDebug() << "VNCGraphicsClient: Already connected, disconnecting first";
-        disconnectAndDispose();
+        DisconnectAndDispose();
     }
 
     // Reset all connection state (matches C# starting fresh connection)
@@ -361,7 +361,7 @@ void VNCGraphicsClient::onSocketReadyRead()
                 // Unknown message - cannot determine length, so we must disconnect
                 // to avoid protocol desynchronization
                 emit errorOccurred(this, QString("Unknown VNC message type: %1").arg(msgType));
-                disconnectAndDispose();
+                DisconnectAndDispose();
                 return;
             }
 
@@ -452,7 +452,7 @@ void VNCGraphicsClient::handleSecurityHandshake()
             // Connection failed - read reason string
             qWarning() << "VNCGraphicsClient: Server rejected connection";
             emit errorOccurred(this, "Server rejected connection");
-            disconnectAndDispose();
+            DisconnectAndDispose();
             return;
         } else if (securityType == 1)
         {
@@ -483,7 +483,7 @@ void VNCGraphicsClient::handleSecurityHandshake()
         {
             qWarning() << "VNCGraphicsClient: Unknown security type:" << securityType;
             emit errorOccurred(this, QString("Unknown security type: %1").arg(securityType));
-            disconnectAndDispose();
+            DisconnectAndDispose();
         }
     } else
     {
@@ -510,7 +510,7 @@ void VNCGraphicsClient::handleSecurityHandshake()
 
             qWarning() << "VNCGraphicsClient: Server rejected connection:" << reason;
             emit errorOccurred(this, "Server rejected: " + reason);
-            disconnectAndDispose();
+            DisconnectAndDispose();
             return;
         }
 
@@ -560,7 +560,7 @@ void VNCGraphicsClient::handleSecurityHandshake()
         {
             qWarning() << "VNCGraphicsClient: No compatible security type found";
             emit errorOccurred(this, "No compatible security type");
-            disconnectAndDispose();
+            DisconnectAndDispose();
         }
     }
 }
@@ -586,7 +586,7 @@ void VNCGraphicsClient::handleSecurityResult()
             }
         }
         emit errorOccurred(this, reason);
-        disconnectAndDispose();
+        DisconnectAndDispose();
         return;
     }
 
@@ -853,7 +853,7 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
             qWarning() << "VNCGraphicsClient: Unsupported encoding:" << encoding;
             // For unsupported encodings, we can't determine size, so disconnect
             emit errorOccurred(this, QString("Unsupported encoding: %1").arg(encoding));
-            disconnectAndDispose();
+            DisconnectAndDispose();
             return false;
         }
     }

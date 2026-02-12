@@ -302,7 +302,7 @@ void RdpClient::configureRDPSettings()
 #endif // HAVE_FREERDP
 }
 
-void RdpClient::connect(const QString& rdpIP, int width, int height)
+void RdpClient::Connect(const QString& rdpIP, int width, int height)
 {
     qDebug() << "RdpClient: Connecting to" << rdpIP << "at" << width << "x" << height;
 
@@ -351,9 +351,9 @@ void RdpClient::connect(const QString& rdpIP, int width, int height)
 #endif // HAVE_FREERDP
 }
 
-void RdpClient::connect(const QString& rdpIP)
+void RdpClient::Connect(const QString& rdpIP)
 {
-    connect(rdpIP, _desktopWidth, _desktopHeight);
+    Connect(rdpIP, _desktopWidth, _desktopHeight);
 }
 
 void RdpClient::runRDPConnection()
@@ -428,7 +428,7 @@ void RdpClient::runRDPConnection()
 #endif // HAVE_FREERDP
 }
 
-void RdpClient::disconnect()
+void RdpClient::Disconnect()
 {
     qDebug() << "RdpClient: Disconnecting";
 
@@ -446,11 +446,11 @@ void RdpClient::disconnect()
     cleanupFreeRDP();
 }
 
-void RdpClient::disconnectAndDispose()
+void RdpClient::DisconnectAndDispose()
 {
     qDebug() << "RdpClient: DisconnectAndDispose called";
 
-    disconnect();
+    Disconnect();
 
     // Use deferred disposal like C# (to avoid crashes during callbacks)
     // Reference: C# RdpClient.Dispose() with Timer
@@ -493,7 +493,7 @@ void RdpClient::disconnectAndDispose()
     }
 }
 
-void RdpClient::setCredentials(const QString& username, const QString& password, const QString& domain)
+void RdpClient::SetCredentials(const QString& username, const QString& password, const QString& domain)
 {
     _username = username;
     _password = password;
@@ -502,7 +502,7 @@ void RdpClient::setCredentials(const QString& username, const QString& password,
     qDebug() << "RdpClient: Credentials set for user:" << username;
 }
 
-void RdpClient::updateDisplay(int width, int height, const QPoint& locationOffset)
+void RdpClient::UpdateDisplay(int width, int height, const QPoint& locationOffset)
 {
     // Dynamic resolution update (if connected and FreeRDP supports it)
     // Reference: C# RdpClient.UpdateDisplay()
@@ -526,7 +526,7 @@ void RdpClient::updateDisplay(int width, int height, const QPoint& locationOffse
     move(locationOffset);
 }
 
-void RdpClient::activate()
+void RdpClient::Activate()
 {
     qDebug() << "RdpClient: Activate";
 
@@ -537,20 +537,20 @@ void RdpClient::activate()
     raise();
 }
 
-void RdpClient::pause()
+void RdpClient::Pause()
 {
     qDebug() << "RdpClient: Pause";
     _paused = true;
 }
 
-void RdpClient::unpause()
+void RdpClient::Unpause()
 {
     qDebug() << "RdpClient: Unpause";
     _paused = false;
     update(); // Force repaint
 }
 
-void RdpClient::sendCAD()
+void RdpClient::SendCAD()
 {
     qDebug() << "RdpClient: Send Ctrl+Alt+Delete";
 
@@ -584,31 +584,31 @@ void RdpClient::sendCAD()
 #endif
 }
 
-QImage RdpClient::snapshot()
+QImage RdpClient::Snapshot()
 {
     QMutexLocker locker(&_framebufferMutex);
     return _framebuffer.copy();
 }
 
-void RdpClient::setSendScanCodes(bool value)
+void RdpClient::SetSendScanCodes(bool value)
 {
     // RDP always uses scan codes, so this is informational only
     Q_UNUSED(value);
 }
 
-void RdpClient::setScaling(bool value)
+void RdpClient::SetScaling(bool value)
 {
     _scaling = value;
     update();
 }
 
-void RdpClient::setDisplayBorder(bool value)
+void RdpClient::SetDisplayBorder(bool value)
 {
     // Not implemented for RDP
     Q_UNUSED(value);
 }
 
-QSize RdpClient::desktopSize() const
+QSize RdpClient::DesktopSize() const
 {
 #ifdef HAVE_FREERDP
     if (_rdpInstance && _rdpContext && _rdpContext->gdi)
@@ -619,15 +619,15 @@ QSize RdpClient::desktopSize() const
     return QSize(_desktopWidth, _desktopHeight);
 }
 
-void RdpClient::setDesktopSize(const QSize& size)
+void RdpClient::SetDesktopSize(const QSize& size)
 {
     _desktopWidth = size.width();
     _desktopHeight = size.height();
 }
 
-QRect RdpClient::consoleBounds() const
+QRect RdpClient::ConsoleBounds() const
 {
-    return QRect(pos(), desktopSize());
+    return QRect(pos(), DesktopSize());
 }
 
 // ========== Qt Event Handlers ==========

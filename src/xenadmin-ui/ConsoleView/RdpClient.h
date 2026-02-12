@@ -76,34 +76,34 @@ class RdpClient : public QWidget, public IRemoteConsole
 
         // ========== IRemoteConsole Interface Implementation ==========
 
-        ConsoleKeyHandler* keyHandler() const override
+        ConsoleKeyHandler* KeyHandler() const override
         {
             return _keyHandler;
         }
-        void setKeyHandler(ConsoleKeyHandler* handler) override
+        void SetKeyHandler(ConsoleKeyHandler* handler) override
         {
             _keyHandler = handler;
         }
-        QWidget* consoleControl() override
+        QWidget* ConsoleControl() override
         {
             return this;
         }
-        void activate() override;
-        void disconnectAndDispose() override;
-        void pause() override;
-        void unpause() override;
-        void sendCAD() override;
-        QImage snapshot() override;
-        void setSendScanCodes(bool value) override;
-        bool scaling() const override
+        void Activate() override;
+        void DisconnectAndDispose() override;
+        void Pause() override;
+        void Unpause() override;
+        void SendCAD() override;
+        QImage Snapshot() override;
+        void SetSendScanCodes(bool value) override;
+        bool IsScaling() const override
         {
             return _scaling;
         }
-        void setScaling(bool value) override;
-        void setDisplayBorder(bool value) override;
-        QSize desktopSize() const override;
-        void setDesktopSize(const QSize& size) override;
-        QRect consoleBounds() const override;
+        void SetScaling(bool value) override;
+        void SetDisplayBorder(bool value) override;
+        QSize DesktopSize() const override;
+        void SetDesktopSize(const QSize& size) override;
+        QRect ConsoleBounds() const override;
 
         // ========== RDP-Specific Public Methods ==========
 
@@ -115,7 +115,7 @@ class RdpClient : public QWidget, public IRemoteConsole
          *
          * Reference: C# RdpClient.RDPConnect()
          */
-        void connect(const QString& rdpIP, int width, int height);
+        void Connect(const QString& rdpIP, int width, int height);
 
         /**
          * @brief Connect using default size
@@ -123,14 +123,14 @@ class RdpClient : public QWidget, public IRemoteConsole
          *
          * Reference: C# RdpClient.Connect()
          */
-        void connect(const QString& rdpIP);
+        void Connect(const QString& rdpIP);
 
         /**
          * @brief Disconnect from RDP server
          *
          * Reference: C# RdpClient.Disconnect()
          */
-        void disconnect();
+        void Disconnect();
 
         /**
          * @brief Update display size (dynamic resolution)
@@ -140,13 +140,13 @@ class RdpClient : public QWidget, public IRemoteConsole
          *
          * Reference: C# RdpClient.UpdateDisplay()
          */
-        void updateDisplay(int width, int height, const QPoint& locationOffset);
+        void UpdateDisplay(int width, int height, const QPoint& locationOffset);
 
         /**
          * @brief Check if RDP is currently connected
          * @return true if connected, false otherwise
          */
-        bool isConnected() const
+        bool IsConnected() const
         {
             return _connected;
         }
@@ -157,7 +157,7 @@ class RdpClient : public QWidget, public IRemoteConsole
          *
          * Reference: C# RdpClient.IsAttemptingConnection
          */
-        bool isAttemptingConnection() const
+        bool IsAttemptingConnection() const
         {
             return _connecting || _authWarningVisible;
         }
@@ -168,7 +168,7 @@ class RdpClient : public QWidget, public IRemoteConsole
          * @param password Password
          * @param domain Domain (optional)
          */
-        void setCredentials(const QString& username, const QString& password, const QString& domain = QString());
+        void SetCredentials(const QString& username, const QString& password, const QString& domain = QString());
 
     signals:
         /**

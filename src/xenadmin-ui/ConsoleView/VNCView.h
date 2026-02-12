@@ -180,7 +180,7 @@ class VNCView : public QWidget
          */
         VNCTabView* GetVncTabView()
         {
-            return _vncTabView;
+            return m_vncTabView;
         }
 
     private slots:
@@ -189,6 +189,8 @@ class VNCView : public QWidget
          * Reference: VNCView.cs lines 207-213
          */
         void onVMPropertyChanged(const QString& propertyName);
+        void onVmDataChanged();
+        void onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef);
 
         /**
          * @brief "Find Console" button clicked - bring undocked window to front
@@ -243,20 +245,20 @@ class VNCView : public QWidget
         QSharedPointer<VM> m_vm;
 
         //! Wrapped console UI
-        VNCTabView* _vncTabView = nullptr;
+        VNCTabView* m_vncTabView = nullptr;
         //! Separate window when undocked
-        QMainWindow* _undockedForm = nullptr;
+        QMainWindow* m_undockedForm = nullptr;
 
-        QPushButton* _findConsoleButton = nullptr;     ///< "Find Console" button (shown when undocked)
-        QPushButton* _reattachConsoleButton = nullptr; ///< "Reattach Console" button (shown when undocked)
+        QPushButton* m_findConsoleButton = nullptr;     ///< "Find Console" button (shown when undocked)
+        QPushButton* m_reattachConsoleButton = nullptr; ///< "Reattach Console" button (shown when undocked)
 
         // Geometry persistence (C#: oldUndockedSize, oldUndockedLocation, oldScaledSetting)
-        QSize _oldUndockedSize;      ///< Last undocked window size
-        QPoint _oldUndockedLocation; ///< Last undocked window position
-        bool _oldScaledSetting = false;      ///< Scale checkbox state before undocking
+        QSize m_oldUndockedSize;      ///< Last undocked window size
+        QPoint m_oldUndockedLocation; ///< Last undocked window position
+        bool m_oldScaledSetting = false;      ///< Scale checkbox state before undocking
 
         // Resize tracking (C#: undockedFormResized)
-        bool _undockedFormResized = false; ///< Helper to detect actual resize (not just move)
+        bool m_undockedFormResized = false; ///< Helper to detect actual resize (not just move)
 };
 
 #endif // VNCVIEW_H

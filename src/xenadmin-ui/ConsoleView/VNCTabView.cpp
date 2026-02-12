@@ -623,6 +623,13 @@ void VNCTabView::SendCAD()
         this->m_vncScreen->sendCAD();
 }
 
+QImage VNCTabView::Snapshot() const
+{
+    if (this->m_vncScreen)
+        return this->m_vncScreen->snapshot();
+    return QImage();
+}
+
 void VNCTabView::onScaleCheckBoxChanged(bool checked)
 {
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 912-930

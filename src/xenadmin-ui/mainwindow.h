@@ -290,6 +290,8 @@ class MainWindow : public QMainWindow
         void loadSettings();
         void restoreConnections();
         void updateConnectionProfileFromCache(XenConnection* connection, XenCache* cache);
+        void closeConsoleViewsForVmRef(const QString& vmRef);
+        void closeConsoleViewsForConnection(XenConnection* connection);
 
     protected:
         void closeEvent(QCloseEvent* event) override;

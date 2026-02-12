@@ -36,25 +36,25 @@
 
 MemoryBar::MemoryBar(QWidget* parent) : QWidget(parent), m_totalMemory(0)
 {
-    setMouseTracking(true);
+    this->setMouseTracking(true);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 }
 
 void MemoryBar::SetTotalMemory(qint64 totalBytes)
 {
-    m_totalMemory = totalBytes;
+    this->m_totalMemory = totalBytes;
     update();
 }
 
 void MemoryBar::ClearSegments()
 {
-    m_segments.clear();
+    this->m_segments.clear();
     update();
 }
 
 void MemoryBar::AddSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip)
 {
-    m_segments.append(Segment(name, bytes, color, tooltip));
+    this->m_segments.append(Segment(name, bytes, color, tooltip));
     update();
 }
 
@@ -72,7 +72,7 @@ void MemoryBar::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    if (m_totalMemory <= 0)
+    if (this->m_totalMemory <= 0)
         return;
 
     QPainter painter(this);
@@ -82,14 +82,14 @@ void MemoryBar::paintEvent(QPaintEvent* event)
     int barTop = fullArea.top() + RULER_HEIGHT + 4;
     QRect barArea(fullArea.left(), barTop, fullArea.width(), BAR_HEIGHT);
 
-    drawRuler(painter, barArea);
+    this->drawRuler(painter, barArea);
 
     // Calculate bytes per pixel
-    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+    double bytesPerPixel = static_cast<double>(this->m_totalMemory) / static_cast<double>(barArea.width());
 
     // Draw segments
     double left = barArea.left();
-    for (const Segment& segment : m_segments)
+    for (const Segment& segment : this->m_segments)
     {
         if (segment.bytes <= 0)
             continue;
@@ -100,7 +100,7 @@ void MemoryBar::paintEvent(QPaintEvent* event)
                           barArea.height());
 
         QString text = segment.name + "\n" + Misc::FormatSize(segment.bytes);
-        drawSegment(painter, barArea, segmentRect, segment.color, text);
+        this->drawSegment(painter, barArea, segmentRect, segment.color, text);
 
         left += width;
     }
@@ -110,7 +110,7 @@ void MemoryBar::paintEvent(QPaintEvent* event)
     {
         QRect freeRect(static_cast<int>(left), barArea.top(),
                        barArea.right() - static_cast<int>(left), barArea.height());
-        drawSegment(painter, barArea, freeRect, QColor(0, 0, 0), "");
+        this->drawSegment(painter, barArea, freeRect, QColor(0, 0, 0), "");
     }
 }
 
@@ -165,16 +165,16 @@ void MemoryBar::drawSegment(QPainter& painter, const QRect& barArea, const QRect
 void MemoryBar::drawGrid(QPainter& painter, const QRect& barArea)
 {
     // Draw grid lines at GB intervals if the bar is wide enough
-    if (m_totalMemory <= 0 || barArea.width() < 100)
+    if (this->m_totalMemory <= 0 || barArea.width() < 100)
         return;
 
     const qint64 GB = 1024LL * 1024LL * 1024LL;
-    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+    double bytesPerPixel = static_cast<double>(this->m_totalMemory) / static_cast<double>(barArea.width());
 
     painter.save();
     painter.setPen(QPen(QColor(100, 100, 100), 1, Qt::DotLine));
 
-    for (qint64 i = GB; i < m_totalMemory; i += GB)
+    for (qint64 i = GB; i < this->m_totalMemory; i += GB)
     {
         int x = barArea.left() + static_cast<int>(i / bytesPerPixel);
         if (x > barArea.left() && x < barArea.right())
@@ -188,7 +188,7 @@ void MemoryBar::drawGrid(QPainter& painter, const QRect& barArea)
 
 void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
 {
-    if (m_totalMemory <= 0 || barArea.width() < 100)
+    if (this->m_totalMemory <= 0 || barArea.width() < 100)
         return;
 
     const int MIN_GAP = 40;
@@ -203,10 +203,10 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
     painter.setFont(font);
     QFontMetrics fm(font);
 
-    QString maxLabel = Misc::FormatSize(m_totalMemory);
+    QString maxLabel = Misc::FormatSize(this->m_totalMemory);
     int longest = fm.horizontalAdvance(maxLabel);
 
-    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+    double bytesPerPixel = static_cast<double>(this->m_totalMemory) / static_cast<double>(barArea.width());
     double incr = BINARY_MEGA / 2.0;
     while (incr / bytesPerPixel * 2 < MIN_GAP + longest)
         incr *= 2;
@@ -217,14 +217,14 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
     int textTop = textBottom - fm.height();
 
     bool withLabel = true;
-    for (double x = 0.0; x <= m_totalMemory; x += incr)
+    for (double x = 0.0; x <= this->m_totalMemory; x += incr)
     {
         int pos = barArea.left() + static_cast<int>(x / bytesPerPixel);
         painter.drawLine(pos, tickTop, pos, rulerBottom);
 
         if (withLabel)
         {
-            if (m_totalMemory <= BINARY_GIGA || static_cast<qint64>(x) % (BINARY_GIGA / 2) == 0)
+            if (this->m_totalMemory <= BINARY_GIGA || static_cast<qint64>(x) % (BINARY_GIGA / 2) == 0)
             {
                 QString label = Misc::FormatSize(static_cast<qint64>(x));
                 QSize size = fm.size(Qt::TextSingleLine, label);
@@ -240,16 +240,16 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
 
 void MemoryBar::mouseMoveEvent(QMouseEvent* event)
 {
-    if (m_totalMemory <= 0)
+    if (this->m_totalMemory <= 0)
         return;
 
     QRect fullArea = rect().adjusted(2, 2, -2, -2);
     int barTop = fullArea.top() + RULER_HEIGHT + 4;
     QRect barArea(fullArea.left(), barTop, fullArea.width(), BAR_HEIGHT);
-    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+    double bytesPerPixel = static_cast<double>(this->m_totalMemory) / static_cast<double>(barArea.width());
 
     double left = barArea.left();
-    for (const Segment& segment : m_segments)
+    for (const Segment& segment : this->m_segments)
     {
         if (segment.bytes <= 0)
             continue;

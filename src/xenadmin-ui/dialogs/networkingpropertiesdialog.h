@@ -49,10 +49,7 @@ class NetworkingPropertiesDialog : public QDialog
     Q_OBJECT
 
     public:
-        explicit NetworkingPropertiesDialog(QSharedPointer<Host> host,
-                                            QSharedPointer<Pool> pool,
-                                            QSharedPointer<PIF> selectedPif,
-                                            QWidget* parent = nullptr);
+        explicit NetworkingPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Pool> pool, QSharedPointer<PIF> selectedPif, QWidget* parent = nullptr);
         ~NetworkingPropertiesDialog();
 
         void accept() override;
@@ -76,14 +73,9 @@ class NetworkingPropertiesDialog : public QDialog
         QString managementNetworkRef() const;
         QString purposeForPif(const QSharedPointer<PIF>& pif) const;
         QString makeAuxTabName() const;
-        void collateChanges(NetworkingPropertiesPage* page,
-                            const QSharedPointer<PIF>& oldPif,
-                            QList<QPair<QSharedPointer<PIF>, bool>>& newPifs,
-                            QList<QPair<QSharedPointer<PIF>, bool>>& newNamePifs,
-                            QMap<QString, QVariantMap>& updatedPifs);
+        void collateChanges(NetworkingPropertiesPage* page, const QSharedPointer<PIF>& oldPif, QList<QPair<QSharedPointer<PIF>, bool>>& newPifs, QList<QPair<QSharedPointer<PIF>, bool>>& newNamePifs, QMap<QString, QVariantMap>& updatedPifs);
         bool ipAddressSettingsChanged(const QSharedPointer<PIF>& pif1, const QSharedPointer<PIF>& pif2) const;
-        bool managementInterfaceIpChanged(const QSharedPointer<PIF>& oldManagement,
-                                          const QSharedPointer<PIF>& newManagement) const;
+        bool managementInterfaceIpChanged(const QSharedPointer<PIF>& oldManagement, const QSharedPointer<PIF>& newManagement) const;
 
         Ui::NetworkingPropertiesDialog* ui;
         QSharedPointer<Host> m_host;

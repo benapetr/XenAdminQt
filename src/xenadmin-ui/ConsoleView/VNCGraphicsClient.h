@@ -70,25 +70,25 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         ~VNCGraphicsClient() override;
 
         // IRemoteConsole interface
-        ConsoleKeyHandler* keyHandler() const override;
-        void setKeyHandler(ConsoleKeyHandler* handler) override;
-        QWidget* consoleControl() override
+        ConsoleKeyHandler* KeyHandler() const override;
+        void SetKeyHandler(ConsoleKeyHandler* handler) override;
+        QWidget* ConsoleControl() override
         {
             return this;
         }
-        void activate() override;
-        void disconnectAndDispose() override;
-        void pause() override;
-        void unpause() override;
-        void sendCAD() override;
-        QImage snapshot() override;
-        void setSendScanCodes(bool value) override;
-        bool scaling() const override;
-        void setScaling(bool value) override;
-        void setDisplayBorder(bool value) override;
-        QSize desktopSize() const override;
-        void setDesktopSize(const QSize& size) override;
-        QRect consoleBounds() const override;
+        void Activate() override;
+        void DisconnectAndDispose() override;
+        void Pause() override;
+        void Unpause() override;
+        void SendCAD() override;
+        QImage Snapshot() override;
+        void SetSendScanCodes(bool value) override;
+        bool IsScaling() const override;
+        void SetScaling(bool value) override;
+        void SetDisplayBorder(bool value) override;
+        QSize DesktopSize() const override;
+        void SetDesktopSize(const QSize& size) override;
+        QRect ConsoleBounds() const override;
 
         // Connection management (matches C# Connect/Disconnect)
         void connect(QTcpSocket* stream, const QString& password);

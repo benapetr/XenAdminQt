@@ -668,11 +668,43 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
 
     connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
     connect(connection->GetCache(), &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
+    connect(connection->GetCache(), &XenCache::objectRemoved, this,
+            [this](XenConnection*, const QString& objectType, const QString& objectRef)
+    {
+        if (XenCache::TypeFromString(objectType) == XenObjectType::VM && !objectRef.isEmpty())
+            this->closeConsoleViewsForVmRef(objectRef);
+    });
+    connect(connection, &XenConnection::ClearingCache, this, [this, conn]()
+    {
+        this->closeConsoleViewsForConnection(conn);
+    });
     connect(connection, &XenConnection::TaskAdded, this, &MainWindow::onConnectionTaskAdded);
     connect(connection, &XenConnection::TaskModified, this, &MainWindow::onConnectionTaskModified);
     connect(connection, &XenConnection::TaskDeleted, this, &MainWindow::onConnectionTaskDeleted);
     connect(connection, &XenConnection::MessageReceived, this, &MainWindow::onMessageReceived);
     connect(connection, &XenConnection::MessageRemoved, this, &MainWindow::onMessageRemoved);
+}
+
+void MainWindow::closeConsoleViewsForVmRef(const QString& vmRef)
+{
+    if (vmRef.isEmpty())
+        return;
+
+    if (this->m_consolePanel)
+        this->m_consolePanel->CloseVncForSource(vmRef);
+
+    if (this->m_cvmConsolePanel)
+        this->m_cvmConsolePanel->CloseVncForSource(vmRef);
+}
+
+void MainWindow::closeConsoleViewsForConnection(XenConnection* connection)
+{
+    if (!connection || !connection->GetCache())
+        return;
+
+    const QStringList vmRefs = connection->GetCache()->GetAllRefs(XenObjectType::VM);
+    for (const QString& vmRef : vmRefs)
+        this->closeConsoleViewsForVmRef(vmRef);
 }
 
 void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData)
@@ -867,6 +899,8 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
 // C# Reference: xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 653-660
 void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const QString& objectRef)
 {
+    const XenObjectType selectedType = XenCache::TypeFromString(objectType);
+
     // Find the object in the tree and select it
     // This matches C# behavior where double-clicking in search results navigates to General tab
     QTreeWidget* tree = this->GetServerTreeWidget();
@@ -880,16 +914,16 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
         QTreeWidgetItem* item = *it;
         QVariant data = item->data(0, Qt::UserRole);
         
-        QString itemType;
+        XenObjectType itemType = XenObjectType::Null;
         QString itemRef;
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            itemType = obj->GetObjectTypeName();
+            itemType = obj->GetObjectType();
             itemRef = obj->OpaqueRef();
         }
 
-        if (itemType == objectType && itemRef == objectRef)
+        if (itemType == selectedType && itemRef == objectRef)
         {
             // Found the item - select it (this will trigger onTreeItemSelected)
             tree->setCurrentItem(item);
@@ -943,13 +977,14 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
 {
     QList<BaseTabPage*> newTabs;
 
-    QString objectType = xen_obj->GetObjectTypeName();
+    const XenObjectType objectType = xen_obj->GetObjectType();
+    const QString objectTypeName = xen_obj->GetObjectTypeName();
 
-    bool isHost = (objectType == "host");
-    bool isVM = (objectType == "vm");
-    bool isPool = (objectType == "pool");
-    bool isSR = (objectType == "sr");
-    bool isNetwork = (objectType == "network");
+    const bool isHost = (objectType == XenObjectType::Host);
+    const bool isVM = (objectType == XenObjectType::VM);
+    const bool isPool = (objectType == XenObjectType::Pool);
+    const bool isSR = (objectType == XenObjectType::SR);
+    const bool isNetwork = (objectType == XenObjectType::Network);
 
     // Get tab pointers from m_tabPages
     BaseTabPage* generalTab = nullptr;
@@ -1095,7 +1130,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     {
         for (BaseTabPage* tab : this->m_tabPages)
         {
-            if (tab->IsApplicableForObjectType(objectType))
+            if (tab->IsApplicableForObjectType(objectTypeName))
                 newTabs.append(tab);
         }
     }
@@ -1200,11 +1235,11 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
                 }
 
                 // Set current source based on object type
-                if (objectType == "vm")
+                if (xen_obj && xen_obj->GetObjectType() == XenObjectType::VM)
                 {
                     consoleTab->GetConsolePanel()->SetCurrentSource(xen_obj);
                     consoleTab->GetConsolePanel()->UnpauseActiveView(true);
-                } else if (objectType == "host")
+                } else if (xen_obj && xen_obj->GetObjectType() == XenObjectType::Host)
                 {
                     consoleTab->GetConsolePanel()->SetCurrentSourceHost(xen_obj);
                     consoleTab->GetConsolePanel()->UnpauseActiveView(true);
@@ -1226,7 +1261,7 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
                     }
 
                     // Set current source for SR
-                    if (objectType == "sr")
+                    if (xen_obj && xen_obj->GetObjectType() == XenObjectType::SR)
                     {
                         cvmConsoleTab->consolePanel()->SetCurrentSource(xen_obj);
                         cvmConsoleTab->consolePanel()->UnpauseActiveView(true);
@@ -1308,12 +1343,12 @@ void MainWindow::onTabChanged(int index)
     }
 
     QString current_ref;
-    QString current_type;
+    XenObjectType currentType = XenObjectType::Null;
 
     if (!this->m_currentObject.isNull())
     {
         current_ref = this->m_currentObject->OpaqueRef();
-        current_type = this->m_currentObject->GetObjectTypeName();
+        currentType = this->m_currentObject->GetObjectType();
     }
 
     // Notify the new tab that it's being shown
@@ -1341,11 +1376,11 @@ void MainWindow::onTabChanged(int index)
             }
 
             // Set current source based on selection
-            if (current_type == "vm")
+            if (currentType == XenObjectType::VM)
             {
                 consoleTab->GetConsolePanel()->SetCurrentSource(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
-            } else if (current_type == "host")
+            } else if (currentType == XenObjectType::Host)
             {
                 consoleTab->GetConsolePanel()->SetCurrentSourceHost(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
@@ -1372,7 +1407,7 @@ void MainWindow::onTabChanged(int index)
 
                 // Set current source - CvmConsolePanel expects SR with driver domain
                 // The CvmConsolePanel will look up the driver domain VM internally
-                if (current_type == "sr")
+                if (currentType == XenObjectType::SR)
                 {
                     // CvmConsolePanel.setCurrentSource() will look up driver domain VM
                     cvmConsoleTab->consolePanel()->SetCurrentSource(this->m_currentObject);
@@ -2180,10 +2215,12 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
     if (!connection)
         return;
 
+    const XenObjectType changedType = XenCache::TypeFromString(objectType);
+
     // If the changed object is the currently displayed one, refresh the tabs
     if (!this->m_currentObject.isNull()
         && connection == this->m_currentObject->GetConnection()
-        && objectType == this->m_currentObject->GetObjectTypeName()
+        && changedType == this->m_currentObject->GetObjectType()
         && objectRef == this->m_currentObject->OpaqueRef())
     {
         BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(this->ui->mainTabWidget->currentWidget());
@@ -2437,6 +2474,7 @@ void MainWindow::updateToolbarsAndMenus()
     QString objectType;
     QString objectRef;
     XenConnection* connection = nullptr;
+    XenObjectType selectedType = XenObjectType::Null;
     if (currentItem)
     {
         QVariant data = currentItem->data(0, Qt::UserRole);
@@ -2448,6 +2486,7 @@ void MainWindow::updateToolbarsAndMenus()
                 objectType = obj->GetObjectTypeName();
                 objectRef = obj->OpaqueRef();
                 connection = obj->GetConnection();
+                selectedType = obj->GetObjectType();
             }
         }
         else if (data.canConvert<XenConnection*>())
@@ -2650,7 +2689,7 @@ void MainWindow::updateToolbarsAndMenus()
     // Matches C#: ForceShutdownToolbarButton.Available = ((ForceVMShutDownCommand)ForceShutdownToolbarButton.Command).ShowOnMainToolBar
     bool hasCleanShutdown = false;
     bool hasCleanReboot = false;
-    if (objectType == "vm" && connection && connection->GetCache())
+    if (selectedType == XenObjectType::VM && connection && connection->GetCache())
     {
         QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", objectRef);
         QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
@@ -2736,7 +2775,8 @@ void MainWindow::SelectObjectInTree(const QString& objectRef, const QString& obj
         QVariant data = item->data(0, Qt::UserRole);
         
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj && obj->OpaqueRef() == objectRef && obj->GetObjectTypeName() == objectType)
+        if (obj && obj->OpaqueRef() == objectRef &&
+            obj->GetObjectType() == XenCache::TypeFromString(objectType))
         {
             // Found the item - select it
             this->GetServerTreeWidget()->setCurrentItem(item);

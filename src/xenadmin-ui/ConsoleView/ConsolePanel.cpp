@@ -384,7 +384,7 @@ QImage ConsolePanel::Snapshot(QSharedPointer<VM> vm, const QString& elevatedUser
     return snapshot;
 }
 
-void ConsolePanel::closeVncForSource(const QString& vmRef)
+void ConsolePanel::CloseVncForSource(const QString& vmRef)
 {
     qDebug() << "ConsolePanel: closeVncForSource() - vmRef:" << vmRef;
 

@@ -174,7 +174,7 @@ class ConsolePanel : public QWidget
          *
          * @param vmRef VM OpaqueRef to close console for
          */
-        void closeVncForSource(const QString& vmRef);
+        void CloseVncForSource(const QString& vmRef);
 
         /**
          * @brief Send Ctrl+Alt+Delete to active console
