@@ -139,6 +139,7 @@ class NavigationView : public QWidget
         bool eventFilter(QObject* watched, QEvent* event) override;
         void handleTreeDropEvent(class QDropEvent* dropEvent);
         QString buildDragDropCommandKey(QTreeWidgetItem* targetItem) const;
+        void updateDragDropAvailability();
 
         void buildInfrastructureTree();
         void buildObjectsTree();

@@ -129,10 +129,7 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
     connect(this->ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &NavigationView::onTreeItemDoubleClicked);
     connect(this->ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &NavigationView::treeNodeRightClicked);
 
-    this->ui->treeWidget->setDragEnabled(true);
-    this->ui->treeWidget->setAcceptDrops(true);
-    this->ui->treeWidget->setDropIndicatorShown(true);
-    this->ui->treeWidget->setDragDropMode(QAbstractItemView::DragDrop);
+    this->updateDragDropAvailability();
     this->ui->treeWidget->viewport()->installEventFilter(this);
 
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
@@ -236,9 +233,23 @@ void NavigationView::SetNavigationMode(NavigationPane::NavigationMode mode)
     if (this->m_navigationMode != mode)
     {
         this->m_navigationMode = mode;
+        this->updateDragDropAvailability();
         // Rebuild tree with new mode
         this->RequestRefreshTreeView();
     }
+}
+
+void NavigationView::updateDragDropAvailability()
+{
+    // Drag/drop commands are meaningful only in organization views for tags/folders.
+    const bool enabled = (this->m_navigationMode == NavigationPane::Tags ||
+                          this->m_navigationMode == NavigationPane::Folders);
+    this->ui->treeWidget->setDragEnabled(enabled);
+    this->ui->treeWidget->setAcceptDrops(enabled);
+    this->ui->treeWidget->setDropIndicatorShown(enabled);
+    this->ui->treeWidget->setDragDropMode(enabled
+        ? QAbstractItemView::DragDrop
+        : QAbstractItemView::NoDragDrop);
 }
 
 QString NavigationView::GetSearchText() const
@@ -461,6 +472,9 @@ void NavigationView::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
 
 bool NavigationView::eventFilter(QObject* watched, QEvent* event)
 {
+    if (this->ui->treeWidget->dragDropMode() == QAbstractItemView::NoDragDrop)
+        return QWidget::eventFilter(watched, event);
+
     if (watched == this->ui->treeWidget->viewport() && event->type() == QEvent::Drop)
     {
         this->handleTreeDropEvent(static_cast<QDropEvent*>(event));
