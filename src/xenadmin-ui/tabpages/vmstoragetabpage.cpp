@@ -37,7 +37,6 @@
 #include "xen/sr.h"
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VDI.h"
-#include "xen/xenapi/xenapi_VM.h"
 #include "xen/actions/vm/changevmisoaction.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "xen/actions/vdi/destroydiskaction.h"
@@ -60,30 +59,6 @@
 #include <QAction>
 #include <QKeyEvent>
 #include <QItemSelectionModel>
-
-namespace
-{
-    void refreshVmRecord(XenConnection* connection, const QString& vmRef)
-    {
-        if (!connection || !connection->GetCache() || vmRef.isEmpty())
-            return;
-
-        XenAPI::Session* session = connection->GetSession();
-        if (!session || !session->IsLoggedIn())
-            return;
-
-        try
-        {
-            QVariantMap record = XenAPI::VM::get_record(session, vmRef);
-            record["ref"] = vmRef;
-            connection->GetCache()->Update(XenObjectType::VM, vmRef, record);
-        }
-        catch (const std::exception& ex)
-        {
-            qWarning() << "VMStorageTabPage: Failed to refresh VM record:" << ex.what();
-        }
-    }
-}
 
 namespace
 {
@@ -712,7 +687,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
 
         // Refresh the drives list to show new drive
         // We need to update the VM's VBD list first
-        refreshVmRecord(this->m_connection, this->m_objectRef);
+        this->refreshContent();
     } else
     {
         qDebug() << "Failed to create CD/DVD drive";
@@ -1076,7 +1051,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
         QMessageBox::warning(this, tr("Failed"), failText);
     }
 
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    this->refreshContent();
 
     delete multi;
 }
@@ -1136,7 +1111,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     dialog->exec();
     delete dialog;
 
-    refreshVmRecord(this->m_vm->GetConnection(), this->m_vm->OpaqueRef());
+    this->refreshContent();
 
     delete multi;
 }
@@ -1223,7 +1198,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     dialog->exec();
     delete dialog;
 
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    this->refreshContent();
 
     delete multi;
 }
@@ -1375,7 +1350,7 @@ void VMStorageTabPage::onAddButtonClicked()
         return;
     command.Run();
 
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    this->refreshContent();
 }
 
 void VMStorageTabPage::onAttachButtonClicked()
@@ -1452,7 +1427,7 @@ void VMStorageTabPage::onAttachButtonClicked()
     qDebug() << "VBD created:" << vbdRef;
 
     // Refresh to show attached disk
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    this->refreshContent();
 }
 
 void VMStorageTabPage::onActivateButtonClicked()
@@ -1490,7 +1465,7 @@ void VMStorageTabPage::onMoveButtonClicked()
     MoveVirtualDiskDialog dialog(vdis, this);
     if (dialog.exec() == QDialog::Accepted)
     {
-        refreshVmRecord(this->m_connection, this->m_objectRef);
+        this->refreshContent();
     }
 }
 
@@ -1522,5 +1497,5 @@ void VMStorageTabPage::onEditButtonClicked()
         return;
 
     // Refresh to show updated properties
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    this->refreshContent();
 }
