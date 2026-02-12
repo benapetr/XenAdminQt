@@ -44,7 +44,6 @@
 
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/xenapi/xenapi_VM.h"
 #include "xenlib/xen/actions/vm/createvmaction.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
@@ -364,17 +363,6 @@ void NewVMWizard::loadTemplateDevices()
 
     // Get template record from cache
     QVariantMap templateRecord = cache->ResolveObjectData(XenObjectType::VM, this->m_selectedTemplate);
-    if (templateRecord.value("provision_xml").toString().isEmpty() && this->m_connection && this->m_connection->GetSession())
-    {
-        try
-        {
-            templateRecord = XenAPI::VM::get_record(this->m_connection->GetSession(), this->m_selectedTemplate);
-        }
-        catch (const std::exception& exn)
-        {
-            qWarning() << "NewVMWizard: Failed to fetch VM record:" << exn.what();
-        }
-    }
     if (templateRecord.isEmpty())
     {
         this->updateDiskTable();
@@ -1144,20 +1132,6 @@ void NewVMWizard::createVirtualMachine()
     }
 
     action->deleteLater();
-
-    XenCache* cache = this->cache();
-    if (cache && connection->GetSession())
-    {
-        cache->ClearType(XenObjectType::VM);
-        try
-        {
-            QVariantMap records = XenAPI::VM::get_all_records(connection->GetSession());
-            cache->UpdateBulk(XenObjectType::VM, records);
-        } catch (const std::exception& exn)
-        {
-            qWarning() << "NewVMWizard: Failed to refresh VM records:" << exn.what();
-        }
-    }
 
     QString message = tr("Virtual machine '%1' has been created successfully.").arg(this->m_vmName);
     if (startImmediately)
