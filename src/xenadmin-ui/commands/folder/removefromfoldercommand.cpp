@@ -62,20 +62,10 @@ void RemoveFromFolderCommand::Run()
     const QList<QSharedPointer<XenObject>> selected = this->getSelectedObjects();
     for (const QSharedPointer<XenObject>& obj : selected)
     {
-        actions.append(new GeneralEditPageAction(obj,
-                                                 obj->GetFolderPath(),
-                                                 QString(),
-                                                 obj->GetTags(),
-                                                 obj->GetTags(),
-                                                 false,
-                                                 this->mainWindow()));
+        actions.append(new GeneralEditPageAction(obj, obj->GetFolderPath(), QString(), obj->GetTags(), obj->GetTags(), false, this->mainWindow(), true));
     }
 
-    this->RunMultipleActions(actions,
-                             QObject::tr("Remove From Folder"),
-                             QObject::tr("Removing selected items from folder..."),
-                             QObject::tr("Items removed from folder"),
-                             true);
+    this->RunMultipleActions(actions, QObject::tr("Remove From Folder"), QObject::tr("Removing selected items from folder..."), QObject::tr("Items removed from folder"), true, true);
 }
 
 QString RemoveFromFolderCommand::MenuText() const

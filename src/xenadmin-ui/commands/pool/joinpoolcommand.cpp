@@ -30,6 +30,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/asyncoperation.h"
 #include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>
 #include <QInputDialog>
@@ -37,6 +38,46 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLineEdit>
+
+namespace
+{
+    class JoinPoolAsyncAction : public AsyncOperation
+    {
+        public:
+            JoinPoolAsyncAction(XenConnection* connection,
+                                const QString& masterAddress,
+                                const QString& username,
+                                const QString& password,
+                                QObject* parent = nullptr)
+                : AsyncOperation(connection,
+                                 QObject::tr("Join Resource Pool"),
+                                 QObject::tr("Joining resource pool..."),
+                                 parent),
+                  m_masterAddress(masterAddress),
+                  m_username(username),
+                  m_password(password)
+            {
+            }
+
+        protected:
+            void run() override
+            {
+                this->SetPercentComplete(5);
+                this->SetDescription(QObject::tr("Starting pool join task..."));
+
+                const QString taskRef = XenAPI::Pool::async_join(this->GetSession(), m_masterAddress, m_username, m_password);
+
+                this->SetPercentComplete(10);
+                this->SetDescription(QObject::tr("Joining resource pool..."));
+                this->pollToCompletion(taskRef, 10, 100);
+            }
+
+        private:
+            QString m_masterAddress;
+            QString m_username;
+            QString m_password;
+    };
+}
 
 JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -122,27 +163,10 @@ void JoinPoolCommand::Run()
         return;
     }
 
-    MainWindow::instance()->ShowStatusMessage(QString("Joining pool at %1...").arg(masterAddress), 0);
+    auto* action = new JoinPoolAsyncAction(hostConnection, masterAddress, username, password, this->mainWindow());
+    action->SetHost(host);
 
-    try
-    {
-        // Call Pool.async_join directly from the current host's session
-        // This is the correct pattern - the joining host calls async_join with the
-        // coordinator's address and credentials
-        QString taskRef = XenAPI::Pool::async_join(session, masterAddress, username, password);
-
-        // Note: After successful join, the host will reboot and reconnect to the coordinator
-        // The connection will be dropped, so we just show success message
-        QMessageBox::information(MainWindow::instance(), "Join Pool",
-                                 QString("Successfully initiated join pool operation.\n"
-                                         "Task: %1\n\n"
-                                         "The host will now be rebooted and join the pool.")
-                                     .arg(taskRef));
-
-    } catch (const std::exception& e)
-    {
-        QMessageBox::critical(MainWindow::instance(), "Join Pool", QString("Failed to join pool:\n%1").arg(e.what()));
-    }
+    this->RunMultipleActions({ action }, QObject::tr("Join Resource Pool"),  QObject::tr("Joining resource pool..."), QObject::tr("Joined"), true, true);
 }
 
 QString JoinPoolCommand::MenuText() const

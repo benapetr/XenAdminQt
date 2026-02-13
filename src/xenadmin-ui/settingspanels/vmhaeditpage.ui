@@ -30,7 +30,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="labelStartOrder">
         <property name="text">
-         <string>&amp;Start order:</string>
+         <string>Start order:</string>
         </property>
        </widget>
       </item>
@@ -44,7 +44,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="labelStartDelay">
         <property name="text">
-         <string>&amp;Attempt to start next VM after:</string>
+         <string>Attempt to start next VM after:</string>
         </property>
        </widget>
       </item>
@@ -86,7 +86,7 @@
       <item>
        <spacer name="scanningLeftSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -106,7 +106,7 @@
       <item>
        <spacer name="scanningRightSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -128,7 +128,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="labelProtectionLevel">
         <property name="text">
-         <string>&amp;HA restart priority:</string>
+         <string>HA restart priority:</string>
         </property>
        </widget>
       </item>
@@ -185,7 +185,7 @@
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>

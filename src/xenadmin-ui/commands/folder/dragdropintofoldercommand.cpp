@@ -134,13 +134,7 @@ void DragDropIntoFolderCommand::Run()
                     continue;
                 handledObjects.insert(key);
 
-                actions.append(new GeneralEditPageAction(candidate,
-                                                         currentPath,
-                                                         updatedPath,
-                                                         candidate->GetTags(),
-                                                         candidate->GetTags(),
-                                                         false,
-                                                         this->mainWindow()));
+                actions.append(new GeneralEditPageAction(candidate, currentPath, updatedPath, candidate->GetTags(), candidate->GetTags(), false, this->mainWindow(), true));
             }
 
             actions.append(new DelegatedAsyncOperation(connection,
@@ -179,22 +173,12 @@ void DragDropIntoFolderCommand::Run()
             continue;
         handledObjects.insert(key);
 
-        actions.append(new GeneralEditPageAction(obj,
-                                                 currentPath,
-                                                 m_targetFolderPath,
-                                                 obj->GetTags(),
-                                                 obj->GetTags(),
-                                                 false,
-                                                 this->mainWindow()));
+        actions.append(new GeneralEditPageAction(obj, currentPath, this->m_targetFolderPath, obj->GetTags(), obj->GetTags(), false, this->mainWindow(), true));
     }
 
     if (!actions.isEmpty())
     {
-        this->RunMultipleActions(actions,
-                                 QObject::tr("Move To Folder"),
-                                 QObject::tr("Moving objects to folder..."),
-                                 QObject::tr("Objects moved to folder"),
-                                 true);
+        this->RunMultipleActions(actions, QObject::tr("Move To Folder"), QObject::tr("Moving objects to folder..."), QObject::tr("Objects moved to folder"), true, true);
     }
 }
 

@@ -57,11 +57,7 @@ void NewFolderCommand::Run()
         return;
 
     bool ok = false;
-    const QString input = QInputDialog::getText(this->mainWindow(), QObject::tr("New Folder"),
-                                                QObject::tr("Folder name (or ';' separated list):"),
-                                                QLineEdit::Normal,
-                                                QString(),
-                                                &ok);
+    const QString input = QInputDialog::getText(this->mainWindow(), QObject::tr("New Folder"), QObject::tr("Folder name (or ';' separated list):"), QLineEdit::Normal, QString(), &ok);
     if (!ok)
         return;
 
@@ -94,11 +90,7 @@ void NewFolderCommand::Run()
                                                },
                                                this->mainWindow()));
 
-    this->RunMultipleActions(actions,
-                             QObject::tr("Create Folder"),
-                             QObject::tr("Creating folder(s)..."),
-                             QObject::tr("Folder creation complete"),
-                             true);
+    this->RunMultipleActions(actions, QObject::tr("Create Folder"), QObject::tr("Creating folder(s)..."), QObject::tr("Folder creation complete"), true, true);
 }
 
 QString NewFolderCommand::MenuText() const
@@ -206,13 +198,7 @@ XenConnection* NewFolderCommand::chooseConnection(const QList<XenConnection*>& c
     }
 
     bool ok = false;
-    const QString chosen = QInputDialog::getItem(this->mainWindow(),
-                                                 QObject::tr("Select Connection"),
-                                                 QObject::tr("Create folder on:"),
-                                                 choices,
-                                                 0,
-                                                 false,
-                                                 &ok);
+    const QString chosen = QInputDialog::getItem(this->mainWindow(), QObject::tr("Select Connection"), QObject::tr("Create folder on:"), choices, 0, false, &ok);
     if (!ok || chosen.isEmpty())
         return nullptr;
 

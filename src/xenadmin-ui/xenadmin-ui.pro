@@ -685,7 +685,8 @@ FORMS += \
     ConsoleView/VNCTabView.ui \
     ConsoleView/ConsolePanel.ui
 
-RESOURCES += resources.qrc
+RESOURCES += resources.qrc \
+    ../resources.qrc
 
 # Link with xenlib
 INCLUDEPATH += .. ../xenlib

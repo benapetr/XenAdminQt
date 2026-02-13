@@ -103,7 +103,8 @@ class XENLIB_EXPORT GeneralEditPageAction : public AsyncOperation
                                        const QStringList& oldTags,
                                        const QStringList& newTags,
                                        bool suppressHistory = true,
-                                       QObject* parent = nullptr);
+                                       QObject* parent = nullptr,
+                                       bool auto_delete = false);
 
     protected:
         /**

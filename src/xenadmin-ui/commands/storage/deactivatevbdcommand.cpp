@@ -26,13 +26,14 @@
  */
 
 #include "deactivatevbdcommand.h"
-#include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/xen/apiversion.h"
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/xenapi/xenapi_VBD.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -84,6 +85,10 @@ bool DeactivateVBDCommand::canRunVBD(QSharedPointer<VBD> vbd) const
     if (vdiType == "system" && vbd->IsOwner())
         return false;
 
+    // C# parity: require IO drivers only on pre-Ely hosts.
+    if (this->areIODriversNeededAndMissing(vm))
+        return false;
+
     if (!vbd->CurrentlyAttached())
         return false;
 
@@ -95,41 +100,79 @@ bool DeactivateVBDCommand::canRunVBD(QSharedPointer<VBD> vbd) const
     return true;
 }
 
-bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData) const
+bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QSharedPointer<VM>& vm) const
 {
-    // Simplified check - C# has complex API version checking (Ely or greater)
-    // For modern XenServer, IO drivers are not strictly required for hot-unplug
-    // TODO: Implement full virtualization status checking
-    Q_UNUSED(vmData);
-    return false;
+    if (!vm || !vm->GetConnection())
+        return false;
+
+    XenAPI::Session* session = vm->GetConnection()->GetSession();
+    if (session && session->ApiVersionMeets(APIVersion::API_2_6))
+        return false;
+
+    // C# equivalent:
+    // !vm.GetVirtualizationStatus(out _).HasFlag(VM.VirtualizationStatus.IoDriversInstalled)
+    constexpr int IoDriversInstalledFlag = 4;
+    const int status = vm->GetVirtualizationStatus();
+    return (status & IoDriversInstalledFlag) == 0;
 }
 
 void DeactivateVBDCommand::Run()
 {
-    QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->IsValid())
-        return;
-
-    QSharedPointer<VDI> vdi = vbd->GetVDI();
-    QSharedPointer<VM> vm = vbd->GetVM();
-
-    if (!vm || !vdi)
-        return;
-
-    QString vdiName = vdi->GetName();
-    QString vmName = vm->GetName();
-
-    // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
-    try
+    QList<QSharedPointer<VBD>> candidates;
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& object : selectedObjects)
     {
-        XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbd->OpaqueRef());
+        if (!object || object->GetObjectType() != XenObjectType::VBD)
+            continue;
 
-        MainWindow::instance()->ShowStatusMessage(QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName), 5000);
-    } catch (const std::exception& e)
-    {
-        QMessageBox::warning(
-            MainWindow::instance(),
-            "Deactivate Virtual Disk Failed",
-            QString("Failed to deactivate virtual disk '%1' from VM '%2': %3").arg(vdiName, vmName, e.what()));
+        QSharedPointer<VBD> vbd = qSharedPointerDynamicCast<VBD>(object);
+        if (vbd && vbd->IsValid() && this->canRunVBD(vbd))
+            candidates.append(vbd);
     }
+
+    if (candidates.isEmpty())
+    {
+        QSharedPointer<VBD> vbd = this->getVBD();
+        if (vbd && vbd->IsValid() && this->canRunVBD(vbd))
+            candidates.append(vbd);
+    }
+
+    if (candidates.isEmpty())
+        return;
+
+    QList<AsyncOperation*> actions;
+    actions.reserve(candidates.size());
+
+    for (const QSharedPointer<VBD>& vbd : candidates)
+    {
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        QSharedPointer<VM> vm = vbd->GetVM();
+        if (!vm || !vdi || !vbd->GetConnection())
+            continue;
+
+        const QString vdiName = vdi->GetName();
+        const QString vmName = vm->GetName();
+
+        auto* action = new DelegatedAsyncOperation(vbd->GetConnection(),
+                                                   QString("Deactivating disk '%1' on VM '%2'").arg(vdiName, vmName),
+                                                   QString("Deactivating virtual disk '%1'...").arg(vdiName),
+                                                   [vbd](DelegatedAsyncOperation* self)
+                                                   {
+                                                       XenAPI::VBD::unplug(self->GetSession(), vbd->OpaqueRef());
+                                                   },
+                                                   this->mainWindow());
+        action->SetVM(vm);
+        actions.append(action);
+    }
+
+    if (actions.isEmpty())
+        return;
+
+    if (actions.size() == 1)
+    {
+        actions.first()->RunAsync();
+        return;
+    }
+
+    this->RunMultipleActions(actions, QObject::tr("Deactivate Virtual Disks"), QObject::tr("Deactivating virtual disks..."), QObject::tr("Completed"), true, true);
 }

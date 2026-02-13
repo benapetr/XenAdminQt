@@ -62,19 +62,12 @@ class XENLIB_EXPORT DelegatedAsyncOperation : public AsyncOperation
          * @param workCallback Function to execute (receives 'this' as parameter)
          * @param parent Parent QObject
          */
-        explicit DelegatedAsyncOperation(XenConnection* connection,
-                                         const QString& title,
-                                         const QString& description,
-                                         WorkCallback workCallback,
-                                         QObject* parent = nullptr);
+        explicit DelegatedAsyncOperation(XenConnection* connection, const QString& title, const QString& description, WorkCallback workCallback, QObject* parent = nullptr);
 
         /**
          * @brief Construct without connection (for non-XenAPI work)
          */
-        explicit DelegatedAsyncOperation(const QString& title,
-                                         const QString& description,
-                                         WorkCallback workCallback,
-                                         QObject* parent = nullptr);
+        explicit DelegatedAsyncOperation(const QString& title, const QString& description, WorkCallback workCallback, QObject* parent = nullptr);
 
         ~DelegatedAsyncOperation() override = default;
 

@@ -59,8 +59,7 @@ void NotificationsSubModeItemDelegate::paint(QPainter* painter, const QStyleOpti
     int imgY = option.rect.top() + (itemHeight - iconSize.height()) / 2;
 
     // Draw icon
-    icon.paint(painter, option.rect.left() + IMG_LEFT_MARGIN, imgY,
-               iconSize.width(), iconSize.height());
+    icon.paint(painter, option.rect.left() + IMG_LEFT_MARGIN, imgY, iconSize.width(), iconSize.height());
 
     // Get text
     QString text = itemData.getText();
@@ -73,8 +72,7 @@ void NotificationsSubModeItemDelegate::paint(QPainter* painter, const QStyleOpti
 
     // Calculate text rect
     int textLeft = option.rect.left() + IMG_LEFT_MARGIN + iconSize.width() + IMG_RIGHT_MARGIN;
-    QRect textRect(textLeft, option.rect.top(),
-                   option.rect.right() - textLeft, itemHeight);
+    QRect textRect(textLeft, option.rect.top(), option.rect.right() - textLeft, itemHeight);
 
     // Combine text with subtext if present
     QString fullText = text;
@@ -89,8 +87,7 @@ void NotificationsSubModeItemDelegate::paint(QPainter* painter, const QStyleOpti
     painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap, fullText);
 }
 
-QSize NotificationsSubModeItemDelegate::sizeHint(const QStyleOptionViewItem& option,
-                                                 const QModelIndex& index) const
+QSize NotificationsSubModeItemDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(option);
     Q_UNUSED(index);
@@ -140,19 +137,19 @@ QIcon NotificationsSubModeItemData::getIcon() const
     // TODO: Replace with actual icon paths once icons are available
     switch (subMode)
     {
-    case NavigationPane::Alerts:
-        return QIcon::fromTheme("dialog-warning");
+        case NavigationPane::Alerts:
+            return QIcon::fromTheme("dialog-warning");
 
-    case NavigationPane::Events:
-        if (unreadEntries == 0)
-            return QIcon::fromTheme("view-calendar");
-        else
-            return QIcon::fromTheme("dialog-error");
+        case NavigationPane::Events:
+            if (unreadEntries == 0)
+                return QIcon::fromTheme("view-calendar");
+            else
+                return QIcon::fromTheme("dialog-error");
 
-    case NavigationPane::Updates:
-        return QIcon::fromTheme("system-software-update");
+        case NavigationPane::Updates:
+            return QIcon::fromTheme("system-software-update");
 
-    default:
-        return QIcon();
+        default:
+            return QIcon();
     }
 }

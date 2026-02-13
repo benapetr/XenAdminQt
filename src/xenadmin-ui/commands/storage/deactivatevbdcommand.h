@@ -30,6 +30,8 @@
 
 #include "vbdcommand.h"
 
+class VM;
+
 /**
  * @brief Command to deactivate (unplug) a VBD
  *
@@ -50,7 +52,7 @@ class DeactivateVBDCommand : public VBDCommand
 
     private:
         bool canRunVBD(QSharedPointer<VBD> vbd) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
+        bool areIODriversNeededAndMissing(const QSharedPointer<VM>& vm) const;
 };
 
 #endif // DEACTIVATEVBDCOMMAND_H

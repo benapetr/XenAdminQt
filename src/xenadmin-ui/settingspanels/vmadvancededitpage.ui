@@ -77,7 +77,7 @@
    <item row="4" column="1">
     <widget class="QLabel" name="labelShadowMultiplier">
      <property name="text">
-      <string>Shadow memory &amp;multiplier:</string>
+      <string>Shadow memory multiplier:</string>
      </property>
     </widget>
    </item>

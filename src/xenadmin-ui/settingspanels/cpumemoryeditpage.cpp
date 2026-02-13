@@ -25,13 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cpumemoryeditpage.h"
-#include "ui_cpumemoryeditpage.h"
-#include "xenlib/xen/actions/vm/changevcpusettingsaction.h"
-#include "xenlib/operations/multipleaction.h"
-#include "xenlib/xencache.h"
-#include "xenlib/xen/host.h"
-#include "xenlib/xen/vm.h"
 #include <QComboBox>
 #include <QSlider>
 #include <QStyle>
@@ -39,9 +32,15 @@
 #include <QtMath>
 #include <algorithm>
 #include <cmath>
+#include "cpumemoryeditpage.h"
+#include "ui_cpumemoryeditpage.h"
+#include "xenlib/xen/actions/vm/changevcpusettingsaction.h"
+#include "xenlib/operations/multipleaction.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
 
-CpuMemoryEditPage::CpuMemoryEditPage(QWidget* parent)
-    : IEditPage(parent),
+CpuMemoryEditPage::CpuMemoryEditPage(QWidget* parent) : IEditPage(parent),
       ui(new Ui::CpuMemoryEditPage),
       m_validToSave(true),
       m_origVcpus(1),
@@ -84,14 +83,10 @@ CpuMemoryEditPage::CpuMemoryEditPage(QWidget* parent)
     this->ui->topologyWarningIcon->setVisible(false);
     this->ui->topologyWarningLabel->setVisible(false);
 
-    connect(this->ui->comboBoxVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &CpuMemoryEditPage::onVcpusSelectionChanged);
-    connect(this->ui->comboBoxInitialVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &CpuMemoryEditPage::onVcpusAtStartupSelectionChanged);
-    connect(this->ui->comboBoxTopology, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &CpuMemoryEditPage::onTopologySelectionChanged);
-    connect(this->ui->cpuPrioritySlider, &QSlider::valueChanged,
-            this, &CpuMemoryEditPage::onPriorityChanged);
+    connect(this->ui->comboBoxVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CpuMemoryEditPage::onVcpusSelectionChanged);
+    connect(this->ui->comboBoxInitialVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CpuMemoryEditPage::onVcpusAtStartupSelectionChanged);
+    connect(this->ui->comboBoxTopology, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CpuMemoryEditPage::onTopologySelectionChanged);
+    connect(this->ui->cpuPrioritySlider, &QSlider::valueChanged, this, &CpuMemoryEditPage::onPriorityChanged);
 }
 
 CpuMemoryEditPage::~CpuMemoryEditPage()
@@ -203,12 +198,12 @@ void CpuMemoryEditPage::repopulate()
 void CpuMemoryEditPage::initializeVCpuControls()
 {
     this->ui->lblVCPUs->setText(this->m_isVcpuHotplugSupported
-        ? tr("Maximum number of v&CPUs:")
-        : tr("&Number of vCPUs:"));
+        ? tr("Maximum number of vCPUs:")
+        : tr("Number of vCPUs:"));
 
     this->ui->labelInitialVCPUs->setText(this->m_vm->GetPowerState() == "Halted"
-        ? tr("Initial number of v&CPUs:")
-        : tr("Current number of v&CPUs:"));
+        ? tr("Initial number of vCPUs:")
+        : tr("Current number of vCPUs:"));
 
     this->ui->labelInitialVCPUs->setVisible(this->m_isVcpuHotplugSupported);
     this->ui->comboBoxInitialVCPUs->setVisible(this->m_isVcpuHotplugSupported);

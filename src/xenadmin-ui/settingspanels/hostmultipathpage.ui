@@ -59,7 +59,7 @@ The server must be in maintenance mode before you can change its multipathing se
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="../../resources.qrc">:/icons/info.png</pixmap>
+        <pixmap>:/icons/info.png</pixmap>
        </property>
        <property name="scaledContents">
         <bool>true</bool>
@@ -79,7 +79,7 @@ The server must be in maintenance mode before you can change its multipathing se
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -94,7 +94,7 @@ The server must be in maintenance mode before you can change its multipathing se
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -106,8 +106,6 @@ The server must be in maintenance mode before you can change its multipathing se
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../../resources.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

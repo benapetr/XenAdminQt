@@ -35,10 +35,11 @@
 
 using namespace XenAPI;
 
-GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object, const QString& oldFolder, const QString& newFolder, const QStringList& oldTags, const QStringList& newTags, bool suppressHistory, QObject* parent)
+GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object, const QString& oldFolder, const QString& newFolder, const QStringList& oldTags, const QStringList& newTags, bool suppressHistory, QObject* parent, bool auto_delete)
     : AsyncOperation(object->GetConnection(), tr("Update Properties"), tr("Updating folder and tag properties..."), suppressHistory, parent), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
 {
     this->m_object = object;
+    this->m_autoDelete = auto_delete;
 
     // Sort tags for efficient comparison (matches C# BinarySearch approach)
     this->m_oldTags.sort();

@@ -30,52 +30,52 @@
 
 NotificationsView::NotificationsView(QWidget* parent) : QWidget(parent), ui(new Ui::NotificationsView), m_alertsCount(0), m_eventsCount(0), m_alertsItem(nullptr), m_eventsItem(nullptr)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Set up custom delegate
-    m_delegate = new NotificationsSubModeItemDelegate(this);
-    ui->subModeList->setItemDelegate(m_delegate);
+    this->m_delegate = new NotificationsSubModeItemDelegate(this);
+    this->ui->subModeList->setItemDelegate(this->m_delegate);
 
     // Initialize list items
-    initializeItems();
+    this->initializeItems();
 
     // Connect item click signal
-    connect(ui->subModeList, &QListWidget::itemClicked,
+    connect(this->ui->subModeList, &QListWidget::itemClicked,
             this, &NotificationsView::onItemClicked);
 
     // Select Alerts by default
-    ui->subModeList->setCurrentRow(0);
+    this->ui->subModeList->setCurrentRow(0);
 }
 
 NotificationsView::~NotificationsView()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void NotificationsView::initializeItems()
 {
     // Set list to flow top-down and not center items
-    ui->subModeList->setFlow(QListView::TopToBottom);
-    ui->subModeList->setLayoutMode(QListView::SinglePass);
-    ui->subModeList->setResizeMode(QListView::Fixed);
-    ui->subModeList->setSpacing(0);
-    ui->subModeList->setUniformItemSizes(true);
+    this->ui->subModeList->setFlow(QListView::TopToBottom);
+    this->ui->subModeList->setLayoutMode(QListView::SinglePass);
+    this->ui->subModeList->setResizeMode(QListView::Fixed);
+    this->ui->subModeList->setSpacing(0);
+    this->ui->subModeList->setUniformItemSizes(true);
 
     // Add Alerts item
-    m_alertsItem = new QListWidgetItem();
+    this->m_alertsItem = new QListWidgetItem();
     NotificationsSubModeItemData alertsData;
     alertsData.subMode = NavigationPane::Alerts;
     alertsData.unreadEntries = 0;
-    m_alertsItem->setData(NotificationsSubModeRole, QVariant::fromValue(alertsData));
-    ui->subModeList->addItem(m_alertsItem);
+    this->m_alertsItem->setData(NotificationsSubModeRole, QVariant::fromValue(alertsData));
+    this->ui->subModeList->addItem(this->m_alertsItem);
 
     // Add Events item
-    m_eventsItem = new QListWidgetItem();
+    this->m_eventsItem = new QListWidgetItem();
     NotificationsSubModeItemData eventsData;
     eventsData.subMode = NavigationPane::Events;
     eventsData.unreadEntries = 0;
-    m_eventsItem->setData(NotificationsSubModeRole, QVariant::fromValue(eventsData));
-    ui->subModeList->addItem(m_eventsItem);
+    this->m_eventsItem->setData(NotificationsSubModeRole, QVariant::fromValue(eventsData));
+    this->ui->subModeList->addItem(this->m_eventsItem);
 }
 
 void NotificationsView::onItemClicked(QListWidgetItem* item)
@@ -96,9 +96,9 @@ QListWidgetItem* NotificationsView::getItemForSubMode(NavigationPane::Notificati
     switch (subMode)
     {
         case NavigationPane::Alerts:
-            return m_alertsItem;
+            return this->m_alertsItem;
         case NavigationPane::Events:
-            return m_eventsItem;
+            return this->m_eventsItem;
         default:
             return nullptr;
     }
@@ -106,10 +106,10 @@ QListWidgetItem* NotificationsView::getItemForSubMode(NavigationPane::Notificati
 
 void NotificationsView::selectNotificationsSubMode(NavigationPane::NotificationsSubMode subMode)
 {
-    QListWidgetItem* item = getItemForSubMode(subMode);
+    QListWidgetItem* item = this->getItemForSubMode(subMode);
     if (item)
     {
-        ui->subModeList->setCurrentItem(item);
+        this->ui->subModeList->setCurrentItem(item);
         
         // Emit signal manually since setCurrentItem doesn't trigger itemClicked
         // This ensures the MainWindow receives the notification when switching programmatically
@@ -119,15 +119,15 @@ void NotificationsView::selectNotificationsSubMode(NavigationPane::Notifications
 
 void NotificationsView::updateEntries(NavigationPane::NotificationsSubMode mode, int entries)
 {
-    QListWidgetItem* item = getItemForSubMode(mode);
+    QListWidgetItem* item = this->getItemForSubMode(mode);
     if (!item)
         return;
 
     // Update stored count
     if (mode == NavigationPane::Alerts)
-        m_alertsCount = entries;
+        this->m_alertsCount = entries;
     else if (mode == NavigationPane::Events)
-        m_eventsCount = entries;
+        this->m_eventsCount = entries;
 
     // Update item data
     QVariant data = item->data(NotificationsSubModeRole);
@@ -140,10 +140,10 @@ void NotificationsView::updateEntries(NavigationPane::NotificationsSubMode mode,
 
     // Force repaint - Qt5 compatibility: indexFromItem is protected in Qt5
     // Use row() to get index instead
-    ui->subModeList->update(ui->subModeList->model()->index(ui->subModeList->row(item), 0));
+    this->ui->subModeList->update(this->ui->subModeList->model()->index(this->ui->subModeList->row(item), 0));
 }
 
 int NotificationsView::getTotalEntries() const
 {
-    return m_alertsCount + m_eventsCount;
+    return this->m_alertsCount + this->m_eventsCount;
 }

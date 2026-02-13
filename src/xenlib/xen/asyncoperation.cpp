@@ -176,6 +176,11 @@ bool AsyncOperation::IsFailed() const
     return this->GetState() == Failed;
 }
 
+void AsyncOperation::SetAutodelete()
+{
+    this->m_autoDelete = true;
+}
+
 // Error handling
 QString AsyncOperation::GetErrorMessage() const
 {

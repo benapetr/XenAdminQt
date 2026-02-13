@@ -136,11 +136,7 @@ void RenameFolderCommand::Run()
                                                },
                                                this->mainWindow()));
 
-    this->RunMultipleActions(actions,
-                             QObject::tr("Rename Folder"),
-                             QObject::tr("Renaming folder..."),
-                             QObject::tr("Folder renamed"),
-                             true);
+    this->RunMultipleActions(actions, QObject::tr("Rename Folder"), QObject::tr("Renaming folder..."), QObject::tr("Folder renamed"), true, true);
 }
 
 QString RenameFolderCommand::MenuText() const

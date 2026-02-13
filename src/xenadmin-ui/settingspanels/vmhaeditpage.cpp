@@ -25,6 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QComboBox>
+#include <QLabel>
+#include <QPointer>
+#include <QThread>
+#include <limits>
+#include <QDebug>
 #include "vmhaeditpage.h"
 #include "ui_vmhaeditpage.h"
 #include "../dialogs/hawizard.h"
@@ -38,12 +44,6 @@
 #include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
 #include "xenlib/xen/actions/vm/setvmstartupoptionsaction.h"
 #include "xenlib/xen/pool.h"
-#include <QComboBox>
-#include <QLabel>
-#include <QPointer>
-#include <QThread>
-#include <limits>
-#include <QDebug>
 
 namespace
 {

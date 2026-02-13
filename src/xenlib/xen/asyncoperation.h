@@ -98,6 +98,7 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         bool IsCompleted() const;
         bool IsCancelled() const;
         bool IsFailed() const;
+        void SetAutodelete();
 
         // Error handling
         QString GetErrorMessage() const;

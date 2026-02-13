@@ -113,21 +113,11 @@ void DeleteFolderCommand::Run()
             const QList<QSharedPointer<XenObject>> objs = collectObjectsInPath(connection, path);
             for (const QSharedPointer<XenObject>& obj : objs)
             {
-                const QString key = QString("%1:%2:%3")
-                                        .arg(reinterpret_cast<quintptr>(connection))
-                                        .arg(static_cast<int>(obj->GetObjectType()))
-                                        .arg(obj->OpaqueRef());
+                const QString key = QString("%1:%2:%3").arg(reinterpret_cast<quintptr>(connection)).arg(static_cast<int>(obj->GetObjectType())).arg(obj->OpaqueRef());
                 if (handledObjects.contains(key))
                     continue;
                 handledObjects.insert(key);
-
-                actions.append(new GeneralEditPageAction(obj,
-                                                         obj->GetFolderPath(),
-                                                         QString(),
-                                                         obj->GetTags(),
-                                                         obj->GetTags(),
-                                                         false,
-                                                         this->mainWindow()));
+                actions.append(new GeneralEditPageAction(obj, obj->GetFolderPath(), QString(), obj->GetTags(), obj->GetTags(), false, this->mainWindow(), true));
             }
         }
     }
@@ -153,15 +143,11 @@ void DeleteFolderCommand::Run()
                                                                if (conn)
                                                                    FoldersManager::instance()->DeleteFolder(conn, path);
                                                            },
-                                                           this->mainWindow());
+                                                           nullptr);
         actions.append(deleteFolderOp);
     }
 
-    this->RunMultipleActions(actions,
-                             QObject::tr("Delete Folders"),
-                             QObject::tr("Deleting selected folders..."),
-                             QObject::tr("Folder deletion complete"),
-                             true);
+    this->RunMultipleActions(actions, QObject::tr("Delete Folders"), QObject::tr("Deleting selected folders..."), QObject::tr("Folder deletion complete"), true, true);
 }
 
 QString DeleteFolderCommand::MenuText() const

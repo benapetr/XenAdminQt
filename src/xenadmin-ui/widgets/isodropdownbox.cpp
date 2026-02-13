@@ -25,6 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QStandardItemModel>
+#include <QSignalBlocker>
+#include <algorithm>
 #include "isodropdownbox.h"
 #include "../settingsmanager.h"
 #include "xenlib/xencache.h"
@@ -37,31 +40,28 @@
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/utils/misc.h"
-#include <QStandardItemModel>
-#include <QSignalBlocker>
-#include <algorithm>
 
 namespace
 {
-bool isSrVisibleToHost(const QSharedPointer<SR>& sr, const QString& hostRef)
-{
-    if (hostRef.isEmpty())
-        return true;
-    if (!sr)
-        return false;
-
-    if (sr->IsShared())
-        return true;
-
-    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
-    for (const QSharedPointer<PBD>& pbd : pbds)
+    bool isSrVisibleToHost(const QSharedPointer<SR>& sr, const QString& hostRef)
     {
-        if (pbd && pbd->GetHostRef() == hostRef)
+        if (hostRef.isEmpty())
             return true;
-    }
+        if (!sr)
+            return false;
 
-    return false;
-}
+        if (sr->IsShared())
+            return true;
+
+        const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+        for (const QSharedPointer<PBD>& pbd : pbds)
+        {
+            if (pbd && pbd->GetHostRef() == hostRef)
+                return true;
+        }
+
+        return false;
+    }
 }
 
 IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_connection(nullptr)
@@ -186,7 +186,7 @@ void IsoDropDownBox::Refresh()
             if (!vdi || !vdi->IsValid())
                 continue;
 
-            if (!showHidden && vdi->GetData().value("is_hidden", false).toBool())
+            if (!showHidden && vdi->IsHidden())
                 continue;
 
             if (vdi->IsSnapshot())
