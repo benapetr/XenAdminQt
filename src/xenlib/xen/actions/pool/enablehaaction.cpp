@@ -26,23 +26,15 @@
  */
 
 #include "enablehaaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include "../../failure.h"
 #include "../../pool.h"
 #include <stdexcept>
 
-EnableHAAction::EnableHAAction(QSharedPointer<Pool> pool,
-                               const QStringList& heartbeatSRRefs,
-                               qint64 failuresToTolerate,
-                               const QMap<QString, QVariantMap>& vmStartupOptions,
-                               QObject* parent)
-    : AsyncOperation(pool ? pool->GetConnection() : nullptr,
-                     QString("Enabling HA on pool"),
-                     "Enabling HA",
-                     parent),
+EnableHAAction::EnableHAAction(QSharedPointer<Pool> pool, const QStringList& heartbeatSRRefs, qint64 failuresToTolerate, const QMap<QString, QVariantMap>& vmStartupOptions, QObject* parent)
+    : AsyncOperation(pool ? pool->GetConnection() : nullptr, QString("Enabling HA on pool"), "Enabling HA", parent),
       m_pool(pool),
       m_heartbeatSRRefs(heartbeatSRRefs),
       m_failuresToTolerate(failuresToTolerate),
@@ -55,6 +47,17 @@ EnableHAAction::EnableHAAction(QSharedPointer<Pool> pool,
     if (this->m_heartbeatSRRefs.isEmpty())
     {
         throw std::invalid_argument("You must specify at least 1 heartbeat SR");
+    }
+
+    this->SetPool(pool);
+
+    this->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("pool.async_enable_ha");
+    if (!this->m_vmStartupOptions.isEmpty())
+    {
+        this->AddApiMethodToRoleCheck("vm.set_ha_restart_priority");
+        this->AddApiMethodToRoleCheck("vm.set_order");
+        this->AddApiMethodToRoleCheck("vm.set_start_delay");
     }
 }
 
@@ -122,6 +125,35 @@ void EnableHAAction::run()
 
         SetDescription("HA enabled successfully");
 
+    } catch (const Failure& f)
+    {
+        if (IsCancelled())
+        {
+            SetDescription("HA enable cancelled");
+            return;
+        }
+
+        const QStringList description = f.errorDescription();
+        if (!description.isEmpty() && description.first() == "VDI_NOT_AVAILABLE")
+        {
+            QString vdiRef = description.value(1);
+            QString vdiUuid;
+
+            XenCache* cache = this->m_pool && this->m_pool->GetConnection() ? this->m_pool->GetConnection()->GetCache() : nullptr;
+            if (cache && !vdiRef.isEmpty())
+            {
+                const QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
+                vdiUuid = vdiData.value("uuid").toString();
+            }
+
+            if (!vdiUuid.isEmpty())
+                setError(QString("Failed to enable HA: VDI not available: %1").arg(vdiUuid));
+            else
+                setError("Failed to enable HA: One or more HA statefile VDIs are not available.");
+            return;
+        }
+
+        setError(QString("Failed to enable HA: %1").arg(f.message()));
     } catch (const std::exception& e)
     {
         if (IsCancelled())
@@ -129,9 +161,7 @@ void EnableHAAction::run()
             SetDescription("HA enable cancelled");
         } else
         {
-            // TODO: In C# there's special handling for VDI_NOT_AVAILABLE errors
-            // to show VDI UUID in friendly format
-            setError(QString("Failed to enable HA: %1").arg(e.what()));
+            setError(QString("Failed to enable HA: %1").arg(QString::fromUtf8(e.what())));
         }
     }
 }

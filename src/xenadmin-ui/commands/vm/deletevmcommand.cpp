@@ -29,7 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/confirmvmdeletedialog.h"
 #include "../../dialogs/commanderrordialog.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"

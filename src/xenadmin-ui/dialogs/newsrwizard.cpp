@@ -62,8 +62,7 @@
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 
-NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
-    : QWizard(parent),
+NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent) : QWizard(parent),
       m_mainWindow(parent),
       m_connection(connection),
       ui(new Ui::NewSRWizard)
@@ -89,8 +88,7 @@ NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
     this->updateNavigationSelection();
 }
 
-NewSRWizard::NewSRWizard(XenConnection* connection, const QSharedPointer<SR>& srToReattach, MainWindow* parent)
-    : NewSRWizard(connection, parent)
+NewSRWizard::NewSRWizard(XenConnection* connection, const QSharedPointer<SR>& srToReattach, MainWindow* parent) : NewSRWizard(connection, parent)
 {
     this->applyReattachDefaults(srToReattach);
 }

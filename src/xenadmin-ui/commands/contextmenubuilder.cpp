@@ -48,6 +48,8 @@
 #include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
 #include "pool/addselectedhosttopoolmenu.h"
+#include "pool/haconfigurecommand.h"
+#include "pool/hadisablecommand.h"
 #include "vm/startvmcommand.h"
 #include "vm/stopvmcommand.h"
 #include "vm/restartvmcommand.h"
@@ -904,9 +906,24 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
 
 void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool)
 {
+    Q_UNUSED(pool);
+
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+
+    // C# parity: "High Availability" submenu with Configure/Disable entries.
+    QMenu* haMenu = new QMenu(tr("High Availability"), menu);
+    this->addCommandAlways(haMenu, new HAConfigureCommand(this->m_mainWindow, this));
+    this->addCommandAlways(haMenu, new HADisableCommand(this->m_mainWindow, this));
+    if (!haMenu->actions().isEmpty())
+    {
+        this->addSeparator(menu);
+        menu->addMenu(haMenu);
+    } else
+    {
+        delete haMenu;
+    }
 
     this->addSeparator(menu);
 
@@ -996,6 +1013,19 @@ void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)
         return;
 
     QAction* action = menu->addAction(command->MenuText());
+    QIcon icon = command->GetIcon();
+    if (!icon.isNull())
+        action->setIcon(icon);
+    connect(action, &QAction::triggered, command, &Command::Run);
+}
+
+void ContextMenuBuilder::addCommandAlways(QMenu* menu, Command* command)
+{
+    if (!command)
+        return;
+
+    QAction* action = menu->addAction(command->MenuText());
+    action->setEnabled(command->CanRun());
     QIcon icon = command->GetIcon();
     if (!icon.isNull())
         action->setIcon(icon);

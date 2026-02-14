@@ -41,6 +41,7 @@
 #include <QMap>
 #include <QSharedPointer>
 #include <QVariantMap>
+#include <QSet>
 
 class XenCache;
 class Pool;
@@ -80,6 +81,10 @@ class EditVmHaPrioritiesDialog : public QDialog
         void setupUi();
         void populateVMTable();
         void updateNtolCalculation();
+        void updateAgilityForRows();
+        QVariantMap buildNtolConfig() const;
+        bool isRestartPriority(const QString& priority) const;
+        bool isVmProtectable(const QSharedPointer<VM>& vm) const;
         bool hasChanges() const;
         QMap<QString, QVariantMap> buildVmStartupOptions() const;
 
@@ -108,6 +113,10 @@ class EditVmHaPrioritiesDialog : public QDialog
         // State
         qint64 m_ntol;
         qint64 m_maxNtol;
+        int m_ntolRequestId = 0;
+        bool m_ntolUpdateInProgress = false;
+        int m_agilityRequestId = 0;
+        QMap<QString, bool> m_vmIsAgile;
         QMap<QString, QVariantMap> m_originalSettings; // Original VM settings for change detection
 };
 

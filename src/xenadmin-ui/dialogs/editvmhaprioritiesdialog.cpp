@@ -26,15 +26,22 @@
  */
 
 #include "editvmhaprioritiesdialog.h"
-#include "../dialogs/actionprogressdialog.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QDialogButtonBox>
+#include <QThread>
+#include <QPointer>
+#include <QSignalBlocker>
+#include <limits>
 
 EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(QSharedPointer<Pool> pool, QWidget* parent)
     : QDialog(parent),
@@ -135,6 +142,7 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     this->m_vmTable->blockSignals(true);
     this->m_vmTable->setRowCount(0);
     this->m_originalSettings.clear();
+    this->m_vmIsAgile.clear();
 
     if (!this->m_pool)
         return;
@@ -167,23 +175,11 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     QList<QSharedPointer<VM>> vms = this->m_pool->GetCache()->GetAll<VM>(XenObjectType::VM);
     for (const QSharedPointer<VM>& vm : vms)
     {
-        if (!vm || !vm->IsValid())
-            continue;
-
-        // Skip templates
-        if (vm->IsTemplate())
-            continue;
-
-        // Skip control domains
-        if (vm->IsControlDomain())
-            continue;
-
-        // Skip snapshots
-        if (vm->IsSnapshot())
+        if (!isVmProtectable(vm))
             continue;
 
         QString vmName = vm->GetName();
-        QString currentPriority = vm->HARestartPriority();
+        QString currentPriority = vm->HARestartPriority().trimmed();
         qint64 order = vm->Order();
         qint64 startDelay = vm->StartDelay();
 
@@ -208,12 +204,13 @@ void EditVmHaPrioritiesDialog::populateVMTable()
         priorityCombo->addItem(tr("Restart"), "restart");
         priorityCombo->addItem(tr("Best Effort"), "best-effort");
         priorityCombo->addItem(tr("Do Not Restart"), "");
+        priorityCombo->setEnabled(false);
 
         // Set current priority
         if (currentPriority == "restart" || currentPriority == "always_restart" ||
             currentPriority == "always_restart_high_priority")
         {
-            priorityCombo->setCurrentIndex(0); // Restart
+            priorityCombo->setCurrentIndex(0);
         } else if (currentPriority == "best-effort" || currentPriority == "best_effort")
         {
             priorityCombo->setCurrentIndex(1); // Best Effort
@@ -245,9 +242,12 @@ void EditVmHaPrioritiesDialog::populateVMTable()
         connect(delaySpin, QOverload<int>::of(&QSpinBox::valueChanged),
                 this, &EditVmHaPrioritiesDialog::updateOkButtonState);
         this->m_vmTable->setCellWidget(row, 3, delaySpin);
+
+        this->m_vmIsAgile.insert(vm->OpaqueRef(), false);
     }
 
     this->m_vmTable->blockSignals(false);
+    updateAgilityForRows();
 }
 
 void EditVmHaPrioritiesDialog::onNtolChanged(int value)
@@ -261,55 +261,208 @@ void EditVmHaPrioritiesDialog::updateNtolCalculation()
 {
     this->m_ntol = this->m_ntolSpinBox->value();
 
-    if (!this->m_pool)
+    if (!this->m_pool || !this->m_pool->GetConnection())
         return;
 
-    // Count hosts in pool
-    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>(XenObjectType::Host);
-    int hostCount = hosts.size();
+    this->m_ntolUpdateInProgress = true;
+    this->m_okButton->setEnabled(false);
+    this->m_ntolStatusLabel->setStyleSheet("color: gray;");
+    this->m_ntolStatusLabel->setText(tr("Calculating host failure tolerance..."));
 
-    // Maximum NTOL is number of hosts - 1
-    this->m_maxNtol = qMax(0, hostCount - 1);
-    this->m_ntolSpinBox->setMaximum(this->m_maxNtol);
+    const QVariantMap ntolConfig = buildNtolConfig();
+    const QString poolRef = this->m_pool->OpaqueRef();
+    const int requestId = ++this->m_ntolRequestId;
+    XenConnection* connection = this->m_pool->GetConnection();
+    QPointer<EditVmHaPrioritiesDialog> self(this);
 
-    this->m_maxNtolLabel->setText(tr("Maximum: %1 (pool has %2 hosts)").arg(this->m_maxNtol).arg(hostCount));
+    QThread* thread = QThread::create([self, requestId, ntolConfig, poolRef, connection]() {
+        if (!self || !connection || !connection->GetSession())
+            return;
 
-    // Count protected VMs
-    int protectedVMs = 0;
+        bool ok = false;
+        qint64 ntolMax = -1;
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(connection->GetSession(), nullptr);
+        if (session)
+        {
+            try
+            {
+                ntolMax = XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(session, ntolConfig);
+                ok = true;
+            }
+            catch (const std::exception&)
+            {
+                ok = false;
+            }
+            delete session;
+        }
+
+        QMetaObject::invokeMethod(self, [self, requestId, ok, ntolMax, poolRef, ntolConfig, connection]() {
+            if (!self || requestId != self->m_ntolRequestId)
+                return;
+
+            self->m_ntolUpdateInProgress = false;
+            if (!ok)
+            {
+                self->m_maxNtol = -1;
+                self->m_maxNtolLabel->setText(QObject::tr("Maximum: unavailable"));
+                self->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+                self->m_ntolStatusLabel->setText(QObject::tr("Unable to calculate failure tolerance for current priorities."));
+                self->updateOkButtonState();
+                return;
+            }
+
+            self->m_maxNtol = qMax<qint64>(0, ntolMax);
+            self->m_ntolSpinBox->setMaximum(static_cast<int>(qMin<qint64>(self->m_maxNtol, std::numeric_limits<int>::max())));
+            self->m_maxNtolLabel->setText(QObject::tr("Maximum supported failures: %1").arg(self->m_maxNtol));
+
+            QVariantMap poolData = connection->GetCache()->ResolveObjectData(XenObjectType::Pool, poolRef);
+            if (poolData.value("ha_enabled", false).toBool())
+            {
+                QSignalBlocker blocker(self->m_ntolSpinBox);
+                self->m_ntolSpinBox->setValue(poolData.value("ha_host_failures_to_tolerate", 0).toInt());
+                self->m_ntol = self->m_ntolSpinBox->value();
+            }
+
+            const int protectedVMs = static_cast<int>(ntolConfig.size());
+            if (self->m_ntol > 0 && protectedVMs > 0 && self->m_ntol <= self->m_maxNtol)
+            {
+                self->m_ntolStatusLabel->setStyleSheet("color: green;");
+                self->m_ntolStatusLabel->setText(QObject::tr("Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
+                                                     .arg(self->m_ntol)
+                                                     .arg(protectedVMs));
+            } else if (self->m_ntol == 0)
+            {
+                self->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+                self->m_ntolStatusLabel->setText(QObject::tr("NTOL is 0 - HA will not automatically restart VMs on host failure"));
+            } else if (protectedVMs == 0)
+            {
+                self->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+                self->m_ntolStatusLabel->setText(QObject::tr("No VMs set to Restart priority"));
+            } else
+            {
+                self->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+                self->m_ntolStatusLabel->setText(QObject::tr("Configured NTOL exceeds current maximum."));
+            }
+            self->updateOkButtonState();
+        }, Qt::QueuedConnection);
+    });
+
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+QVariantMap EditVmHaPrioritiesDialog::buildNtolConfig() const
+{
+    QVariantMap config;
     for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 0);
         QComboBox* combo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
-        if (combo)
-        {
-            QString priority = combo->currentData().toString();
-            if (priority == "restart")
-            {
-                protectedVMs++;
-            }
-        }
+        if (!vmItem || !combo)
+            continue;
+
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        const QString priority = combo->currentData().toString();
+        if (vmRef.isEmpty() || !isRestartPriority(priority))
+            continue;
+
+        config.insert(vmRef, "restart");
+    }
+    return config;
+}
+
+void EditVmHaPrioritiesDialog::updateAgilityForRows()
+{
+    if (!this->m_pool || !this->m_pool->GetConnection() || !this->m_pool->GetConnection()->GetSession())
+        return;
+
+    QStringList vmRefs;
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 0);
+        if (vmItem)
+            vmRefs.append(vmItem->data(Qt::UserRole).toString());
     }
 
-    if (this->m_ntol > 0 && protectedVMs > 0)
-    {
-        this->m_ntolStatusLabel->setStyleSheet("color: green;");
-        this->m_ntolStatusLabel->setText(tr("✓ Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
-                                       .arg(this->m_ntol)
-                                       .arg(protectedVMs));
-    } else if (this->m_ntol == 0)
-    {
-        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        this->m_ntolStatusLabel->setText(tr("⚠ NTOL is 0 - HA will not automatically restart VMs on host failure"));
-    } else
-    {
-        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        this->m_ntolStatusLabel->setText(tr("⚠ No VMs set to 'Restart' priority"));
-    }
+    const int requestId = ++this->m_agilityRequestId;
+    XenConnection* connection = this->m_pool->GetConnection();
+    QPointer<EditVmHaPrioritiesDialog> self(this);
+
+    QThread* thread = QThread::create([self, requestId, vmRefs, connection]() {
+        if (!self || !connection || !connection->GetSession())
+            return;
+
+        QMap<QString, bool> agileMap;
+        QMap<QString, QString> reasonMap;
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(connection->GetSession(), nullptr);
+        if (session)
+        {
+            for (const QString& vmRef : vmRefs)
+            {
+                bool agile = false;
+                QString reason;
+                try
+                {
+                    XenAPI::VM::assert_agile(session, vmRef);
+                    agile = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    agile = false;
+                    reason = QString::fromUtf8(ex.what());
+                }
+                agileMap.insert(vmRef, agile);
+                reasonMap.insert(vmRef, reason);
+            }
+            delete session;
+        }
+
+        QMetaObject::invokeMethod(self, [self, requestId, agileMap, reasonMap]() {
+            if (!self || requestId != self->m_agilityRequestId)
+                return;
+
+            for (int row = 0; row < self->m_vmTable->rowCount(); ++row)
+            {
+                QTableWidgetItem* vmItem = self->m_vmTable->item(row, 0);
+                QComboBox* combo = qobject_cast<QComboBox*>(self->m_vmTable->cellWidget(row, 1));
+                if (!vmItem || !combo)
+                    continue;
+
+                const QString vmRef = vmItem->data(Qt::UserRole).toString();
+                if (!agileMap.contains(vmRef))
+                    continue;
+
+                const bool isAgile = agileMap.value(vmRef);
+                self->m_vmIsAgile.insert(vmRef, isAgile);
+                if (!isAgile && self->isRestartPriority(combo->currentData().toString()))
+                    combo->setCurrentIndex(1); // Best Effort
+                combo->setEnabled(true);
+                vmItem->setToolTip(isAgile ? QString() : reasonMap.value(vmRef));
+            }
+
+            self->updateNtolCalculation();
+            self->updateOkButtonState();
+        }, Qt::QueuedConnection);
+    });
+
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+bool EditVmHaPrioritiesDialog::isRestartPriority(const QString& priority) const
+{
+    return priority == "restart" || priority == "always_restart" || priority == "always_restart_high_priority";
+}
+
+bool EditVmHaPrioritiesDialog::isVmProtectable(const QSharedPointer<VM>& vm) const
+{
+    return vm && vm->IsValid() && !vm->IsTemplate() && !vm->IsControlDomain() && !vm->IsSnapshot() && vm->Show(false);
 }
 
 void EditVmHaPrioritiesDialog::updateOkButtonState()
 {
-    // Enable OK if changes were made
-    this->m_okButton->setEnabled(this->hasChanges());
+    // Enable OK if changes were made and calculations are complete
+    this->m_okButton->setEnabled(!this->m_ntolUpdateInProgress && this->hasChanges());
 }
 
 bool EditVmHaPrioritiesDialog::hasChanges() const
@@ -341,7 +494,7 @@ bool EditVmHaPrioritiesDialog::hasChanges() const
             QString origPriority = original.value("ha_restart_priority", "").toString();
 
             // Normalize priority names for comparison
-            bool currentIsRestart = (currentPriority == "restart");
+            bool currentIsRestart = (currentPriority == "restart" || currentPriority == "always_restart_high_priority");
             bool origIsRestart = (origPriority == "restart" || origPriority == "always_restart" ||
                                   origPriority == "always_restart_high_priority");
             bool currentIsBestEffort = (currentPriority == "best-effort");
@@ -396,10 +549,13 @@ QMap<QString, QVariantMap> EditVmHaPrioritiesDialog::buildVmStartupOptions() con
 
 void EditVmHaPrioritiesDialog::accept()
 {
+    if (this->m_ntolUpdateInProgress)
+        return;
+
     qint64 newNtol = this->m_ntolSpinBox->value();
 
     // Warn if NTOL is being set to 0
-    if (newNtol == 0 && this->m_originalNtol != 0)
+    if (newNtol == 0)
     {
         QMessageBox::StandardButton result = QMessageBox::warning(
             this, tr("NTOL is Zero"),
@@ -422,25 +578,9 @@ void EditVmHaPrioritiesDialog::accept()
     // Build startup options
     QMap<QString, QVariantMap> vmOptions = this->buildVmStartupOptions();
 
-    // Create and run SetHaPrioritiesAction
-    SetHaPrioritiesAction* action = new SetHaPrioritiesAction(this->m_pool, vmOptions, newNtol, this);
-
-    // Show progress dialog
-    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
-
-    connect(action, &AsyncOperation::completed, [this, progressDialog]()
-    {
-        progressDialog->close();
-        QDialog::accept();
-    });
-
-    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error)
-    {
-        progressDialog->close();
-        QMessageBox::critical(this, tr("Failed to Update HA Priorities"),
-                              tr("Failed to update HA priorities:\n\n%1").arg(error));
-    });
-
-    action->RunAsync();
-    progressDialog->exec();
+    // Match C# behavior: fire async action and close immediately.
+    // Progress and failures are surfaced via OperationManager (status bar/history/events).
+    auto* action = new SetHaPrioritiesAction(this->m_pool, vmOptions, newNtol, false, nullptr);
+    action->RunAsync(true);
+    QDialog::accept();
 }

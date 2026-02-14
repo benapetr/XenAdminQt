@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HAWizard</class>
+ <widget class="QWizard" name="HAWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>620</height>
+   </rect>
+  </property>
+  <widget class="QWizardPage" name="pageIntro">
+   <property name="title">
+    <string>HA configuration prerequisites</string>
+   </property>
+   <property name="subTitle">
+    <string>Prerequisites</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutIntro">
+    <item>
+     <widget class="QLabel" name="introLabel">
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     <property name="text">
+       <string>&lt;p&gt;High Availability (HA) provides automated VM restart capabilities in case of host failure.&lt;/p&gt;
+&lt;p&gt;When HA is enabled:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The pool monitors the health of all hosts&lt;/li&gt;
+&lt;li&gt;If a host fails, protected VMs are automatically restarted on surviving hosts&lt;/li&gt;
+&lt;li&gt;A heartbeat storage repository (SR) is used to detect host failures&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;b&gt;Requirements:&lt;/b&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;At least one shared storage repository accessible from all hosts&lt;/li&gt;
+&lt;li&gt;At least 2 hosts in the pool for meaningful protection&lt;/li&gt;
+&lt;li&gt;Sufficient spare capacity on surviving hosts to restart failed VMs&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Click &lt;b&gt;Next&lt;/b&gt; to select a heartbeat SR and configure VM restart priorities.&lt;/p&gt;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacerIntro">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageRbac">
+   <property name="title">
+    <string>Permissions</string>
+   </property>
+   <property name="subTitle">
+    <string>Verify permissions required to configure HA</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutRbac">
+    <item>
+     <widget class="QLabel" name="rbacWarningLabel">
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacerRbac">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageChooseSr">
+   <property name="title">
+    <string>Choose a heartbeat SR</string>
+   </property>
+   <property name="subTitle">
+    <string>Heartbeat SR</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutChooseSr">
+    <item>
+     <widget class="QLabel" name="chooseSrDescriptionLabel">
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>The heartbeat SR stores the HA statefile and is used by hosts to communicate their health status. Choose a reliable shared storage repository that is accessible from all hosts in the pool.</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QProgressBar" name="scanProgress">
+      <property name="value">
+       <number>0</number>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="noSrLabel">
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>No suitable shared storage repositories found.</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="srTable">
+     <column>
+      <property name="text">
+        <string/>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+        <string>Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+        <string>Description</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Comment</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayoutRescan">
+      <item>
+       <spacer name="horizontalSpacerRescan">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="rescanButton">
+        <property name="text">
+         <string>Rescan</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageAssign">
+   <property name="title">
+    <string>Configure the HA restart priority, restart order and delay interval for the VMs in this pool</string>
+   </property>
+   <property name="subTitle">
+    <string>HA Plan</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutAssign">
+    <item>
+     <widget class="QWidget" name="statusWidget" native="true">
+      <layout class="QHBoxLayout" name="horizontalLayoutStatus">
+       <item>
+        <widget class="QLabel" name="haStatusIconLabel">
+         <property name="minimumSize">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>✓</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="ntolStatusLabel">
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="vmTable">
+      <column>
+       <property name="text">
+        <string/>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Virtual machine</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Restart priority</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Start order</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Delay interval</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Agile</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayoutAssignBottom">
+      <item>
+       <widget class="QGroupBox" name="selectedVmGroup">
+        <property name="title">
+         <string>Selected VM settings</string>
+        </property>
+        <layout class="QFormLayout" name="formLayoutSelectedVm">
+         <item row="0" column="0">
+          <widget class="QLabel" name="selectedPriorityLabel">
+           <property name="text">
+            <string>HA restart priority:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="selectedPriorityCombo"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="selectedOrderLabel">
+           <property name="text">
+            <string>Start order:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSpinBox" name="selectedOrderSpin"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="selectedDelayLabel">
+           <property name="text">
+            <string>Attempt to start next VM after:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <layout class="QHBoxLayout" name="horizontalLayoutDelay">
+           <item>
+            <widget class="QSpinBox" name="selectedDelaySpin"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="selectedDelayUnitsLabel">
+             <property name="text">
+              <string>seconds</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="ntolGroup">
+        <property name="title">
+         <string>Server failure limit</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayoutNtolGroup">
+         <item>
+          <widget class="QLabel" name="ntolGroupInfoLabel">
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="text">
+            <string>You can specify the number of server failures you need to be able to tolerate in the pool.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayoutNtol">
+           <item>
+            <widget class="QLabel" name="ntolLabel">
+             <property name="text">
+              <string>Failures tolerated:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="ntolSpinBox"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="maxNtolLabel">
+             <property name="text">
+              <string>(max = 0)</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Review configuration and activate HA</string>
+   </property>
+   <property name="subTitle">
+    <string>Finish</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutFinish">
+    <item>
+     <widget class="QLabel" name="finishDescriptionLabel">
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>Review the final HA configuration below. You can press Finish to enable HA with this configuration, or Previous to alter the configuration.</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="summaryGroup">
+      <property name="title">
+       <string>Configuration Summary</string>
+      </property>
+      <layout class="QFormLayout" name="formLayoutSummary">
+       <item row="0" column="0">
+        <widget class="QLabel" name="labelHeartbeatSr">
+         <property name="text">
+          <string>Heartbeat SR:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="finishSRLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelFailuresTol">
+         <property name="text">
+          <string>Failures to tolerate:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="finishNtolLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelRestartHigh">
+         <property name="text">
+          <string>Protected VMs (Restart High):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="finishRestartHighLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="labelRestart">
+         <property name="text">
+          <string>Protected VMs (Restart):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLabel" name="finishRestartLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="labelBestEffort">
+         <property name="text">
+          <string>Best Effort VMs:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="finishBestEffortLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="labelDoNotRestart">
+         <property name="text">
+          <string>Do Not Restart VMs:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="finishDoNotRestartLabel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayoutFinishWarning">
+      <item>
+       <widget class="QLabel" name="finishWarningIcon">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="finishWarningLabel">
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="verticalSpacerFinish">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

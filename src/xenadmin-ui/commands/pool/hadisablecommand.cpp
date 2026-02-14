@@ -27,31 +27,37 @@
 
 #include "hadisablecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/pool/disablehaaction.h"
-#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
+HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent) : HACommand(mainWindow, parent)
 {
 }
 
 bool HADisableCommand::CanRun() const
 {
-    QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->IsValid())
-        return false;
-
-    // Can disable HA if pool is connected and HA is enabled
-    return this->isPoolConnected() && this->isHAEnabled();
+    return this->CanRunHACommand();
 }
 
 void HADisableCommand::Run()
 {
-    QSharedPointer<Pool> pool = this->getPool();
+    const CantRunReason cantRun = this->GetCantRunReason();
+    if (cantRun != CantRunReason::None)
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("Disable High Availability"), this->GetCantRunReasonText(cantRun));
+        return;
+    }
+
+    QSharedPointer<Pool> pool = this->getTargetPool();
     if (!pool || !pool->IsValid())
         return;
+
+    if (this->allStatefilesUnresolvable(pool))
+    {
+        QMessageBox::critical(MainWindow::instance(), tr("Disable High Availability"), tr("Cannot resolve HA statefile VDI for pool '%1'.").arg(pool->GetName()));
+        return;
+    }
 
     QString poolName = pool->GetName();
 
@@ -65,34 +71,8 @@ void HADisableCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Create and run the DisableHAAction
-    XenConnection* connection = pool->GetConnection();
-    if (!connection)
-    {
-        QMessageBox::critical(MainWindow::instance(), "Error", "No active connection.");
-        return;
-    }
-
-    DisableHAAction* action = new DisableHAAction(pool, nullptr);
-
-    // Connect completion signals
-    connect(action, &AsyncOperation::completed, [poolName, action]()
-    {
-        MainWindow* mainWindow = MainWindow::instance();
-        if (mainWindow)
-            mainWindow->ShowStatusMessage(QString("High Availability disabled for pool '%1'").arg(poolName), 5000);
-        action->deleteLater();
-    });
-
-    connect(action, &AsyncOperation::failed, [poolName, action](const QString& error)
-    {
-        QMessageBox::critical(MainWindow::instance(), "Disable HA Failed", QString("Failed to disable HA for pool '%1':\n%2").arg(poolName, error));
-        action->deleteLater();
-    });
-
-    // Run action asynchronously
-    action->RunAsync();
-    MainWindow::instance()->ShowStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
+    DisableHAAction* action = new DisableHAAction(pool);
+    this->RunMultipleActions({action}, tr("Disabling High Availability"), tr("Disabling HA on pool '%1'...").arg(poolName), tr("High Availability disabled for pool '%1'.").arg(poolName), false, true);
 }
 
 QString HADisableCommand::MenuText() const
@@ -100,18 +80,7 @@ QString HADisableCommand::MenuText() const
     return "Disable";
 }
 
-bool HADisableCommand::isPoolConnected() const
+bool HADisableCommand::CanRunOnPool(const QSharedPointer<Pool>& pool) const
 {
-    QSharedPointer<Pool> pool = this->getPool();
-    XenConnection* conn = pool ? pool->GetConnection() : nullptr;
-    return conn && conn->IsConnected();
-}
-
-bool HADisableCommand::isHAEnabled() const
-{
-    QSharedPointer<Pool> pool = this->getPool();
-    if (!pool)
-        return false;
-
-    return pool->HAEnabled();
+    return pool && pool->HAEnabled();
 }

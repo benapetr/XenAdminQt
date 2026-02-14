@@ -59,6 +59,7 @@ class BaseTabPage : public QWidget
             Network,
             Nics,
             Performance,
+            Ha,
             Snapshots,
             BootOptions,
             Console,

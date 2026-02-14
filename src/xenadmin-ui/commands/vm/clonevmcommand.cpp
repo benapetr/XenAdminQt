@@ -96,8 +96,7 @@ void CloneVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(MainWindow::instance(), "Not Connected",
-                                 "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 

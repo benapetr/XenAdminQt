@@ -45,9 +45,18 @@
 #include <QVariantMap>
 #include <QStringList>
 #include <QSharedPointer>
+#include <QSet>
 
 class XenCache;
 class Pool;
+class VM;
+class XenConnection;
+class WizardNavigationPane;
+class QShowEvent;
+namespace Ui
+{
+    class HAWizard;
+}
 
 /**
  * @brief The HAWizard class provides a wizard for enabling High Availability on a pool.
@@ -66,14 +75,16 @@ class HAWizard : public QWizard
 
     public:
         explicit HAWizard(QSharedPointer<Pool> pool, QWidget* parent = nullptr);
+        ~HAWizard() override;
 
         // Page IDs
         enum PageIds
         {
             Page_Intro = 0,
-            Page_ChooseSR = 1,
-            Page_AssignPriorities = 2,
-            Page_Finish = 3
+            Page_RbacWarning = 1,
+            Page_ChooseSR = 2,
+            Page_AssignPriorities = 3,
+            Page_Finish = 4
         };
 
         // VM restart priority enumeration (matches C# VM.HaRestartPriority)
@@ -104,26 +115,45 @@ class HAWizard : public QWizard
         }
 
     protected:
+        void showEvent(QShowEvent* event) override;
         void initializePage(int id) override;
         bool validateCurrentPage() override;
         void accept() override;
 
     private slots:
+        void onCurrentIdChanged(int id);
         void onHeartbeatSRSelectionChanged();
-        void onPriorityChanged(int row, int column);
         void onNtolChanged(int value);
+        void onVmSelectionChanged();
+        void onSelectedPriorityChanged(int index);
+        void onSelectedOrderChanged(int value);
+        void onSelectedDelayChanged(int value);
         void scanForHeartbeatSRs();
         void updateFinishPage();
 
     private:
         XenCache* cache() const;
         QWizardPage* createIntroPage();
+        QWizardPage* createRbacWarningPage();
         QWizardPage* createChooseSRPage();
         QWizardPage* createAssignPrioritiesPage();
         QWizardPage* createFinishPage();
 
         void populateVMTable();
         void updateNtolCalculation();
+        QVariantMap buildNtolConfig() const;
+        void updateAgilityForRows();
+        bool performHeartbeatSRScan();
+        int wizardStepIndexForPage(int pageId) const;
+        void applyNtolCalculationResult(int requestId, bool ok, qint64 ntolMax, const QVariantMap& ntolConfig, const QString& poolRef, XenConnection* connection);
+        void applyAgilityResults(int requestId, const QMap<QString, bool>& agileMap, const QMap<QString, QString>& reasonMap);
+        void setNtolUpdateInProgress(bool inProgress);
+        bool isRestartPriority(const QString& priority) const;
+        bool isVmProtectable(const QSharedPointer<VM>& vm) const;
+        QString normalizePriority(const QString& priority) const;
+        QString priorityDisplayText(const QString& priority) const;
+        void setVmRowValues(int row, const QString& vmRef);
+        void refreshSelectionEditors();
         QString priorityToString(HaRestartPriority priority) const;
         HaRestartPriority stringToPriority(const QString& str) const;
         int countVMsByPriority(HaRestartPriority priority) const;
@@ -142,6 +172,9 @@ class HAWizard : public QWizard
         QSpinBox* m_ntolSpinBox;
         QLabel* m_ntolStatusLabel;
         QLabel* m_maxNtolLabel;
+        QComboBox* m_selectedPriorityCombo = nullptr;
+        QSpinBox* m_selectedOrderSpin = nullptr;
+        QSpinBox* m_selectedDelaySpin = nullptr;
 
         // Finish page widgets
         QLabel* m_finishSRLabel;
@@ -155,13 +188,28 @@ class HAWizard : public QWizard
         // State
         QString m_selectedHeartbeatSR;
         QString m_selectedHeartbeatSRName;
-        qint64 m_ntol;
-        qint64 m_maxNtol;
+        qint64 m_ntol = 0;
+        qint64 m_maxNtol = 0;
         QMap<QString, QVariantMap> m_vmStartupOptions;
         QMap<QString, HaRestartPriority> m_vmPriorities;
+        QMap<QString, bool> m_vmAgilityKnown;
+        QMap<QString, bool> m_vmIsAgile;
+        QSet<QString> m_pendingPriorityInitialization;
+        bool m_protectVmsByDefault = true;
+        int m_ntolRequestId = 0;
+        bool m_ntolUpdateInProgress = false;
+        bool m_ntolInitializedFromServer = false;
+        bool m_updatingSelectionEditors = false;
+        int m_agilityRequestId = 0;
+        bool m_rbacRequired = false;
+        bool m_rbacBlockingFailure = false;
+        QLabel* m_rbacWarningLabel = nullptr;
+        WizardNavigationPane* m_navigationPane = nullptr;
+        bool m_brokenSrWarningShown = false;
 
         // SR list from scan
         QList<QPair<QString, QString>> m_heartbeatSRs; // ref, name pairs
+        Ui::HAWizard* ui = nullptr;
 };
 
 #endif // HAWIZARD_H

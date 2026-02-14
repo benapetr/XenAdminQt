@@ -56,11 +56,13 @@ class SetHaPrioritiesAction : public AsyncOperation
          * @param pool Pool object
          * @param vmStartupOptions Map of VM ref -> {ha_restart_priority, order, start_delay}
          * @param ntol Number of host failures to tolerate
+         * @param suppressHistory True to suppress operation history entry
          * @param parent Parent QObject
          */
         SetHaPrioritiesAction(QSharedPointer<Pool> pool,
                               const QMap<QString, QVariantMap>& vmStartupOptions,
                               qint64 ntol,
+                              bool suppressHistory = false,
                               QObject* parent = nullptr);
 
     protected:

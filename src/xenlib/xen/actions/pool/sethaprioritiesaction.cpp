@@ -34,9 +34,11 @@
 SetHaPrioritiesAction::SetHaPrioritiesAction(QSharedPointer<Pool> pool,
                                              const QMap<QString, QVariantMap>& vmStartupOptions,
                                              qint64 ntol,
+                                             bool suppressHistory,
                                              QObject* parent)
     : AsyncOperation(QString("Setting HA priorities"),
                      "Configuring HA",
+                     suppressHistory,
                      parent),
       m_pool(pool),
       m_vmStartupOptions(vmStartupOptions),
@@ -45,6 +47,13 @@ SetHaPrioritiesAction::SetHaPrioritiesAction(QSharedPointer<Pool> pool,
     if (!this->m_pool || !this->m_pool->IsValid())
         throw std::invalid_argument("Invalid pool object");
     this->m_connection = pool->GetConnection();
+    this->SetPool(pool);
+
+    this->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("pool.async_sync_database");
+    this->AddApiMethodToRoleCheck("vm.set_ha_restart_priority");
+    this->AddApiMethodToRoleCheck("vm.set_order");
+    this->AddApiMethodToRoleCheck("vm.set_start_delay");
 }
 
 bool SetHaPrioritiesAction::isRestartPriority(const QString& priority) const
@@ -61,7 +70,7 @@ void SetHaPrioritiesAction::run()
         this->SetPercentComplete(0);
         this->SetDescription("Configuring HA priorities...");
 
-        int totalVMs = this->m_vmStartupOptions.size();
+        const int totalVMs = this->m_vmStartupOptions.size();
         int processedVMs = 0;
 
         // First pass: Move VMs from protected -> unprotected
@@ -99,7 +108,7 @@ void SetHaPrioritiesAction::run()
             }
 
             processedVMs++;
-            SetPercentComplete(static_cast<int>(processedVMs * 30.0 / qMax(totalVMs, 1)));
+            SetPercentComplete(static_cast<int>(processedVMs * 60.0 / qMax(totalVMs, 1)));
 
             if (IsCancelled())
             {
@@ -108,13 +117,10 @@ void SetHaPrioritiesAction::run()
             }
         }
 
-        SetPercentComplete(30);
         SetDescription("Setting failure tolerance...");
 
         // Set NTOL
         XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), this->m_pool->OpaqueRef(), this->m_ntol);
-
-        SetPercentComplete(40);
 
         // Second pass: Move VMs from unprotected -> protected
         QMapIterator<QString, QVariantMap> it2(m_vmStartupOptions);
@@ -150,7 +156,7 @@ void SetHaPrioritiesAction::run()
             }
 
             processedVMs++;
-            SetPercentComplete(40 + static_cast<int>((processedVMs - (totalVMs / 2)) * 30.0 / qMax(totalVMs, 1)));
+            SetPercentComplete(static_cast<int>(processedVMs * 60.0 / qMax(totalVMs, 1)));
 
             if (IsCancelled())
             {
@@ -159,12 +165,11 @@ void SetHaPrioritiesAction::run()
             }
         }
 
-        SetPercentComplete(70);
         SetDescription("Synchronizing pool database...");
 
         // Sync database to ensure settings propagate to all hosts
         QString taskRef = XenAPI::Pool::async_sync_database(GetSession());
-        pollToCompletion(taskRef, 70, 100);
+        pollToCompletion(taskRef, 60, 100);
 
         SetDescription("HA priorities updated successfully");
 

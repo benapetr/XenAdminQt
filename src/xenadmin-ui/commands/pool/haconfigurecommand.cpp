@@ -29,38 +29,61 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/hawizard.h"
 #include "../../dialogs/editvmhaprioritiesdialog.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/pool.h"
-#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
+HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent) : HACommand(mainWindow, parent)
 {
 }
 
 bool HAConfigureCommand::CanRun() const
 {
-    QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->IsValid())
-        return false;
-
-    // Can configure HA if:
-    // - Pool is connected
-    // - Pool has coordinator
-    // - Pool is not locked
-    return this->isPoolConnected() && this->hasCoordinator() && !this->isPoolLocked();
+    return this->CanRunHACommand();
 }
 
 void HAConfigureCommand::Run()
 {
-    QSharedPointer<Pool> pool = this->getPool();
+    const CantRunReason cantRun = this->GetCantRunReason();
+    if (cantRun != CantRunReason::None)
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("Configure High Availability"), this->GetCantRunReasonText(cantRun));
+        return;
+    }
+
+    QSharedPointer<Pool> pool = this->getTargetPool();
     if (!pool || !pool->IsValid())
         return;
+
+    if (this->hasPendingPoolSecretRotationConflict(pool))
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("Configure High Availability"), tr("HA cannot be configured while pool secret rotation is pending."));
+        return;
+    }
 
     // Check if HA is already enabled
     if (pool->HAEnabled())
     {
+        if (this->allStatefilesUnresolvable(pool))
+        {
+            QMessageBox::critical(MainWindow::instance(), tr("Configure High Availability"), tr("Cannot resolve HA statefile VDI for pool '%1'.").arg(pool->GetName()));
+            return;
+        }
+
         // HA is already enabled - show edit dialog to modify priorities
+        const QStringList requiredMethods = {"pool.set_ha_host_failures_to_tolerate",
+                                             "pool.sync_database",
+                                             "vm.set_ha_restart_priority",
+                                             "pool.ha_compute_hypothetical_max_host_failures_to_tolerate"};
+        QStringList missingMethods;
+        if (!this->HasRequiredPermissions(pool, requiredMethods, &missingMethods))
+        {
+            QMessageBox::warning(MainWindow::instance(),
+                                 tr("Configure High Availability"),
+                                 tr("Your current role is not authorized to edit HA priorities.\nMissing permissions:\n%1")
+                                     .arg(missingMethods.join("\n")));
+            return;
+        }
+
         EditVmHaPrioritiesDialog dialog(pool, MainWindow::instance());
         dialog.exec();
         return;
@@ -76,28 +99,7 @@ QString HAConfigureCommand::MenuText() const
     return "Configure...";
 }
 
-bool HAConfigureCommand::isPoolConnected() const
+bool HAConfigureCommand::CanRunOnPool(const QSharedPointer<Pool>& pool) const
 {
-    QSharedPointer<Pool> pool = this->getPool();
-    XenConnection* conn = pool ? pool->GetConnection() : nullptr;
-    return conn && conn->IsConnected();
-}
-
-bool HAConfigureCommand::hasCoordinator() const
-{
-    QSharedPointer<Pool> pool = this->getPool();
-    if (!pool)
-        return false;
-
-    return !pool->GetMasterHost().isNull();
-}
-
-bool HAConfigureCommand::isPoolLocked() const
-{
-    QSharedPointer<Pool> pool = this->getPool();
-    if (!pool)
-        return false;
-
-    // Check if pool has any operations in progress that would lock it
-    return !pool->CurrentOperations().isEmpty();
+    return pool && !this->hasPendingPoolSecretRotationConflict(pool);
 }

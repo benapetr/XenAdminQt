@@ -28,9 +28,9 @@
 #ifndef HADISABLECOMMAND_H
 #define HADISABLECOMMAND_H
 
-#include "poolcommand.h"
+#include "hacommand.h"
 
-class HADisableCommand : public PoolCommand
+class HADisableCommand : public HACommand
 {
     Q_OBJECT
 
@@ -43,8 +43,7 @@ class HADisableCommand : public PoolCommand
         QString MenuText() const override;
 
     private:
-        bool isPoolConnected() const;
-        bool isHAEnabled() const;
+        bool CanRunOnPool(const QSharedPointer<Pool>& pool) const override;
 };
 
 #endif // HADISABLECOMMAND_H

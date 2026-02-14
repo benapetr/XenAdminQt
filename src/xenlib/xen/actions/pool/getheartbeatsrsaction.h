@@ -25,39 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "disablehaaction.h"
-#include "../../xenapi/xenapi_Pool.h"
-#include "xen/pool.h"
+#ifndef GETHEARTBEATSRSACTION_H
+#define GETHEARTBEATSRSACTION_H
 
-DisableHAAction::DisableHAAction(QSharedPointer<Pool> pool, QObject* parent) : AsyncOperation(pool->GetConnection(), QString("Disabling HA on pool"), "Disabling HA", parent), m_pool(pool)
+#include "../../asyncoperation.h"
+#include <QList>
+#include <QSharedPointer>
+
+class Pool;
+class SR;
+
+struct SRWrapper
 {
-    this->SetPool(pool);
-    this->AddApiMethodToRoleCheck("pool.async_disable_ha");
-}
+    bool enabled = false;
+    QString reasonUnsuitable;
+    QSharedPointer<SR> sr;
+};
 
-void DisableHAAction::run()
+/**
+ * @brief Async action that probes all shared SRs for HA statefile suitability.
+ *
+ * Parity target: C# GetHeartbeatSRsAction.
+ */
+class GetHeartbeatSRsAction : public AsyncOperation
 {
-    try
-    {
-        this->SetPercentComplete(0);
-        this->SetDescription("Disabling HA...");
+    Q_OBJECT
 
-        // Call Pool.async_disable_ha
-        QString taskRef = XenAPI::Pool::async_disable_ha(this->GetSession());
+    public:
+        explicit GetHeartbeatSRsAction(QSharedPointer<Pool> pool, QObject* parent = nullptr);
+        ~GetHeartbeatSRsAction() override = default;
 
-        // Poll to completion
-        this->pollToCompletion(taskRef, 0, 100);
-
-        this->SetDescription("HA disabled successfully");
-
-    } catch (const std::exception& e)
-    {
-        if (this->IsCancelled())
+        const QList<SRWrapper>& GetSRs() const
         {
-            this->SetDescription("HA disable cancelled");
-        } else
-        {
-            this->setError(QString("Failed to disable HA: %1").arg(e.what()));
+            return this->m_srs;
         }
-    }
-}
+
+    protected:
+        void run() override;
+
+    private:
+        QSharedPointer<Pool> m_pool;
+        QList<SRWrapper> m_srs;
+};
+
+#endif // GETHEARTBEATSRSACTION_H

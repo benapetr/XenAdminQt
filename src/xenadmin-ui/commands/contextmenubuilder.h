@@ -83,6 +83,7 @@ class ContextMenuBuilder : public QObject
 
         // Helper methods
         void addCommand(QMenu* menu, Command* command);
+        void addCommandAlways(QMenu* menu, Command* command);
         void addSeparator(QMenu* menu);
 };
 

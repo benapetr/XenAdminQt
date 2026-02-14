@@ -239,6 +239,7 @@ SOURCES += \
     commands/pool/deletepoolcommand.cpp \
     commands/pool/rotatepoolsecretcommand.cpp \
     commands/pool/disconnectpoolcommand.cpp \
+    commands/pool/hacommand.cpp \
     commands/pool/haconfigurecommand.cpp \
     commands/pool/hadisablecommand.cpp \
     commands/network/newnetworkcommand.cpp \
@@ -263,6 +264,7 @@ SOURCES += \
     tabpages/cvmconsoletabpage.cpp \
     tabpages/snapshotstabpage.cpp \
     tabpages/performancetabpage.cpp \
+    tabpages/hatabpage.cpp \
     tabpages/memorytabpage.cpp \
     tabpages/searchtabpage.cpp \
     tabpages/notificationsbasepage.cpp \
@@ -537,6 +539,7 @@ HEADERS += \
     commands/pool/deletepoolcommand.h \
     commands/pool/rotatepoolsecretcommand.h \
     commands/pool/disconnectpoolcommand.h \
+    commands/pool/hacommand.h \
     commands/pool/haconfigurecommand.h \
     commands/pool/hadisablecommand.h \
     commands/network/newnetworkcommand.h \
@@ -561,6 +564,7 @@ HEADERS += \
     tabpages/cvmconsoletabpage.h \
     tabpages/snapshotstabpage.h \
     tabpages/performancetabpage.h \
+    tabpages/hatabpage.h \
     tabpages/memorytabpage.h \
     tabpages/searchtabpage.h \
     tabpages/notificationsbasepage.h \
@@ -624,6 +628,7 @@ FORMS += \
     dialogs/networkingpropertiespage.ui \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
+    dialogs/hawizard.ui \
     dialogs/crosspoolmigratewizard.ui \
     dialogs/crosspoolmigratewizard_copymodepage.ui \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.ui \
@@ -673,6 +678,7 @@ FORMS += \
     tabpages/cvmconsoletabpage.ui \
     tabpages/snapshotstabpage.ui \
     tabpages/performancetabpage.ui \
+    tabpages/hatabpage.ui \
     tabpages/memorytabpage.ui \
     tabpages/vmstoragetabpage.ui \
     tabpages/alertsummarypage.ui \
@@ -685,8 +691,7 @@ FORMS += \
     ConsoleView/VNCTabView.ui \
     ConsoleView/ConsolePanel.ui
 
-RESOURCES += resources.qrc \
-    ../resources.qrc
+RESOURCES += $$PWD/resources.qrc
 
 # Link with xenlib
 INCLUDEPATH += .. ../xenlib

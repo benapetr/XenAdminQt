@@ -65,6 +65,7 @@
 #include "tabpages/physicalstoragetabpage.h"
 #include "tabpages/networktabpage.h"
 #include "tabpages/nicstabpage.h"
+#include "tabpages/hatabpage.h"
 #include "tabpages/consoletabpage.h"
 #include "tabpages/cvmconsoletabpage.h"
 #include "tabpages/snapshotstabpage.h"
@@ -317,7 +318,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
-    // Note: We don't implement all C# tabs yet (Home, Ballooning, HA, WLB, AD, GPU, Docker, USB)
+    // Note: We don't implement all C# tabs yet (Home, Ballooning, WLB, AD, GPU, Docker, USB)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
     // Console tabs are added below after initialization
     this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
@@ -326,7 +327,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork
     this->m_tabPages.append(new NICsTabPage());        // C#: TabPageNICs
     this->m_tabPages.append(new PerformanceTabPage()); // C#: TabPagePerformance
-    // HA - not implemented yet
+    this->m_tabPages.append(new HATabPage());          // C#: TabPageHA
     this->m_tabPages.append(new SnapshotsTabPage()); // C#: TabPageSnapshots
     // WLB - not implemented yet
     // AD - not implemented yet
@@ -995,6 +996,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     BaseTabPage* networkTab = nullptr;
     BaseTabPage* nicsTab = nullptr;
     BaseTabPage* performanceTab = nullptr;
+    BaseTabPage* haTab = nullptr;
     BaseTabPage* snapshotsTab = nullptr;
     BaseTabPage* consoleTab = nullptr;
     BaseTabPage* cvmConsoleTab = nullptr;
@@ -1027,6 +1029,9 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
                 break;
             case BaseTabPage::Type::Performance:
                 performanceTab = tab;
+                break;
+            case BaseTabPage::Type::Ha:
+                haTab = tab;
                 break;
             case BaseTabPage::Type::Snapshots:
                 snapshotsTab = tab;
@@ -1096,6 +1101,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(physicalStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
+        if (haTab)
+            newTabs.append(haTab);
         if (performanceTab)
             newTabs.append(performanceTab);
     }
@@ -2572,8 +2579,8 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
     this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
     this->ui->manageVappsToolStripMenuItem->setEnabled(false);
-    this->ui->toolStripMenuItemHaConfigure->setEnabled(false);
-    this->ui->toolStripMenuItemHaDisable->setEnabled(false);
+    this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
+    this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
     this->ui->menuDisasterRecovery->setEnabled(false);
     this->ui->vmSnapshotSchedulesToolStripMenuItem->setEnabled(false);
     this->ui->exportResourceDataToolStripMenuItem->setEnabled(false);

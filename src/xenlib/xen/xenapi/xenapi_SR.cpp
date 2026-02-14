@@ -318,4 +318,32 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
+    void SR::assert_can_host_ha_statefile(Session* session, const QString& sr)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << sr;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("SR.assert_can_host_ha_statefile", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Throws on failure
+    }
+
+    QString SR::async_assert_can_host_ha_statefile(Session* session, const QString& sr)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << sr;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.SR.assert_can_host_ha_statefile", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
 } // namespace XenAPI

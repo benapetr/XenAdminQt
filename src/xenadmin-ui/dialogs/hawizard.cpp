@@ -26,7 +26,10 @@
  */
 
 #include "hawizard.h"
+#include "ui_hawizard.h"
 #include "../dialogs/actionprogressdialog.h"
+#include "../widgets/wizardnavigationpane.h"
+#include "../iconmanager.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
@@ -35,245 +38,245 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include "xenlib/xen/actions/pool/enablehaaction.h"
+#include "xenlib/xen/actions/pool/getheartbeatsrsaction.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QIcon>
 #include <QTimer>
 #include <QApplication>
+#include <QThread>
+#include <QPointer>
+#include <QSignalBlocker>
+#include <QShowEvent>
+#include <QStyle>
 
-HAWizard::HAWizard(QSharedPointer<Pool> pool, QWidget* parent)
-    : QWizard(parent),
-      m_pool(pool),
-      m_ntol(1),
-      m_maxNtol(0)
+HAWizard::HAWizard(QSharedPointer<Pool> pool, QWidget* parent) : QWizard(parent), m_pool(pool), ui(new Ui::HAWizard)
 {
-    setWindowTitle(tr("Configure High Availability"));
-    setWizardStyle(QWizard::ModernStyle);
-    setMinimumSize(700, 500);
+    this->ui->setupUi(this);
+    this->setWindowTitle(tr("Configure High Availability"));
+    this->setWizardStyle(QWizard::ModernStyle);
+    this->setOption(QWizard::HaveHelpButton, true);
+    this->setOption(QWizard::HelpButtonOnRight, false);
+    this->setMinimumSize(700, 500);
 
     // Get pool name for display
     this->m_poolName = this->m_pool ? this->m_pool->GetName() : QString("Pool");
 
-    // Create wizard pages
-    addPage(createIntroPage());
-    addPage(createChooseSRPage());
-    addPage(createAssignPrioritiesPage());
-    addPage(createFinishPage());
+    // Bind UI pages to explicit wizard IDs and populate page content.
+    this->setPage(Page_Intro, this->ui->pageIntro);
+    this->setPage(Page_RbacWarning, this->ui->pageRbac);
+    this->setPage(Page_ChooseSR, this->ui->pageChooseSr);
+    this->setPage(Page_AssignPriorities, this->ui->pageAssign);
+    this->setPage(Page_Finish, this->ui->pageFinish);
+    this->setStartId(Page_Intro);
+    this->createIntroPage();
+    this->createRbacWarningPage();
+    this->createChooseSRPage();
+    this->createAssignPrioritiesPage();
+    this->createFinishPage();
 
-    setButtonText(QWizard::FinishButton, tr("Enable HA"));
+    XenConnection* conn = this->m_pool ? this->m_pool->GetConnection() : nullptr;
+    XenAPI::Session* session = conn ? conn->GetSession() : nullptr;
+    this->m_rbacRequired = session && session->IsLoggedIn() && !session->IsLocalSuperuser() &&
+                           session->ApiVersionMeets(APIVersion::API_1_7);
+
+    const QStringList requiredMethods = {"vm.set_ha_restart_priority",
+                                         "vm.set_order",
+                                         "vm.set_start_delay",
+                                         "pool.sync_database",
+                                         "pool.ha_compute_hypothetical_max_host_failures_to_tolerate",
+                                         "pool.set_ha_host_failures_to_tolerate",
+                                         "pool.enable_ha",
+                                         "sr.assert_can_host_ha_statefile"};
+    if (this->m_rbacRequired && session)
+    {
+        const QStringList permissions = session->GetPermissions();
+        if (!permissions.isEmpty())
+        {
+            QStringList missing;
+            for (const QString& method : requiredMethods)
+            {
+                if (!permissions.contains(method, Qt::CaseInsensitive))
+                    missing.append(method);
+            }
+
+            this->m_rbacBlockingFailure = !missing.isEmpty();
+            this->m_rbacWarningLabel->setText(
+                this->m_rbacBlockingFailure
+                    ? tr("You do not have sufficient permissions to enable HA.\n\nMissing methods:\n%1")
+                          .arg(missing.join("\n"))
+                    : tr("Permission checks passed."));
+        } else
+        {
+            this->m_rbacWarningLabel->setText(tr("Permission checks are unavailable for this session."));
+        }
+    } else
+    {
+        this->m_rbacWarningLabel->setText(tr("RBAC checks are not required for this connection."));
+        this->removePage(Page_RbacWarning);
+    }
+
+    this->setButtonText(QWizard::FinishButton, tr("Enable HA"));
+    connect(this, &QWizard::currentIdChanged, this, &HAWizard::onCurrentIdChanged);
+
+    this->m_navigationPane = new WizardNavigationPane(this);
+    QVector<WizardNavigationPane::Step> steps = {{tr("Prerequisites"), QIcon()}};
+    if (this->m_rbacRequired)
+        steps.append({tr("Permissions"), QIcon()});
+    steps.append({tr("Heartbeat SR"), QIcon()});
+    steps.append({tr("HA Plan"), QIcon()});
+    steps.append({tr("Finish"), QIcon()});
+    this->m_navigationPane->setSteps(steps);
+    this->setSideWidget(this->m_navigationPane);
+}
+
+HAWizard::~HAWizard()
+{
+    delete this->ui;
+}
+
+void HAWizard::showEvent(QShowEvent* event)
+{
+    QWizard::showEvent(event);
+
+    if (this->m_brokenSrWarningShown || !this->m_pool || !this->m_pool->GetCache())
+        return;
+
+    this->m_brokenSrWarningShown = true;
+    QStringList broken;
+    const QList<QSharedPointer<SR>> srs = this->m_pool->GetCache()->GetAll<SR>(XenObjectType::SR);
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (!sr || !sr->IsValid())
+            continue;
+        if (sr->HasPBDs() && sr->IsBroken() && !sr->IsToolsSR() && sr->IsShared())
+            broken.append(sr->GetName());
+    }
+
+    if (!broken.isEmpty())
+    {
+        QTimer::singleShot(0, this, [this, broken]() {
+            QMessageBox::warning(this,
+                                 tr("High Availability"),
+                                 tr("Some shared storage repositories are broken:\n\n%1").arg(broken.join("\n")));
+        });
+    }
+}
+
+void HAWizard::onCurrentIdChanged(int id)
+{
+    if (this->m_navigationPane)
+        this->m_navigationPane->setCurrentStep(this->wizardStepIndexForPage(id));
 }
 
 QWizardPage* HAWizard::createIntroPage()
 {
-    QWizardPage* page = new QWizardPage(this);
-    page->setTitle(tr("High Availability"));
-    page->setSubTitle(tr("Introduction to High Availability"));
-
-    QVBoxLayout* layout = new QVBoxLayout(page);
-
-    QLabel* introLabel = new QLabel(page);
-    introLabel->setWordWrap(true);
-    introLabel->setText(tr(
-        "<p>High Availability (HA) provides automated VM restart capabilities in case of host failure.</p>"
-        "<p>When HA is enabled:</p>"
-        "<ul>"
-        "<li>The pool monitors the health of all hosts</li>"
-        "<li>If a host fails, protected VMs are automatically restarted on surviving hosts</li>"
-        "<li>A heartbeat storage repository (SR) is used to detect host failures</li>"
-        "</ul>"
-        "<p><b>Requirements:</b></p>"
-        "<ul>"
-        "<li>At least one shared storage repository accessible from all hosts</li>"
-        "<li>At least 2 hosts in the pool for meaningful protection</li>"
-        "<li>Sufficient spare capacity on surviving hosts to restart failed VMs</li>"
-        "</ul>"
-        "<p>Click <b>Next</b> to select a heartbeat SR and configure VM restart priorities.</p>"));
-
-    layout->addWidget(introLabel);
-    layout->addStretch();
-
+    QWizardPage* page = this->ui->pageIntro;
     return page;
 }
 
 QWizardPage* HAWizard::createChooseSRPage()
 {
-    QWizardPage* page = new QWizardPage(this);
-    page->setTitle(tr("Choose Heartbeat SR"));
-    page->setSubTitle(tr("Select a storage repository for the HA heartbeat and statefile"));
-
-    QVBoxLayout* layout = new QVBoxLayout(page);
-
-    QLabel* descLabel = new QLabel(page);
-    descLabel->setWordWrap(true);
-    descLabel->setText(tr(
-        "The heartbeat SR stores the HA statefile and is used by hosts to communicate their health status. "
-        "Choose a reliable shared storage repository that is accessible from all hosts in the pool."));
-    layout->addWidget(descLabel);
-
-    layout->addSpacing(10);
-
-    // Progress bar for scanning
-    this->m_scanProgress = new QProgressBar(page);
-    this->m_scanProgress->setRange(0, 0); // Indeterminate
+    QWizardPage* page = this->ui->pageChooseSr;
+    this->m_scanProgress = this->ui->scanProgress;
+    this->m_scanProgress->setRange(0, 0);
     this->m_scanProgress->setVisible(false);
-    layout->addWidget(this->m_scanProgress);
-
-    // No SRs available label
-    this->m_noSRsLabel = new QLabel(tr("No suitable shared storage repositories found."), page);
+    this->m_noSRsLabel = this->ui->noSrLabel;
     this->m_noSRsLabel->setStyleSheet("color: red; font-weight: bold;");
-    this->m_noSRsLabel->setVisible(false);
-    layout->addWidget(this->m_noSRsLabel);
-
-    // SR table
-    this->m_srTable = new QTableWidget(page);
-    this->m_srTable->setColumnCount(3);
-    this->m_srTable->setHorizontalHeaderLabels({tr("Name"), tr("Description"), tr("Status")});
+    this->m_srTable = this->ui->srTable;
+    this->m_srTable->setColumnCount(4);
+    this->m_srTable->setHorizontalHeaderLabels({tr(""), tr("Name"), tr("Description"), tr("Comment")});
     this->m_srTable->horizontalHeader()->setStretchLastSection(true);
     this->m_srTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    this->m_srTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    this->m_srTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    this->m_srTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    this->m_srTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     this->m_srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     this->m_srTable->setSelectionMode(QAbstractItemView::SingleSelection);
     this->m_srTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     this->m_srTable->verticalHeader()->setVisible(false);
-    layout->addWidget(this->m_srTable, 1);
 
-    connect(this->m_srTable, &QTableWidget::itemSelectionChanged,
-            this, &HAWizard::onHeartbeatSRSelectionChanged);
-
-    // Rescan button
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    this->m_rescanButton = new QPushButton(tr("Rescan"), page);
+    connect(this->m_srTable, &QTableWidget::itemSelectionChanged, this, &HAWizard::onHeartbeatSRSelectionChanged);
+    this->m_rescanButton = this->ui->rescanButton;
     connect(this->m_rescanButton, &QPushButton::clicked, this, &HAWizard::scanForHeartbeatSRs);
-    buttonLayout->addWidget(this->m_rescanButton);
-    layout->addLayout(buttonLayout);
 
+    return page;
+}
+
+QWizardPage* HAWizard::createRbacWarningPage()
+{
+    QWizardPage* page = this->ui->pageRbac;
+    this->m_rbacWarningLabel = this->ui->rbacWarningLabel;
     return page;
 }
 
 QWizardPage* HAWizard::createAssignPrioritiesPage()
 {
-    QWizardPage* page = new QWizardPage(this);
-    page->setTitle(tr("Assign VM Restart Priorities"));
-    page->setSubTitle(tr("Configure which VMs should be restarted in case of host failure"));
-
-    QVBoxLayout* layout = new QVBoxLayout(page);
-
-    QLabel* descLabel = new QLabel(page);
-    descLabel->setWordWrap(true);
-    descLabel->setText(tr(
-        "Assign restart priorities to VMs. Higher priority VMs are guaranteed to be restarted, "
-        "while lower priority VMs are restarted on a best-effort basis."));
-    layout->addWidget(descLabel);
-
-    layout->addSpacing(10);
-
-    // NTOL configuration group
-    QGroupBox* ntolGroup = new QGroupBox(tr("Host Failure Tolerance"), page);
-    QVBoxLayout* ntolLayout = new QVBoxLayout(ntolGroup);
-
-    QHBoxLayout* ntolSpinLayout = new QHBoxLayout();
-    QLabel* ntolLabel = new QLabel(tr("Number of host failures to tolerate:"), ntolGroup);
-    this->m_ntolSpinBox = new QSpinBox(ntolGroup);
-    this->m_ntolSpinBox->setRange(0, 10);
-    this->m_ntolSpinBox->setValue(1);
-    connect(this->m_ntolSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &HAWizard::onNtolChanged);
-    ntolSpinLayout->addWidget(ntolLabel);
-    ntolSpinLayout->addWidget(this->m_ntolSpinBox);
-    ntolSpinLayout->addStretch();
-    ntolLayout->addLayout(ntolSpinLayout);
-
-    this->m_maxNtolLabel = new QLabel(ntolGroup);
+    QWizardPage* page = this->ui->pageAssign;
+    this->m_ntolSpinBox = this->ui->ntolSpinBox;
+    // C# numeric control is not capped to computed ntolMax; over-max is shown as overcommit.
+    this->m_ntolSpinBox->setRange(0, 9999);
+    this->m_ntolSpinBox->setValue(0);
+    connect(this->m_ntolSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &HAWizard::onNtolChanged);
+    this->m_maxNtolLabel = this->ui->maxNtolLabel;
     this->m_maxNtolLabel->setStyleSheet("color: gray;");
-    ntolLayout->addWidget(this->m_maxNtolLabel);
-
-    this->m_ntolStatusLabel = new QLabel(ntolGroup);
-    ntolLayout->addWidget(this->m_ntolStatusLabel);
-
-    layout->addWidget(ntolGroup);
-
-    layout->addSpacing(10);
-
-    // VM priorities table
-    QLabel* vmLabel = new QLabel(tr("VM Restart Priorities:"), page);
-    layout->addWidget(vmLabel);
-
-    this->m_vmTable = new QTableWidget(page);
-    this->m_vmTable->setColumnCount(4);
-    this->m_vmTable->setHorizontalHeaderLabels({tr("VM"), tr("Restart Priority"), tr("Start Order"), tr("Start Delay (s)")});
+    this->m_ntolStatusLabel = this->ui->ntolStatusLabel;
+    this->m_vmTable = this->ui->vmTable;
+    this->m_vmTable->setColumnCount(6);
+    this->m_vmTable->setHorizontalHeaderLabels({tr(""), tr("VM"), tr("Restart Priority"), tr("Start Order"), tr("Start Delay (s)"), tr("Agility")});
     this->m_vmTable->horizontalHeader()->setStretchLastSection(true);
-    this->m_vmTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    this->m_vmTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     this->m_vmTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     this->m_vmTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
     this->m_vmTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     this->m_vmTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    this->m_vmTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     this->m_vmTable->verticalHeader()->setVisible(false);
-    layout->addWidget(this->m_vmTable, 1);
 
-    connect(this->m_vmTable, &QTableWidget::cellChanged,
-            this, &HAWizard::onPriorityChanged);
+    this->m_selectedPriorityCombo = this->ui->selectedPriorityCombo;
+    this->m_selectedOrderSpin = this->ui->selectedOrderSpin;
+    this->m_selectedDelaySpin = this->ui->selectedDelaySpin;
+
+    this->m_selectedPriorityCombo->clear();
+    this->m_selectedPriorityCombo->addItem(tr("Mixed"), "__mixed__");
+    this->m_selectedPriorityCombo->addItem(tr("Restart"), "restart");
+    this->m_selectedPriorityCombo->addItem(tr("Restart if possible"), "best-effort");
+    this->m_selectedPriorityCombo->addItem(tr("Do not restart"), "");
+
+    this->m_selectedOrderSpin->setRange(0, 9999);
+    this->m_selectedDelaySpin->setRange(0, 600);
+    this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9C\x93"));
+
+    connect(this->m_vmTable, &QTableWidget::itemSelectionChanged, this, &HAWizard::onVmSelectionChanged);
+    connect(this->m_selectedPriorityCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &HAWizard::onSelectedPriorityChanged);
+    connect(this->m_selectedOrderSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &HAWizard::onSelectedOrderChanged);
+    connect(this->m_selectedDelaySpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &HAWizard::onSelectedDelayChanged);
 
     return page;
 }
 
 QWizardPage* HAWizard::createFinishPage()
 {
-    QWizardPage* page = new QWizardPage(this);
-    page->setTitle(tr("Confirm HA Configuration"));
-    page->setSubTitle(tr("Review your settings before enabling High Availability"));
-
-    QVBoxLayout* layout = new QVBoxLayout(page);
-
-    QLabel* descLabel = new QLabel(page);
-    descLabel->setWordWrap(true);
-    descLabel->setText(tr("Click <b>Enable HA</b> to enable High Availability with the following settings:"));
-    layout->addWidget(descLabel);
-
-    layout->addSpacing(15);
-
-    // Summary group
-    QGroupBox* summaryGroup = new QGroupBox(tr("Configuration Summary"), page);
-    QFormLayout* formLayout = new QFormLayout(summaryGroup);
-    formLayout->setLabelAlignment(Qt::AlignRight);
-
-    this->m_finishSRLabel = new QLabel(summaryGroup);
-    formLayout->addRow(tr("Heartbeat SR:"), this->m_finishSRLabel);
-
-    this->m_finishNtolLabel = new QLabel(summaryGroup);
-    formLayout->addRow(tr("Failures to tolerate:"), this->m_finishNtolLabel);
-
-    this->m_finishRestartLabel = new QLabel(summaryGroup);
-    formLayout->addRow(tr("Protected VMs (Restart):"), this->m_finishRestartLabel);
-
-    this->m_finishBestEffortLabel = new QLabel(summaryGroup);
-    formLayout->addRow(tr("Best Effort VMs:"), this->m_finishBestEffortLabel);
-
-    this->m_finishDoNotRestartLabel = new QLabel(summaryGroup);
-    formLayout->addRow(tr("Do Not Restart VMs:"), this->m_finishDoNotRestartLabel);
-
-    layout->addWidget(summaryGroup);
-
-    layout->addSpacing(15);
-
-    // Warning section
-    QHBoxLayout* warningLayout = new QHBoxLayout();
-    this->m_finishWarningIcon = new QLabel(page);
+    QWizardPage* page = this->ui->pageFinish;
+    this->m_finishSRLabel = this->ui->finishSRLabel;
+    this->m_finishNtolLabel = this->ui->finishNtolLabel;
+    this->m_finishRestartLabel = this->ui->finishRestartLabel;
+    this->m_finishBestEffortLabel = this->ui->finishBestEffortLabel;
+    this->m_finishDoNotRestartLabel = this->ui->finishDoNotRestartLabel;
+    this->ui->labelRestartHigh->setVisible(false);
+    this->ui->finishRestartHighLabel->setVisible(false);
+    this->m_finishWarningIcon = this->ui->finishWarningIcon;
     this->m_finishWarningIcon->setPixmap(QIcon::fromTheme("dialog-warning").pixmap(24, 24));
     this->m_finishWarningIcon->setVisible(false);
-    warningLayout->addWidget(this->m_finishWarningIcon);
-
-    this->m_finishWarningLabel = new QLabel(page);
-    this->m_finishWarningLabel->setWordWrap(true);
+    this->m_finishWarningLabel = this->ui->finishWarningLabel;
     this->m_finishWarningLabel->setStyleSheet("color: #b8860b;"); // Dark goldenrod
     this->m_finishWarningLabel->setVisible(false);
-    warningLayout->addWidget(this->m_finishWarningLabel, 1);
-    layout->addLayout(warningLayout);
-
-    layout->addStretch();
-
     return page;
 }
 
@@ -281,9 +284,11 @@ void HAWizard::initializePage(int id)
 {
     switch (id)
     {
+        case Page_Intro:
+            break;
+        case Page_RbacWarning:
+            break;
         case Page_ChooseSR:
-            // Scan for heartbeat SRs when entering this page
-            QTimer::singleShot(100, this, &HAWizard::scanForHeartbeatSRs);
             break;
 
         case Page_AssignPriorities:
@@ -308,29 +313,47 @@ bool HAWizard::validateCurrentPage()
 
     switch (id)
     {
-    case Page_ChooseSR:
-        if (this->m_selectedHeartbeatSR.isEmpty())
-        {
-            QMessageBox::warning(this, tr("No SR Selected"),
-                                 tr("Please select a storage repository for the HA heartbeat."));
-            return false;
-        }
-        break;
+        case Page_Intro:
+            if (!this->m_rbacRequired)
+            {
+                if (!this->performHeartbeatSRScan())
+                    return false;
+                break;
+            }
+            [[fallthrough]];
+        case Page_RbacWarning:
+            if (this->m_rbacBlockingFailure)
+            {
+                QMessageBox::warning(this, tr("Insufficient permissions"), tr("You do not have the required permissions to configure HA on this pool."));
+                return false;
+            }
+            if (!this->performHeartbeatSRScan())
+                return false;
+            break;
+        case Page_ChooseSR:
+            if (this->m_selectedHeartbeatSR.isEmpty())
+            {
+                QMessageBox::warning(this, tr("No SR Selected"), tr("Please select a storage repository for the HA heartbeat."));
+                return false;
+            }
+            break;
 
-    case Page_AssignPriorities:
-        // Validate NTOL is reasonable
-        if (this->m_ntol > this->m_maxNtol && this->m_maxNtol > 0)
-        {
-            QMessageBox::warning(this, tr("Invalid NTOL"),
-                                 tr("The number of failures to tolerate (%1) exceeds the maximum (%2) based on current VM priorities and available resources.")
-                                     .arg(this->m_ntol)
-                                     .arg(this->m_maxNtol));
-            return false;
-        }
-        break;
+        case Page_AssignPriorities:
+            if (this->m_ntolUpdateInProgress)
+            {
+                QMessageBox::information(this, tr("Please wait"), tr("Still calculating host failure tolerance. Please wait."));
+                return false;
+            }
+            // Validate NTOL is reasonable
+            if (this->m_maxNtol >= 0 && this->m_ntol > this->m_maxNtol)
+            {
+                QMessageBox::warning(this, tr("Invalid NTOL"), tr("The number of failures to tolerate (%1) exceeds the maximum (%2) based on current VM priorities and available resources.").arg(this->m_ntol).arg(this->m_maxNtol));
+                return false;
+            }
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 
     return QWizard::validateCurrentPage();
@@ -338,35 +361,14 @@ bool HAWizard::validateCurrentPage()
 
 void HAWizard::accept()
 {
-    // Build startup options map from the VM table
-    this->m_vmStartupOptions.clear();
+    if (this->m_ntolUpdateInProgress)
+        return;
 
-    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
+    if (this->m_ntol == 0)
     {
-        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 0);
-        if (!vmItem)
-            continue;
-
-        QString vmRef = vmItem->data(Qt::UserRole).toString();
-
-        // Get priority from combo box
-        QComboBox* priorityCombo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
-        QString priority = priorityCombo ? priorityCombo->currentData().toString() : "";
-
-        // Get order from spinbox
-        QSpinBox* orderSpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 2));
-        qint64 order = orderSpin ? orderSpin->value() : 0;
-
-        // Get delay from spinbox
-        QSpinBox* delaySpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 3));
-        qint64 delay = delaySpin ? delaySpin->value() : 0;
-
-        QVariantMap options;
-        options["ha_restart_priority"] = priority;
-        options["order"] = order;
-        options["start_delay"] = delay;
-
-        this->m_vmStartupOptions[vmRef] = options;
+        const int rc = QMessageBox::warning(this, tr("High Availability"), tr("Failures to tolerate is set to 0. Continue anyway?"), QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (rc != QMessageBox::Yes)
+            return;
     }
 
     // Resolve Pool object from cache
@@ -377,148 +379,81 @@ void HAWizard::accept()
     }
 
     // Create and run EnableHAAction
-    EnableHAAction* action = new EnableHAAction(
-        this->m_pool,
-        QStringList{this->m_selectedHeartbeatSR},
-        this->m_ntol,
-        this->m_vmStartupOptions,
-        this);
+    EnableHAAction* action = new EnableHAAction(this->m_pool, QStringList{this->m_selectedHeartbeatSR}, this->m_ntol, this->m_vmStartupOptions, this);
 
-    // Show progress dialog
-    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
+    ActionProgressDialog progressDialog(action, this);
+    progressDialog.setShowCancel(true);
 
-    connect(action, &AsyncOperation::completed, [this, progressDialog]()
+    if (progressDialog.exec() == QDialog::Accepted && !action->HasError() && !action->IsCancelled())
     {
-        progressDialog->close();
-        QMessageBox::information(this, tr("HA Enabled"),
-                                 tr("High Availability has been successfully enabled on pool '%1'.")
-                                     .arg(this->m_poolName));
+        QMessageBox::information(this, tr("HA Enabled"), tr("High Availability has been successfully enabled on pool '%1'.").arg(this->m_poolName));
         QWizard::accept();
-    });
-
-    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error)
-    {
-        progressDialog->close();
-        QMessageBox::critical(this, tr("Failed to Enable HA"),
-                              tr("Failed to enable High Availability:\n\n%1").arg(error));
-        // Don't close wizard on failure - let user retry
-    });
-
-    action->RunAsync();
-    progressDialog->exec();
+    }
 }
 
 void HAWizard::scanForHeartbeatSRs()
 {
-    this->m_scanProgress->setVisible(true);
+    this->performHeartbeatSRScan();
+}
+
+bool HAWizard::performHeartbeatSRScan()
+{
     this->m_rescanButton->setEnabled(false);
     this->m_srTable->setEnabled(false);
     this->m_noSRsLabel->setVisible(false);
 
-    QApplication::processEvents();
-
     this->m_heartbeatSRs.clear();
     this->m_srTable->setRowCount(0);
 
-    try
+    GetHeartbeatSRsAction* action = new GetHeartbeatSRsAction(this->m_pool, this);
+    ActionProgressDialog progressDialog(action, this);
+    progressDialog.setShowCancel(true);
+    progressDialog.exec();
+
+    bool cancelled = action->IsCancelled();
+    if (action->HasError())
     {
-        XenConnection* connection = this->m_pool ? this->m_pool->GetConnection() : nullptr;
-        XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
-        if (!session || !session->IsLoggedIn())
+        QMessageBox::warning(this, tr("Scan Failed"), tr("Failed to scan for heartbeat SRs: %1").arg(action->GetErrorMessage()));
+    } else if (!cancelled)
+    {
+        const QList<SRWrapper>& scanned = action->GetSRs();
+        for (const SRWrapper& wrapper : scanned)
         {
-            throw std::runtime_error("Not connected");
-        }
-
-        // Get all SRs from cache
-        XenCache* cache = this->cache();
-        if (!cache)
-            throw std::runtime_error("Cache not available");
-
-        QList<QSharedPointer<SR>> srs = cache->GetAll<SR>(XenObjectType::SR);
-
-        for (const QSharedPointer<SR>& sr : srs)
-        {
-            // Check if SR is suitable for heartbeat:
-            // - Must be shared
-            // - Must have at least one connected PBD
-            // - Not a tools SR
-            // - Not broken
-            if (!sr || !sr->IsValid())
+            if (!wrapper.sr || !wrapper.sr->IsValid())
                 continue;
 
-            bool isShared = sr->IsShared();
-            QString srType = sr->GetType();
-
-            // Skip non-shared SRs
-            if (!isShared)
-                continue;
-
-            // Skip tools SRs
-            if (sr->IsToolsSR() || srType == "iso")
-                continue;
-
-            // Skip udev/local SRs
-            if (srType == "udev" || srType == "local")
-                continue;
-
-            if (sr->IsBroken())
-                continue;
-
-            // Check if SR has working PBDs
-            bool hasConnectedPBD = false;
-            for (const QSharedPointer<PBD>& pbd : sr->GetPBDs())
-            {
-                if (pbd && pbd->IsCurrentlyAttached())
-                {
-                    hasConnectedPBD = true;
-                    break;
-                }
-            }
-
-            if (!hasConnectedPBD)
-                continue;
-
-            QString srName = sr->GetName();
-            QString srDesc = sr->GetDescription();
-
-            // For now, all shared SRs with connected PBDs are considered suitable
-            // TODO: Add XenAPI::SR::assert_can_host_ha_statefile check when implemented
-            QString status = tr("Available");
-
-            this->m_heartbeatSRs.append({sr->OpaqueRef(), srName});
-
-            int row = this->m_srTable->rowCount();
+            const int row = this->m_srTable->rowCount();
             this->m_srTable->insertRow(row);
 
-            QTableWidgetItem* nameItem = new QTableWidgetItem(srName);
-            nameItem->setData(Qt::UserRole, sr->OpaqueRef());
-            this->m_srTable->setItem(row, 0, nameItem);
+            QTableWidgetItem* iconItem = new QTableWidgetItem();
+            iconItem->setIcon(IconManager::instance().GetIconForObject(wrapper.sr.data()));
+            iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
+            this->m_srTable->setItem(row, 0, iconItem);
 
-            this->m_srTable->setItem(row, 1, new QTableWidgetItem(srDesc));
-            this->m_srTable->setItem(row, 2, new QTableWidgetItem(status));
+            QTableWidgetItem* nameItem = new QTableWidgetItem(wrapper.sr->GetName());
+            nameItem->setData(Qt::UserRole, wrapper.sr->OpaqueRef());
+            this->m_srTable->setItem(row, 1, nameItem);
 
-            // Disable rows that are not suitable
-            if (status != tr("Available"))
+            this->m_srTable->setItem(row, 2, new QTableWidgetItem(wrapper.sr->GetDescription()));
+            this->m_srTable->setItem(row, 3, new QTableWidgetItem(wrapper.enabled ? tr("") : wrapper.reasonUnsuitable));
+
+            if (wrapper.enabled)
             {
-                for (int col = 0; col < 3; ++col)
+                this->m_heartbeatSRs.append({wrapper.sr->OpaqueRef(), wrapper.sr->GetName()});
+            } else
+            {
+                for (int col = 0; col < 4; ++col)
                 {
                     QTableWidgetItem* item = this->m_srTable->item(row, col);
-                    if (item)
-                    {
-                        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-                        item->setForeground(Qt::gray);
-                    }
+                    if (!item)
+                        continue;
+                    item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+                    item->setForeground(Qt::gray);
                 }
             }
         }
-
-    } catch (const std::exception& e)
-    {
-        QMessageBox::warning(this, tr("Scan Failed"),
-                             tr("Failed to scan for heartbeat SRs: %1").arg(e.what()));
     }
 
-    this->m_scanProgress->setVisible(false);
     this->m_rescanButton->setEnabled(true);
     this->m_srTable->setEnabled(true);
 
@@ -532,7 +467,7 @@ void HAWizard::scanForHeartbeatSRs()
     {
         for (int row = 0; row < this->m_srTable->rowCount(); ++row)
         {
-            QTableWidgetItem* item = this->m_srTable->item(row, 0);
+            QTableWidgetItem* item = this->m_srTable->item(row, 1);
             if (item && item->data(Qt::UserRole).toString() == this->m_selectedHeartbeatSR)
             {
                 if (item->flags() & Qt::ItemIsEnabled)
@@ -543,6 +478,8 @@ void HAWizard::scanForHeartbeatSRs()
             }
         }
     }
+
+    return !cancelled;
 }
 
 void HAWizard::onHeartbeatSRSelectionChanged()
@@ -550,7 +487,7 @@ void HAWizard::onHeartbeatSRSelectionChanged()
     QList<QTableWidgetItem*> selected = this->m_srTable->selectedItems();
     if (!selected.isEmpty())
     {
-        QTableWidgetItem* item = this->m_srTable->item(selected.first()->row(), 0);
+        QTableWidgetItem* item = this->m_srTable->item(selected.first()->row(), 1);
         if (item && (item->flags() & Qt::ItemIsEnabled))
         {
             this->m_selectedHeartbeatSR = item->data(Qt::UserRole).toString();
@@ -571,90 +508,93 @@ void HAWizard::populateVMTable()
 {
     this->m_vmTable->blockSignals(true);
     this->m_vmTable->setRowCount(0);
+    this->m_vmStartupOptions.clear();
+    this->m_vmAgilityKnown.clear();
+    this->m_vmIsAgile.clear();
+    this->m_pendingPriorityInitialization.clear();
 
     // Get all VMs from cache
     XenCache* cache = this->cache();
     if (!cache)
         return;
 
-    QList<QSharedPointer<VM>> vms = cache->GetAll<VM>(XenObjectType::VM);
+    const QList<QSharedPointer<VM>> vms = cache->GetAll<VM>(XenObjectType::VM);
+    bool firstTime = this->m_protectVmsByDefault;
+    QList<QSharedPointer<VM>> protectableVms;
+
+    static constexpr int ColIcon = 0;
+    static constexpr int ColVm = 1;
+    static constexpr int ColPriority = 2;
+    static constexpr int ColOrder = 3;
+    static constexpr int ColDelay = 4;
+    static constexpr int ColAgility = 5;
 
     for (const QSharedPointer<VM>& vm : vms)
     {
-        if (!vm || !vm->IsValid())
+        if (!isVmProtectable(vm))
             continue;
 
-        // Skip templates
-        if (vm->IsTemplate())
-            continue;
-
-        // Skip control domains
-        if (vm->IsControlDomain())
-            continue;
-
-        // Skip snapshots
-        if (vm->IsSnapshot())
-            continue;
-
-        QString vmName = vm->GetName();
-        QString currentPriority = vm->HARestartPriority();
-        qint64 order = vm->Order();
-        qint64 startDelay = vm->StartDelay();
-
-        int row = this->m_vmTable->rowCount();
-        this->m_vmTable->insertRow(row);
-
-        // VM name
-        QTableWidgetItem* nameItem = new QTableWidgetItem(vmName);
-        nameItem->setData(Qt::UserRole, vm->OpaqueRef());
-        nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
-        this->m_vmTable->setItem(row, 0, nameItem);
-
-        // Priority combo box
-        QComboBox* priorityCombo = new QComboBox();
-        priorityCombo->addItem(tr("Restart"), "restart");
-        priorityCombo->addItem(tr("Best Effort"), "best-effort");
-        priorityCombo->addItem(tr("Do Not Restart"), "");
-
-        // Set current priority
-        if (currentPriority == "restart" || currentPriority == "always_restart" ||
-            currentPriority == "always_restart_high_priority")
-        {
-            priorityCombo->setCurrentIndex(0); // Restart
-        } else if (currentPriority == "best-effort" || currentPriority == "best_effort")
-        {
-            priorityCombo->setCurrentIndex(1); // Best Effort
-        } else
-        {
-            priorityCombo->setCurrentIndex(2); // Do Not Restart
-        }
-
-        connect(priorityCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, [this](int) { this->updateNtolCalculation(); });
-        this->m_vmTable->setCellWidget(row, 1, priorityCombo);
-
-        // Start order spinbox
-        QSpinBox* orderSpin = new QSpinBox();
-        orderSpin->setRange(0, 9999);
-        orderSpin->setValue(order);
-        this->m_vmTable->setCellWidget(row, 2, orderSpin);
-
-        // Start delay spinbox
-        QSpinBox* delaySpin = new QSpinBox();
-        delaySpin->setRange(0, 600);
-        delaySpin->setValue(startDelay);
-        delaySpin->setSuffix(tr(" sec"));
-        this->m_vmTable->setCellWidget(row, 3, delaySpin);
+        protectableVms.append(vm);
+        if (!this->normalizePriority(vm->HARestartPriority()).isEmpty())
+            firstTime = false;
     }
 
-    this->m_vmTable->blockSignals(false);
-}
+    for (const QSharedPointer<VM>& vm : protectableVms)
+    {
+        const QString vmRef = vm->OpaqueRef();
+        const int row = this->m_vmTable->rowCount();
+        this->m_vmTable->insertRow(row);
 
-void HAWizard::onPriorityChanged(int row, int column)
-{
-    Q_UNUSED(row);
-    Q_UNUSED(column);
-    updateNtolCalculation();
+        auto* iconItem = new QTableWidgetItem();
+        iconItem->setIcon(IconManager::instance().GetIconForObject(vm.data()));
+        iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColIcon, iconItem);
+
+        auto* nameItem = new QTableWidgetItem(vm->GetName());
+        nameItem->setData(Qt::UserRole, vmRef);
+        nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColVm, nameItem);
+
+        QVariantMap options;
+        options["order"] = vm->Order();
+        options["start_delay"] = vm->StartDelay();
+
+        QString priority = this->normalizePriority(vm->HARestartPriority());
+        if (firstTime)
+        {
+            // C# first-time flow: assign after agility determination.
+            this->m_pendingPriorityInitialization.insert(vmRef);
+            priority.clear();
+        }
+        options["ha_restart_priority"] = priority;
+        this->m_vmStartupOptions.insert(vmRef, options);
+
+        auto* priorityItem = new QTableWidgetItem();
+        priorityItem->setFlags(priorityItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColPriority, priorityItem);
+
+        auto* orderItem = new QTableWidgetItem();
+        orderItem->setFlags(orderItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColOrder, orderItem);
+
+        auto* delayItem = new QTableWidgetItem();
+        delayItem->setFlags(delayItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColDelay, delayItem);
+
+        auto* agilityItem = new QTableWidgetItem(tr("Checking..."));
+        agilityItem->setFlags(agilityItem->flags() & ~Qt::ItemIsEditable);
+        this->m_vmTable->setItem(row, ColAgility, agilityItem);
+
+        this->m_vmAgilityKnown.insert(vmRef, false);
+        this->m_vmIsAgile.insert(vmRef, false);
+        this->setVmRowValues(row, vmRef);
+    }
+
+    this->m_protectVmsByDefault = firstTime;
+    this->m_vmTable->blockSignals(false);
+
+    this->updateAgilityForRows();
+    this->refreshSelectionEditors();
 }
 
 void HAWizard::onNtolChanged(int value)
@@ -663,52 +603,497 @@ void HAWizard::onNtolChanged(int value)
     this->updateNtolCalculation();
 }
 
+void HAWizard::onVmSelectionChanged()
+{
+    this->refreshSelectionEditors();
+}
+
+void HAWizard::onSelectedPriorityChanged(int index)
+{
+    if (this->m_updatingSelectionEditors || index < 0)
+        return;
+
+    const QString target = this->m_selectedPriorityCombo->currentData().toString();
+    if (target == "__mixed__")
+        return;
+
+    const QList<QTableWidgetItem*> selectedItems = this->m_vmTable->selectedItems();
+    QSet<int> rows;
+    for (QTableWidgetItem* item : selectedItems)
+        rows.insert(item->row());
+
+    bool changed = false;
+    for (int row : rows)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+        QString priority = target;
+        if (priority == "restart" && this->m_vmAgilityKnown.value(vmRef, false) && !this->m_vmIsAgile.value(vmRef, false))
+            priority = "best-effort";
+        if (this->normalizePriority(options.value("ha_restart_priority").toString()) == priority)
+            continue;
+        options["ha_restart_priority"] = priority;
+        this->m_vmStartupOptions.insert(vmRef, options);
+        this->setVmRowValues(row, vmRef);
+        changed = true;
+    }
+
+    if (changed)
+        this->updateNtolCalculation();
+    this->refreshSelectionEditors();
+}
+
+void HAWizard::onSelectedOrderChanged(int value)
+{
+    if (this->m_updatingSelectionEditors)
+        return;
+
+    const QList<QTableWidgetItem*> selectedItems = this->m_vmTable->selectedItems();
+    QSet<int> rows;
+    for (QTableWidgetItem* item : selectedItems)
+        rows.insert(item->row());
+
+    bool changed = false;
+    for (int row : rows)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+        if (options.value("order", 0).toLongLong() == value)
+            continue;
+        options["order"] = value;
+        this->m_vmStartupOptions.insert(vmRef, options);
+        this->setVmRowValues(row, vmRef);
+        changed = true;
+    }
+
+    if (changed)
+        this->updateNtolCalculation();
+}
+
+void HAWizard::onSelectedDelayChanged(int value)
+{
+    if (this->m_updatingSelectionEditors)
+        return;
+
+    const QList<QTableWidgetItem*> selectedItems = this->m_vmTable->selectedItems();
+    QSet<int> rows;
+    for (QTableWidgetItem* item : selectedItems)
+        rows.insert(item->row());
+
+    bool changed = false;
+    for (int row : rows)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+        if (options.value("start_delay", 0).toLongLong() == value)
+            continue;
+        options["start_delay"] = value;
+        this->m_vmStartupOptions.insert(vmRef, options);
+        this->setVmRowValues(row, vmRef);
+        changed = true;
+    }
+
+    if (changed)
+        this->updateNtolCalculation();
+}
+
 void HAWizard::updateNtolCalculation()
 {
     this->m_ntol = this->m_ntolSpinBox->value();
-
-    // Count hosts in pool
-    if (!this->m_pool)
+    if (!this->m_pool || !this->m_pool->GetConnection())
         return;
 
-    int hostCount = this->m_pool->GetHosts().size();
+    setNtolUpdateInProgress(true);
+    const int requestId = ++this->m_ntolRequestId;
+    const QVariantMap ntolConfig = buildNtolConfig();
+    const QString poolRef = this->m_pool->OpaqueRef();
+    XenConnection* connection = this->m_pool->GetConnection();
+    QPointer<HAWizard> self(this);
 
-    // Maximum NTOL is number of hosts - 1
-    this->m_maxNtol = qMax(0, hostCount - 1);
-    this->m_ntolSpinBox->setMaximum(this->m_maxNtol);
+    QThread* thread = QThread::create([self, requestId, ntolConfig, poolRef, connection]()
+    {
+        if (!self || !connection || !connection->GetSession())
+            return;
 
-    this->m_maxNtolLabel->setText(tr("Maximum: %1 (pool has %2 hosts)").arg(this->m_maxNtol).arg(hostCount));
+        bool ok = false;
+        qint64 ntolMax = -1;
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(connection->GetSession(), nullptr);
+        if (session)
+        {
+            try
+            {
+                ntolMax = XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(session, ntolConfig);
+                ok = true;
+            }
+            catch (const std::exception&)
+            {
+                ok = false;
+            }
+            delete session;
+        }
 
-    // Count protected VMs
-    int protectedVMs = 0;
+        QMetaObject::invokeMethod(self, [self, requestId, ok, ntolMax, poolRef, ntolConfig, connection]() {
+            if (!self)
+                return;
+            self->applyNtolCalculationResult(requestId, ok, ntolMax, ntolConfig, poolRef, connection);
+        }, Qt::QueuedConnection);
+    });
+
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+QVariantMap HAWizard::buildNtolConfig() const
+{
+    QVariantMap config;
     for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
-        QComboBox* combo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
-        if (combo)
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        const QString priority = this->normalizePriority(this->m_vmStartupOptions.value(vmRef).value("ha_restart_priority").toString());
+        if (vmRef.isEmpty() || !isRestartPriority(priority))
+            continue;
+
+        config.insert(vmRef, "restart");
+    }
+    return config;
+}
+
+void HAWizard::updateAgilityForRows()
+{
+    if (!this->m_pool || !this->m_pool->GetConnection() || !this->m_pool->GetConnection()->GetSession())
+        return;
+
+    QStringList vmRefs;
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        vmRefs.append(vmItem->data(Qt::UserRole).toString());
+    }
+
+    const int requestId = ++this->m_agilityRequestId;
+    XenConnection* connection = this->m_pool->GetConnection();
+    QPointer<HAWizard> self(this);
+
+    QThread* thread = QThread::create([self, requestId, vmRefs, connection]() {
+        if (!self || !connection || !connection->GetSession())
+            return;
+
+        QMap<QString, bool> agileMap;
+        QMap<QString, QString> reasonMap;
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(connection->GetSession(), nullptr);
+        if (session)
         {
-            QString priority = combo->currentData().toString();
-            if (priority == "restart")
+            for (const QString& vmRef : vmRefs)
             {
-                protectedVMs++;
+                bool agile = false;
+                QString reason;
+                try
+                {
+                    XenAPI::VM::assert_agile(session, vmRef);
+                    agile = true;
+                }
+                catch (const std::exception& ex)
+                {
+                    agile = false;
+                    reason = QString::fromUtf8(ex.what());
+                }
+                agileMap.insert(vmRef, agile);
+                reasonMap.insert(vmRef, reason);
             }
+            delete session;
+        }
+
+        QMetaObject::invokeMethod(self, [self, requestId, agileMap, reasonMap]() {
+            if (!self)
+                return;
+            self->applyAgilityResults(requestId, agileMap, reasonMap);
+        }, Qt::QueuedConnection);
+    });
+
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+void HAWizard::applyNtolCalculationResult(int requestId, bool ok, qint64 ntolMax, const QVariantMap& ntolConfig, const QString& poolRef, XenConnection* connection)
+{
+    if (requestId != this->m_ntolRequestId)
+        return;
+
+    this->setNtolUpdateInProgress(false);
+    if (!ok)
+    {
+        this->m_maxNtol = -1;
+        this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9A\xA0"));
+        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+        this->m_ntolStatusLabel->setText(QObject::tr("Unable to calculate failure tolerance for current priorities."));
+        this->m_maxNtolLabel->setText(QObject::tr("Maximum: unavailable"));
+        return;
+    }
+
+    this->m_maxNtol = qMax<qint64>(0, ntolMax);
+    this->m_maxNtolLabel->setText(QObject::tr("(max = %1)").arg(this->m_maxNtol));
+
+    if (connection && connection->GetCache())
+    {
+        QVariantMap poolData = connection->GetCache()->ResolveObjectData(XenObjectType::Pool, poolRef);
+        const bool haEnabled = poolData.value("ha_enabled", false).toBool();
+        if (!this->m_ntolInitializedFromServer)
+        {
+            QSignalBlocker blocker(this->m_ntolSpinBox);
+            const qint64 initialNtol = haEnabled ? poolData.value("ha_host_failures_to_tolerate", 0).toLongLong() : this->m_maxNtol;
+            const qint64 clampedInitial = qBound<qint64>(0LL, initialNtol, 9999LL);
+            this->m_ntolSpinBox->setValue(static_cast<int>(clampedInitial));
+            this->m_ntol = this->m_ntolSpinBox->value();
+            this->m_ntolInitializedFromServer = true;
         }
     }
 
-    if (this->m_ntol > 0 && protectedVMs > 0)
+    const int protectedVMs = static_cast<int>(ntolConfig.size());
+    if (this->m_ntol > 0 && protectedVMs > 0 && this->m_ntol <= this->m_maxNtol)
     {
+        this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9C\x93"));
         this->m_ntolStatusLabel->setStyleSheet("color: green;");
-        this->m_ntolStatusLabel->setText(tr("✓ Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
-                                       .arg(this->m_ntol)
-                                       .arg(protectedVMs));
+        this->m_ntolStatusLabel->setText(QObject::tr("Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
+                                             .arg(this->m_ntol)
+                                             .arg(protectedVMs));
     } else if (this->m_ntol == 0)
     {
+        this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9A\xA0"));
         this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        this->m_ntolStatusLabel->setText(tr("⚠ NTOL is 0 - HA will not automatically restart VMs on host failure"));
+        this->m_ntolStatusLabel->setText(QObject::tr("NTOL is 0 - HA will not automatically restart VMs on host failure"));
+    } else if (protectedVMs == 0)
+    {
+        this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9A\xA0"));
+        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+        this->m_ntolStatusLabel->setText(QObject::tr("No VMs set to Restart priority"));
     } else
     {
+        this->ui->haStatusIconLabel->setText(QString::fromUtf8("\xE2\x9A\xA0"));
         this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        this->m_ntolStatusLabel->setText(tr("⚠ No VMs set to 'Restart' priority"));
+        this->m_ntolStatusLabel->setText(QObject::tr("Configured NTOL exceeds current maximum."));
     }
+}
+
+void HAWizard::applyAgilityResults(int requestId,
+                                   const QMap<QString, bool>& agileMap,
+                                   const QMap<QString, QString>& reasonMap)
+{
+    if (requestId != this->m_agilityRequestId)
+        return;
+
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        QTableWidgetItem* agilityItem = this->m_vmTable->item(row, 5);
+        if (!vmItem)
+            continue;
+
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        if (!agileMap.contains(vmRef))
+            continue;
+
+        const bool isAgile = agileMap.value(vmRef);
+        this->m_vmAgilityKnown[vmRef] = true;
+        this->m_vmIsAgile[vmRef] = isAgile;
+
+        QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+        QString priority = this->normalizePriority(options.value("ha_restart_priority").toString());
+
+        if (this->m_pendingPriorityInitialization.contains(vmRef))
+        {
+            priority = isAgile ? QStringLiteral("restart") : QStringLiteral("best-effort");
+            this->m_pendingPriorityInitialization.remove(vmRef);
+        } else if (!isAgile && this->isRestartPriority(priority))
+        {
+            priority = QStringLiteral("best-effort");
+        }
+
+        options["ha_restart_priority"] = priority;
+        this->m_vmStartupOptions.insert(vmRef, options);
+        vmItem->setToolTip(isAgile ? QString() : reasonMap.value(vmRef));
+        if (agilityItem)
+            agilityItem->setText(isAgile ? tr("Yes") : tr("No"));
+
+        this->setVmRowValues(row, vmRef);
+    }
+
+    this->updateNtolCalculation();
+    this->refreshSelectionEditors();
+}
+
+void HAWizard::setNtolUpdateInProgress(bool inProgress)
+{
+    this->m_ntolUpdateInProgress = inProgress;
+    if (this->button(QWizard::NextButton))
+        this->button(QWizard::NextButton)->setEnabled(!inProgress);
+    if (this->button(QWizard::FinishButton))
+        this->button(QWizard::FinishButton)->setEnabled(!inProgress);
+    if (inProgress)
+    {
+        this->ui->haStatusIconLabel->setText("...");
+        this->m_ntolStatusLabel->setStyleSheet("color: gray;");
+        this->m_ntolStatusLabel->setText(tr("Calculating host failure tolerance..."));
+    }
+}
+
+bool HAWizard::isRestartPriority(const QString& priority) const
+{
+    return this->normalizePriority(priority) == "restart";
+}
+
+bool HAWizard::isVmProtectable(const QSharedPointer<VM>& vm) const
+{
+    return vm && vm->IsValid() && !vm->IsTemplate() && !vm->IsControlDomain() && !vm->IsSnapshot() && vm->Show(false);
+}
+
+QString HAWizard::normalizePriority(const QString& priority) const
+{
+    const QString normalized = priority.trimmed().toLower();
+    if (normalized == "always_restart_high_priority" || normalized == "always_restart" || normalized == "restart")
+        return "restart";
+    if (normalized == "best_effort" || normalized == "best-effort")
+        return "best-effort";
+    return "";
+}
+
+QString HAWizard::priorityDisplayText(const QString& priority) const
+{
+    const QString normalized = this->normalizePriority(priority);
+    if (normalized == "restart")
+        return tr("Restart");
+    if (normalized == "best-effort")
+        return tr("Restart if possible");
+    return tr("Do not restart");
+}
+
+void HAWizard::setVmRowValues(int row, const QString& vmRef)
+{
+    if (row < 0 || row >= this->m_vmTable->rowCount())
+        return;
+
+    const QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+    const QString priority = this->normalizePriority(options.value("ha_restart_priority").toString());
+    const qint64 order = options.value("order", 0).toLongLong();
+    const qint64 delay = options.value("start_delay", 0).toLongLong();
+
+    if (QTableWidgetItem* priorityItem = this->m_vmTable->item(row, 2))
+        priorityItem->setText(this->priorityDisplayText(priority));
+    if (QTableWidgetItem* orderItem = this->m_vmTable->item(row, 3))
+        orderItem->setText(QString::number(order));
+    if (QTableWidgetItem* delayItem = this->m_vmTable->item(row, 4))
+        delayItem->setText(tr("%1 seconds").arg(delay));
+}
+
+void HAWizard::refreshSelectionEditors()
+{
+    if (!this->m_selectedPriorityCombo || !this->m_selectedOrderSpin || !this->m_selectedDelaySpin)
+        return;
+
+    this->m_updatingSelectionEditors = true;
+    const QSignalBlocker b1(this->m_selectedPriorityCombo);
+    const QSignalBlocker b2(this->m_selectedOrderSpin);
+    const QSignalBlocker b3(this->m_selectedDelaySpin);
+
+    const QList<QTableWidgetItem*> selectedItems = this->m_vmTable->selectedItems();
+    QSet<int> rows;
+    for (QTableWidgetItem* item : selectedItems)
+        rows.insert(item->row());
+
+    if (rows.isEmpty())
+    {
+        this->m_selectedPriorityCombo->setCurrentIndex(0);
+        this->m_selectedPriorityCombo->setEnabled(false);
+        this->m_selectedOrderSpin->setValue(0);
+        this->m_selectedOrderSpin->setEnabled(false);
+        this->m_selectedDelaySpin->setValue(0);
+        this->m_selectedDelaySpin->setEnabled(false);
+        this->m_updatingSelectionEditors = false;
+        return;
+    }
+
+    QString firstPriority;
+    qint64 firstOrder = 0;
+    qint64 firstDelay = 0;
+    bool priorityMixed = false;
+    bool orderMixed = false;
+    bool delayMixed = false;
+    bool anyAgilityUnknown = false;
+    bool anyNonAgile = false;
+    bool first = true;
+
+    for (int row : rows)
+    {
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        const QVariantMap options = this->m_vmStartupOptions.value(vmRef);
+        const QString priority = this->normalizePriority(options.value("ha_restart_priority").toString());
+        const qint64 order = options.value("order", 0).toLongLong();
+        const qint64 delay = options.value("start_delay", 0).toLongLong();
+
+        if (!this->m_vmAgilityKnown.value(vmRef, false))
+            anyAgilityUnknown = true;
+        else if (!this->m_vmIsAgile.value(vmRef, false))
+            anyNonAgile = true;
+
+        if (first)
+        {
+            firstPriority = priority;
+            firstOrder = order;
+            firstDelay = delay;
+            first = false;
+            continue;
+        }
+
+        if (firstPriority != priority)
+            priorityMixed = true;
+        if (firstOrder != order)
+            orderMixed = true;
+        if (firstDelay != delay)
+            delayMixed = true;
+    }
+
+    this->m_selectedPriorityCombo->setEnabled(!anyAgilityUnknown);
+    this->m_selectedOrderSpin->setEnabled(!anyAgilityUnknown);
+    this->m_selectedDelaySpin->setEnabled(!anyAgilityUnknown);
+
+    // Keep restart choice visible; non-agile rows will be coerced to Best Effort on apply.
+    Q_UNUSED(anyNonAgile);
+
+    if (priorityMixed)
+    {
+        this->m_selectedPriorityCombo->setCurrentIndex(0);
+    } else
+    {
+        int idx = 3;
+        if (firstPriority == "restart")
+            idx = 1;
+        else if (firstPriority == "best-effort")
+            idx = 2;
+        this->m_selectedPriorityCombo->setCurrentIndex(idx);
+    }
+
+    this->m_selectedOrderSpin->setToolTip(orderMixed ? tr("Selected VMs have mixed values.") : QString());
+    this->m_selectedDelaySpin->setToolTip(delayMixed ? tr("Selected VMs have mixed values.") : QString());
+    this->m_selectedOrderSpin->setValue(static_cast<int>(qBound<qint64>(0LL, firstOrder, 9999LL)));
+    this->m_selectedDelaySpin->setValue(static_cast<int>(qBound<qint64>(0LL, firstDelay, 600LL)));
+    this->m_updatingSelectionEditors = false;
 }
 
 void HAWizard::updateFinishPage()
@@ -723,21 +1108,17 @@ void HAWizard::updateFinishPage()
 
     for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
-        QComboBox* combo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
-        if (combo)
-        {
-            QString priority = combo->currentData().toString();
-            if (priority == "restart")
-            {
-                restartCount++;
-            } else if (priority == "best-effort")
-            {
-                bestEffortCount++;
-            } else
-            {
-                doNotRestartCount++;
-            }
-        }
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 1);
+        if (!vmItem)
+            continue;
+        const QString vmRef = vmItem->data(Qt::UserRole).toString();
+        const QString priority = this->normalizePriority(this->m_vmStartupOptions.value(vmRef).value("ha_restart_priority").toString());
+        if (priority == "restart")
+            restartCount++;
+        else if (priority == "best-effort")
+            bestEffortCount++;
+        else
+            doNotRestartCount++;
     }
 
     this->m_finishRestartLabel->setText(QString::number(restartCount));
@@ -806,4 +1187,24 @@ int HAWizard::countVMsByPriority(HaRestartPriority priority) const
         }
     }
     return count;
+}
+
+int HAWizard::wizardStepIndexForPage(int pageId) const
+{
+    if (this->m_rbacRequired)
+        return pageId;
+
+    switch (pageId)
+    {
+        case Page_Intro:
+            return 0;
+        case Page_ChooseSR:
+            return 1;
+        case Page_AssignPriorities:
+            return 2;
+        case Page_Finish:
+            return 3;
+        default:
+            return 0;
+    }
 }

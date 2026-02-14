@@ -163,7 +163,7 @@ AsyncOperation* VMHAEditPage::SaveSettings()
         }
 
         QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(true);
-        auto* action = new SetHaPrioritiesAction(pool, settings, this->m_ntol, this);
+        auto* action = new SetHaPrioritiesAction(pool, settings, this->m_ntol, true, this);
         action->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
         action->AddApiMethodToRoleCheck("pool.sync_database");
         action->AddApiMethodToRoleCheck("vm.set_ha_restart_priority");

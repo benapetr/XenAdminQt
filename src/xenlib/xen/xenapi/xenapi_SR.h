@@ -253,6 +253,21 @@ namespace XenAPI
                                         const QString& content_type,
                                         bool shared,
                                         const QVariantMap& sm_config);
+
+            /**
+             * @brief Assert whether this SR can host HA statefile (sync)
+             * @param session Active XenSession
+             * @param sr SR opaque reference
+             */
+            static void assert_can_host_ha_statefile(Session* session, const QString& sr);
+
+            /**
+             * @brief Assert whether this SR can host HA statefile (async)
+             * @param session Active XenSession
+             * @param sr SR opaque reference
+             * @return Task reference
+             */
+            static QString async_assert_can_host_ha_statefile(Session* session, const QString& sr);
     };
 
 } // namespace XenAPI

@@ -213,6 +213,7 @@ HEADERS += \
     xen/actions/pool/rotatepoolsecretaction.h \
     xen/actions/pool/enablehaaction.h \
     xen/actions/pool/disablehaaction.h \
+    xen/actions/pool/getheartbeatsrsaction.h \
     xen/actions/pool/sethaprioritiesaction.h \
     xen/actions/pool/emergencytransitiontomasteraction.h \
     xen/actions/pool/designatenewmasteraction.h \
@@ -443,6 +444,7 @@ SOURCES += \
     xen/actions/pool/rotatepoolsecretaction.cpp \
     xen/actions/pool/enablehaaction.cpp \
     xen/actions/pool/disablehaaction.cpp \
+    xen/actions/pool/getheartbeatsrsaction.cpp \
     xen/actions/pool/sethaprioritiesaction.cpp \
     xen/actions/pool/emergencytransitiontomasteraction.cpp \
     xen/actions/pool/designatenewmasteraction.cpp \
