@@ -1371,7 +1371,7 @@ void XSVNCScreen::connectToRemoteConsole()
     {
 #ifdef HAVE_FREERDP
         // Connect using RDP
-        this->_rdpClient->connect(this->_rdpIp);
+        this->_rdpClient->Connect(this->_rdpIp);
 #else
         // RDP support not available - fall back to VNC
         qWarning() << "XSVNCScreen: RDP not available, falling back to VNC";
