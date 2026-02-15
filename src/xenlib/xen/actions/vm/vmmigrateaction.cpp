@@ -61,7 +61,7 @@ void VMMigrateAction::run()
 
         if (!residentOnRef.isEmpty() && residentOnRef != XENOBJECT_NULL)
         {
-            QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData("host", residentOnRef);
+            QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData(XenObjectType::Host, residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();
 
             SetTitle(QString("Migrating %1 from %2 to %3").arg(vmName).arg(sourceHostName).arg(hostName));

@@ -1293,7 +1293,7 @@ void VNCTabView::registerEventListeners()
         });
 
         // C#: Also register host_metrics property changes
-        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
         QString hostMetricsRef = hostData.value("metrics").toString();
         if (!hostMetricsRef.isEmpty() && hostMetricsRef != XENOBJECT_NULL)
         {

@@ -325,7 +325,7 @@ Host* SR::GetFirstAttachedStorageHost() const
 
     for (const QString& pbdRef : pbds)
     {
-        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
         if (pbdData.isEmpty())
             continue;
 

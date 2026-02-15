@@ -72,7 +72,7 @@ void CDChanger::connectVbdSignals()
         return;
 
     // Monitor VBD property changes to update UI when CD is changed externally
-    connect(this->cdrom_.data(), &XenObject::dataChanged, this, &CDChanger::onVbdPropertyChanged);
+    connect(this->cdrom_.data(), &XenObject::DataChanged, this, &CDChanger::onVbdPropertyChanged);
 }
 
 void CDChanger::disconnectVbdSignals()
@@ -80,7 +80,7 @@ void CDChanger::disconnectVbdSignals()
     if (!this->cdrom_)
         return;
         
-    disconnect(this->cdrom_.data(), &XenObject::dataChanged, this, &CDChanger::onVbdPropertyChanged);
+    disconnect(this->cdrom_.data(), &XenObject::DataChanged, this, &CDChanger::onVbdPropertyChanged);
 }
 
 void CDChanger::updateSelectedCd()

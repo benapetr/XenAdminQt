@@ -92,13 +92,13 @@ void VMMemoryControls::SetVMs(const QList<QSharedPointer<VM>>& vms)
     {
         if (vm && !vm->IsEvicted())
         {
-            connect(vm.data(), &XenObject::dataChanged, this, &VMMemoryControls::onVMDataChanged);
+            connect(vm.data(), &XenObject::DataChanged, this, &VMMemoryControls::onVMDataChanged);
             
             // Subscribe to metrics changes
             QSharedPointer<VMMetrics> metrics = vm->GetMetrics();
             if (metrics && !metrics->IsEvicted())
             {
-                connect(metrics.data(), &XenObject::dataChanged, this, &VMMemoryControls::onVMMetricsChanged);
+                connect(metrics.data(), &XenObject::DataChanged, this, &VMMemoryControls::onVMMetricsChanged);
             }
         }
     }

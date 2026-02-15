@@ -434,7 +434,7 @@ void VNCView::registerEventListeners()
     }
 
     if (this->m_vm)
-        connect(this->m_vm.data(), &XenObject::dataChanged, this, &VNCView::onVmDataChanged);
+        connect(this->m_vm.data(), &XenObject::DataChanged, this, &VNCView::onVmDataChanged);
 
     if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->GetConnection()->GetCache())
     {
@@ -457,7 +457,7 @@ void VNCView::unregisterEventListeners()
     }
 
     if (this->m_vm)
-        disconnect(this->m_vm.data(), &XenObject::dataChanged, this, &VNCView::onVmDataChanged);
+        disconnect(this->m_vm.data(), &XenObject::DataChanged, this, &VNCView::onVmDataChanged);
 
     if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->GetConnection()->GetCache())
     {

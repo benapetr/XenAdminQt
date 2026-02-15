@@ -88,7 +88,7 @@ RepairSRDialog::RepairSRDialog(QList<QSharedPointer<SR>> srs, bool runAction, QW
     {
         if (sr)
         {
-            connect(sr.data(), &XenObject::dataChanged, this, &RepairSRDialog::onSrPropertyChanged);
+            connect(sr.data(), &XenObject::DataChanged, this, &RepairSRDialog::onSrPropertyChanged);
             
             XenConnection* conn = sr->GetConnection();
             if (conn && conn->GetCache())

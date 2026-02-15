@@ -1445,10 +1445,7 @@ QVariantMap XenConnection::WaitForCacheData(const QString& type,
     return QVariantMap();
 }
 
-QSharedPointer<XenObject> XenConnection::WaitForCacheObject(const QString& type,
-                                                            const QString& ref,
-                                                            int timeoutMs,
-                                                            const std::function<bool()>& cancelling) const
+QSharedPointer<XenObject> XenConnection::WaitForCacheObject(const QString& type, const QString& ref, int timeoutMs, const std::function<bool()>& cancelling) const
 {
     if (!this->d->cache || ref.isEmpty())
         return QSharedPointer<XenObject>();

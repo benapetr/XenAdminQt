@@ -108,7 +108,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
 
             if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
             {
-                QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
                 QVariantMap networks = guestMetrics.value("networks").toMap();
 
                 // Convert QVariantMap to QMap<QString, QString>
@@ -701,7 +701,7 @@ void XSVNCScreen::onCacheObjectChanged(XenConnection* connection, const QString&
 
     if (type == XenObjectType::VMGuestMetrics && objectRef == this->_guestMetricsRef)
     {
-        QVariantMap metricsData = cache->ResolveObjectData("vm_guest_metrics", objectRef);
+        QVariantMap metricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, objectRef);
         if (!metricsData.isEmpty())
         {
             this->onGuestMetricsChanged(metricsData);
@@ -891,7 +891,7 @@ bool XSVNCScreen::hasGPUPassthrough(const QString& vmRef) const
         if (vgpuRef.isEmpty() || vgpuRef == XENOBJECT_NULL)
             continue;
 
-        QVariantMap vgpuData = cache->ResolveObjectData("vgpu", vgpuRef);
+        QVariantMap vgpuData = cache->ResolveObjectData(XenObjectType::VGPU, vgpuRef);
         if (vgpuData.isEmpty())
             continue;
 
@@ -1213,7 +1213,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
             return QString();
 
         // Get guest metrics record
-        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
         if (guestMetrics.isEmpty())
             return QString();
 
@@ -1654,7 +1654,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
             throw std::runtime_error("No cache available");
         }
 
-        QVariantMap consoleRecord = cache->ResolveObjectData("console", consoleRef);
+        QVariantMap consoleRecord = cache->ResolveObjectData(XenObjectType::Console, consoleRef);
         if (consoleRecord.isEmpty())
         {
             throw std::runtime_error("Cannot resolve console record");

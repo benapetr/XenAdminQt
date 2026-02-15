@@ -2698,7 +2698,7 @@ void MainWindow::updateToolbarsAndMenus()
     bool hasCleanReboot = false;
     if (selectedType == XenObjectType::VM && connection && connection->GetCache())
     {
-        QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", objectRef);
+        QVariantMap vmData = connection->GetCache()->ResolveObjectData(XenObjectType::VM, objectRef);
         QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
         for (const QVariant& op : allowedOps)
         {

@@ -94,11 +94,11 @@ void VMCrossPoolMigrateAction::run()
         if (!sourceCache || !destCache)
             throw std::runtime_error("Cache not available");
 
-        QVariantMap vmData = sourceCache->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = sourceCache->ResolveObjectData(XenObjectType::VM, m_vmRef);
         if (vmData.isEmpty())
             throw std::runtime_error("VM not found in cache");
 
-        QVariantMap hostData = destCache->ResolveObjectData("host", m_destinationHostRef);
+        QVariantMap hostData = destCache->ResolveObjectData(XenObjectType::Host, m_destinationHostRef);
         if (hostData.isEmpty())
             throw std::runtime_error("Destination host not found in cache");
 

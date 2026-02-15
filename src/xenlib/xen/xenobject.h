@@ -179,6 +179,8 @@ class XENLIB_EXPORT XenObject : public QObject
         void SetEvicted(bool evicted)
         {
             this->m_evicted = evicted;
+            if (evicted)
+                emit this->Evicted();
         }
 
         /**
@@ -201,7 +203,8 @@ class XENLIB_EXPORT XenObject : public QObject
         /**
          * @brief Emitted when object data changes
          */
-        void dataChanged();
+        void DataChanged();
+        void Evicted();
 
     protected:
         /**

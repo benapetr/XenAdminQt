@@ -52,7 +52,7 @@ namespace
         if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL || !cache)
             return false;
 
-        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
         QVariantMap other = guestMetrics.value("other").toMap();
         if (!other.contains("feature-balloon"))
             return false;
@@ -157,7 +157,7 @@ qint64 VMShinyBar::CalcMemoryUsed(const QList<QSharedPointer<VM>>& vms)
                 auto cache = vm->GetCache();
                 if (cache)
                 {
-                    QVariantMap metricsData = cache->ResolveObjectData("vm_metrics", metricsRef);
+                    QVariantMap metricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, metricsRef);
                     qint64 memoryActual = metricsData.value("memory_actual").toLongLong();
                     if (memoryActual > 0)
                         memories.append(memoryActual);
@@ -176,9 +176,7 @@ qint64 VMShinyBar::CalcMemoryUsed(const QList<QSharedPointer<VM>>& vms)
     return sum / memories.count();
 }
 
-void VMShinyBar::SetRanges(double dynamicMinLowLimit, double dynamicMinHighLimit,
-                           double dynamicMaxLowLimit, double dynamicMaxHighLimit,
-                           const QString& units)
+void VMShinyBar::SetRanges(double dynamicMinLowLimit, double dynamicMinHighLimit, double dynamicMaxLowLimit, double dynamicMaxHighLimit, const QString& units)
 {
     const qint64 BINARY_MEGA = 1024 * 1024;
     const qint64 BINARY_GIGA = 1024 * 1024 * 1024;

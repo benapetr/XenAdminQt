@@ -64,7 +64,7 @@ void HostMemoryRow::SetHost(const QSharedPointer<Host>& host)
     
     // C# equivalent: HostMemoryControls.host property setter
     // Subscribe to host property changes
-    connect(this->host_.data(), &XenObject::dataChanged, this, &HostMemoryRow::onHostDataChanged);
+    connect(this->host_.data(), &XenObject::DataChanged, this, &HostMemoryRow::onHostDataChanged);
     
     // Subscribe to all resident VM property changes
     QList<QSharedPointer<VM>> residentVMs = this->host_->GetResidentVMs();
@@ -73,13 +73,13 @@ void HostMemoryRow::SetHost(const QSharedPointer<Host>& host)
         if (vm.isNull())
             continue;
             
-        connect(vm.data(), &XenObject::dataChanged, this, &HostMemoryRow::onVMDataChanged);
+        connect(vm.data(), &XenObject::DataChanged, this, &HostMemoryRow::onVMDataChanged);
         
         // Subscribe to VM metrics changes
         QSharedPointer<VMMetrics> metrics = vm->GetMetrics();
         if (!metrics.isNull())
         {
-            connect(metrics.data(), &XenObject::dataChanged, this, &HostMemoryRow::onMetricsDataChanged);
+            connect(metrics.data(), &XenObject::DataChanged, this, &HostMemoryRow::onMetricsDataChanged);
         }
     }
     

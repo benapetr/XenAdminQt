@@ -209,7 +209,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
         for (const QVariant& snapshotRefVar : snapshotRefs)
         {
             QString snapshotRef = snapshotRefVar.toString();
-            QVariantMap snapshotData = cache->ResolveObjectData("vm", snapshotRef);
+            QVariantMap snapshotData = cache->ResolveObjectData(XenObjectType::VM, snapshotRef);
             
             if (snapshotData.isEmpty())
                 continue;

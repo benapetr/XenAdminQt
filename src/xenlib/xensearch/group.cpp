@@ -269,7 +269,7 @@ namespace XenSearch
                 if (pbdRef.isEmpty())
                     continue;
 
-                QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+                QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
                 QString hostRef = pbdData.value("host").toString();
                 if (hostRef.isEmpty())
                     continue;

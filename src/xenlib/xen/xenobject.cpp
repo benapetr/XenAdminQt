@@ -240,7 +240,7 @@ void XenObject::SetLocalData(const QVariantMap& data)
 
 void XenObject::Refresh()
 {
-    emit dataChanged();
+    emit DataChanged();
 }
 
 bool XenObject::IsValid() const

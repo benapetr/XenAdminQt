@@ -71,7 +71,7 @@ void MultipleDvdIsoList::SetVM(const QSharedPointer<VM>& vm)
     if (this->m_vm)
     {
         // Connect to VM data changes via XenObject's dataChanged signal
-        this->vmConnection_ = connect(this->m_vm.data(), &XenObject::dataChanged, this, &MultipleDvdIsoList::onVmPropertyChanged);
+        this->vmConnection_ = connect(this->m_vm.data(), &XenObject::DataChanged, this, &MultipleDvdIsoList::onVmPropertyChanged);
     }
     
     this->refreshDrives();
@@ -245,7 +245,7 @@ void MultipleDvdIsoList::refreshDrives()
         for (const QSharedPointer<VBD>& vbd : vbds)
         {
             // Connect to VBD data changes
-            auto conn = connect(vbd.data(), &XenObject::dataChanged,
+            auto conn = connect(vbd.data(), &XenObject::DataChanged,
                               this, &MultipleDvdIsoList::onVbdPropertyChanged);
             this->vbdConnections_.append(conn);
 
