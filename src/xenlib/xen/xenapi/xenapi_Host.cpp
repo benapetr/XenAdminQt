@@ -613,4 +613,60 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
+    QString Host::enable_display(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.enable_display", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    QString Host::async_enable_display(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.enable_display", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    QString Host::disable_display(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.disable_display", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    QString Host::async_disable_display(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.disable_display", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
 } // namespace XenAPI

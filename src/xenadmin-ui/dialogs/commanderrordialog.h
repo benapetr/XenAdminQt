@@ -100,16 +100,22 @@ class CommandErrorDialog : public QDialog
 
     private slots:
         void onTableHeaderClicked(int logicalIndex);
+        void scheduleRowResize();
 
     private:
         Ui::CommandErrorDialog* ui;
         DialogMode m_mode;
         int m_currentSortColumn;
         Qt::SortOrder m_currentSortOrder;
+        bool m_rowResizePending = false;
 
         void setupDialog(const QString& title, const QString& text, DialogMode mode);
         void addRow(const QString& iconPath, const QString& name, const QString& reason);
         void addRow(const QIcon& icon, const QString& name, const QString& reason);
+
+    protected:
+        void showEvent(QShowEvent* event) override;
+        void resizeEvent(QResizeEvent* event) override;
 };
 
 #endif // COMMANDERRORDIALOG_H

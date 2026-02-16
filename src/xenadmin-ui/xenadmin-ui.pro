@@ -67,6 +67,7 @@ SOURCES += \
     dialogs/crosspoolmigratewizardpages.cpp \
     dialogs/crosspoolmigratewizard_copymodepage.cpp \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.cpp \
+    dialogs/addvgpudialog.cpp \
     dialogs/newtagdialog.cpp \
     dialogs/folderchangedialog.cpp \
     dialogs/warningdialogs/closexencenterwarningdialog.cpp \
@@ -80,6 +81,11 @@ SOURCES += \
     controls/multipledvdisolist.cpp \
     controls/vmoperationmenu.cpp \
     controls/bonddetailswidget.cpp \
+    controls/gpuconfiguration.cpp \
+    controls/gpuplacementpolicypanel.cpp \
+    controls/gpurow.cpp \
+    controls/gpushinybar.cpp \
+    controls/vgpucombobox.cpp \
     controls/customtreenode.cpp \
     controls/customtreeview.cpp \
     controls/connectionwrapperwithmorestuff.cpp \
@@ -125,6 +131,8 @@ SOURCES += \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
     settingspanels/networkgeneraleditpage.cpp \
+    settingspanels/poolgpueditpage.cpp \
+    settingspanels/gpueditpage.cpp \
     settingspanels/vdisizelocationpage.cpp \
     settingspanels/vbdeditpage.cpp \
     dialogs/optionspages/securityoptionspage.cpp \
@@ -260,6 +268,7 @@ SOURCES += \
     tabpages/srstoragetabpage.cpp \
     tabpages/networktabpage.cpp \
     tabpages/nicstabpage.cpp \
+    tabpages/gputabpage.cpp \
     tabpages/consoletabpage.cpp \
     tabpages/cvmconsoletabpage.cpp \
     tabpages/snapshotstabpage.cpp \
@@ -360,6 +369,7 @@ HEADERS += \
     dialogs/crosspoolmigratewizardpages.h \
     dialogs/crosspoolmigratewizard_copymodepage.h \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.h \
+    dialogs/addvgpudialog.h \
     dialogs/newtagdialog.h \
     dialogs/folderchangedialog.h \
     dialogs/warningdialogs/closexencenterwarningdialog.h \
@@ -372,6 +382,11 @@ HEADERS += \
     controls/dropdownbutton.h \
     controls/vmoperationmenu.h \
     controls/bonddetailswidget.h \
+    controls/gpuconfiguration.h \
+    controls/gpuplacementpolicypanel.h \
+    controls/gpurow.h \
+    controls/gpushinybar.h \
+    controls/vgpucombobox.h \
     controls/customtreenode.h \
     controls/customtreeview.h \
     controls/connectionwrapperwithmorestuff.h \
@@ -425,6 +440,8 @@ HEADERS += \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
     settingspanels/networkgeneraleditpage.h \
+    settingspanels/poolgpueditpage.h \
+    settingspanels/gpueditpage.h \
     settingspanels/vdisizelocationpage.h \
     settingspanels/vbdeditpage.h \
     dialogs/optionspages/ioptionspage.h \
@@ -560,6 +577,7 @@ HEADERS += \
     tabpages/srstoragetabpage.h \
     tabpages/networktabpage.h \
     tabpages/nicstabpage.h \
+    tabpages/gputabpage.h \
     tabpages/consoletabpage.h \
     tabpages/cvmconsoletabpage.h \
     tabpages/snapshotstabpage.h \
@@ -674,6 +692,7 @@ FORMS += \
     tabpages/srstoragetabpage.ui \
     tabpages/networktabpage.ui \
     tabpages/nicstabpage.ui \
+    tabpages/gputabpage.ui \
     tabpages/consoletabpage.ui \
     tabpages/cvmconsoletabpage.ui \
     tabpages/snapshotstabpage.ui \

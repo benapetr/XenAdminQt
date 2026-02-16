@@ -28,6 +28,7 @@
 #include "gpuassignaction.h"
 #include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VGPU.h"
+#include "../gpu/gpuhelpers.h"
 #include "../../../xencache.h"
 #include "../../vm.h"
 #include <stdexcept>
@@ -45,6 +46,10 @@ GpuAssignAction::GpuAssignAction(QSharedPointer<VM> vm,
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
+
+    // C# parity: GpuAssignAction role checks
+    this->AddApiMethodToRoleCheck("VGPU.destroy");
+    this->AddApiMethodToRoleCheck("VGPU.async_create");
 }
 
 void GpuAssignAction::run()
@@ -143,17 +148,14 @@ void GpuAssignAction::addGpu(const QString& gpuGroupRef, const QString& vgpuType
 
     QVariantMap otherConfig; // Empty for now
 
-    QString taskRef;
-    if (vgpuTypeRef.isEmpty() || vgpuTypeRef == XENOBJECT_NULL)
+    const bool restrictedVgpu = GpuHelpers::FeatureForbidden(this->m_vm.data(), &Host::RestrictVgpu);
+    if (restrictedVgpu || vgpuTypeRef.isEmpty() || vgpuTypeRef == XENOBJECT_NULL)
     {
         // Create without type (basic VGPU)
-        taskRef = XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig);
+        XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig);
     } else
     {
         // Create with specific VGPU type
-        taskRef = XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig, vgpuTypeRef);
+        XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig, vgpuTypeRef);
     }
-
-    // Poll the task to completion
-    pollToCompletion(taskRef, GetPercentComplete(), GetPercentComplete());
 }

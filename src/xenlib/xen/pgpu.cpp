@@ -32,6 +32,7 @@
 #include "gpugroup.h"
 #include "host.h"
 #include "vgpu.h"
+#include "vgputype.h"
 
 PGPU::PGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -94,6 +95,24 @@ QVariantMap PGPU::CompatibilityMetadata() const
 bool PGPU::SupportsVGPUs() const
 {
     return !this->SupportedVGPUTypeRefs().isEmpty();
+}
+
+bool PGPU::HasVGpu() const
+{
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QStringList typeRefs = this->SupportedVGPUTypeRefs();
+    for (const QString& ref : typeRefs)
+    {
+        QSharedPointer<VGPUType> type = cache->ResolveObject<VGPUType>(ref);
+        if (type && type->IsValid() && !type->IsPassthrough())
+            return true;
+    }
+
+    return false;
 }
 
 bool PGPU::HasResidentVGPUs() const

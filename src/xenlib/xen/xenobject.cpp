@@ -197,6 +197,7 @@ QString XenObject::TypeToString(XenObjectType type)
         case XenObjectType::VBDMetrics: return "vbd_metrics";
         case XenObjectType::VDI: return "vdi";
         case XenObjectType::VGPU: return "vgpu";
+        case XenObjectType::VGPUType: return "vgpu_type";
         case XenObjectType::VIF: return "vif";
         case XenObjectType::VLAN: return "vlan";
         case XenObjectType::VM: return "vm";

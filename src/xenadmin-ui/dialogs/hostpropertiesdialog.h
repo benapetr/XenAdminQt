@@ -46,9 +46,13 @@ class HostPropertiesDialog : public VerticallyTabbedDialog
 
     public:
         explicit HostPropertiesDialog(QSharedPointer<Host> host, QWidget* parent = nullptr);
+        void SelectPoolGpuEditPage();
 
     protected:
         void build() override;
+
+    private:
+        QSharedPointer<Host> m_host;
 };
 
 #endif // HOSTPROPERTIESDIALOG_H

@@ -52,6 +52,7 @@
 #include <QSignalBlocker>
 #include <QShowEvent>
 #include <QStyle>
+#include <algorithm>
 
 HAWizard::HAWizard(QSharedPointer<Pool> pool, QWidget* parent) : QWizard(parent), m_pool(pool), ui(new Ui::HAWizard)
 {
@@ -344,12 +345,6 @@ bool HAWizard::validateCurrentPage()
                 QMessageBox::information(this, tr("Please wait"), tr("Still calculating host failure tolerance. Please wait."));
                 return false;
             }
-            // Validate NTOL is reasonable
-            if (this->m_maxNtol >= 0 && this->m_ntol > this->m_maxNtol)
-            {
-                QMessageBox::warning(this, tr("Invalid NTOL"), tr("The number of failures to tolerate (%1) exceeds the maximum (%2) based on current VM priorities and available resources.").arg(this->m_ntol).arg(this->m_maxNtol));
-                return false;
-            }
             break;
 
         default:
@@ -411,12 +406,28 @@ bool HAWizard::performHeartbeatSRScan()
     progressDialog.exec();
 
     bool cancelled = action->IsCancelled();
-    if (action->HasError())
+    if (!cancelled)
     {
-        QMessageBox::warning(this, tr("Scan Failed"), tr("Failed to scan for heartbeat SRs: %1").arg(action->GetErrorMessage()));
-    } else if (!cancelled)
-    {
-        const QList<SRWrapper>& scanned = action->GetSRs();
+        QList<SRWrapper> scanned = action->GetSRs();
+        std::sort(scanned.begin(), scanned.end(), [](const SRWrapper& left, const SRWrapper& right) {
+            if (left.enabled != right.enabled)
+                return left.enabled > right.enabled;
+
+            const QString leftName = (left.sr && left.sr->IsValid()) ? left.sr->GetName() : QString();
+            const QString rightName = (right.sr && right.sr->IsValid()) ? right.sr->GetName() : QString();
+            return leftName.localeAwareCompare(rightName) < 0;
+        });
+
+        if (action->HasError() || scanned.isEmpty())
+        {
+            this->m_selectedHeartbeatSR.clear();
+            this->m_selectedHeartbeatSRName.clear();
+            this->m_srTable->setEnabled(false);
+            this->m_noSRsLabel->setVisible(true);
+            this->m_rescanButton->setEnabled(true);
+            return true;
+        }
+
         for (const SRWrapper& wrapper : scanned)
         {
             if (!wrapper.sr || !wrapper.sr->IsValid())
@@ -459,10 +470,12 @@ bool HAWizard::performHeartbeatSRScan()
 
     if (this->m_srTable->rowCount() == 0)
     {
+        this->m_srTable->setEnabled(false);
         this->m_noSRsLabel->setVisible(true);
     }
 
     // Re-select previous selection if still valid
+    bool reselected = false;
     if (!this->m_selectedHeartbeatSR.isEmpty())
     {
         for (int row = 0; row < this->m_srTable->rowCount(); ++row)
@@ -473,10 +486,17 @@ bool HAWizard::performHeartbeatSRScan()
                 if (item->flags() & Qt::ItemIsEnabled)
                 {
                     this->m_srTable->selectRow(row);
+                    reselected = true;
                 }
                 break;
             }
         }
+    }
+
+    if (!reselected)
+    {
+        this->m_selectedHeartbeatSR.clear();
+        this->m_selectedHeartbeatSRName.clear();
     }
 
     return !cancelled;
@@ -766,7 +786,7 @@ QVariantMap HAWizard::buildNtolConfig() const
         if (vmRef.isEmpty() || !isRestartPriority(priority))
             continue;
 
-        config.insert(vmRef, "restart");
+        config.insert(vmRef, priority);
     }
     return config;
 }

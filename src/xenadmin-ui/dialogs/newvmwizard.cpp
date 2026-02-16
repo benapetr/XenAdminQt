@@ -41,10 +41,12 @@
 #include "../widgets/wizardnavigationpane.h"
 #include "../widgets/isodropdownbox.h"
 #include "../settingsmanager.h"
+#include "../settingspanels/gpueditpage.h"
 
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/vm/createvmaction.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
@@ -116,6 +118,14 @@ void NewVMWizard::setupUiPages()
     this->setPage(Page_InstallationMedia, this->ui->pageInstallation);
     this->setPage(Page_HomeServer, this->ui->pageHomeServer);
     this->setPage(Page_CpuMemory, this->ui->pageCpuMemory);
+    this->m_gpuWizardPage = new QWizardPage(this);
+    this->m_gpuWizardPage->setTitle(tr("GPU"));
+    this->m_gpuWizardPage->setSubTitle(tr("Configure virtual GPU assignments for this VM."));
+    QVBoxLayout* gpuLayout = new QVBoxLayout(this->m_gpuWizardPage);
+    this->m_gpuEditPage = new GpuEditPage(this->m_gpuWizardPage);
+    this->m_gpuEditPage->SetConnection(this->m_connection);
+    gpuLayout->addWidget(this->m_gpuEditPage);
+    this->setPage(Page_Gpu, this->m_gpuWizardPage);
     this->setPage(Page_Storage, this->ui->pageStorage);
     this->setPage(Page_Network, this->ui->pageNetworking);
     this->setPage(Page_Finish, this->ui->pageFinish);
@@ -164,17 +174,7 @@ void NewVMWizard::setupUiPages()
     }
 
     this->m_navigationPane = new WizardNavigationPane(this);
-    QVector<WizardNavigationPane::Step> steps = {
-        {tr("Template"), QIcon()},
-        {tr("Name"), QIcon()},
-        {tr("Installation Media"), QIcon()},
-        {tr("Home Server"), QIcon()},
-        {tr("CPU & Memory"), QIcon()},
-        {tr("Storage"), QIcon()},
-        {tr("Networking"), QIcon()},
-        {tr("Finish"), QIcon()},
-    };
-    this->m_navigationPane->setSteps(steps);
+    this->rebuildNavigationSteps();
     this->setSideWidget(this->m_navigationPane);
 }
 
@@ -259,6 +259,8 @@ void NewVMWizard::handleTemplateSelectionChanged()
     {
         this->m_selectedTemplate.clear();
         this->ui->templateDescriptionLabel->setText(tr("Select a template to view its description."));
+        this->m_gpuPageEnabled = false;
+        this->rebuildNavigationSteps();
         return;
     }
 
@@ -331,6 +333,7 @@ void NewVMWizard::handleTemplateSelectionChanged()
 
     this->loadTemplateDevices();
     this->updateVcpuControls();
+    this->updateGpuPageState();
 
     const QVariantMap otherConfig = this->m_selectedTemplateRecord.value("other_config").toMap();
     const bool isDefaultTemplate = otherConfig.contains("default_template");
@@ -728,6 +731,8 @@ void NewVMWizard::updateSummaryPage()
                  .arg(this->ui->memoryStaticMaxSpin->value())
                  .arg(this->ui->memoryDynamicMinSpin->value())
                  .arg(this->ui->memoryDynamicMaxSpin->value());
+    if (this->m_gpuPageEnabled && this->m_gpuEditPage)
+        lines << tr("vGPUs: %1").arg(this->m_gpuEditPage->GetVGpuData().size());
     lines << tr("Disks: %1").arg(this->m_disks.size());
     lines << tr("Networks: %1").arg(this->m_networks.size());
 
@@ -883,10 +888,75 @@ void NewVMWizard::applyDefaultSRToDisks(const QString& srRef)
     this->updateDiskTable();
 }
 
+void NewVMWizard::updateGpuPageState()
+{
+    XenCache* cache = this->cache();
+    QSharedPointer<VM> templateVm = (cache && !this->m_selectedTemplate.isEmpty())
+                                        ? cache->ResolveObject<VM>(XenObjectType::VM, this->m_selectedTemplate)
+                                        : QSharedPointer<VM>();
+
+    const bool canShowGpuPage = this->m_connection
+                                && templateVm
+                                && templateVm->CanHaveGpu()
+                                && GpuHelpers::VGpuCapability(this->m_connection)
+                                && GpuHelpers::GpusAvailable(this->m_connection);
+
+    this->m_gpuPageEnabled = canShowGpuPage;
+
+    if (!this->m_gpuWizardPage)
+        return;
+
+    this->m_gpuWizardPage->setVisible(canShowGpuPage);
+    this->setPage(Page_Gpu, this->m_gpuWizardPage);
+
+    if (this->m_gpuEditPage && templateVm)
+    {
+        const QVariantMap templateData = cache->ResolveObjectData(XenObjectType::VM, this->m_selectedTemplate);
+        this->m_gpuEditPage->SetXenObject(templateVm, templateData, templateData);
+    }
+
+    this->rebuildNavigationSteps();
+    this->updateNavigationSelection();
+}
+
+void NewVMWizard::rebuildNavigationSteps()
+{
+    if (!this->m_navigationPane)
+        return;
+
+    QVector<WizardNavigationPane::Step> steps = {
+        {tr("Template"), QIcon()},
+        {tr("Name"), QIcon()},
+        {tr("Installation Media"), QIcon()},
+        {tr("Home Server"), QIcon()},
+        {tr("CPU & Memory"), QIcon()},
+    };
+
+    if (this->m_gpuPageEnabled)
+        steps.append({tr("GPU"), QIcon()});
+
+    steps.append({tr("Storage"), QIcon()});
+    steps.append({tr("Networking"), QIcon()});
+    steps.append({tr("Finish"), QIcon()});
+
+    this->m_navigationPane->setSteps(steps);
+}
+
+int NewVMWizard::navigationIndexForPageId(int pageId) const
+{
+    if (this->m_gpuPageEnabled)
+        return pageId;
+
+    if (pageId >= Page_Storage)
+        return pageId - 1;
+
+    return pageId;
+}
+
 void NewVMWizard::updateNavigationSelection()
 {
     if (this->m_navigationPane)
-        this->m_navigationPane->setCurrentStep(currentId());
+        this->m_navigationPane->setCurrentStep(this->navigationIndexForPageId(currentId()));
 }
 
 void NewVMWizard::initializePage(int id)
@@ -984,6 +1054,19 @@ bool NewVMWizard::validateCurrentPage()
     }
 
     return QWizard::validateCurrentPage();
+}
+
+int NewVMWizard::nextId() const
+{
+    switch (this->currentId())
+    {
+    case Page_CpuMemory:
+        return this->m_gpuPageEnabled ? Page_Gpu : Page_Storage;
+    case Page_Gpu:
+        return Page_Storage;
+    default:
+        return QWizard::nextId();
+    }
 }
 
 void NewVMWizard::accept()
@@ -1088,6 +1171,11 @@ void NewVMWizard::createVirtualMachine()
         vifs.append(config);
     }
 
+    const QVariantList vgpuData = (this->m_gpuPageEnabled && this->m_gpuEditPage)
+                                      ? this->m_gpuEditPage->GetVGpuData()
+                                      : QVariantList();
+    const bool modifyVgpuSettings = this->m_gpuPageEnabled && this->m_gpuEditPage && this->m_gpuEditPage->HasChanged();
+
     CreateVMAction* action = new CreateVMAction(
         connection,
         this->m_selectedTemplate,
@@ -1109,6 +1197,8 @@ void NewVMWizard::createVirtualMachine()
         vifs,
         startImmediately,
         this->m_assignVtpm,
+        vgpuData,
+        modifyVgpuSettings,
         this);
 
     ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);

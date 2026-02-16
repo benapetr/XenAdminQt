@@ -72,6 +72,7 @@ enum class XenObjectType
     VBDMetrics,
     VDI,
     VGPU,
+    VGPUType,
     VIF,
     VLAN,
     VM,

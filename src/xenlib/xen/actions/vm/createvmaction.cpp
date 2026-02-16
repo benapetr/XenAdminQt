@@ -32,11 +32,13 @@
 #include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VDI.h"
 #include "../../xenapi/xenapi_VIF.h"
+#include "../../xenapi/xenapi_VGPU.h"
 #include "../../xenapi/xenapi_SR.h"
 #include "../vm/vmstartaction.h"
 #include "../../jsonrpcclient.h"
 #include "../../vm.h"
 #include <QDebug>
+#include <QSet>
 #include <stdexcept>
 
 namespace
@@ -90,6 +92,8 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
                                const QList<VifConfig>& vifs,
                                bool startAfter,
                                bool assignVtpm,
+                               const QVariantList& vgpuData,
+                               bool modifyVgpuSettings,
                                QObject* parent)
     : AsyncOperation(connection,
                      QString("Creating VM '%1'").arg(nameLabel),
@@ -113,7 +117,9 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
       m_disks(disks),
       m_vifs(vifs),
       m_startAfter(startAfter),
-      m_assignVtpm(assignVtpm)
+      m_assignVtpm(assignVtpm),
+      m_vgpuData(vgpuData),
+      m_modifyVgpuSettings(modifyVgpuSettings)
 {
 }
 
@@ -303,6 +309,8 @@ void CreateVMAction::run()
             XenAPI::VIF::create(session, vifRecord);
         }
 
+        this->assignVgpu(session, newVmRef);
+
         if (this->m_startAfter)
         {
             VM* vmInstance = new VM(this->GetConnection(), newVmRef);
@@ -318,6 +326,60 @@ void CreateVMAction::run()
     catch (const std::exception& e)
     {
         this->setError(QString("Failed to create VM: %1").arg(e.what()));
+    }
+}
+
+void CreateVMAction::assignVgpu(XenAPI::Session* session, const QString& vmRef)
+{
+    if (!this->m_modifyVgpuSettings)
+        return;
+
+    this->SetDescription(QString("Configuring vGPU assignments"));
+
+    QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
+    QSet<QString> vgpusToRemove;
+    const QVariantList currentVgpus = vmRecord.value("VGPUs").toList();
+    for (const QVariant& refVar : currentVgpus)
+    {
+        const QString ref = refVar.toString();
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
+            vgpusToRemove.insert(ref);
+    }
+
+    QSet<QString> vgpusToKeep;
+    for (const QVariant& rowVar : this->m_vgpuData)
+    {
+        const QVariantMap row = rowVar.toMap();
+        const QString ref = row.value("opaque_ref").toString();
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
+            vgpusToKeep.insert(ref);
+    }
+
+    vgpusToRemove.subtract(vgpusToKeep);
+    for (const QString& ref : vgpusToRemove)
+        XenAPI::VGPU::destroy(session, ref);
+
+    for (const QVariant& rowVar : this->m_vgpuData)
+    {
+        const QVariantMap row = rowVar.toMap();
+        const QString existingRef = row.value("opaque_ref").toString();
+        if (!existingRef.isEmpty() && existingRef != XENOBJECT_NULL)
+            continue;
+
+        const QString gpuGroupRef = row.value("GPU_group").toString();
+        const QString typeRef = row.value("type").toString();
+        const QString device = row.value("device", "0").toString();
+        if (gpuGroupRef.isEmpty() || gpuGroupRef == XENOBJECT_NULL)
+            continue;
+
+        QString taskRef;
+        if (typeRef.isEmpty() || typeRef == XENOBJECT_NULL)
+            taskRef = XenAPI::VGPU::async_create(session, vmRef, gpuGroupRef, device, QVariantMap());
+        else
+            taskRef = XenAPI::VGPU::async_create(session, vmRef, gpuGroupRef, device, QVariantMap(), typeRef);
+
+        if (!taskRef.isEmpty())
+            this->pollToCompletion(taskRef, 0, 0, true);
     }
 }
 

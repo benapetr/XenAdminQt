@@ -73,6 +73,7 @@ class PGPU : public XenObject
 
         // Helper methods
         bool SupportsVGPUs() const;
+        bool HasVGpu() const;
         bool HasResidentVGPUs() const;
         int ResidentVGPUCount() const;
         bool IsAccessibleFromDom0() const;
@@ -81,7 +82,6 @@ class PGPU : public XenObject
         QSharedPointer<PCI> GetPCI() const;
         QSharedPointer<GPUGroup> GetGPUGroup() const;
         QSharedPointer<Host> GetHost() const;
-        // TODO: Add GetSupportedVGPUTypes() and GetEnabledVGPUTypes() when VGPUType class is ported
         QList<QSharedPointer<VGPU>> GetResidentVGPUs() const;
 };
 

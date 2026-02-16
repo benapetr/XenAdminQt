@@ -61,6 +61,7 @@ HEADERS += \
     xen/xenapi/xenapi_Network_sriov.h \
     xen/xenapi/xenapi_PBD.h \
     xen/xenapi/xenapi_PGPU.h \
+    xen/xenapi/xenapi_GPU_group.h \
     xen/xenapi/xenapi_PIF.h \
     xen/xenapi/xenapi_Secret.h \
     xen/xenapi/xenapi_VBD.h \
@@ -116,6 +117,7 @@ HEADERS += \
     xen/vmss.h \
     xen/vmpp.h \
     xen/vgpu.h \
+    xen/vgputype.h \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
@@ -146,6 +148,8 @@ HEADERS += \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/hvmbootaction.h \
     xen/actions/gpu/vgpuconfigurationaction.h \
+    xen/actions/gpu/gpuhelpers.h \
+    xen/actions/pool/setgpuplacementpolicyaction.h \
     xen/actions/sr/srcreateaction.h \
     xen/actions/sr/srintroduceaction.h \
     xen/actions/sr/srreattachaction.h \
@@ -167,6 +171,7 @@ HEADERS += \
     xen/actions/host/changehostpasswordaction.h \
     xen/actions/host/changecontroldomainmemoryaction.h \
     xen/actions/host/editmultipathaction.h \
+    xen/actions/host/updateintegratedgpupassthroughaction.h \
     xen/actions/host/hahelpers.h \
     xen/actions/host/savepoweronsettingsaction.h \
     xen/actions/vdi/creatediskaction.h \
@@ -302,6 +307,7 @@ SOURCES += \
     xen/xenapi/xenapi_Network_sriov.cpp \
     xen/xenapi/xenapi_PBD.cpp \
     xen/xenapi/xenapi_PGPU.cpp \
+    xen/xenapi/xenapi_GPU_group.cpp \
     xen/xenapi/xenapi_PIF.cpp \
     xen/xenapi/xenapi_Secret.cpp \
     xen/xenapi/xenapi_VBD.cpp \
@@ -351,6 +357,7 @@ SOURCES += \
     xen/vmss.cpp \
     xen/vmpp.cpp \
     xen/vgpu.cpp \
+    xen/vgputype.cpp \
     xen/pci.cpp \
     xen/pgpu.cpp \
     xen/network.cpp \
@@ -376,6 +383,7 @@ SOURCES += \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
     xen/actions/gpu/vgpuconfigurationaction.cpp \
+    xen/actions/pool/setgpuplacementpolicyaction.cpp \
     xen/actions/sr/srcreateaction.cpp \
     xen/actions/sr/srintroduceaction.cpp \
     xen/actions/sr/srreattachaction.cpp \
@@ -399,6 +407,7 @@ SOURCES += \
     xen/actions/host/changehostpasswordaction.cpp \
     xen/actions/host/changecontroldomainmemoryaction.cpp \
     xen/actions/host/editmultipathaction.cpp \
+    xen/actions/host/updateintegratedgpupassthroughaction.cpp \
     xen/actions/host/savepoweronsettingsaction.cpp \
     xen/actions/vdi/creatediskaction.cpp \
     xen/actions/vdi/detachvirtualdiskaction.cpp \

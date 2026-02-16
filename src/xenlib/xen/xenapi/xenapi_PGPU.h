@@ -56,6 +56,11 @@ class PGPU
         PGPU() = delete; // Static-only class
 
     public:
+        static QString enable_dom0_access(Session* session, const QString& pgpu);
+        static QString async_enable_dom0_access(Session* session, const QString& pgpu);
+        static QString disable_dom0_access(Session* session, const QString& pgpu);
+        static QString async_disable_dom0_access(Session* session, const QString& pgpu);
+
         /**
          * @brief Set the enabled VGPU types for a physical GPU
          *

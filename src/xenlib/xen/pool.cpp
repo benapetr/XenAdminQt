@@ -33,6 +33,7 @@
 #include "vm.h"
 #include "vdi.h"
 #include "pif.h"
+#include "pgpu.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -234,6 +235,31 @@ bool Pool::HasSriovNic() const
         if (pif->SriovCapable())
             return true;
     }
+    return false;
+}
+
+bool Pool::HasGpu() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return false;
+
+    return !cache->GetAllRefs(XenObjectType::PGPU).isEmpty();
+}
+
+bool Pool::HasVGpu() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache || !this->HasGpu())
+        return false;
+
+    const QList<QSharedPointer<PGPU>> pgpus = cache->GetAll<PGPU>(XenObjectType::PGPU);
+    for (const QSharedPointer<PGPU>& pgpu : pgpus)
+    {
+        if (pgpu && pgpu->IsValid() && pgpu->HasVGpu())
+            return true;
+    }
+
     return false;
 }
 

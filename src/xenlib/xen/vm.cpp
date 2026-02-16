@@ -754,6 +754,40 @@ namespace
 
         return values;
     }
+
+    qint64 getIntRestrictionValue(XenCache* cache,
+                                  const QVariantMap& vmData,
+                                  const QString& field,
+                                  qint64 defaultValue)
+    {
+        qint64 value = 0;
+        if (tryGetMatchingTemplateRestriction(cache, vmData, field, "value", value))
+            return value;
+
+        QList<qint64> values = getRestrictionValuesAcrossTemplates(cache, field, "value");
+        values.append(defaultValue);
+        return *std::max_element(values.begin(), values.end());
+    }
+}
+
+bool VM::CanHaveGpu() const
+{
+    if (!this->IsHVM())
+        return false;
+
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    const QVariantMap vmData = this->GetData();
+    return getIntRestrictionValue(cache, vmData, "allow-gpu-passthrough", 1) != 0;
+}
+
+bool VM::CanHaveVGpu() const
+{
+    if (!this->IsHVM() || !this->CanHaveGpu())
+        return false;
+
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    const QVariantMap vmData = this->GetData();
+    return getIntRestrictionValue(cache, vmData, "allow-vgpu", 1) != 0;
 }
 
 int VM::MaxVCPUsAllowed() const

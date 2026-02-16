@@ -60,6 +60,9 @@ public:
     QString AllocationAlgorithm() const;
     QStringList SupportedVGPUTypeRefs() const;
     QStringList EnabledVGPUTypeRefs() const;
+    QString Name() const;
+    bool HasVGpu() const;
+    bool HasPassthrough() const;
 
     // Object resolution getters
     QList<QSharedPointer<PGPU>> GetPGPUs() const;

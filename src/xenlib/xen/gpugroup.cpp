@@ -30,6 +30,7 @@
 #include "../xencache.h"
 #include "pgpu.h"
 #include "vgpu.h"
+#include "vgputype.h"
 #include <QMap>
 
 GPUGroup::GPUGroup(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -68,6 +69,42 @@ QStringList GPUGroup::SupportedVGPUTypeRefs() const
 QStringList GPUGroup::EnabledVGPUTypeRefs() const
 {
     return this->property("enabled_VGPU_types").toStringList();
+}
+
+QString GPUGroup::Name() const
+{
+    QString name = this->GetName();
+    if (name.startsWith(QStringLiteral("Group of ")))
+        name = name.mid(9);
+    return name;
+}
+
+bool GPUGroup::HasVGpu() const
+{
+    const QList<QSharedPointer<PGPU>> pgpus = this->GetPGPUs();
+    for (const QSharedPointer<PGPU>& pgpu : pgpus)
+    {
+        if (pgpu && pgpu->HasVGpu())
+            return true;
+    }
+    return false;
+}
+
+bool GPUGroup::HasPassthrough() const
+{
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QStringList refs = this->SupportedVGPUTypeRefs();
+    for (const QString& ref : refs)
+    {
+        QSharedPointer<VGPUType> type = cache->ResolveObject<VGPUType>(ref);
+        if (type && type->IsValid() && type->IsPassthrough())
+            return true;
+    }
+    return false;
 }
 
 QList<QSharedPointer<PGPU>> GPUGroup::GetPGPUs() const

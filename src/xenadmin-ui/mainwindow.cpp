@@ -65,6 +65,7 @@
 #include "tabpages/physicalstoragetabpage.h"
 #include "tabpages/networktabpage.h"
 #include "tabpages/nicstabpage.h"
+#include "tabpages/gputabpage.h"
 #include "tabpages/hatabpage.h"
 #include "tabpages/consoletabpage.h"
 #include "tabpages/cvmconsoletabpage.h"
@@ -203,6 +204,7 @@
 
 #include "controls/vmoperationmenu.h"
 #include "xenlib/xen/actions/meddlingactionmanager.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "titlebar.h"
 
 MainWindow *MainWindow::g_instance = nullptr;
@@ -318,7 +320,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
-    // Note: We don't implement all C# tabs yet (Home, Ballooning, WLB, AD, GPU, Docker, USB)
+    // Note: We don't implement all C# tabs yet (Home, Ballooning, WLB, AD, Docker, USB)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
     // Console tabs are added below after initialization
     this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
@@ -327,11 +329,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork
     this->m_tabPages.append(new NICsTabPage());        // C#: TabPageNICs
     this->m_tabPages.append(new PerformanceTabPage()); // C#: TabPagePerformance
+    this->m_tabPages.append(new GpuTabPage());         // C#: TabPageGPU
     this->m_tabPages.append(new HATabPage());          // C#: TabPageHA
     this->m_tabPages.append(new SnapshotsTabPage()); // C#: TabPageSnapshots
     // WLB - not implemented yet
     // AD - not implemented yet
-    // GPU - not implemented yet
     // Docker pages - not implemented yet
     // USB - not implemented yet
     this->m_tabPages.append(new MemoryTabPage());  // In C# this is called "Ballooning"
@@ -986,6 +988,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     const bool isPool = (objectType == XenObjectType::Pool);
     const bool isSR = (objectType == XenObjectType::SR);
     const bool isNetwork = (objectType == XenObjectType::Network);
+    const QSharedPointer<Host> hostObj = isHost ? qSharedPointerDynamicCast<Host>(xen_obj) : QSharedPointer<Host>();
+    const bool isHostLive = hostObj && hostObj->IsLive();
 
     // Get tab pointers from m_tabPages
     BaseTabPage* generalTab = nullptr;
@@ -995,6 +999,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     BaseTabPage* physicalStorageTab = nullptr;
     BaseTabPage* networkTab = nullptr;
     BaseTabPage* nicsTab = nullptr;
+    BaseTabPage* gpuTab = nullptr;
     BaseTabPage* performanceTab = nullptr;
     BaseTabPage* haTab = nullptr;
     BaseTabPage* snapshotsTab = nullptr;
@@ -1027,6 +1032,9 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             case BaseTabPage::Type::Nics:
                 nicsTab = tab;
                 break;
+            case BaseTabPage::Type::Gpu:
+                gpuTab = tab;
+                break;
             case BaseTabPage::Type::Performance:
                 performanceTab = tab;
                 break;
@@ -1051,7 +1059,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
         }
     }
 
-    // Host tab order: General, Memory, Storage, Networking, NICs, [GPU], Console, Performance
+    // Host tab order: General, Memory, Storage, Networking, NICs, GPU, Console, Performance
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1327-1379
     if (isHost)
     {
@@ -1065,7 +1073,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(networkTab);
         if (nicsTab)
             newTabs.append(nicsTab);
-        // TODO: Add GPU tab when implemented
+        if (gpuTab && isHostLive && !GpuHelpers::FeatureForbidden(xen_obj->GetConnection(), &Host::RestrictGpu))
+            newTabs.append(gpuTab);
         if (consoleTab)
             newTabs.append(consoleTab);
         if (performanceTab)
@@ -1101,6 +1110,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(physicalStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
+        if (gpuTab && !GpuHelpers::FeatureForbidden(xen_obj->GetConnection(), &Host::RestrictGpu))
+            newTabs.append(gpuTab);
         if (haTab)
             newTabs.append(haTab);
         if (performanceTab)

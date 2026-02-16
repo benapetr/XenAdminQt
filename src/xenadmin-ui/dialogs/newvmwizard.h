@@ -39,6 +39,7 @@ class XenConnection;
 class XenCache;
 class QTreeWidgetItem;
 class WizardNavigationPane;
+class GpuEditPage;
 
 namespace Ui
 {
@@ -58,6 +59,7 @@ class NewVMWizard : public QWizard
             Page_InstallationMedia,
             Page_HomeServer,
             Page_CpuMemory,
+            Page_Gpu,
             Page_Storage,
             Page_Network,
             Page_Finish
@@ -69,6 +71,7 @@ class NewVMWizard : public QWizard
     protected:
         void initializePage(int id) override;
         bool validateCurrentPage() override;
+        int nextId() const override;
         void accept() override;
 
     private slots:
@@ -119,6 +122,9 @@ class NewVMWizard : public QWizard
         bool isValidVcpu(int vcpus) const;
         void enforceVcpuTopology();
         void applyDefaultSRToDisks(const QString& srRef);
+        void updateGpuPageState();
+        void rebuildNavigationSteps();
+        int navigationIndexForPageId(int pageId) const;
         void updateNavigationSelection();
 
         struct TemplateInfo
@@ -182,6 +188,9 @@ class NewVMWizard : public QWizard
         QString m_bootMode;
         QString m_pvArgs;
         WizardNavigationPane* m_navigationPane = nullptr;
+        QWizardPage* m_gpuWizardPage = nullptr;
+        GpuEditPage* m_gpuEditPage = nullptr;
+        bool m_gpuPageEnabled = false;
 
         // Storage configuration: list of (VDI ref, SR ref, size, device)
         // This is just a temporary disk descriptor that actual VDB / VDI

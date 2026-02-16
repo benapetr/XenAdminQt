@@ -46,6 +46,7 @@ class PoolPropertiesDialog : public VerticallyTabbedDialog
 
     public:
         explicit PoolPropertiesDialog(QSharedPointer<Pool> pool, QWidget* parent = nullptr);
+        void SelectPoolGpuEditPage();
 
     protected:
         void build() override;

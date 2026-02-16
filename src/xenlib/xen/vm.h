@@ -214,6 +214,12 @@ class XENLIB_EXPORT VM : public XenObject
         //! Check if vCPU hotplug is supported
         bool SupportsVCPUHotplug() const;
 
+        //! Check whether VM supports GPU passthrough
+        bool CanHaveGpu() const;
+
+        //! Check whether VM supports vGPU
+        bool CanHaveVGpu() const;
+
         //! Get maximum allowed VCPUs
         int MaxVCPUsAllowed() const;
 

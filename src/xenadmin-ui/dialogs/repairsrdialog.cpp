@@ -293,7 +293,7 @@ void RepairSRDialog::onRepairButtonClicked()
     if (this->srList.count() == 1)
     {
         // Single SR repair
-        this->repairAction = new SrRepairAction(this->srList[0], false, this);
+        this->repairAction = new SrRepairAction(this->srList[0], false, nullptr);
     } else
     {
         // Multiple SR repair
@@ -303,7 +303,7 @@ void RepairSRDialog::onRepairButtonClicked()
         {
             if (sr)
             {
-                SrRepairAction* action = new SrRepairAction(sr, false, this);
+                SrRepairAction* action = new SrRepairAction(sr, false, nullptr);
                 subActions.append(action);
             }
         }
@@ -317,7 +317,7 @@ void RepairSRDialog::onRepairButtonClicked()
             true,
             false,
             false,
-            this);
+            nullptr);
     }
     
     if (this->runAction)
@@ -327,7 +327,7 @@ void RepairSRDialog::onRepairButtonClicked()
         connect(this->repairAction, &AsyncOperation::failed, this, &RepairSRDialog::onActionCompleted);
         
         this->grow();
-        this->repairAction->RunAsync();
+        this->repairAction->RunAsync(true);
     }
 }
 
@@ -419,15 +419,11 @@ void RepairSRDialog::shrink()
     this->ui->separator->hide();
     
     // Calculate height difference
-    int progressHeight = this->ui->progressBar->height() +
-                        this->ui->statusLabel->height() +
-                        this->ui->separator->height() + 30; // margins
+    int progressHeight = this->ui->progressBar->height() + this->ui->statusLabel->height() + this->ui->separator->height() + 30; // margins
     
     // Store original height
     if (this->originalHeight == 0)
-    {
         this->originalHeight = this->height();
-    }
     
     // Shrink window
     this->resize(this->width(), this->height() - progressHeight);

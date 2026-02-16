@@ -34,9 +34,11 @@
 #include "../settingspanels/securityeditpage.h"
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
+#include "../settingspanels/poolgpueditpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
 
 namespace
 {
@@ -119,13 +121,8 @@ void PoolPropertiesDialog::build()
     this->showTab(new HostPowerONEditPage());
 
     // GPU Settings tab
-    // C# lines 171-173: if ((isPoolOrStandalone && Helpers.VGpuCapability(connection))
-    //                       || (isHost && host.CanEnableDisableIntegratedGpu()))
-    // TODO: Create PoolGpuEditPage class - more complex, requires GPU group management
-    // Reference: xenadmin/XenAdmin/SettingsPanels/PoolGpuEditPage.cs
-    // Condition: VGpu capability or integrated GPU support
-    // TODO: Implement version/capability checking (need Helpers class)
-    // this->showTab(new PoolGpuEditPage());
+    if (GpuHelpers::VGpuCapability(this->m_pool ? this->m_pool->GetConnection() : nullptr))
+        this->showTab(new PoolGpuEditPage());
 
     // Security tab (SSL/TLS settings)
     // C# line 176: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictSslLegacySwitch)
@@ -169,4 +166,16 @@ void PoolPropertiesDialog::build()
 
     if (cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
         this->showTab(new PoolAdvancedEditPage());
+}
+
+void PoolPropertiesDialog::SelectPoolGpuEditPage()
+{
+    for (IEditPage* page : this->m_pages)
+    {
+        if (qobject_cast<PoolGpuEditPage*>(page))
+        {
+            this->selectPage(page);
+            return;
+        }
+    }
 }

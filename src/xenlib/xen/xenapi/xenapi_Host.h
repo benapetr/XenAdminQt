@@ -352,6 +352,46 @@ namespace XenAPI
              * VMs continue running during the restart.
              */
             static QString async_restart_agent(Session* session, const QString& host);
+
+            /**
+             * @brief Enable integrated display on host
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return New host display state
+             *
+             * Matches C# Host.enable_display()
+             */
+            static QString enable_display(Session* session, const QString& host);
+
+            /**
+             * @brief Enable integrated display on host (async)
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Task reference
+             *
+             * Matches C# Host.async_enable_display()
+             */
+            static QString async_enable_display(Session* session, const QString& host);
+
+            /**
+             * @brief Disable integrated display on host
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return New host display state
+             *
+             * Matches C# Host.disable_display()
+             */
+            static QString disable_display(Session* session, const QString& host);
+
+            /**
+             * @brief Disable integrated display on host (async)
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Task reference
+             *
+             * Matches C# Host.async_disable_display()
+             */
+            static QString async_disable_display(Session* session, const QString& host);
     };
 
 } // namespace XenAPI

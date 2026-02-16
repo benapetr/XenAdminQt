@@ -31,6 +31,7 @@
 #include "../settingspanels/cpumemoryeditpage.h"
 #include "../settingspanels/bootoptionseditpage.h"
 #include "../settingspanels/vmhaeditpage.h"
+#include "../settingspanels/gpueditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
 #include "../settingspanels/perfmonalerteditpage.h"
 #include "../settingspanels/homeservereditpage.h"
@@ -40,6 +41,7 @@
 #include "xen/host.h"
 #include "xen/poolupdate.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xencache.h"
 
 namespace
@@ -134,8 +136,11 @@ void VMPropertiesDialog::build()
             this->showTab(new HomeServerEditPage());
         }
 
+        // Tab 8: GPU (C# GpuEditPage parity)
+        if (this->m_vm->CanHaveGpu() && GpuHelpers::GpusAvailable(this->m_vm->GetConnection()))
+            this->showTab(new GpuEditPage());
+
         // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:
-        // - GpuEditPage (if VM.CanHaveGpu() and GPUs available)
         // - USBEditPage (if !template and USB passthrough supported and PUSBs exist)
         // - CloudConfigParametersPage (if VM.CanHaveCloudConfigDrive())
         if (isHVM)

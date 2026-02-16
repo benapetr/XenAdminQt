@@ -31,6 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 #include <QList>
+#include <QVariant>
 
 class XenConnection;
 namespace XenAPI { class Session; }
@@ -99,6 +100,8 @@ class CreateVMAction : public AsyncOperation
                        const QList<VifConfig>& vifs,
                        bool startAfter,
                        bool assignVtpm,
+                       const QVariantList& vgpuData,
+                       bool modifyVgpuSettings,
                        QObject* parent = nullptr);
 
     protected:
@@ -113,6 +116,7 @@ class CreateVMAction : public AsyncOperation
         void addVmHint(XenAPI::Session* session, const QString& vmRef, const QString& vdiRef);
         QString createVdi(XenAPI::Session* session, const DiskConfig& disk, double progress1, double progress2);
         void createVbd(XenAPI::Session* session, const QString& vmRef, const DiskConfig& disk, const QString& vdiRef, double progress1, double progress2, bool bootable);
+        void assignVgpu(XenAPI::Session* session, const QString& vmRef);
         bool isDeviceAtPositionZero(const DiskConfig& disk) const;
         bool srIsHbaLunPerVdi(XenAPI::Session* session, const QString& srRef);
 
@@ -135,6 +139,8 @@ class CreateVMAction : public AsyncOperation
         QList<VifConfig> m_vifs;
         bool m_startAfter;
         bool m_assignVtpm;
+        QVariantList m_vgpuData;
+        bool m_modifyVgpuSettings;
 };
 
 #endif // CREATEVMACTION_H

@@ -112,7 +112,7 @@ void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QSt
     QString text = QObject::tr("The VM '%1' could not be %2. The following servers cannot run this VM:")
                        .arg(vmName, isStart ? "started" : "resumed");
 
-    QMap<QString, QPair<QString, QString>> reasons;
+    QHash<QSharedPointer<XenObject>, QString> reasons;
     QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
     
     if (hosts.isEmpty())
@@ -150,10 +150,7 @@ void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QSt
         }
 
         if (!canBoot && !reason.isEmpty())
-        {
-            QString iconPath = ":/images/tree_host.png";
-            reasons.insert(hostName, qMakePair(iconPath, reason));
-        }
+            reasons.insert(host, reason);
     }
 
     if (reasons.isEmpty())

@@ -36,6 +36,9 @@
 #include <QStyle>
 #include <QDialogButtonBox>
 #include <QPushButton>
+#include <QTimer>
+#include <QShowEvent>
+#include <QResizeEvent>
 
 // Constructor with simple string map
 CommandErrorDialog::CommandErrorDialog(const QString& title,
@@ -60,6 +63,7 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
 
     // Sort by name column initially
     this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
+    this->scheduleRowResize();
 }
 
 // Constructor with icon data
@@ -87,6 +91,7 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
 
     // Sort by name column initially
     this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
+    this->scheduleRowResize();
 }
 
 // Constructor with XenObject pointers (matches C# version)
@@ -126,6 +131,7 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
 
     // Sort by name column initially (already sorted in insertion order)
     this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
+    this->scheduleRowResize();
 }
 
 CommandErrorDialog::~CommandErrorDialog()
@@ -161,12 +167,20 @@ void CommandErrorDialog::setupDialog(const QString& title, const QString& text, 
     // Configure table widget
     this->ui->tableWidget->setColumnCount(3);
     this->ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "" << tr("Name") << tr("Reason"));
-    
-    // Set column widths
-    this->ui->tableWidget->setColumnWidth(0, 24);  // Icon column - narrow
-    this->ui->tableWidget->horizontalHeader()->setStretchLastSection(true);  // Reason column stretches
-    this->ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);  // Name column resizable
-    
+
+    // Allow multiline cell content like C# grid, and grow row heights to fit text.
+    this->ui->tableWidget->setWordWrap(true);
+    this->ui->tableWidget->setTextElideMode(Qt::ElideNone);
+    this->ui->tableWidget->setIconSize(QSize(16, 16));
+    this->ui->tableWidget->verticalHeader()->setDefaultSectionSize(20);
+    this->ui->tableWidget->verticalHeader()->setMinimumSectionSize(20);
+
+    // Set column widths/sizing.
+    this->ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+    this->ui->tableWidget->setColumnWidth(0, 22);  // Icon column
+    this->ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    this->ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+
     // Hide row numbers
     this->ui->tableWidget->verticalHeader()->setVisible(false);
     
@@ -176,6 +190,8 @@ void CommandErrorDialog::setupDialog(const QString& title, const QString& text, 
     // Connect header click for custom sorting
     connect(this->ui->tableWidget->horizontalHeader(), &QHeaderView::sectionClicked,
             this, &CommandErrorDialog::onTableHeaderClicked);
+    connect(this->ui->tableWidget->horizontalHeader(), &QHeaderView::sectionResized,
+            this, [this](int, int, int) { this->scheduleRowResize(); });
     
     // Set selection behavior
     this->ui->tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -194,11 +210,13 @@ void CommandErrorDialog::addRow(const QString& iconPath, const QString& name, co
         QIcon icon(iconPath);
         iconItem->setIcon(icon);
     }
+    iconItem->setTextAlignment(Qt::AlignTop | Qt::AlignHCenter);
     iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);  // Read-only
     this->ui->tableWidget->setItem(row, 0, iconItem);
 
     // Column 1: Name
     QTableWidgetItem* nameItem = new QTableWidgetItem(name);
+    nameItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
     nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);  // Read-only
     this->ui->tableWidget->setItem(row, 1, nameItem);
 
@@ -208,8 +226,6 @@ void CommandErrorDialog::addRow(const QString& iconPath, const QString& name, co
     reasonItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
     this->ui->tableWidget->setItem(row, 2, reasonItem);
 
-    // Auto-resize row height to fit content
-    this->ui->tableWidget->resizeRowToContents(row);
 }
 
 void CommandErrorDialog::addRow(const QIcon& icon, const QString& name, const QString& reason)
@@ -223,11 +239,13 @@ void CommandErrorDialog::addRow(const QIcon& icon, const QString& name, const QS
     {
         iconItem->setIcon(icon);
     }
+    iconItem->setTextAlignment(Qt::AlignTop | Qt::AlignHCenter);
     iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);  // Read-only
     this->ui->tableWidget->setItem(row, 0, iconItem);
 
     // Column 1: Name
     QTableWidgetItem* nameItem = new QTableWidgetItem(name);
+    nameItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
     nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);  // Read-only
     this->ui->tableWidget->setItem(row, 1, nameItem);
 
@@ -237,8 +255,6 @@ void CommandErrorDialog::addRow(const QIcon& icon, const QString& name, const QS
     reasonItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
     this->ui->tableWidget->setItem(row, 2, reasonItem);
 
-    // Auto-resize row height to fit content
-    this->ui->tableWidget->resizeRowToContents(row);
 }
 
 void CommandErrorDialog::onTableHeaderClicked(int logicalIndex)
@@ -261,4 +277,31 @@ void CommandErrorDialog::onTableHeaderClicked(int logicalIndex)
     }
 
     this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
+    this->scheduleRowResize();
+}
+
+void CommandErrorDialog::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    this->scheduleRowResize();
+}
+
+void CommandErrorDialog::resizeEvent(QResizeEvent* event)
+{
+    QDialog::resizeEvent(event);
+    this->scheduleRowResize();
+}
+
+void CommandErrorDialog::scheduleRowResize()
+{
+    if (this->m_rowResizePending || !this->ui || !this->ui->tableWidget)
+        return;
+
+    this->m_rowResizePending = true;
+    QTimer::singleShot(0, this, [this]() {
+        this->m_rowResizePending = false;
+        if (!this->ui || !this->ui->tableWidget)
+            return;
+        this->ui->tableWidget->resizeRowsToContents();
+    });
 }

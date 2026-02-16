@@ -34,10 +34,14 @@
 #include "../settingspanels/hostpoweroneditpage.h"
 #include "../settingspanels/hostautostarteditpage.h"
 #include "../settingspanels/logdestinationeditpage.h"
+#include "../settingspanels/poolgpueditpage.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-HostPropertiesDialog::HostPropertiesDialog(QSharedPointer<Host> host, QWidget* parent) : VerticallyTabbedDialog(host, parent)
+HostPropertiesDialog::HostPropertiesDialog(QSharedPointer<Host> host, QWidget* parent)
+    : VerticallyTabbedDialog(host, parent), m_host(host)
 {
     this->setWindowTitle(tr("Host Properties"));
     this->resize(700, 550);
@@ -90,11 +94,13 @@ void HostPropertiesDialog::build()
     this->showTab(new HostAutostartEditPage());
 
     // Tab 9: GPU
-    // Shown if pool/standalone has vGPU capability or host can enable/disable integrated GPU (C# line 169-173)
-    // TODO: Create PoolGpuEditPage class
-    // TODO: Add conditional: if ((isPoolOrStandalone && Helpers.VGpuCapability(connection))
-    //                           || (isHost && host.CanEnableDisableIntegratedGpu()))
-    // this->showTab(new PoolGpuEditPage());
+    // Shown if standalone host has vGPU capability or host can enable/disable integrated GPU.
+    QSharedPointer<Host> host = this->m_host;
+    XenConnection* connection = host ? host->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    const bool standalone = cache && cache->GetPoolOfOne().isNull();
+    if ((standalone && GpuHelpers::VGpuCapability(connection)) || (host && host->CanEnableDisableIntegratedGpu()))
+        this->showTab(new PoolGpuEditPage());
 
     // Tab 10: Security (SSL Legacy Switch)
     // Shown for pool/standalone if not forbidden and pre-Stockholm (C# line 174-175)
@@ -134,5 +140,17 @@ void HostPropertiesDialog::build()
     if (!this->m_pages.isEmpty())
     {
         this->ui->verticalTabs->setCurrentRow(0);
+    }
+}
+
+void HostPropertiesDialog::SelectPoolGpuEditPage()
+{
+    for (IEditPage* page : this->m_pages)
+    {
+        if (qobject_cast<PoolGpuEditPage*>(page))
+        {
+            this->selectPage(page);
+            return;
+        }
     }
 }

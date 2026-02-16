@@ -34,6 +34,62 @@
 namespace XenAPI
 {
 
+QString PGPU::enable_dom0_access(Session* session, const QString& pgpu)
+{
+    if (!session || !session->IsLoggedIn())
+        throw std::runtime_error("Not connected to XenServer");
+
+    QVariantList params;
+    params << session->GetSessionID() << pgpu;
+
+    XenRpcAPI api(session);
+    QByteArray request = api.BuildJsonRpcCall("PGPU.enable_dom0_access", params);
+    QByteArray response = session->SendApiRequest(request);
+    return api.ParseJsonRpcResponse(response).toString();
+}
+
+QString PGPU::async_enable_dom0_access(Session* session, const QString& pgpu)
+{
+    if (!session || !session->IsLoggedIn())
+        throw std::runtime_error("Not connected to XenServer");
+
+    QVariantList params;
+    params << session->GetSessionID() << pgpu;
+
+    XenRpcAPI api(session);
+    QByteArray request = api.BuildJsonRpcCall("Async.PGPU.enable_dom0_access", params);
+    QByteArray response = session->SendApiRequest(request);
+    return api.ParseJsonRpcResponse(response).toString();
+}
+
+QString PGPU::disable_dom0_access(Session* session, const QString& pgpu)
+{
+    if (!session || !session->IsLoggedIn())
+        throw std::runtime_error("Not connected to XenServer");
+
+    QVariantList params;
+    params << session->GetSessionID() << pgpu;
+
+    XenRpcAPI api(session);
+    QByteArray request = api.BuildJsonRpcCall("PGPU.disable_dom0_access", params);
+    QByteArray response = session->SendApiRequest(request);
+    return api.ParseJsonRpcResponse(response).toString();
+}
+
+QString PGPU::async_disable_dom0_access(Session* session, const QString& pgpu)
+{
+    if (!session || !session->IsLoggedIn())
+        throw std::runtime_error("Not connected to XenServer");
+
+    QVariantList params;
+    params << session->GetSessionID() << pgpu;
+
+    XenRpcAPI api(session);
+    QByteArray request = api.BuildJsonRpcCall("Async.PGPU.disable_dom0_access", params);
+    QByteArray response = session->SendApiRequest(request);
+    return api.ParseJsonRpcResponse(response).toString();
+}
+
 // PGPU.set_enabled_VGPU_types - Synchronous
 void PGPU::set_enabled_VGPU_types(Session* session, const QString& pgpu, const QStringList& value)
 {

@@ -30,6 +30,7 @@
 #include "ui_verticallytabbeddialog.h"
 #include "actionprogressdialog.h"
 #include "../mainwindow.h"
+#include "../settingspanels/gpueditpage.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
@@ -229,6 +230,12 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             // Refresh all pages with new data
             for (IEditPage* page : this->m_pages)
             {
+                if (dynamic_cast<GpuEditPage*>(page))
+                {
+                    // GPU page is refreshed by XenCache events after async VGPU operations complete.
+                    this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
+                    continue;
+                }
                 page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
                 this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
             }
@@ -292,6 +299,13 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
                 this->loadObjectData();
                 for (IEditPage* page : this->m_pages)
                 {
+                    if (dynamic_cast<GpuEditPage*>(page))
+                    {
+                        // GPU page is refreshed by XenCache events after async VGPU operations complete.
+                        qDebug() << "[VerticallyTabbedDialog] Apply success: skipping forced SetXenObject for GpuEditPage";
+                        this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
+                        continue;
+                    }
                     page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
                     this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
                 }
@@ -305,8 +319,8 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
         }
     });
 
-    // Run the operation and show progress dialog modally
-    multiOp->RunAsync();
+    // Show progress dialog modally. ActionProgressDialog starts the operation
+    // in showEvent(), so we must not call RunAsync() here.
     progressDialog->exec(); // Blocks until operation completes
     
     // Dialog and operation are automatically cleaned up when dialog closes

@@ -36,6 +36,7 @@
 #include "vm.h"
 #include "pbd.h"
 #include "pif.h"
+#include "pgpu.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -97,6 +98,21 @@ bool Host::RestrictIntraPoolMigrate() const
     return boolKey(LicenseParams(), "restrict_xen_motion");
 }
 
+bool Host::RestrictGpu() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_gpu");
+}
+
+bool Host::RestrictVgpu() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_vgpu");
+}
+
+bool Host::RestrictIntegratedGpuPassthrough() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_integrated_gpu_passthrough");
+}
+
 bool Host::RestrictVSwitchController() const
 {
     return boolKeyPreferTrue(LicenseParams(), "restrict_vswitch_controller");
@@ -154,6 +170,38 @@ bool Host::vSwitchNetworkBackend() const
 {
     const QVariantMap version = this->SoftwareVersion();
     return version.value("network_backend").toString() == "openvswitch";
+}
+
+QSharedPointer<PGPU> Host::SystemDisplayDevice() const
+{
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return QSharedPointer<PGPU>();
+
+    const QStringList refs = this->PGPURefs();
+    for (const QString& ref : refs)
+    {
+        QSharedPointer<PGPU> pgpu = cache->ResolveObject<PGPU>(ref);
+        if (pgpu && pgpu->IsValid() && pgpu->IsSystemDisplayDevice())
+            return pgpu;
+    }
+
+    return QSharedPointer<PGPU>();
+}
+
+bool Host::CanEnableDisableIntegratedGpu() const
+{
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    // Same effective condition as C#: Helpers.GpuCapability(connection) &&
+    // !Helpers.FeatureForbidden(connection, Host.RestrictIntegratedGpuPassthrough)
+    const QList<QSharedPointer<PGPU>> allPgpus = cache->GetAll<PGPU>(XenObjectType::PGPU);
+    const bool hasAnyGpu = !allPgpus.isEmpty();
+    return hasAnyGpu && !this->RestrictIntegratedGpuPassthrough();
 }
 
 QStringList Host::GetResidentVMRefs() const

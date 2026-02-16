@@ -53,6 +53,8 @@
 #include "xen/vbd.h"
 #include "xen/vbdmetrics.h"
 #include "xen/vdi.h"
+#include "xen/vgpu.h"
+#include "xen/vgputype.h"
 #include "xen/vif.h"
 #include "xen/vlan.h"
 #include "xen/vm.h"
@@ -163,6 +165,8 @@ XenObjectType XenCache::TypeFromString(const QString& type)
         return XenObjectType::VDI;
     if (normalized == "vgpu" || normalized == "vgpus")
         return XenObjectType::VGPU;
+    if (normalized == "vgpu_type" || normalized == "vgpu_types" || normalized == "vgputype" || normalized == "vgputypes")
+        return XenObjectType::VGPUType;
     if (normalized == "vif" || normalized == "vifs")
         return XenObjectType::VIF;
     if (normalized == "vlan" || normalized == "vlans")
@@ -631,6 +635,8 @@ QStringList XenCache::GetKnownTypes() const
         this->typeToCacheString(XenObjectType::VBD),
         this->typeToCacheString(XenObjectType::VBDMetrics),
         this->typeToCacheString(XenObjectType::VDI),
+        this->typeToCacheString(XenObjectType::VGPU),
+        this->typeToCacheString(XenObjectType::VGPUType),
         this->typeToCacheString(XenObjectType::VIF),
         this->typeToCacheString(XenObjectType::VLAN),
         this->typeToCacheString(XenObjectType::VM),
@@ -693,6 +699,10 @@ QSharedPointer<XenObject> XenCache::createObjectForType(XenObjectType type, cons
         return QSharedPointer<XenObject>(new VBDMetrics(this->m_connection, ref));
     if (type == XenObjectType::VDI)
         return QSharedPointer<XenObject>(new VDI(this->m_connection, ref));
+    if (type == XenObjectType::VGPU)
+        return QSharedPointer<XenObject>(new VGPU(this->m_connection, ref));
+    if (type == XenObjectType::VGPUType)
+        return QSharedPointer<XenObject>(new VGPUType(this->m_connection, ref));
     if (type == XenObjectType::VIF)
         return QSharedPointer<XenObject>(new VIF(this->m_connection, ref));
     if (type == XenObjectType::VLAN)

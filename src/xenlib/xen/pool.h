@@ -170,6 +170,8 @@ class XENLIB_EXPORT Pool : public XenObject
         QString VswitchController() const;
         bool vSwitchController() const;
         bool HasSriovNic() const;
+        bool HasGpu() const;
+        bool HasVGpu() const;
 
         //! Get license restrictions (Map of license restriction keys and values)
         QVariantMap Restrictions() const;

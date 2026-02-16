@@ -38,6 +38,7 @@ class VM;
 class PBD;
 class PIF;
 class HostMetrics;
+class PGPU;
 
 /**
  * @brief Host - A physical host
@@ -91,6 +92,9 @@ class XENLIB_EXPORT Host : public XenObject
          * C# equivalent: Host.RestrictIntraPoolMigrate (BoolKey on license_params)
          */
         bool RestrictIntraPoolMigrate() const;
+        bool RestrictGpu() const;
+        bool RestrictVgpu() const;
+        bool RestrictIntegratedGpuPassthrough() const;
         bool RestrictVSwitchController() const;
         bool RestrictSriovNetwork() const;
         bool RestrictManagementOnVLAN() const;
@@ -99,6 +103,9 @@ class XENLIB_EXPORT Host : public XenObject
         bool RestrictPoolSecretRotation() const;
         bool SriovNetworkDisabled() const;
         bool vSwitchNetworkBackend() const;
+
+        QSharedPointer<PGPU> SystemDisplayDevice() const;
+        bool CanEnableDisableIntegratedGpu() const;
 
         //! Get list of VMs resident on this host (list of VM opaque references)
         QStringList GetResidentVMRefs() const;

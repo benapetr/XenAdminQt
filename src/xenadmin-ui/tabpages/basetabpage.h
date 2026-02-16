@@ -58,6 +58,7 @@ class BaseTabPage : public QWidget
             PhysicalStorage,
             Network,
             Nics,
+            Gpu,
             Performance,
             Ha,
             Snapshots,
