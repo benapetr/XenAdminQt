@@ -186,7 +186,7 @@ class IEditPage : public QWidget
         virtual void SetXenObjects(const QString& objectRef,
                                    const QString& objectType,
                                    const QVariantMap& objectDataBefore,
-                                   const QVariantMap& objectDataCopy) = 0;
+                                   const QVariantMap& objectDataCopy) {};
 
         virtual void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy);
 

@@ -92,7 +92,7 @@ QString GpuEditPage::GetText() const
 QString GpuEditPage::GetSubText() const
 {
     if (this->m_rows.isEmpty())
-        return tr("NONE");
+        return tr("None");
 
     QStringList labels;
     for (const RowData& row : this->m_rows)
@@ -105,27 +105,20 @@ QIcon GpuEditPage::GetImage() const
     return QIcon(":/icons/cpu_16.png");
 }
 
-void GpuEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void GpuEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap &objectDataBefore, const QVariantMap &objectDataCopy)
 {
-    Q_UNUSED(objectRef);
-    Q_UNUSED(objectType);
+    this->m_object = object;
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
     this->disconnectCacheSignals();
     this->m_vm = qSharedPointerDynamicCast<VM>(this->m_object);
     this->connectCacheSignals();
-    qDebug() << "[GpuEditPage] SetXenObjects:"
-             << "objectRef=" << objectRef
-             << "objectType=" << objectType
-             << "vmRef=" << (this->m_vm ? this->m_vm->OpaqueRef() : QString())
-             << "vmValid=" << (this->m_vm && this->m_vm->IsValid());
+
     this->populateRowsFromVm();
     this->m_waitingForCacheSync = false;
     this->m_originalStateKey = this->normalizedStateKey();
-    qDebug() << "[GpuEditPage] SetXenObjects done:"
-             << "rows=" << this->m_rows.size()
-             << "stateKey=" << this->m_originalStateKey;
+
     this->updateEnablement();
     emit populated();
 }

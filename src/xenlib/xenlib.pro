@@ -185,6 +185,7 @@ HEADERS += \
     xen/actions/general/generaleditpageaction.h \
     xen/actions/general/getdatasourcesaction.h \
     xen/actions/general/enabledatasourceaction.h \
+    xen/actions/general/perfmondefinitionaction.h \
     xen/actions/general/savedatasourcestateaction.h \
     xen/actions/vm/vmstartabstractaction.h \
     xen/actions/vm/vmstartonaction.h \
@@ -420,6 +421,7 @@ SOURCES += \
     xen/actions/general/generaleditpageaction.cpp \
     xen/actions/general/getdatasourcesaction.cpp \
     xen/actions/general/enabledatasourceaction.cpp \
+    xen/actions/general/perfmondefinitionaction.cpp \
     xen/actions/general/savedatasourcestateaction.cpp \
     xen/actions/vm/vmstartabstractaction.cpp \
     xen/actions/vm/vmstartonaction.cpp \

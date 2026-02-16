@@ -51,10 +51,7 @@ class PerfmonAlertEditPage : public IEditPage
         QString GetSubText() const override;
         QIcon GetImage() const override;
 
-        void SetXenObjects(const QString& objectRef,
-                           const QString& objectType,
-                           const QVariantMap& objectDataBefore,
-                           const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy) override;
 
         AsyncOperation* SaveSettings() override;
         bool IsValidToSave() const override;

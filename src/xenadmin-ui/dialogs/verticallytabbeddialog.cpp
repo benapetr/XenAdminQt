@@ -30,7 +30,6 @@
 #include "ui_verticallytabbeddialog.h"
 #include "actionprogressdialog.h"
 #include "../mainwindow.h"
-#include "../settingspanels/gpueditpage.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
@@ -40,6 +39,7 @@
 #include "xenlib/xen/xenapi/xenapi_Network.h"
 #include "xenlib/xen/xenapi/xenapi_VDI.h"
 #include "xenlib/xen/jsonrpcclient.h"
+#include "xenlib/xencache.h"
 #include <QtGlobal>
 #include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/asyncoperation.h"
@@ -75,6 +75,13 @@ VerticallyTabbedDialog::VerticallyTabbedDialog(QSharedPointer<XenObject> object,
 
     // Load object data from XenServer
     this->loadObjectData();
+
+    XenConnection* conn = this->m_object ? this->m_object->GetConnection() : nullptr;
+    XenCache* cache = conn ? conn->GetCache() : nullptr;
+    if (cache)
+    {
+        connect(cache, &XenCache::objectChanged, this, &VerticallyTabbedDialog::onCacheObjectChanged, Qt::UniqueConnection);
+    }
 
     // NOTE: Subclass must call build() in its constructor after this base constructor
     // Cannot call pure virtual from base constructor in C++
@@ -117,6 +124,16 @@ void VerticallyTabbedDialog::loadObjectData()
     qDebug() << "VerticallyTabbedDialog: Loaded data for"
              << XenObject::TypeToString(this->m_objectType) << this->m_objectRef
              << "- name_label:" << objectData.value("name_label").toString();
+}
+
+void VerticallyTabbedDialog::refreshPagesFromCurrentData()
+{
+    this->loadObjectData();
+    for (IEditPage* page : this->m_pages)
+    {
+        page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
+        this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
+    }
 }
 
 void VerticallyTabbedDialog::showTab(IEditPage* page)
@@ -223,22 +240,13 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
         // Apply them and optionally close
         this->applySimpleChanges();
         
-        // After successful save, reload data so Apply can be used again
+        // After successful save, keep new baseline and wait for cache sync event.
         if (!closeOnSuccess)
         {
-            this->loadObjectData();
-            // Refresh all pages with new data
+            this->m_objectDataBefore = this->m_objectDataCopy;
+            this->m_waitingForCacheSync = true;
             for (IEditPage* page : this->m_pages)
-            {
-                if (dynamic_cast<GpuEditPage*>(page))
-                {
-                    // GPU page is refreshed by XenCache events after async VGPU operations complete.
-                    this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
-                    continue;
-                }
-                page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
                 this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
-            }
         }
         
         return true;
@@ -295,20 +303,11 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             }
             else
             {
-                // Apply button - reload data and refresh pages
-                this->loadObjectData();
+                // Apply button - keep baseline and wait for cache objectChanged.
+                this->m_objectDataBefore = this->m_objectDataCopy;
+                this->m_waitingForCacheSync = true;
                 for (IEditPage* page : this->m_pages)
-                {
-                    if (dynamic_cast<GpuEditPage*>(page))
-                    {
-                        // GPU page is refreshed by XenCache events after async VGPU operations complete.
-                        qDebug() << "[VerticallyTabbedDialog] Apply success: skipping forced SetXenObject for GpuEditPage";
-                        this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
-                        continue;
-                    }
-                    page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
                     this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
-                }
             }
         }
         else
@@ -325,6 +324,33 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     
     // Dialog and operation are automatically cleaned up when dialog closes
     return saveSucceeded;
+}
+
+void VerticallyTabbedDialog::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+{
+    if (!this->m_waitingForCacheSync || !this->m_object)
+        return;
+
+    XenConnection* expectedConnection = this->m_object->GetConnection();
+    if (!expectedConnection || connection != expectedConnection)
+        return;
+
+    const XenObjectType changedType = XenCache::TypeFromString(type);
+    if (changedType != this->m_objectType || ref != this->m_objectRef)
+        return;
+
+    for (IEditPage* page : this->m_pages)
+    {
+        if (page->HasChanged())
+        {
+            qDebug() << "VerticallyTabbedDialog: cache sync detected but local edits exist, skipping auto-refresh";
+            return;
+        }
+    }
+
+    qDebug() << "VerticallyTabbedDialog: cache sync detected for edited object, refreshing pages";
+    this->m_waitingForCacheSync = false;
+    this->refreshPagesFromCurrentData();
 }
 
 void VerticallyTabbedDialog::reject()

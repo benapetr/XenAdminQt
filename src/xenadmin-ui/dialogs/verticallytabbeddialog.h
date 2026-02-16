@@ -46,6 +46,7 @@ class XenConnection;
 class AsyncOperation;
 class XenObject;
 class MultipleAction;
+class XenCache;
 
 /**
  * @brief VerticallyTabbedDialog - Base class for property editor dialogs
@@ -141,9 +142,11 @@ class VerticallyTabbedDialog : public QDialog
     private slots:
         void onVerticalTabsCurrentChanged(int index);
         void onApplyClicked();
+        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
 
     private:
         void loadObjectData();
+        void refreshPagesFromCurrentData();
         QList<AsyncOperation*> collectActions();
         void applySimpleChanges();
         bool performSave(bool closeOnSuccess);
@@ -153,6 +156,7 @@ class VerticallyTabbedDialog : public QDialog
         XenObjectType m_objectType{XenObjectType::Null};
         QVariantMap m_objectDataBefore; // Original data (read-only)
         QVariantMap m_objectDataCopy;   // Clone being edited
+        bool m_waitingForCacheSync{false};
 };
 
 #endif // VERTICALLYTABBEDDIALOG_H

@@ -627,9 +627,12 @@ void AsyncOperation::RunSync(XenAPI::Session* session)
         this->setError(QString::fromLocal8Bit(e.what()));
         this->setState(Failed);
         this->auditLogFailure(QString::fromLocal8Bit(e.what()));
+        if (!locker.isLocked())
+            locker.relock();
     }
 
-    //locker.relock();
+    if (!locker.isLocked())
+        locker.relock();
     this->m_endTime = QDateTime::currentDateTime();
     locker.unlock();
 

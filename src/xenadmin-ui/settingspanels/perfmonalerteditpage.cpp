@@ -27,11 +27,10 @@
 
 #include "perfmonalerteditpage.h"
 #include "ui_perfmonalerteditpage.h"
+#include "xenlib/xen/actions/general/perfmondefinitionaction.h"
 #include "xenlib/xen/asyncoperation.h"
-#include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/session.h"
-#include "xenlib/xen/api.h"
 #include <QDomDocument>
+#include <QPointer>
 #include <QSet>
 #include <QXmlStreamWriter>
 #include <QtMath>
@@ -102,10 +101,7 @@ QIcon PerfmonAlertEditPage::GetImage() const
     return QIcon(":/icons/alert_16.png");
 }
 
-void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef,
-                                         const QString& objectType,
-                                         const QVariantMap& objectDataBefore,
-                                         const QVariantMap& objectDataCopy)
+void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
     this->m_objectRef = objectRef;
     this->m_objectType = objectType.toLower();
@@ -166,44 +162,36 @@ AsyncOperation* PerfmonAlertEditPage::SaveSettings()
 
     this->m_objectDataCopy["other_config"] = otherConfig;
 
-    class PerfmonAlertOperation : public AsyncOperation
+    QList<PerfmonDefinitionAction::Definition> definitionList;
+    definitionList.reserve(defs.size());
+
+    for (auto it = defs.cbegin(); it != defs.cend(); ++it)
     {
-        public:
-            PerfmonAlertOperation(XenConnection* conn,
-                                  const QString& objectRef,
-                                  const QString& objectType,
-                                  const QVariantMap& otherConfig,
-                                  QObject* parent)
-                : AsyncOperation(conn, tr("Update Performance Alerts"),
-                                 tr("Updating performance alert configuration..."), parent),
-                  m_objectRef(objectRef), m_objectType(objectType), m_otherConfig(otherConfig)
-            {
-            }
+        PerfmonDefinitionAction::Definition def;
+        def.name = it.key();
+        def.threshold = it.value().threshold;
+        def.durationSeconds = it.value().durationSeconds;
+        def.intervalSeconds = it.value().intervalSeconds;
+        definitionList.append(def);
+    }
 
-        protected:
-            void run() override
-            {
-                XenRpcAPI api(GetConnection()->GetSession());
+    PerfmonDefinitionAction* action = new PerfmonDefinitionAction(this->connection(), this->m_objectRef, this->m_objectType, definitionList, true, nullptr);
+    QPointer<PerfmonAlertEditPage> self(this);
+    connect(action, &AsyncOperation::completed, this, [self, action]() {
+        if (!self || action->HasError())
+            return;
 
-                SetPercentComplete(30);
+        // Keep page state consistent on Apply until cache catches up.
+        self->m_origCPUAlert = self->readCpuAlertFromUi();
+        self->m_origNetworkAlert = self->readNetworkAlertFromUi();
+        self->m_origDiskAlert = self->readDiskAlertFromUi();
+        self->m_origSrAlert = self->readSrAlertFromUi();
+        self->m_origMemoryAlert = self->readMemoryAlertFromUi();
+        self->m_origDom0Alert = self->readDom0AlertFromUi();
+        self->m_objectDataBefore = self->m_objectDataCopy;
+    });
 
-                QString methodName = m_objectType + ".set_other_config";
-                QVariantList params;
-                params << GetConnection()->GetSessionId() << this->m_objectRef << this->m_otherConfig;
-                QByteArray request = api.BuildJsonRpcCall(methodName, params);
-                QByteArray response = GetConnection()->SendRequest(request);
-                api.ParseJsonRpcResponse(response);
-
-                SetPercentComplete(100);
-            }
-
-        private:
-            QString m_objectRef;
-            QString m_objectType;
-            QVariantMap m_otherConfig;
-    };
-
-    return new PerfmonAlertOperation(this->m_connection, this->m_objectRef, this->m_objectType, otherConfig, nullptr);
+    return action;
 }
 
 bool PerfmonAlertEditPage::IsValidToSave() const
