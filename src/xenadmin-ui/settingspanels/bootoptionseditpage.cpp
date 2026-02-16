@@ -29,6 +29,7 @@
 #include "ui_bootoptionseditpage.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/asyncoperation.h"
@@ -143,21 +144,16 @@ QIcon BootOptionsEditPage::GetImage() const
     return QIcon(":/icons/power_on.png");
 }
 
-void BootOptionsEditPage::SetXenObjects(const QString& objectRef,
-                                        const QString& objectType,
-                                        const QVariantMap& objectDataBefore,
-                                        const QVariantMap& objectDataCopy)
+void BootOptionsEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    if (objectType != "vm")
+    this->m_object = object;
+    if (object.isNull() || object->GetObjectType() != XenObjectType::VM)
         return;
 
-    this->m_vmRef = objectRef;
+    this->m_vmRef = object->OpaqueRef();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
-    this->m_vm.clear();
-
-    if (this->connection() && this->connection()->GetCache())
-        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
+    this->m_vm = qSharedPointerDynamicCast<VM>(object);
 
     this->m_origAutoBoot = objectDataBefore.value("other_config").toMap().value("auto_poweron", "false").toString() == "true";
     this->m_origBootOrder = objectDataBefore.value("HVM_boot_params").toMap().value("order", "dc").toString().toUpper();

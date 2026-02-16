@@ -104,11 +104,11 @@ class IEditPage : public QWidget
 
         /**
          * @brief Set the XenConnection for this page
-         * Called by VerticallyTabbedDialog before setXenObjects
+         * Called by VerticallyTabbedDialog before SetXenObject
          */
         void SetConnection(XenConnection* connection)
         {
-            m_connection = connection;
+            this->m_connection = connection;
         }
 
         /**
@@ -116,7 +116,7 @@ class IEditPage : public QWidget
          */
         XenConnection* connection() const
         {
-            return m_connection;
+            return this->m_connection;
         }
 
         // IVerticalTab interface (for display in VerticalTabWidget)
@@ -150,45 +150,16 @@ class IEditPage : public QWidget
         // C# source: XenAdmin/SettingsPanels/IEditPage.cs
 
         /**
-         * @brief Set the objects being edited
-         * @param objectRef OpaqueRef of the original object (from cache)
-         * @param objectType Type string ("vm", "host", "pool", "sr", etc.)
+         * @brief Set the object being edited plus before/copy snapshots of its data
+         * @param object Edited Xen object from cache
          * @param objectDataBefore Original object data (for comparison and reference)
          * @param objectDataCopy Cloned object data (page edits this copy)
          *
          * Pages work with TWO copies of object data:
-         * - **objectDataBefore**: The original cached data, read-only, for reference
-         * - **objectDataCopy**: A clone that page can modify (not committed until save)
-         *
-         * Most pages only need objectDataCopy, but some operations (like actions)
-         * need both to know what changed.
-         *
-         * C# equivalent: void SetXenObjects(IXenObject orig, IXenObject clone)
-         *
-         * Example implementation:
-         * ```cpp
-         * void GeneralEditPage::SetXenObjects(const QString& objectRef,
-         *                                      const QString& objectType,
-         *                                      const QVariantMap& objectDataBefore,
-         *                                      const QVariantMap& objectDataCopy)
-         * {
-         *     m_objectRef = objectRef;
-         *     m_objectType = objectType;
-         *     m_objectDataBefore = objectDataBefore;
-         *     m_objectDataCopy = objectDataCopy;
-         *
-         *     // Load data into UI fields:
-         *     ui->nameLineEdit->setText(objectDataCopy["name_label"].toString());
-         *     ui->descriptionTextEdit->setPlainText(objectDataCopy["name_description"].toString());
-         * }
-         * ```
+         * - **objectDataBefore**: the original cached data, read-only, for reference
+         * - **objectDataCopy**: a clone the page can edit (not committed until save)
          */
-        virtual void SetXenObjects(const QString& objectRef,
-                                   const QString& objectType,
-                                   const QVariantMap& objectDataBefore,
-                                   const QVariantMap& objectDataCopy) {};
-
-        virtual void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy);
+        virtual void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy) = 0;
 
         /**
          * @brief Save settings from this page
@@ -351,4 +322,3 @@ class IEditPage : public QWidget
 };
 
 #endif // IEDITPAGE_H
-

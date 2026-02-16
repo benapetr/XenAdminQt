@@ -30,6 +30,7 @@
 #include "../../xenlib/xen/actions/delegatedasyncoperation.h"
 #include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
+#include "../../xenlib/xen/xenobject.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include <QToolTip>
 
@@ -73,14 +74,19 @@ QIcon VMAdvancedEditPage::GetImage() const
     return QIcon(":/icons/configure_16.png");
 }
 
-void VMAdvancedEditPage::SetXenObjects(const QString& objectRef,
-                                       const QString& objectType,
-                                       const QVariantMap& objectDataBefore,
-                                       const QVariantMap& objectDataCopy)
+void VMAdvancedEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                      const QVariantMap& objectDataBefore,
+                                      const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
+    this->m_object = object;
+    this->m_vmRef.clear();
+    this->m_objectDataCopy.clear();
+    this->m_powerState.clear();
 
-    this->m_vmRef = objectRef;
+    if (object.isNull() || object->GetObjectType() != XenObjectType::VM)
+        return;
+
+    this->m_vmRef = object->OpaqueRef();
     this->m_objectDataCopy = objectDataCopy;
     this->m_powerState = objectDataBefore.value("power_state").toString();
 

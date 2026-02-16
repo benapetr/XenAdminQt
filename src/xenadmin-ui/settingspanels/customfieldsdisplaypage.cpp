@@ -27,6 +27,7 @@
 
 #include "customfieldsdisplaypage.h"
 #include "ui_customfieldsdisplaypage.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/asyncoperation.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
@@ -87,13 +88,12 @@ QIcon CustomFieldsDisplayPage::GetImage() const
     return QIcon(":/icons/fields_16.png");
 }
 
-void CustomFieldsDisplayPage::SetXenObjects(const QString& objectRef,
-                                            const QString& objectType,
-                                            const QVariantMap& objectDataBefore,
-                                            const QVariantMap& objectDataCopy)
+void CustomFieldsDisplayPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    this->m_objectRef = objectRef;
-    this->m_objectType = objectType;
+    this->m_object = object;
+    this->m_objectRef = object.isNull() ? QString() : object->OpaqueRef();
+    this->m_objectTypeApiName = object.isNull() ? QString() : object->GetObjectTypeName().toLower();
+    this->m_objectType = object.isNull() ? XenObjectType::Null : object->GetObjectType();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
@@ -188,8 +188,7 @@ AsyncOperation* CustomFieldsDisplayPage::SaveSettings()
         QVariantMap m_otherConfig;
     };
 
-    QString objectType = this->m_objectDataBefore.value("class", "VM").toString();
-    return new CustomFieldsOperation(this->m_connection, this->m_objectRef, objectType, otherConfig, this);
+    return new CustomFieldsOperation(this->m_connection, this->m_objectRef, this->m_objectTypeApiName, otherConfig, this);
 }
 
 bool CustomFieldsDisplayPage::IsValidToSave() const

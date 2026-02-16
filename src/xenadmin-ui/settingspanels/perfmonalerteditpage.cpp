@@ -27,6 +27,7 @@
 
 #include "perfmonalerteditpage.h"
 #include "ui_perfmonalerteditpage.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/actions/general/perfmondefinitionaction.h"
 #include "xenlib/xen/asyncoperation.h"
 #include <QDomDocument>
@@ -101,10 +102,12 @@ QIcon PerfmonAlertEditPage::GetImage() const
     return QIcon(":/icons/alert_16.png");
 }
 
-void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void PerfmonAlertEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    this->m_objectRef = objectRef;
-    this->m_objectType = objectType.toLower();
+    this->m_object = object;
+    this->m_objectRef = object.isNull() ? QString() : object->OpaqueRef();
+    this->m_objectType = object.isNull() ? XenObjectType::Null : object->GetObjectType();
+    this->m_objectTypeApiName = object.isNull() ? QString() : object->GetObjectTypeName().toLower();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
@@ -175,7 +178,7 @@ AsyncOperation* PerfmonAlertEditPage::SaveSettings()
         definitionList.append(def);
     }
 
-    PerfmonDefinitionAction* action = new PerfmonDefinitionAction(this->connection(), this->m_objectRef, this->m_objectType, definitionList, true, nullptr);
+    PerfmonDefinitionAction* action = new PerfmonDefinitionAction(this->connection(), this->m_objectRef, this->m_objectTypeApiName, definitionList, true, nullptr);
     QPointer<PerfmonAlertEditPage> self(this);
     connect(action, &AsyncOperation::completed, this, [self, action]() {
         if (!self || action->HasError())
@@ -490,9 +493,9 @@ void PerfmonAlertEditPage::setDom0AlertToUi(const AlertConfig& config)
 
 void PerfmonAlertEditPage::configureVisibilityByObjectType()
 {
-    const bool isVm = (this->m_objectType == QStringLiteral("vm"));
-    const bool isHost = (this->m_objectType == QStringLiteral("host"));
-    const bool isSr = (this->m_objectType == QStringLiteral("sr"));
+    const bool isVm = (this->m_objectType == XenObjectType::VM);
+    const bool isHost = (this->m_objectType == XenObjectType::Host);
+    const bool isSr = (this->m_objectType == XenObjectType::SR);
 
     this->ui->groupBoxCPU->setVisible(isVm || isHost);
     this->ui->groupBoxNetwork->setVisible(isVm || isHost);

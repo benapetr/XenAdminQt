@@ -67,8 +67,7 @@ class HostPowerONEditPage : public IEditPage
         QString GetText() const override;
         QString GetSubText() const override;
         QIcon GetImage() const override;
-        void SetXenObjects(const QString& objectRef,
-                          const QString& objectType,
+        void SetXenObject(QSharedPointer<XenObject> object,
                           const QVariantMap& objectDataBefore,
                           const QVariantMap& objectDataCopy) override;
         AsyncOperation* SaveSettings() override;

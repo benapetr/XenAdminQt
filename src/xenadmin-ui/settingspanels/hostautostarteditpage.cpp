@@ -59,12 +59,15 @@ QIcon HostAutostartEditPage::GetImage() const
     return QIcon(":/icons/enable_power_control_16.png");
 }
 
-void HostAutostartEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void HostAutostartEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
+    this->m_object = object;
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
-    this->m_host = qSharedPointerDynamicCast<Host>(this->m_object);
+    this->m_host = (!object.isNull() && object->GetObjectType() == XenObjectType::Host)
+                       ? qSharedPointerDynamicCast<Host>(object)
+                       : QSharedPointer<Host>();
 
     // m_connection is set by VerticallyTabbedDialog before calling this
 

@@ -94,12 +94,11 @@ QIcon PoolGpuEditPage::GetImage() const
     return QIcon(":/icons/cpu_16.png");
 }
 
-void PoolGpuEditPage::SetXenObjects(const QString& objectRef,
-                                    const QString& objectType,
-                                    const QVariantMap& objectDataBefore,
-                                    const QVariantMap& objectDataCopy)
+void PoolGpuEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                   const QVariantMap& objectDataBefore,
+                                   const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectRef);
+    this->m_object = object;
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
@@ -118,11 +117,11 @@ void PoolGpuEditPage::SetXenObjects(const QString& objectRef,
     }
 
     this->m_pool = cache->GetPoolOfOne();
-    this->m_host = (objectType == QLatin1String("host"))
-                       ? qSharedPointerDynamicCast<Host>(this->m_object)
+    this->m_host = (!object.isNull() && object->GetObjectType() == XenObjectType::Host)
+                       ? qSharedPointerDynamicCast<Host>(object)
                        : QSharedPointer<Host>();
 
-    const bool isPoolObject = objectType == QLatin1String("pool");
+    const bool isPoolObject = (!object.isNull() && object->GetObjectType() == XenObjectType::Pool);
     const bool isStandaloneHost = this->m_host && !this->m_pool;
     this->m_showPlacementPolicy = (isPoolObject || isStandaloneHost) && GpuHelpers::VGpuCapability(conn);
     this->m_showIntegratedGpu = this->m_host && this->m_host->CanEnableDisableIntegratedGpu();

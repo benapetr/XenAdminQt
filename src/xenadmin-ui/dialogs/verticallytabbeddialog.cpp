@@ -153,7 +153,7 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
     page->SetConnection(this->m_object->GetConnection());
 
     // Initialize page with object data
-    // C# equivalent: editPage.SetXenObjects(_xenObjectBefore, _xenObjectCopy);
+    // C# equivalent: editPage.SetXenObject(_xenObjectBefore, _xenObjectCopy);
     page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
     this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
 

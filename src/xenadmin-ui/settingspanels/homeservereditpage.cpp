@@ -34,6 +34,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/xenobject.h"
 #include "iconmanager.h"
 #include <QTableWidgetItem>
 
@@ -90,15 +91,17 @@ QIcon HomeServerEditPage::GetImage() const
     return IconManager::instance().GetConnectedIcon();
 }
 
-void HomeServerEditPage::SetXenObjects(const QString& objectRef,
-                                       const QString& objectType,
-                                       const QVariantMap& objectDataBefore,
-                                       const QVariantMap& objectDataCopy)
+void HomeServerEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
     Q_UNUSED(objectDataCopy);
+    this->m_object = object;
+    m_vmRef.clear();
+    m_originalAffinityRef.clear();
 
-    m_vmRef = objectRef;
+    if (object.isNull() || object->GetObjectType() != XenObjectType::VM)
+        return;
+
+    m_vmRef = object->OpaqueRef();
 
     // Get VM's current affinity
     m_originalAffinityRef = objectDataBefore.value("affinity").toString();

@@ -62,10 +62,7 @@ class HostAutostartEditPage : public IEditPage
         QIcon GetImage() const override;
 
         // IEditPage interface
-        void SetXenObjects(const QString& objectRef,
-                           const QString& objectType,
-                           const QVariantMap& objectDataBefore,
-                           const QVariantMap& objectDataCopy) override;
+        void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy) override;
         AsyncOperation* SaveSettings() override;
         bool IsValidToSave() const override;
         void ShowLocalValidationMessages() override;

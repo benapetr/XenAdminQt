@@ -95,13 +95,11 @@ QIcon GeneralEditPage::GetImage() const
     return QIcon(":/icons/edit_16.png");
 }
 
-void GeneralEditPage::SetXenObjects(const QString& objectRef,
-                                    const QString& objectType,
-                                    const QVariantMap& objectDataBefore,
-                                    const QVariantMap& objectDataCopy)
+void GeneralEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    this->m_objectRef = objectRef;
-    this->m_objectType = objectType;
+    this->m_object = object;
+    this->m_objectRef = object.isNull() ? QString() : object->OpaqueRef();
+    this->m_objectType = object.isNull() ? XenObjectType::Null : object->GetObjectType();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
@@ -145,7 +143,7 @@ void GeneralEditPage::repopulate()
     this->updateTagsDisplay();
 
     // Show/hide IQN fields for hosts
-    if (this->m_objectType == "host")
+    if (this->m_objectType == XenObjectType::Host)
     {
         this->ui->lblIQN->setVisible(true);
         this->ui->txtIQN->setVisible(true);
@@ -163,16 +161,16 @@ void GeneralEditPage::repopulate()
     }
 
     // Update title based on object type
-    if (this->m_objectType == "vm")
+    if (this->m_objectType == XenObjectType::VM)
     {
         this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this virtual machine"));
-    } else if (this->m_objectType == "host")
+    } else if (this->m_objectType == XenObjectType::Host)
     {
         this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this server"));
-    } else if (this->m_objectType == "pool")
+    } else if (this->m_objectType == XenObjectType::Pool)
     {
         this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this pool"));
-    } else if (this->m_objectType == "sr")
+    } else if (this->m_objectType == XenObjectType::SR)
     {
         this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this storage repository"));
     } else
@@ -207,7 +205,7 @@ AsyncOperation* GeneralEditPage::SaveSettings()
         this->m_objectDataCopy["name_description"] = this->ui->txtDescription->toPlainText();
     }
 
-    if (this->iqnChanged() && this->m_objectType == "host")
+    if (this->iqnChanged() && this->m_objectType == XenObjectType::Host)
     {
         // IQN is stored in other_config["iscsi_iqn"]
         QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
@@ -242,7 +240,7 @@ bool GeneralEditPage::IsValidToSave() const
     }
 
     // IQN validation for hosts
-    if (this->m_objectType == "host" && this->ui->lblIQN->isVisible())
+    if (this->m_objectType == XenObjectType::Host && this->ui->lblIQN->isVisible())
     {
         QString iqn = this->ui->txtIQN->text().trimmed();
         if (!iqn.isEmpty())
@@ -267,7 +265,7 @@ void GeneralEditPage::ShowLocalValidationMessages()
         // TODO: Show balloon tooltip with error message
     }
 
-    if (this->m_objectType == "host" && this->ui->lblIQN->isVisible())
+    if (this->m_objectType == XenObjectType::Host && this->ui->lblIQN->isVisible())
     {
         QString iqn = this->ui->txtIQN->text().trimmed();
         if (!iqn.isEmpty() && !iqn.startsWith("iqn.") && !iqn.startsWith("eui.") && !iqn.startsWith("naa."))
@@ -356,7 +354,7 @@ bool GeneralEditPage::tagsChanged() const
 
 bool GeneralEditPage::iqnChanged() const
 {
-    if (this->m_objectType != "host" || !this->ui->lblIQN->isVisible())
+    if (this->m_objectType != XenObjectType::Host || !this->ui->lblIQN->isVisible())
     {
         return false;
     }

@@ -33,6 +33,7 @@
 #include "xenlib/xen/apiversion.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/xen/xenobject.h"
 #include <QMessageBox>
 #include <QHostAddress>
 #include <QTableWidgetItem>
@@ -156,14 +157,22 @@ QIcon HostPowerONEditPage::GetImage() const
     return QIcon(":/icons/power_on.png");
 }
 
-void HostPowerONEditPage::SetXenObjects(const QString& objectRef,
-                                       const QString& objectType,
+void HostPowerONEditPage::SetXenObject(QSharedPointer<XenObject> object,
                                        const QVariantMap& objectDataBefore,
                                        const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
-    
-    this->m_hostRef = objectRef;
+    this->m_object = object;
+    this->m_hostRef.clear();
+    this->m_objectDataBefore.clear();
+    this->m_objectDataCopy.clear();
+    this->m_currentMode = PowerOnMode();
+    this->m_originalMode = PowerOnMode();
+    this->m_loaded = false;
+
+    if (object.isNull() || object->GetObjectType() != XenObjectType::Host)
+        return;
+
+    this->m_hostRef = object->OpaqueRef();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
     

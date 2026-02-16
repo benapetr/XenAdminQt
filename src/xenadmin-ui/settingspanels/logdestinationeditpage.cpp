@@ -27,6 +27,7 @@
 
 #include "logdestinationeditpage.h"
 #include "ui_logdestinationeditpage.h"
+#include "../../xenlib/xen/xenobject.h"
 #include "../../xenlib/xen/asyncoperation.h"
 #include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
@@ -92,15 +93,14 @@ QIcon LogDestinationEditPage::GetImage() const
     return QIcon(":/icons/log_destination_16.png");
 }
 
-void LogDestinationEditPage::SetXenObjects(const QString& objectRef,
-                                           const QString& objectType,
-                                           const QVariantMap& objectDataBefore,
-                                           const QVariantMap& objectDataCopy)
+void LogDestinationEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                          const QVariantMap& objectDataBefore,
+                                          const QVariantMap& objectDataCopy)
 {
     Q_UNUSED(objectDataBefore);
-    Q_UNUSED(objectType);
+    this->m_object = object;
 
-    this->m_hostRef = objectRef;
+    this->m_hostRef = object.isNull() ? QString() : object->OpaqueRef();
     this->m_objectDataCopy = objectDataCopy; // Store copy for modification
 
     this->repopulate();

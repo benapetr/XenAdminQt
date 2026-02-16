@@ -59,35 +59,30 @@ QIcon NetworkOptionsEditPage::GetImage() const
     return QIcon(":/icons/network_16.png");
 }
 
-void NetworkOptionsEditPage::SetXenObjects(const QString& objectRef,
-                                           const QString& objectType,
-                                           const QVariantMap& objectDataBefore,
-                                           const QVariantMap& objectDataCopy)
+void NetworkOptionsEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                          const QVariantMap& objectDataBefore,
+                                          const QVariantMap& objectDataCopy)
 {
+    this->m_object = object;
     this->m_poolRef_.clear();
     this->m_objectDataBefore_.clear();
     this->m_objectDataCopy_.clear();
 
-    if (objectType == "pool")
+    if (!object.isNull() && object->GetObjectType() == XenObjectType::Pool)
     {
-        this->m_poolRef_ = objectRef;
+        this->m_poolRef_ = object->OpaqueRef();
         this->m_objectDataBefore_ = objectDataBefore;
         this->m_objectDataCopy_ = objectDataCopy;
-    } else
+    }
+    else if (!object.isNull() && object->GetCache())
     {
-        XenConnection* conn = this->connection();
-        XenCache* cache = conn ? conn->GetCache() : nullptr;
-        if (cache)
+        QSharedPointer<Pool> pool = object->GetCache()->GetPoolOfOne();
+        if (!pool.isNull())
         {
-            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>();
-            if (!pools.isEmpty() && pools.first())
-            {
-                QSharedPointer<Pool> pool = pools.first();
-                this->m_poolRef_ = pool->OpaqueRef();
-                QVariantMap poolData = pool->GetData();
-                this->m_objectDataBefore_ = poolData;
-                this->m_objectDataCopy_ = poolData;
-            }
+            this->m_poolRef_ = pool->OpaqueRef();
+            QVariantMap poolData = pool->GetData();
+            this->m_objectDataBefore_ = poolData;
+            this->m_objectDataCopy_ = poolData;
         }
     }
 

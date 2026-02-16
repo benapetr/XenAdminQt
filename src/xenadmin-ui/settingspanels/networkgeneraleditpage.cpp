@@ -29,6 +29,7 @@
 #include "ui_networkgeneraleditpage.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/bond.h"
 #include "xenlib/xen/pif.h"
 #include "xenlib/xen/host.h"
@@ -86,21 +87,21 @@ QIcon NetworkGeneralEditPage::GetImage() const
     return IconManager::instance().GetIconForNetwork(this->m_objectDataCopy_);
 }
 
-void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
-                                           const QString& objectType,
-                                           const QVariantMap& objectDataBefore,
-                                           const QVariantMap& objectDataCopy)
+void NetworkGeneralEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                          const QVariantMap& objectDataBefore,
+                                          const QVariantMap& objectDataCopy)
 {
+    this->m_object = object;
     this->m_networkRef_.clear();
     this->m_objectDataBefore_.clear();
     this->m_objectDataCopy_.clear();
     this->m_hostRef_.clear();
     this->m_runningVMsWithoutTools_ = false;
 
-    if (objectType != "network")
+    if (object.isNull() || object->GetObjectType() != XenObjectType::Network)
         return;
 
-    this->m_networkRef_ = objectRef;
+    this->m_networkRef_ = object->OpaqueRef();
     this->m_objectDataBefore_ = objectDataBefore;
     this->m_objectDataCopy_ = objectDataCopy;
 

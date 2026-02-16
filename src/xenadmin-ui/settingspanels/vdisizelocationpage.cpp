@@ -75,14 +75,15 @@ QIcon VdiSizeLocationPage::GetImage() const
     return QIcon(":/icons/virtual_storage.png");
 }
 
-void VdiSizeLocationPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void VdiSizeLocationPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectRef);
-    Q_UNUSED(objectType);
+    this->m_object = object;
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
-    this->m_vdi = qSharedPointerDynamicCast<VDI>(this->m_object);
+    this->m_vdi = (!object.isNull() && object->GetObjectType() == XenObjectType::VDI)
+                      ? qSharedPointerDynamicCast<VDI>(object)
+                      : QSharedPointer<VDI>();
     if (!this->m_vdi || !this->m_vdi->IsValid())
         return;
 

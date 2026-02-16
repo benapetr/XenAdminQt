@@ -29,6 +29,7 @@
 #define CUSTOMFIELDSDISPLAYPAGE_H
 
 #include "ieditpage.h"
+#include "xenlib/xen/xenobjecttype.h"
 #include <QVariantMap>
 #include <QMap>
 
@@ -58,10 +59,7 @@ class CustomFieldsDisplayPage : public IEditPage
         QString GetSubText() const override;
         QIcon GetImage() const override;
 
-        void SetXenObjects(const QString& objectRef,
-                           const QString& objectType,
-                           const QVariantMap& objectDataBefore,
-                           const QVariantMap& objectDataCopy) override;
+        void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy) override;
 
         AsyncOperation* SaveSettings() override;
         bool IsValidToSave() const override;
@@ -80,7 +78,8 @@ class CustomFieldsDisplayPage : public IEditPage
 
         Ui::CustomFieldsDisplayPage* ui;
         QString m_objectRef;
-        QString m_objectType;
+        QString m_objectTypeApiName;
+        XenObjectType m_objectType = XenObjectType::Null;
         QVariantMap m_objectDataBefore;
         QVariantMap m_objectDataCopy;
 

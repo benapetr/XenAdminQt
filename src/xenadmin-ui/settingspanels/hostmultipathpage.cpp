@@ -32,6 +32,7 @@
 #include "xenlib/xen/actions/host/editmultipathaction.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xen/xenobject.h"
 #include <QDebug>
 #include <QSharedPointer>
 
@@ -66,14 +67,20 @@ QIcon HostMultipathPage::GetImage() const
     return QIcon(":/icons/storage.png");
 }
 
-void HostMultipathPage::SetXenObjects(const QString& objectRef,
-                                     const QString& objectType,
+void HostMultipathPage::SetXenObject(QSharedPointer<XenObject> object,
                                      const QVariantMap& objectDataBefore,
                                      const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
-    
-    this->m_hostRef = objectRef;
+    this->m_object = object;
+    this->m_hostRef.clear();
+    this->m_objectDataBefore.clear();
+    this->m_objectDataCopy.clear();
+    this->m_originalMultipathEnabled = false;
+
+    if (object.isNull() || object->GetObjectType() != XenObjectType::Host)
+        return;
+
+    this->m_hostRef = object->OpaqueRef();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 

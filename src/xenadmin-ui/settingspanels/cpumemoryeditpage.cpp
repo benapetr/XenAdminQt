@@ -109,22 +109,17 @@ QIcon CpuMemoryEditPage::GetImage() const
     return QIcon(":/icons/cpu_16.png");
 }
 
-void CpuMemoryEditPage::SetXenObjects(const QString& objectRef,
-                                      const QString& objectType,
-                                      const QVariantMap& objectDataBefore,
-                                      const QVariantMap& objectDataCopy)
+void CpuMemoryEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    this->m_vmRef = objectRef;
+    this->m_object = object;
+    this->m_vmRef = object.isNull() ? QString() : object->OpaqueRef();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
-    if (this->connection() && objectType.toLower() == "vm")
-    {
-        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
-    } else
-    {
+    if (!object.isNull() && object->GetObjectType() == XenObjectType::VM)
+        this->m_vm = qSharedPointerDynamicCast<VM>(object);
+    else
         this->m_vm.reset();
-    }
 
     this->repopulate();
     emit populated();

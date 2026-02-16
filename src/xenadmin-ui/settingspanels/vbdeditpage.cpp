@@ -93,10 +93,9 @@ QIcon VBDEditPage::GetImage() const
     return QIcon(":/tree-icons/vm_generic.png");
 }
 
-void VBDEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void VBDEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectRef);
-    Q_UNUSED(objectType);
+    this->m_object = object;
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 

@@ -39,6 +39,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
 #include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
@@ -103,11 +104,13 @@ QIcon VMHAEditPage::GetImage() const
     return QIcon(":/icons/reboot_vm_16.png");
 }
 
-void VMHAEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void VMHAEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
-    Q_UNUSED(objectType);
+    this->m_object = object;
+    if (object.isNull() || object->GetObjectType() != XenObjectType::VM)
+        return;
 
-    this->m_vmRef = objectRef;
+    this->m_vmRef = object->OpaqueRef();
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 

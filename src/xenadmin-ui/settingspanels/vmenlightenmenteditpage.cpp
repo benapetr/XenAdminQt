@@ -57,21 +57,22 @@ QIcon VMEnlightenmentEditPage::GetImage() const
     return QIcon(":/icons/dc_16.png");
 }
 
-void VMEnlightenmentEditPage::SetXenObjects(const QString& objectRef,
-                                            const QString& objectType,
-                                            const QVariantMap& objectDataBefore,
-                                            const QVariantMap& objectDataCopy)
+void VMEnlightenmentEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                           const QVariantMap& objectDataBefore,
+                                           const QVariantMap& objectDataCopy)
 {
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
-    this->m_vmRef = objectRef;
+    this->m_object = object;
+    this->m_vmRef.clear();
     this->m_vm.clear();
 
-    if (objectType.toLower() == "vm" && this->connection() && this->connection()->GetCache())
-    {
-        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
-    }
+    if (!object.isNull() && object->GetObjectType() == XenObjectType::VM)
+        this->m_vm = qSharedPointerDynamicCast<VM>(object);
+
+    if (!this->m_vm.isNull())
+        this->m_vmRef = this->m_vm->OpaqueRef();
 
     this->m_originalEnlightened = this->m_vm && this->m_vm->IsEnlightened();
     this->ui->checkBoxEnlightenment->setChecked(this->m_originalEnlightened);

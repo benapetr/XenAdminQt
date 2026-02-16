@@ -26,10 +26,3 @@
  */
 
 #include "ieditpage.h"
-#include "xenlib/xen/xenobject.h"
-
-void IEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap &objectDataBefore, const QVariantMap &objectDataCopy)
-{
-    this->m_object = object;
-    this->SetXenObjects(object->OpaqueRef(), object->GetObjectTypeName(), objectDataBefore, objectDataCopy);
-}

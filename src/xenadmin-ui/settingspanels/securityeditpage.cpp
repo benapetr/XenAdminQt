@@ -62,15 +62,33 @@ QIcon SecurityEditPage::GetImage() const
     return QIcon(":/icons/padlock.png");
 }
 
-void SecurityEditPage::SetXenObjects(const QString& objectRef,
-                                     const QString& objectType,
-                                     const QVariantMap& objectDataBefore,
-                                     const QVariantMap& objectDataCopy)
+void SecurityEditPage::SetXenObject(QSharedPointer<XenObject> object,
+                                    const QVariantMap& objectDataBefore,
+                                    const QVariantMap& objectDataCopy)
 {
-    this->m_poolRef_ = objectRef;
-    this->m_objectDataBefore_ = objectDataBefore;
-    this->m_objectDataCopy_ = objectDataCopy;
-    this->m_isHost_ = (objectType == "host");
+    this->m_object = object;
+    this->m_poolRef_.clear();
+    this->m_objectDataBefore_.clear();
+    this->m_objectDataCopy_.clear();
+    this->m_isHost_ = (!object.isNull() && object->GetObjectType() == XenObjectType::Host);
+
+    if (!object.isNull() && object->GetObjectType() == XenObjectType::Pool)
+    {
+        this->m_poolRef_ = object->OpaqueRef();
+        this->m_objectDataBefore_ = objectDataBefore;
+        this->m_objectDataCopy_ = objectDataCopy;
+    }
+    else if (!object.isNull() && object->GetCache())
+    {
+        QSharedPointer<Pool> pool = object->GetCache()->GetPoolOfOne();
+        if (!pool.isNull())
+        {
+            this->m_poolRef_ = pool->OpaqueRef();
+            QVariantMap poolData = pool->GetData();
+            this->m_objectDataBefore_ = poolData;
+            this->m_objectDataCopy_ = poolData;
+        }
+    }
 
     // Adjust text for host vs pool
     if (this->m_isHost_)
@@ -85,7 +103,7 @@ void SecurityEditPage::SetXenObjects(const QString& objectRef,
 
     // Read ssl_legacy from pool other_config
     // In XenServer, ssl_legacy() checks: other_config["ssl_legacy"] == "true"
-    QVariantMap otherConfig = objectDataCopy.value("other_config").toMap();
+    QVariantMap otherConfig = this->m_objectDataCopy_.value("other_config").toMap();
     bool sslLegacy = (otherConfig.value("ssl_legacy").toString() == "true");
 
     if (sslLegacy)
