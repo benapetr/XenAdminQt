@@ -696,6 +696,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             record["hostname"] = hostname;
             record["address"] = hostname;
             record["enabled"] = false;
+            record["is_disconnected"] = true;
 
             const QVariantMap existing = cache->ResolveObjectData(XenObjectType::Host, hostRef);
             if (existing.isEmpty() || existing != record)

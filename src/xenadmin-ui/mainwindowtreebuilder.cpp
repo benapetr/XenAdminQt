@@ -362,10 +362,37 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
     else
     {
         // This is a group header node
-        QString name = grouping ? grouping->getGroupName(group) : QString();
-        QIcon icon = grouping ? grouping->getGroupIcon(group) : QIcon();
-        GroupingTag* tag = new GroupingTag(grouping, this->getGroupingTagFromNode(this->parent_), group);
-        node = this->addNode(name, icon, false, QVariant::fromValue(tag));
+        if (this->parent_)
+        {
+            for (int i = 0; i < this->parent_->childCount(); ++i)
+            {
+                QTreeWidgetItem* existingNode = this->parent_->child(i);
+                if (!existingNode)
+                    continue;
+
+                const QVariant existingTagVar = existingNode->data(0, Qt::UserRole + 3);
+                if (!existingTagVar.canConvert<GroupingTag*>())
+                    continue;
+
+                GroupingTag* existingTag = existingTagVar.value<GroupingTag*>();
+                if (!existingTag || !existingTag->getGrouping() || !grouping)
+                    continue;
+
+                if (existingTag->getGrouping()->equals(grouping) && existingTag->getGroup() == group)
+                {
+                    node = existingNode;
+                    break;
+                }
+            }
+        }
+
+        if (!node)
+        {
+            QString name = grouping ? grouping->getGroupName(group) : QString();
+            QIcon icon = grouping ? grouping->getGroupIcon(group) : QIcon();
+            GroupingTag* tag = new GroupingTag(grouping, this->getGroupingTagFromNode(this->parent_), group);
+            node = this->addNode(name, icon, false, QVariant::fromValue(tag));
+        }
     }
     
     if (node)

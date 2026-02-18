@@ -39,6 +39,8 @@
 // Base Grouping class
 //==============================================================================
 
+//! TODO move all icon stuff to UI layer our of library
+
 Grouping::Grouping(Grouping* subgrouping) : m_subgrouping(subgrouping)
 {
 }
@@ -136,19 +138,19 @@ QIcon TypeGrouping::getGroupIcon(const QVariant& group) const
     QString objectType = group.toString();
 
     if (objectType == "vm")
-        return QIcon(":/resources/vm_16.png");
+        return QIcon(":/tree-icons/vm_generic.png");
     else if (objectType == "host")
-        return QIcon(":/resources/server_16.png");
+        return QIcon(":/tree-icons/host.png");
     else if (objectType == "disconnected_host")
         return QIcon(":/tree-icons/host_disconnected.png");
     else if (objectType == "sr")
-        return QIcon(":/resources/storage_16.png");
+        return QIcon(":/tree-icons/storage.png");
     else if (objectType == "network")
-        return QIcon(":/resources/network_16.png");
+        return QIcon(":/tree-icons/network.png");
     else if (objectType == "pool")
-        return QIcon(":/resources/pool_16.png");
+        return QIcon(":/tree-icons/pool.png");
     else if (objectType == "template")
-        return QIcon(":/resources/template_16.png");
+        return QIcon(":/tree-icons/template.png");
     else
         return Grouping::getGroupIcon(group);
 }
@@ -170,9 +172,8 @@ QVariant TypeGrouping::getGroup(const QVariantMap& objectData, const QString& ob
 
     if (objectType == "host")
     {
-        // TODO integrate IsConnected here
-        //if (objectData.value("is_disconnected").toBool())
-        //    return "disconnected_host";
+        if (objectData.value("is_disconnected").toBool())
+            return "disconnected_host";
         return "host";
     }
 
