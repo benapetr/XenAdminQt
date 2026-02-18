@@ -597,6 +597,7 @@ void AsyncOperation::RunSync(XenAPI::Session* session)
     this->setState(Running);
     this->m_startTime = QDateTime::currentDateTime();
     locker.unlock();
+    bool lockerIsLocked = false;  // Track lock state manually for Qt5 compatibility
 
     emit this->started();
 
@@ -617,6 +618,7 @@ void AsyncOperation::RunSync(XenAPI::Session* session)
         this->run();
 
         locker.relock();
+        lockerIsLocked = true;
         if (this->m_state == Running)
         {
             this->setState(Completed);
@@ -627,12 +629,18 @@ void AsyncOperation::RunSync(XenAPI::Session* session)
         this->setError(QString::fromLocal8Bit(e.what()));
         this->setState(Failed);
         this->auditLogFailure(QString::fromLocal8Bit(e.what()));
-        if (!locker.isLocked())
+        if (!lockerIsLocked)
+        {
             locker.relock();
+            lockerIsLocked = true;
+        }
     }
 
-    if (!locker.isLocked())
+    if (!lockerIsLocked)
+    {
         locker.relock();
+        lockerIsLocked = true;
+    }
     this->m_endTime = QDateTime::currentDateTime();
     locker.unlock();
 
