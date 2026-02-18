@@ -292,25 +292,9 @@ MainWindowTreeNodeGroupAcceptor::MainWindowTreeNodeGroupAcceptor(QObject* highli
 
 void MainWindowTreeNodeGroupAcceptor::FinishedInThisGroup(bool /*defaultExpand*/)
 {
-    if (!this->parent_ || this->parent_->childCount() < 2)
-        return;
-
-    // Only sort within group headers to preserve grouping order at higher levels.
-    const QVariant groupTag = this->parent_->data(0, Qt::UserRole + 3);
-    if (!groupTag.isValid() || !groupTag.canConvert<GroupingTag*>())
-        return;
-
-    QCollator collator;
-    collator.setNumericMode(true);
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-
-    QList<QTreeWidgetItem*> children = this->parent_->takeChildren();
-    std::stable_sort(children.begin(), children.end(),
-                     [&collator](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                         return collator.compare(a->text(0), b->text(0)) < 0;
-                     });
-    for (QTreeWidgetItem* child : children)
-        this->parent_->addChild(child);
+    // Intentionally no UI-level sorting.
+    // Keep insertion order from XenSearch grouping pipeline to match C# behavior,
+    // including type-aware ordering within infrastructure groups.
 }
 
 IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
