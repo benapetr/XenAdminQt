@@ -193,7 +193,7 @@ AsyncOperation* GeneralEditPage::SaveSettings()
     // 2. Return AsyncAction for complex operations
 
     // Step 1: Apply simple changes to objectDataCopy
-    // These will be persisted by VerticallyTabbedDialog.applySimpleChanges()
+    // These will be persisted by SaveChangesAction in the dialog pipeline.
 
     if (this->nameChanged())
     {

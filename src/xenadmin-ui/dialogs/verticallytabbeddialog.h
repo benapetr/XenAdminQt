@@ -62,7 +62,7 @@ class XenCache;
  * 3. Object cloning - creates objectDataCopy for editing without affecting cache
  * 4. AsyncOperation-based save:
  *    - Collects actions from pages via saveSettings()
- *    - Applies simple property changes first
+ *    - Inserts SaveChangesAction first (C# SaveChangesAction parity)
  *    - Executes complex actions via MultipleOperation
  * 5. Validation - checks all pages before allowing save
  * 6. Change tracking - only saves if pages have changed
@@ -148,7 +148,6 @@ class VerticallyTabbedDialog : public QDialog
         void loadObjectData();
         void refreshPagesFromCurrentData();
         QList<AsyncOperation*> collectActions();
-        void applySimpleChanges();
         bool performSave(bool closeOnSuccess);
 
         QSharedPointer<XenObject> m_object;

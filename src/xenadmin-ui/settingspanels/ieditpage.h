@@ -292,7 +292,7 @@ class IEditPage : public QWidget
          * @return QVariantMap with modifications made by the page
          *
          * This allows the dialog to retrieve changes made by the page to its local
-         * m_objectDataCopy so they can be applied via applySimpleChanges().
+         * m_objectDataCopy so they can be applied by SaveChangesAction.
          *
          * Called by VerticallyTabbedDialog::collectActions() after saveSettings().
          *

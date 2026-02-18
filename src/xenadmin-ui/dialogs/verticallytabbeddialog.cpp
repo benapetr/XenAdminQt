@@ -29,22 +29,12 @@
 #include "verticallytabbeddialog.h"
 #include "ui_verticallytabbeddialog.h"
 #include "actionprogressdialog.h"
-#include "../mainwindow.h"
+#include "xenlib/xen/actions/general/savechangesaction.h"
 #include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/session.h"
-#include "xenlib/xen/xenapi/xenapi_VM.h"
-#include "xenlib/xen/xenapi/xenapi_Host.h"
-#include "xenlib/xen/xenapi/xenapi_Pool.h"
-#include "xenlib/xen/xenapi/xenapi_SR.h"
-#include "xenlib/xen/xenapi/xenapi_Network.h"
-#include "xenlib/xen/xenapi/xenapi_VDI.h"
-#include "xenlib/xen/jsonrpcclient.h"
 #include "xenlib/xencache.h"
-#include <QtGlobal>
 #include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/asyncoperation.h"
 #include "xenlib/xen/xenobject.h"
-#include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
@@ -234,25 +224,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     // C# equivalent: List<AsyncAction> actions = SaveSettings();
     QList<AsyncOperation*> actions = this->collectActions();
 
-    if (actions.isEmpty())
-    {
-        // No complex actions, just simple property changes
-        // Apply them and optionally close
-        this->applySimpleChanges();
-        
-        // After successful save, keep new baseline and wait for cache sync event.
-        if (!closeOnSuccess)
-        {
-            this->m_objectDataBefore = this->m_objectDataCopy;
-            this->m_waitingForCacheSync = true;
-            for (IEditPage* page : this->m_pages)
-                this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
-        }
-        
-        return true;
-    }
-
-    // Step 4: Create OperationProgressDialog to own the MultipleOperation
+    // Step 4: Insert SaveChangesAction first (C# parity)
     // C# code:
     //   actions.Insert(index, new SaveChangesAction(_xenObjectCopy, true, _xenObjectBefore));
     //   _action = new MultipleAction(connection, title, desc, completedDesc, actions);
@@ -262,8 +234,13 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     //       dialog.ShowDialog(this);
     //   }
 
-    // First apply simple changes (equivalent to SaveChangesAction)
-    this->applySimpleChanges();
+    AsyncOperation* saveChangesAction = new SaveChangesAction(this->m_object,
+                                                              this->m_objectDataBefore,
+                                                              this->m_objectDataCopy,
+                                                              true,
+                                                              nullptr);
+    saveChangesAction->setParent(nullptr);
+    actions.prepend(saveChangesAction);
 
     // Create progress dialog - it will own the MultipleOperation and all sub-actions
     QString objName = this->m_object->GetName();
@@ -298,8 +275,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             
             if (closeOnSuccess)
             {
-                // OK button - close the properties dialog
-                QDialog::accept();
+                // OK path closes in VerticallyTabbedDialog::accept() after performSave() returns true.
             }
             else
             {
@@ -403,7 +379,7 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
         AsyncOperation* action = page->SaveSettings();
         
         // Copy the modified data back from the page to the dialog's copy
-        // This ensures applySimpleChanges() sees the modifications
+        // so SaveChangesAction sees the latest simple-field state.
         QVariantMap pageData = page->GetModifiedObjectData();
         
         // Merge simple fields that pages modify directly
@@ -462,374 +438,6 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
 
     return actions;
 }
-
-void VerticallyTabbedDialog::applySimpleChanges()
-{
-    if (!this->m_object || !this->m_object->GetConnection())
-        return;
-
-    // Apply simple property changes that pages made directly to objectDataCopy
-    // C# equivalent: SaveChangesAction.Run() which calls xenObject.SaveChanges(Session, beforeObject)
-    
-    // Pages like GeneralEditPage modify objectDataCopy directly for simple fields:
-    // - name_label
-    // - name_description  
-    // - other_config entries (like iscsi_iqn)
-    //
-    // This method detects those changes and makes synchronous XenAPI calls to apply them.
-    // Complex operations (folder, tags, etc.) are handled by dedicated Actions.
-    
-
-    XenAPI::Session* session = this->m_object->GetConnection()->GetSession();
-
-    if (!session || !session->IsLoggedIn())
-    {
-        qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No session";
-        return;
-    }
-
-    bool hasChanges = false;
-    auto reportJsonError = [](const QString& context) -> bool
-    {
-        const QString error = Xen::JsonRpcClient::lastError();
-        if (error.isEmpty())
-            return true;
-
-        qWarning() << "VerticallyTabbedDialog::applySimpleChanges:" << context << "failed:" << error;
-        if (MainWindow::instance())
-            MainWindow::instance()->ShowStatusMessage(error, 5000);
-        return false;
-    };
-    
-    // 1. Check if name_label changed
-    QString oldName = this->m_objectDataBefore.value("name_label").toString();
-    QString newName = this->m_objectDataCopy.value("name_label").toString();
-    if (oldName != newName && !newName.isEmpty())
-    {
-        qDebug() << "VerticallyTabbedDialog: Applying name_label change:" << oldName << "->" << newName;
-        
-        bool success = false;
-        if (this->m_objectType == XenObjectType::VM)
-        {
-            try
-            {
-                XenAPI::VM::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("VM.set_name_label");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VM name_label:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Host)
-        {
-            try
-            {
-                XenAPI::Host::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("Host.set_name_label");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Host name_label:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Pool)
-        {
-            try
-            {
-                XenAPI::Pool::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("Pool.set_name_label");
-            }
-            catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Pool name_label:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::SR)
-        {
-            try
-            {
-                XenAPI::SR::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("SR.set_name_label");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set SR name_label:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Network)
-        {
-            try
-            {
-                XenAPI::Network::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("Network.set_name_label");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Network name_label:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::VDI)
-        {
-            try
-            {
-                XenAPI::VDI::set_name_label(session, this->m_objectRef, newName);
-                success = reportJsonError("VDI.set_name_label");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VDI name_label:" << ex.what();
-            }
-        }
-        
-        if (success)
-            hasChanges = true;
-        else
-            qWarning() << "Failed to set name_label for" << XenObject::TypeToString(this->m_objectType);
-    }
-    
-    // 2. Check if name_description changed
-    QString oldDesc = this->m_objectDataBefore.value("name_description").toString();
-    QString newDesc = this->m_objectDataCopy.value("name_description").toString();
-    if (oldDesc != newDesc)
-    {
-        qDebug() << "VerticallyTabbedDialog: Applying name_description change";
-        
-        bool success = false;
-        if (this->m_objectType == XenObjectType::VM)
-        {
-            try
-            {
-                XenAPI::VM::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("VM.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VM name_description:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Host)
-        {
-            try
-            {
-                XenAPI::Host::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("Host.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Host name_description:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Pool)
-        {
-            try
-            {
-                XenAPI::Pool::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("Pool.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Pool name_description:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::SR)
-        {
-            try
-            {
-                XenAPI::SR::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("SR.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set SR name_description:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::Network)
-        {
-            try
-            {
-                XenAPI::Network::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("Network.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Network name_description:" << ex.what();
-            }
-        } else if (this->m_objectType == XenObjectType::VDI)
-        {
-            try
-            {
-                XenAPI::VDI::set_name_description(session, this->m_objectRef, newDesc);
-                success = reportJsonError("VDI.set_name_description");
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VDI name_description:" << ex.what();
-            }
-        }
-        
-        if (success)
-        {
-            hasChanges = true;
-        } else
-        {
-            qWarning() << "Failed to set name_description for" << XenObject::TypeToString(this->m_objectType);
-        }
-    }
-    
-    // 3. Check if other_config changed (for things like iscsi_iqn)
-    QVariantMap oldOtherConfig = this->m_objectDataBefore.value("other_config").toMap();
-    QVariantMap newOtherConfig = this->m_objectDataCopy.value("other_config").toMap();
-    QVariantMap oldLogging = this->m_objectDataBefore.value("logging").toMap();
-    QVariantMap newLogging = this->m_objectDataCopy.value("logging").toMap();
-
-    if (this->m_objectType == XenObjectType::VM)
-    {
-        if (oldOtherConfig != newOtherConfig)
-        {
-            qDebug() << "VerticallyTabbedDialog: Applying VM other_config changes";
-            try
-            {
-                XenAPI::VM::set_other_config(session, this->m_objectRef, newOtherConfig);
-                hasChanges = true;
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VM other_config:" << ex.what();
-            }
-        }
-
-        QVariantMap oldVcpusParams = this->m_objectDataBefore.value("VCPUs_params").toMap();
-        QVariantMap newVcpusParams = this->m_objectDataCopy.value("VCPUs_params").toMap();
-        if (oldVcpusParams != newVcpusParams)
-        {
-            qDebug() << "VerticallyTabbedDialog: Applying VM VCPUs_params changes";
-            try
-            {
-                XenAPI::VM::set_VCPUs_params(session, this->m_objectRef, newVcpusParams);
-                hasChanges = true;
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VM VCPUs_params:" << ex.what();
-            }
-        }
-
-        QVariantMap oldPlatform = this->m_objectDataBefore.value("platform").toMap();
-        QVariantMap newPlatform = this->m_objectDataCopy.value("platform").toMap();
-        if (oldPlatform != newPlatform)
-        {
-            qDebug() << "VerticallyTabbedDialog: Applying VM platform changes";
-            try
-            {
-                XenAPI::VM::set_platform(session, this->m_objectRef, newPlatform);
-                hasChanges = true;
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set VM platform:" << ex.what();
-            }
-        }
-    } else if (this->m_objectType == XenObjectType::Network)
-    {
-        if (oldOtherConfig != newOtherConfig)
-        {
-            qDebug() << "VerticallyTabbedDialog: Applying Network other_config changes";
-            try
-            {
-                XenAPI::Network::set_other_config(session, this->m_objectRef, newOtherConfig);
-                hasChanges = true;
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set Network other_config:" << ex.what();
-            }
-        }
-    }
-
-    // 4. Check if logging changed (host only)
-    if (this->m_objectType == XenObjectType::Host && oldLogging != newLogging)
-    {
-        qDebug() << "VerticallyTabbedDialog: Applying Host logging changes";
-        try
-        {
-            XenAPI::Host::set_logging(session, this->m_objectRef, newLogging);
-            if (reportJsonError("Host.set_logging"))
-                hasChanges = true;
-        } catch (const std::exception& ex)
-        {
-            qWarning() << "Failed to set Host logging:" << ex.what();
-        }
-    }
-
-    // 4. Check if HVM_shadow_multiplier changed (VM only)
-    if (this->m_objectType == XenObjectType::VM && this->m_objectDataCopy.contains("HVM_shadow_multiplier"))
-    {
-        double oldMultiplier = this->m_objectDataBefore.value("HVM_shadow_multiplier").toDouble();
-        double newMultiplier = this->m_objectDataCopy.value("HVM_shadow_multiplier").toDouble();
-        if (qAbs(oldMultiplier - newMultiplier) > 0.0001)
-        {
-            qDebug() << "VerticallyTabbedDialog: Applying HVM_shadow_multiplier change:"
-                     << oldMultiplier << "->" << newMultiplier;
-            try
-            {
-                XenAPI::VM::set_HVM_shadow_multiplier(session, this->m_objectRef, newMultiplier);
-                hasChanges = true;
-            } catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to set HVM_shadow_multiplier:" << ex.what();
-            }
-        }
-    }
-    else
-    {
-        // Find keys that changed - store keys in QList first to avoid dangling iterators
-        QList<QString> oldKeys = oldOtherConfig.keys();
-        QList<QString> newKeys = newOtherConfig.keys();
-        QSet<QString> allKeys(oldKeys.begin(), oldKeys.end());
-        allKeys.unite(QSet<QString>(newKeys.begin(), newKeys.end()));
-
-        for (const QString& key : allKeys)
-        {
-            QString oldValue = oldOtherConfig.value(key).toString();
-            QString newValue = newOtherConfig.value(key).toString();
-
-            if (oldValue != newValue)
-            {
-                qDebug() << "VerticallyTabbedDialog: Applying other_config change:" << key
-                         << ":" << oldValue << "->" << newValue;
-
-                bool success = false;
-
-                if (newValue.isEmpty() && oldOtherConfig.contains(key))
-                {
-                    // Remove the key - would need remove_from_other_config API
-                    // For now, just skip removal (set to empty string instead)
-                    qWarning() << "Skipping removal of other_config key" << key
-                               << "(remove_from_other_config not implemented)";
-                } else
-                {
-                    // Add or update the key
-                    if (this->m_objectType == XenObjectType::Host)
-                    {
-                        QVariantMap hostData = this->m_objectDataCopy;
-                        QVariantMap otherConfig = hostData.value("other_config").toMap();
-                        if (newValue.isEmpty())
-                            otherConfig.remove(key);
-                        else
-                            otherConfig[key] = newValue;
-
-                        try
-                        {
-                            XenAPI::Host::set_other_config(session, this->m_objectRef, otherConfig);
-                            success = true;
-                        } catch (const std::exception& ex)
-                        {
-                            qWarning() << "Failed to set Host other_config:" << ex.what();
-                        }
-                    }
-                    // Pool, SR, Network also have other_config but we haven't implemented helpers yet
-                    else
-                    {
-                        qWarning() << "other_config updates not implemented for"
-                                   << XenObject::TypeToString(this->m_objectType);
-                    }
-
-                    if (success)
-                    {
-                        hasChanges = true;
-                    }
-                }
-            }
-        }
-    }
-    
-    if (hasChanges)
-    {
-        qDebug() << "VerticallyTabbedDialog::applySimpleChanges: Changes applied successfully";
-    } else
-    {
-        qDebug() << "VerticallyTabbedDialog::applySimpleChanges: No simple changes detected";
-    }
-}
-
-
 void VerticallyTabbedDialog::onVerticalTabsCurrentChanged(int index)
 {
     if (index < 0 || index >= this->m_pages.size())
