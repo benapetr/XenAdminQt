@@ -339,8 +339,8 @@ namespace XenSearch
             //     }
             // }
 
-            // Natural string comparison
-            return QString::compare(one.toString(), other.toString(), Qt::CaseInsensitive);
+            // Natural string comparison for non-Xen objects.
+            return Misc::NaturalCompare(one.toString(), other.toString());
         }
 
         if (!oneIsObject)
@@ -373,7 +373,7 @@ namespace XenSearch
         // Compare by name
         QString oneName = oneData.value("name_label").toString();
         QString otherName = otherData.value("name_label").toString();
-        return QString::compare(oneName, otherName, Qt::CaseInsensitive);
+        return Misc::NaturalCompare(oneName, otherName);
     }
 
     int Group::CompareByType(const QVariantMap& oneData, const QVariantMap& otherData)
@@ -396,10 +396,11 @@ namespace XenSearch
             return "30";
         if (objectType == "vm")
         {
-            // Check if real VM (not template, not snapshot)
+            // C# IsRealVm parity: non-template, non-snapshot, non-control-domain.
             bool isTemplate = objectData.value("is_a_template").toBool();
             bool isSnapshot = objectData.value("is_a_snapshot").toBool();
-            if (!isTemplate && !isSnapshot)
+            bool isControlDomain = objectData.value("is_control_domain").toBool();
+            if (!isTemplate && !isSnapshot && !isControlDomain)
                 return "40";
         }
         return objectType; // Other types sorted alphabetically

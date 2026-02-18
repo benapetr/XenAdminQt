@@ -48,6 +48,60 @@ namespace XenSearch
                 return objectData.value("uuid");
             case PropertyNames::tags:
                 return objectData.value("tags");
+            case PropertyNames::host:
+                {
+                    QVariantList hosts;
+                    auto appendHost = [&hosts](const QVariant& value) {
+                        const QString ref = value.toString();
+                        if (!ref.isEmpty() && ref != "OpaqueRef:NULL" && !hosts.contains(ref))
+                            hosts.append(ref);
+                    };
+
+                    // Host object -> self
+                    appendHost(objectData.value("ref"));
+                    appendHost(objectData.value("opaque_ref"));
+                    appendHost(objectData.value("opaqueRef"));
+
+                    // VM/home-like relationships
+                    appendHost(objectData.value("resident_on"));
+                    appendHost(objectData.value("affinity"));
+                    appendHost(objectData.value("home"));
+
+                    // Generic host field (string or list)
+                    const QVariant hostField = objectData.value("host");
+                    if (hostField.canConvert<QVariantList>())
+                    {
+                        const QVariantList hostList = hostField.toList();
+                        for (const QVariant& host : hostList)
+                            appendHost(host);
+                    } else
+                    {
+                        appendHost(hostField);
+                    }
+
+                    return hosts;
+                }
+            case PropertyNames::pool:
+                {
+                    // Pool object -> self
+                    QString poolRef = objectData.value("pool").toString();
+                    if (!poolRef.isEmpty() && poolRef != "OpaqueRef:NULL")
+                        return poolRef;
+
+                    poolRef = objectData.value("ref").toString();
+                    if (!poolRef.isEmpty() && poolRef.startsWith("OpaqueRef:"))
+                        return poolRef;
+
+                    poolRef = objectData.value("opaque_ref").toString();
+                    if (!poolRef.isEmpty() && poolRef.startsWith("OpaqueRef:"))
+                        return poolRef;
+
+                    poolRef = objectData.value("opaqueRef").toString();
+                    if (!poolRef.isEmpty() && poolRef.startsWith("OpaqueRef:"))
+                        return poolRef;
+
+                    return QVariant();
+                }
             case PropertyNames::folder:
                 return objectData.value("other_config").toMap().value("folder");
             case PropertyNames::folders:
@@ -136,6 +190,8 @@ namespace XenSearch
             case PropertyNames::description: return "description";
             case PropertyNames::uuid: return "uuid";
             case PropertyNames::tags: return "tags";
+            case PropertyNames::host: return "host";
+            case PropertyNames::pool: return "pool";
             case PropertyNames::folder: return "folder";
             case PropertyNames::folders: return "folders";
             case PropertyNames::type: return "type";

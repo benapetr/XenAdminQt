@@ -26,6 +26,9 @@
  */
 
 // search.cpp - Implementation of Search
+#include <QDebug>
+#include <QMetaType>
+#include <algorithm>
 #include "search.h"
 #include "queryscope.h"
 #include "queryfilter.h"
@@ -40,8 +43,6 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/xenobject.h"
-#include <QDebug>
-#include <QMetaType>
 
 using namespace XenSearch;
 
@@ -249,6 +250,132 @@ static Search* buildOverviewSearch(QueryScope* scopeToUse)
     return new Search(query, poolGrouping, "Overview", "", false);
 }
 
+static QString getObjectUuid(XenConnection* conn, const QString& objType, const QString& objRef)
+{
+    if (!conn || !conn->GetCache() || objRef.isEmpty())
+        return QString();
+
+    QSharedPointer<XenObject> object = conn->GetCache()->ResolveObject(objType, objRef);
+    if (!object)
+        return QString();
+
+    return object->OpaqueRef();
+}
+
+static QString getPoolUuid(XenConnection* conn)
+{
+    if (!conn || !conn->GetCache())
+        return QString();
+
+    const QSharedPointer<Pool> pool = conn->GetCache()->GetPoolOfOne();
+    if (!pool || !pool->IsValid())
+        return QString();
+
+    return pool->GetUUID();
+}
+
+static QString getHostAncestorRef(XenConnection* conn, const QString& objType, const QString& objRef)
+{
+    if (!conn || !conn->GetCache() || objRef.isEmpty())
+        return QString();
+
+    XenCache* cache = conn->GetCache();
+    const QString type = objType.toLower();
+
+    if (type == "host")
+        return objRef;
+
+    if (type == "vm")
+    {
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, objRef);
+        if (vm)
+            return vm->GetHomeRef();
+    }
+
+    if (type == "sr")
+    {
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, objRef);
+        if (sr)
+            return sr->HomeRef();
+    }
+
+    if (type == "vdi")
+    {
+        const QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, objRef);
+        const QString srRef = vdiData.value("SR").toString();
+        if (!srRef.isEmpty() && srRef != XENOBJECT_NULL)
+        {
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, srRef);
+            if (sr)
+                return sr->HomeRef();
+        }
+    }
+
+    if (type == "network")
+    {
+        const QVariantMap networkData = cache->ResolveObjectData(XenObjectType::Network, objRef);
+        const QVariantList pifRefs = networkData.value("PIFs").toList();
+        for (const QVariant& pifRefVar : pifRefs)
+        {
+            const QString pifRef = pifRefVar.toString();
+            if (pifRef.isEmpty() || pifRef == XENOBJECT_NULL)
+                continue;
+
+            const QVariantMap pifData = cache->ResolveObjectData(XenObjectType::PIF, pifRef);
+            const QString hostRef = pifData.value("host").toString();
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+                return hostRef;
+        }
+    }
+
+    // Standalone-host fallback: when there is exactly one host, use it.
+    const QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
+    if (hostRefs.size() == 1)
+        return hostRefs.first();
+
+    return QString();
+}
+
+static bool isRealVmData(const QVariantMap& data)
+{
+    const bool isTemplate = data.value("is_a_template").toBool();
+    const bool isSnapshot = data.value("is_a_snapshot").toBool();
+    const bool isControlDomain = data.value("is_control_domain").toBool();
+    return !isTemplate && !isSnapshot && !isControlDomain;
+}
+
+static QString typeSortKey(const QString& objectType, const QVariantMap& data)
+{
+    const QString type = objectType.toLower();
+    if (type == "folder")
+        return "10";
+    if (type == "pool")
+        return "20";
+    if (type == "host")
+        return "30";
+    if (type == "vm" && isRealVmData(data))
+        return "40";
+    return type;
+}
+
+static int compareByTypeAndName(const QString& typeA, const QVariantMap& dataA, const QString& refA,
+                                const QString& typeB, const QVariantMap& dataB, const QString& refB)
+{
+    const QString keyA = typeSortKey(typeA, dataA);
+    const QString keyB = typeSortKey(typeB, dataB);
+    const int typeCmp = keyA.compare(keyB);
+    if (typeCmp != 0)
+        return typeCmp;
+
+    const QString nameA = dataA.value("name_label").toString();
+    const QString nameB = dataB.value("name_label").toString();
+    const int nameCmp = Misc::NaturalCompare(nameA, nameB);
+    if (nameCmp != 0)
+        return nameCmp;
+
+    return Misc::NaturalCompare(refA, refB);
+}
+
 Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection* conn, QueryScope* scope)
 {
     if (!scope)
@@ -265,14 +392,16 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
         if (objType == "host")
         {
             Grouping* hostGrouping = new HostGrouping(nullptr);
-            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, StringPropertyQuery::MatchType::ExactMatch);
-            QueryFilter* hostQuery = uuidQuery; // TODO: Implement RecursiveXMOListPropertyQuery
+            const QString resolvedHostUuid = getObjectUuid(conn, "host", objRef);
+            const QString hostUuid = resolvedHostUuid.isEmpty() ? objRef : resolvedHostUuid;
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, hostUuid, StringPropertyQuery::MatchType::ExactMatch);
+            QueryFilter* hostQuery = new RecursiveXMOListPropertyQuery(PropertyNames::host, uuidQuery);
 
             Query* query = new Query(scope, hostQuery);
             QString nameLabel;
             if (conn && conn->GetCache())
             {
-                QSharedPointer<Host> host = conn->GetCache()->ResolveObject<Host>(objRef);
+                QSharedPointer<Host> host = conn->GetCache()->ResolveObject<Host>(XenObjectType::Host, objRef);
                 if (host && host->IsValid())
                     nameLabel = host->GetName();
             }
@@ -283,8 +412,10 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             Grouping* hostGrouping = new HostGrouping(nullptr);
             Grouping* poolGrouping = new PoolGrouping(hostGrouping);
 
-            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, StringPropertyQuery::MatchType::ExactMatch);
-            QueryFilter* poolQuery = uuidQuery; // TODO: Implement RecursiveXMOPropertyQuery
+            const QString resolvedPoolUuid = getObjectUuid(conn, "pool", objRef);
+            const QString poolUuid = resolvedPoolUuid.isEmpty() ? objRef : resolvedPoolUuid;
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, poolUuid, StringPropertyQuery::MatchType::ExactMatch);
+            QueryFilter* poolQuery = new RecursiveXMOPropertyQuery(PropertyNames::pool, uuidQuery);
 
             Query* query = new Query(scope, poolQuery);
             QString nameLabel;
@@ -302,8 +433,49 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
         }
     } else
     {
-        // TODO: Implement multi-object search with proper grouping
-        return buildOverviewSearch(scope);
+        bool containsHost = false;
+        bool containsPool = false;
+        QList<QueryFilter*> queryFilters;
+
+        const QString poolUuid = getPoolUuid(conn);
+
+        for (int i = 0; i < objectRefs.size(); ++i)
+        {
+            const QString ref = objectRefs.at(i);
+            const QString type = (i < objectTypes.size()) ? objectTypes.at(i).toLower() : QString();
+
+            if (!poolUuid.isEmpty())
+            {
+                containsPool = true;
+                QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, poolUuid, StringPropertyQuery::MatchType::ExactMatch);
+                queryFilters.append(new RecursiveXMOPropertyQuery(PropertyNames::pool, uuidQuery));
+                continue;
+            }
+
+            const QString hostRef = getHostAncestorRef(conn, type, ref);
+            const QString resolvedHostUuid = getObjectUuid(conn, "host", hostRef);
+            const QString hostUuid = resolvedHostUuid.isEmpty() ? hostRef : resolvedHostUuid;
+            if (hostUuid.isEmpty())
+                continue;
+
+            containsHost = true;
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, hostUuid, StringPropertyQuery::MatchType::ExactMatch);
+            queryFilters.append(new RecursiveXMOListPropertyQuery(PropertyNames::host, uuidQuery));
+        }
+
+        Grouping* grouping = nullptr;
+        if (containsPool)
+        {
+            Grouping* hostGrouping = new HostGrouping(nullptr);
+            grouping = new PoolGrouping(hostGrouping);
+        } else if (containsHost)
+        {
+            grouping = new HostGrouping(nullptr);
+        }
+
+        QueryFilter* filter = queryFilters.isEmpty() ? nullptr : static_cast<QueryFilter*>(new GroupQuery(GroupQuery::GroupQueryType::Or, queryFilters));
+        Query* query = new Query(scope, filter);
+        return new Search(query, grouping, "Overview", "", false);
     }
 }
 
@@ -870,21 +1042,13 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
             // Leaf level - add objects directly
             std::sort(groupObjects.begin(), groupObjects.end(), [&](const QPair<XenObjectType, QString>& a,
                                                                    const QPair<XenObjectType, QString>& b) {
-                QSharedPointer<XenObject> objA = conn->GetCache()->ResolveObject(a.first, a.second);
-                QSharedPointer<XenObject> objB = conn->GetCache()->ResolveObject(b.first, b.second);
-                QString nameA = objA ? objA->GetName() : QString();
-                QString nameB = objB ? objB->GetName() : QString();
-
-                if (!nameA.isEmpty() || !nameB.isEmpty())
-                {
-                    if (nameA.isEmpty())
-                        return false;
-                    if (nameB.isEmpty())
-                        return true;
-                    return Misc::NaturalCompare(nameA, nameB) < 0;
-                }
-
-                return Misc::NaturalCompare(a.second, b.second) < 0;
+                const QString typeA = XenObject::TypeToString(a.first);
+                const QString typeB = XenObject::TypeToString(b.first);
+                QVariantMap dataA = conn->GetCache()->ResolveObjectData(typeA, a.second);
+                QVariantMap dataB = conn->GetCache()->ResolveObjectData(typeB, b.second);
+                dataA["__type"] = typeA;
+                dataB["__type"] = typeB;
+                return compareByTypeAndName(typeA, dataA, a.second, typeB, dataB, b.second) < 0;
             });
 
             for (const auto& objPair : groupObjects)
@@ -914,6 +1078,17 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         }
         else
         {
+            std::sort(ungroupedObjects.begin(), ungroupedObjects.end(),
+                [&](const QPair<XenObjectType, QString>& a, const QPair<XenObjectType, QString>& b) {
+                    const QString typeA = XenObject::TypeToString(a.first);
+                    const QString typeB = XenObject::TypeToString(b.first);
+                    QVariantMap dataA = conn->GetCache()->ResolveObjectData(typeA, a.second);
+                    QVariantMap dataB = conn->GetCache()->ResolveObjectData(typeB, b.second);
+                    dataA["__type"] = typeA;
+                    dataB["__type"] = typeB;
+                    return compareByTypeAndName(typeA, dataA, a.second, typeB, dataB, b.second) < 0;
+                });
+
             for (const auto& objPair : ungroupedObjects)
             {
                 XenObjectType objType = objPair.first;

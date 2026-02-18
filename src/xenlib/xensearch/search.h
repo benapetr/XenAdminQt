@@ -302,8 +302,7 @@ class Search
          * @return New Search instance configured for the objects
          */
         static Search* SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection* conn);
-        static Search* SearchFor(const QStringList& objectRefs, const QStringList& objectTypes,
-                                 XenConnection* conn, QueryScope* scope);
+        static Search* SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection* conn, QueryScope* scope);
 
         /**
          * @brief Create a search for all types (default overview)
