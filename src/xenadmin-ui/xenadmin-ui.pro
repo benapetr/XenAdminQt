@@ -280,6 +280,7 @@ SOURCES += \
     tabpages/alertsummarypage.cpp \
     tabpages/eventspage.cpp \
     controls/memorybar.cpp \
+    controls/memoryspinner.cpp \
     controls/shinybar.cpp \
     controls/vmshinybar.cpp \
     controls/hostshinybar.cpp \
@@ -589,6 +590,7 @@ HEADERS += \
     tabpages/alertsummarypage.h \
     tabpages/eventspage.h \
     controls/memorybar.h \
+    controls/memoryspinner.h \
     controls/shinybar.h \
     controls/vmshinybar.h \
     controls/hostshinybar.h \

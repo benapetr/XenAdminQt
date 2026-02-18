@@ -27,6 +27,7 @@
 
 #include "xenlib/utils/misc.h"
 #include "shinybar.h"
+#include "globals.h"
 #include <QPainterPath>
 #include <QLinearGradient>
 #include <QFontMetrics>
@@ -161,7 +162,6 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
         return;
 
     const int MIN_LABEL_GAP = MIN_GAP;
-    const qint64 BINARY_MEGA = 1024LL * 1024LL;
 
     painter.save();
     painter.setPen(QPen(COLOR_GRID, 1));

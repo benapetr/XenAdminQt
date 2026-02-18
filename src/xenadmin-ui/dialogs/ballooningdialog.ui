@@ -31,6 +31,44 @@
      </property>
      <layout class="QVBoxLayout" name="memoryGroupLayout">
       <item>
+       <layout class="QHBoxLayout" name="unitsLayout">
+        <item>
+         <spacer name="horizontalSpacerUnits">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelUnits">
+          <property name="text">
+           <string>Units:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboUnits">
+          <item>
+           <property name="text">
+            <string>MB</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GB</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QRadioButton" name="radioFixed">
         <property name="text">
          <string>Fixed allocation</string>
@@ -66,10 +104,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="spinnerFixed">
-          <property name="suffix">
-           <string> MB</string>
-          </property>
+         <widget class="MemorySpinner" name="spinnerFixed">
           <property name="minimum">
            <double>128.000000000000000</double>
           </property>
@@ -136,10 +171,7 @@
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QDoubleSpinBox" name="spinnerDynMin">
-              <property name="suffix">
-               <string> MB</string>
-              </property>
+             <widget class="MemorySpinner" name="spinnerDynMin">
               <property name="minimum">
                <double>128.000000000000000</double>
               </property>
@@ -162,10 +194,7 @@
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QDoubleSpinBox" name="spinnerDynMax">
-              <property name="suffix">
-               <string> MB</string>
-              </property>
+             <widget class="MemorySpinner" name="spinnerDynMax">
               <property name="minimum">
                <double>128.000000000000000</double>
               </property>
@@ -232,10 +261,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QDoubleSpinBox" name="spinnerStaticMin">
-             <property name="suffix">
-              <string> MB</string>
-             </property>
+            <widget class="MemorySpinner" name="spinnerStaticMin">
              <property name="minimum">
               <double>128.000000000000000</double>
              </property>
@@ -298,6 +324,11 @@
    <class>VMShinyBar</class>
    <extends>QWidget</extends>
    <header>controls/vmshinybar.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MemorySpinner</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>controls/memoryspinner.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

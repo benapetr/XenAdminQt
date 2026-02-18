@@ -26,6 +26,7 @@
  */
 
 #include "memorybar.h"
+#include "globals.h"
 #include "xenlib/utils/misc.h"
 #include <QPainter>
 #include <QPainterPath>
@@ -192,8 +193,6 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
         return;
 
     const int MIN_GAP = 40;
-    const qint64 BINARY_MEGA = 1024LL * 1024LL;
-    const qint64 BINARY_GIGA = 1024LL * 1024LL * 1024LL;
 
     painter.save();
     painter.setPen(QPen(QColor(120, 120, 120), 1));
@@ -284,4 +283,3 @@ bool MemoryBar::event(QEvent* event)
     }
     return QWidget::event(event);
 }
-

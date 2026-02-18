@@ -25,24 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GLOBALS_H
-#define GLOBALS_H
+#ifndef MEMORYSPINNER_H
+#define MEMORYSPINNER_H
 
-#include <QtGlobal>
+#include <QDoubleSpinBox>
 
-#define XENADMIN_VERSION "0.0.4"
+class MemorySpinner : public QDoubleSpinBox
+{
+    Q_OBJECT
 
-// Shown on places like tree view root
-#define XENADMIN_BRANDING_NAME "XenAdmin"
+    public:
+        enum class Unit
+        {
+            MB,
+            GB
+        };
 
-// For about and settings mostly
-#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
-#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
-#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
+        explicit MemorySpinner(QWidget* parent = nullptr);
 
-constexpr qint64 BINARY_KILO = 1024LL;
-constexpr qint64 BINARY_MEGA = BINARY_KILO * 1024LL;
-constexpr qint64 BINARY_GIGA = BINARY_MEGA * 1024LL;
-constexpr qint64 BINARY_TERA = BINARY_GIGA * 1024LL;
+        Unit GetUnit() const;
+        void SetUnit(Unit unit);
 
-#endif // GLOBALS_H
+        qint64 GetValueInBytes() const;
+        void SetValueInBytes(qint64 bytes);
+
+        void SetRangeInBytes(qint64 minBytes, qint64 maxBytes);
+        void SetSingleStepBytes(qint64 bytes);
+
+    private slots:
+        void onDisplayValueChanged(double value);
+
+    private:
+        Unit m_unit = Unit::MB;
+        qint64 m_valueBytes = 0;
+        qint64 m_minBytes = 0;
+        qint64 m_maxBytes = 0;
+        qint64 m_stepBytes = 0;
+        bool m_syncing = false;
+
+        static double bytesToDisplay(qint64 bytes, Unit unit);
+        static qint64 displayToBytes(double value, Unit unit);
+        void applyPresentation();
+};
+
+#endif // MEMORYSPINNER_H

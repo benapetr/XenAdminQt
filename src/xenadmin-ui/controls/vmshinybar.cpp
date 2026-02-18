@@ -34,6 +34,7 @@
 #include <cmath>
 #include "vmshinybar.h"
 #include "shinybar.h"
+#include "globals.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xencache.h"
 
@@ -178,9 +179,6 @@ qint64 VMShinyBar::CalcMemoryUsed(const QList<QSharedPointer<VM>>& vms)
 
 void VMShinyBar::SetRanges(double dynamicMinLowLimit, double dynamicMinHighLimit, double dynamicMaxLowLimit, double dynamicMaxHighLimit, const QString& units)
 {
-    const qint64 BINARY_MEGA = 1024 * 1024;
-    const qint64 BINARY_GIGA = 1024 * 1024 * 1024;
-    
     if (units == "MB")
     {
         // Round to nearest MB inwards
@@ -462,9 +460,6 @@ void VMShinyBar::DrawGrid(QPainter& painter, const QRect& barArea, double bytesP
     
     const int MIN_GAP = 40;  // min gap between consecutive labels
     const int LINE_HEIGHT = 12;
-    const qint64 BINARY_MEGA = 1024 * 1024;
-    const qint64 BINARY_GIGA = 1024 * 1024 * 1024;
-    
     int lineBottom = barArea.top() + barArea.height() / 2;
     int lineTop = barArea.top() - LINE_HEIGHT;
     int textBottom = lineTop - 2;

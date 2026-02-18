@@ -30,6 +30,7 @@
 
 #include <QDialog>
 #include <QSharedPointer>
+#include "controls/memoryspinner.h"
 
 class XenConnection;
 class ChangeMemorySettingsAction;
@@ -75,6 +76,7 @@ class BallooningDialog : public QDialog
         void onShinyBarSliderDragged();
         void onAdvancedToggled(bool checked);
         void onStaticMinValueChanged(double value);
+        void onUnitsChanged(int index);
         void onAccepted();
 
     private:
@@ -93,25 +95,26 @@ class BallooningDialog : public QDialog
         qint64 m_originalStaticMax;
         qint64 m_originalDynamicMin;
         qint64 m_originalDynamicMax;
+        MemorySpinner::Unit m_memoryUnit = MemorySpinner::Unit::MB;
 
         void populateControls();
         void updateDMCAvailability();
         void updateSpinnerRanges();
         void updateShinyBar();
         void setIncrements();
+        void applyUnitToSpinners();
         void setSpinnerEnabled(bool fixed, bool dynamic);
-        double currentDynamicMinMB() const;
-        double currentDynamicMaxMB() const;
-        double currentStaticMaxMB() const;
-        double currentStaticMinMB() const;
+        qint64 currentDynamicMinBytes() const;
+        qint64 currentDynamicMaxBytes() const;
+        qint64 currentStaticMaxBytes() const;
+        qint64 currentStaticMinBytes() const;
         double getMemoryRatio() const;
         double calcMaxDynMin() const;
         bool vmUsesBallooning() const;
         qint64 getMemorySpinnerMax() const;
-        double calcIncrementMB(double staticMaxMB) const;
+        qint64 calcIncrementBytes(qint64 staticMaxBytes) const;
 
-        qint64 bytesToMB(qint64 bytes) const;
-        qint64 mbToBytes(double mb) const;
+        QString unitName() const;
 
         bool validateMemorySettings() const;
         bool applyMemoryChanges();

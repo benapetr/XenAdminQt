@@ -27,6 +27,7 @@
 
 #include "querytype.h"
 #include "queryelement.h"
+#include "globals.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/connection.h"
@@ -36,10 +37,6 @@
 #include <QSet>
 
 using namespace XenSearch;
-
-// Constants for binary sizes
-static const qint64 BINARY_MEGA = 1024 * 1024;
-static const qint64 BINARY_GIGA = 1024 * 1024 * 1024;
 
 // ============================================================================
 // QueryType base class
