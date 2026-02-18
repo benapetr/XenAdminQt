@@ -25,14 +25,14 @@
    </property>
    <layout class="QVBoxLayout" name="templatePageLayout">
     <item>
-      <widget class="QLabel" name="templateIntroLabel">
-       <property name="text">
-        <string>Choose a template as the basis for the new VM. Use the search box to quickly filter by name.</string>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
+     <widget class="QLabel" name="templateIntroLabel">
+      <property name="text">
+       <string>Choose a template as the basis for the new VM. Use the search box to quickly filter by name.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item>
      <layout class="QHBoxLayout" name="templateSearchLayout">
@@ -57,6 +57,12 @@
     </item>
     <item>
      <widget class="QTreeWidget" name="templateTree">
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="rootIsDecorated">
+       <bool>false</bool>
+      </property>
       <column>
        <property name="text">
         <string>Template</string>
@@ -67,12 +73,6 @@
         <string>Type</string>
        </property>
       </column>
-      <property name="rootIsDecorated">
-       <bool>false</bool>
-      </property>
-      <property name="alternatingRowColors">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
     <item>
@@ -152,11 +152,11 @@
       </item>
       <item row="1" column="1">
        <widget class="QPlainTextEdit" name="vmDescriptionEdit">
-        <property name="placeholderText">
-         <string>Optional notes about the workload</string>
-        </property>
         <property name="maximumBlockCount">
          <number>0</number>
+        </property>
+        <property name="placeholderText">
+         <string>Optional notes about the workload</string>
         </property>
        </widget>
       </item>
@@ -211,11 +211,11 @@
        </item>
        <item row="3" column="0" colspan="2">
         <widget class="QLineEdit" name="urlLineEdit">
-         <property name="placeholderText">
-          <string>e.g. http://server/path/to/install/files</string>
-         </property>
          <property name="enabled">
           <bool>false</bool>
+         </property>
+         <property name="placeholderText">
+          <string>e.g. http://server/path/to/install/files</string>
          </property>
         </widget>
        </item>
@@ -307,11 +307,11 @@
     </item>
     <item>
      <widget class="QCheckBox" name="copyBiosStringsFromAffinityCheckBox">
-      <property name="text">
-       <string>Copy BIOS strings from the selected VM</string>
-      </property>
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Copy BIOS strings from the selected VM</string>
       </property>
      </widget>
     </item>
@@ -455,6 +455,19 @@
     </item>
    </layout>
   </widget>
+  <widget class="QWizardPage" name="pageGpu">
+   <property name="title">
+    <string>GPU</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure virtual GPU assignments for this VM.</string>
+   </property>
+   <layout class="QVBoxLayout" name="gpuLayout">
+    <item>
+     <widget class="GpuEditPage" name="gpuEditPage"/>
+    </item>
+   </layout>
+  </widget>
   <widget class="QWizardPage" name="pageStorage">
    <property name="title">
     <string>Storage</string>
@@ -465,6 +478,18 @@
    <layout class="QVBoxLayout" name="storageLayout">
     <item>
      <widget class="QTableWidget" name="diskTable">
+      <property name="editTriggers">
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+      </property>
       <column>
        <property name="text">
         <string>Disk</string>
@@ -485,18 +510,6 @@
         <string>Mode</string>
        </property>
       </column>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
-      </property>
-      <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
-      </property>
-      <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
-      </property>
-      <property name="alternatingRowColors">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
     <item>
@@ -510,28 +523,34 @@
       </item>
       <item>
        <widget class="QPushButton" name="editDiskButton">
-        <property name="text">
-         <string>Edit...</string>
-        </property>
         <property name="enabled">
          <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Edit...</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="removeDiskButton">
-        <property name="text">
-         <string>Remove</string>
-        </property>
         <property name="enabled">
          <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Remove</string>
         </property>
        </widget>
       </item>
       <item>
        <spacer name="diskButtonsSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
        </spacer>
       </item>
@@ -595,6 +614,18 @@
    <layout class="QVBoxLayout" name="networkLayout">
     <item>
      <widget class="QTableWidget" name="networkTable">
+      <property name="editTriggers">
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+      </property>
       <column>
        <property name="text">
         <string>Device</string>
@@ -610,18 +641,6 @@
         <string>MAC</string>
        </property>
       </column>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
-      </property>
-      <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
-      </property>
-      <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
-      </property>
-      <property name="alternatingRowColors">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
     <item>
@@ -635,28 +654,34 @@
       </item>
       <item>
        <widget class="QPushButton" name="editNetworkButton">
-        <property name="text">
-         <string>Properties...</string>
-        </property>
         <property name="enabled">
          <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Properties...</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="removeNetworkButton">
-        <property name="text">
-         <string>Remove</string>
-        </property>
         <property name="enabled">
          <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Remove</string>
         </property>
        </widget>
       </item>
       <item>
        <spacer name="networkButtonsSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
        </spacer>
       </item>
@@ -726,6 +751,11 @@
    <class>IsoDropDownBox</class>
    <extends>QComboBox</extends>
    <header>widgets/isodropdownbox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>GpuEditPage</class>
+   <extends>QWidget</extends>
+   <header>settingspanels/gpueditpage.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

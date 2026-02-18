@@ -118,14 +118,9 @@ void NewVMWizard::setupUiPages()
     this->setPage(Page_InstallationMedia, this->ui->pageInstallation);
     this->setPage(Page_HomeServer, this->ui->pageHomeServer);
     this->setPage(Page_CpuMemory, this->ui->pageCpuMemory);
-    this->m_gpuWizardPage = new QWizardPage(this);
-    this->m_gpuWizardPage->setTitle(tr("GPU"));
-    this->m_gpuWizardPage->setSubTitle(tr("Configure virtual GPU assignments for this VM."));
-    QVBoxLayout* gpuLayout = new QVBoxLayout(this->m_gpuWizardPage);
-    this->m_gpuEditPage = new GpuEditPage(this->m_gpuWizardPage);
-    this->m_gpuEditPage->SetConnection(this->m_connection);
-    gpuLayout->addWidget(this->m_gpuEditPage);
-    this->setPage(Page_Gpu, this->m_gpuWizardPage);
+    this->setPage(Page_Gpu, this->ui->pageGpu);
+    if (this->ui->gpuEditPage)
+        this->ui->gpuEditPage->SetConnection(this->m_connection);
     this->setPage(Page_Storage, this->ui->pageStorage);
     this->setPage(Page_Network, this->ui->pageNetworking);
     this->setPage(Page_Finish, this->ui->pageFinish);
@@ -731,8 +726,8 @@ void NewVMWizard::updateSummaryPage()
                  .arg(this->ui->memoryStaticMaxSpin->value())
                  .arg(this->ui->memoryDynamicMinSpin->value())
                  .arg(this->ui->memoryDynamicMaxSpin->value());
-    if (this->m_gpuPageEnabled && this->m_gpuEditPage)
-        lines << tr("vGPUs: %1").arg(this->m_gpuEditPage->GetVGpuData().size());
+    if (this->m_gpuPageEnabled && this->ui->gpuEditPage)
+        lines << tr("vGPUs: %1").arg(this->ui->gpuEditPage->GetVGpuData().size());
     lines << tr("Disks: %1").arg(this->m_disks.size());
     lines << tr("Networks: %1").arg(this->m_networks.size());
 
@@ -903,16 +898,15 @@ void NewVMWizard::updateGpuPageState()
 
     this->m_gpuPageEnabled = canShowGpuPage;
 
-    if (!this->m_gpuWizardPage)
+    if (!this->ui->pageGpu)
         return;
 
-    this->m_gpuWizardPage->setVisible(canShowGpuPage);
-    this->setPage(Page_Gpu, this->m_gpuWizardPage);
+    this->ui->pageGpu->setVisible(canShowGpuPage);
 
-    if (this->m_gpuEditPage && templateVm)
+    if (this->ui->gpuEditPage && templateVm)
     {
         const QVariantMap templateData = cache->ResolveObjectData(XenObjectType::VM, this->m_selectedTemplate);
-        this->m_gpuEditPage->SetXenObject(templateVm, templateData, templateData);
+        this->ui->gpuEditPage->SetXenObject(templateVm, templateData, templateData);
     }
 
     this->rebuildNavigationSteps();
@@ -1171,10 +1165,10 @@ void NewVMWizard::createVirtualMachine()
         vifs.append(config);
     }
 
-    const QVariantList vgpuData = (this->m_gpuPageEnabled && this->m_gpuEditPage)
-                                      ? this->m_gpuEditPage->GetVGpuData()
+    const QVariantList vgpuData = (this->m_gpuPageEnabled && this->ui->gpuEditPage)
+                                      ? this->ui->gpuEditPage->GetVGpuData()
                                       : QVariantList();
-    const bool modifyVgpuSettings = this->m_gpuPageEnabled && this->m_gpuEditPage && this->m_gpuEditPage->HasChanged();
+    const bool modifyVgpuSettings = this->m_gpuPageEnabled && this->ui->gpuEditPage && this->ui->gpuEditPage->HasChanged();
 
     CreateVMAction* action = new CreateVMAction(
         connection,

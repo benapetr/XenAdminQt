@@ -39,7 +39,6 @@ class XenConnection;
 class XenCache;
 class QTreeWidgetItem;
 class WizardNavigationPane;
-class GpuEditPage;
 
 namespace Ui
 {
@@ -188,8 +187,6 @@ class NewVMWizard : public QWizard
         QString m_bootMode;
         QString m_pvArgs;
         WizardNavigationPane* m_navigationPane = nullptr;
-        QWizardPage* m_gpuWizardPage = nullptr;
-        GpuEditPage* m_gpuEditPage = nullptr;
         bool m_gpuPageEnabled = false;
 
         // Storage configuration: list of (VDI ref, SR ref, size, device)
