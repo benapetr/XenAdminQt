@@ -25,30 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "querypanel.h"
-#include "treewidgetgroupacceptor.h"
-#include "xenlib/xensearch/search.h"
-#include "xenlib/xensearch/sort.h"
-#include "xenlib/xensearch/grouping.h"
-#include "xenlib/xensearch/query.h"
-#include "xenlib/xensearch/queryfilter.h"
-#include "xenlib/xensearch/queryscope.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/network/connection.h"
-#include "xencache.h"
-#include "xen/xenobject.h"
-#include "xen/host.h"
-#include "xen/vm.h"
-#include "xen/vbd.h"
-#include "xen/vif.h"
-#include "xen/pif.h"
-#include "xen/hostmetrics.h"
-#include "xen/vmmetrics.h"
-#include "xen/vmguestmetrics.h"
-#include "iconmanager.h"
-#include "../../widgets/progressbardelegate.h"
-#include "xenlib/metricupdater.h"
-#include "xenlib/utils/misc.h"
 #include <QHeaderView>
 #include <QMenu>
 #include <QAction>
@@ -58,18 +34,38 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <cmath>
+#include "querypanel.h"
+#include "treewidgetgroupacceptor.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/sort.h"
+#include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/queryfilter.h"
+#include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vif.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xen/vmmetrics.h"
+#include "xenlib/xen/vmguestmetrics.h"
+#include "iconmanager.h"
+#include "../../widgets/progressbardelegate.h"
+#include "xenlib/metricupdater.h"
+#include "xenlib/utils/misc.h"
 
 // Static members
-const QStringList QueryPanel::DEFAULT_COLUMNS = QStringList()
-    << "name" << "cpu" << "memory" << "disks" << "network" << "ip" << "ha" << "uptime";
+const QStringList QueryPanel::DEFAULT_COLUMNS = QStringList() << "name" << "cpu" << "memory" << "disks" << "network" << "ip" << "ha" << "uptime";
 
 QTimer* QueryPanel::metricsUpdateTimer_ = nullptr;
 QList<XenObject*> QueryPanel::metricsObjects_;
 
-QueryPanel::QueryPanel(QWidget* parent)
-    : QTreeWidget(parent)
-    , search_(nullptr)
-    , updatePending_(false)
+QueryPanel::QueryPanel(QWidget* parent) : QTreeWidget(parent)
 {
     // Configure tree widget
     this->setColumnCount(DEFAULT_COLUMNS.size());
@@ -83,10 +79,8 @@ QueryPanel::QueryPanel(QWidget* parent)
     
     // Setup header
     this->header()->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->header(), &QHeaderView::customContextMenuRequested,
-            this, &QueryPanel::onHeaderContextMenu);
-    connect(this->header(), &QHeaderView::sortIndicatorChanged,
-            this, &QueryPanel::onSortIndicatorChanged);
+    connect(this->header(), &QHeaderView::customContextMenuRequested, this, &QueryPanel::onHeaderContextMenu);
+    connect(this->header(), &QHeaderView::sortIndicatorChanged, this, &QueryPanel::onSortIndicatorChanged);
     
     // Setup columns
     this->setupColumns();
@@ -109,8 +103,7 @@ QueryPanel::QueryPanel(QWidget* parent)
         metricsUpdateTimer_ = new QTimer();
         metricsUpdateTimer_->setInterval(2000); // 2 second updates
     }
-    connect(metricsUpdateTimer_, &QTimer::timeout,
-            this, &QueryPanel::onMetricsUpdateTimerTimeout);
+    connect(metricsUpdateTimer_, &QTimer::timeout, this, &QueryPanel::onMetricsUpdateTimerTimeout);
 }
 
 QueryPanel::~QueryPanel()
@@ -343,36 +336,29 @@ void QueryPanel::populateRow(QTreeWidgetItem* item, XenObject* xenObject)
             QIcon icon = IconManager::instance().GetIconForObject(xenObject);
             if (!icon.isNull())
                 item->setIcon(0, icon);
-        }
-        else if (columnName == "cpu")
+        } else if (columnName == "cpu")
         {
             int percent = -1;
             value = this->formatCpuUsage(xenObject, &percent);
             item->setData(col, Qt::UserRole, percent);
-        }
-        else if (columnName == "memory")
+        } else if (columnName == "memory")
         {
             int percent = -1;
             value = this->formatMemoryUsage(xenObject, &percent);
             item->setData(col, Qt::UserRole, percent);
-        }
-        else if (columnName == "disks")
+        } else if (columnName == "disks")
         {
             value = this->formatDiskIO(xenObject);
-        }
-        else if (columnName == "network")
+        } else if (columnName == "network")
         {
             value = this->formatNetworkIO(xenObject);
-        }
-        else if (columnName == "ip")
+        } else if (columnName == "ip")
         {
             value = this->formatIpAddress(xenObject);
-        }
-        else if (columnName == "ha")
+        } else if (columnName == "ha")
         {
             value = this->formatHA(xenObject);
-        }
-        else if (columnName == "uptime")
+        } else if (columnName == "uptime")
         {
             value = this->formatUptime(xenObject);
         }
@@ -894,39 +880,14 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
     if (objectType == XenObjectType::VM)
     {
         VM* vm = dynamic_cast<VM*>(xenObject);
-        if (!vm)
+        if (!vm || !vm->IsRealVM())
             return "";
 
-        QString powerState = vm->GetPowerState();
-        if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
-            return "";
-
-        QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
-        if (!vmMetrics || !vmMetrics->IsValid())
-            return "";
-
-        QDateTime startTime = vmMetrics->GetStartTime();
-        if (!startTime.isValid())
-            return "";
-
-        QDateTime now = QDateTime::currentDateTimeUtc();
-        qint64 uptimeSeconds = startTime.secsTo(now);
+        qint64 uptimeSeconds = vm->GetUptime();
         if (uptimeSeconds < 0)
             return "";
 
-        int days = uptimeSeconds / 86400;
-        int hours = (uptimeSeconds % 86400) / 3600;
-        int minutes = (uptimeSeconds % 3600) / 60;
-
-        QStringList parts;
-        if (days > 0)
-            parts.append(tr("%1 days").arg(days));
-        if (hours > 0 || days > 0)
-            parts.append(tr("%1 hours").arg(hours));
-        if (minutes > 0 || parts.isEmpty())
-            parts.append(tr("%1 minutes").arg(minutes));
-
-        return parts.join(" ");
+        return Misc::FormatUptime(uptimeSeconds);
     }
 
     if (objectType == XenObjectType::Host)
@@ -942,7 +903,7 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
         return Misc::FormatUptime(uptimeSeconds);
     }
 
-    return "";
+    return "-";
 }
 
 QString QueryPanel::formatHA(XenObject* xenObject) const

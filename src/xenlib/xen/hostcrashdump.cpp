@@ -27,6 +27,7 @@
 
 #include "hostcrashdump.h"
 #include "network/connection.h"
+#include "../utils/misc.h"
 #include <QDateTime>
 #include <QMap>
 
@@ -47,9 +48,7 @@ QString HostCrashdump::HostRef() const
 QDateTime HostCrashdump::Timestamp() const
 {
     QString dateStr = this->stringProperty("timestamp");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 qint64 HostCrashdump::Size() const

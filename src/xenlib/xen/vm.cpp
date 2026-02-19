@@ -1325,7 +1325,7 @@ QString VM::MetricsRef() const
     return this->stringProperty("metrics");
 }
 
-QSharedPointer<VMMetrics> VM::GetMetrics()
+QSharedPointer<VMMetrics> VM::GetMetrics() const
 {
     XenCache* cache = this->GetCache();
     QString ref = this->MetricsRef();
@@ -1368,9 +1368,7 @@ QString VM::HARestartPriority() const
 QDateTime VM::SnapshotTime() const
 {
     QString dateStr = this->stringProperty("snapshot_time");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QString VM::TransportableSnapshotId() const
@@ -1735,43 +1733,38 @@ QList<ComparableAddress> VM::GetIPAddresses() const
 qint64 VM::GetStartTime() const
 {
     // C# equivalent: VM.GetStartTime()
-    // Gets start_time from guest_metrics or metrics
-    
-    QString guestMetricsRef = this->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
-    {
-        XenConnection* conn = this->GetConnection();
-        if (conn)
-        {
-            XenCache* cache = conn->GetCache();
-            if (cache)
-            {
-                QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
-                if (!guestMetrics.isEmpty())
-                {
-                    // Check if start_time exists
-                    if (guestMetrics.contains("start_time"))
-                    {
-                        // Parse ISO 8601 datetime or epoch seconds
-                        QString startTimeStr = guestMetrics.value("start_time").toString();
-                        if (!startTimeStr.isEmpty())
-                        {
-                            // Try to parse as epoch seconds first
-                            bool ok;
-                            qint64 epochTime = startTimeStr.toLongLong(&ok);
-                            if (ok)
-                                return epochTime;
-                            
-                            // Otherwise parse XenAPI date-time formats used by C# XenAdmin.
-                            QDateTime dt = Misc::ParseXenDateTime(startTimeStr);
-                            if (dt.isValid())
-                                return dt.toSecsSinceEpoch();
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    return 0; // Not available
+    // C# VM.GetStartTime() resolves VM.metrics and returns VM_metrics.start_time.
+    QSharedPointer<VMMetrics> metrics = this->GetMetrics();
+    if (!metrics || !metrics->IsValid())
+        return 0;
+
+    QDateTime startTime = metrics->GetStartTime();
+    if (!startTime.isValid())
+        return 0;
+
+    return startTime.toSecsSinceEpoch();
+}
+
+qint64 VM::GetUptime() const
+{
+    QString powerState = this->GetPowerState();
+    if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
+        return -1;
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return -1;
+
+    qint64 startTime = this->GetStartTime();
+    if (startTime <= 0)
+        return -1;
+
+    const qint64 now = QDateTime::currentDateTimeUtc().toSecsSinceEpoch();
+    const qint64 serverOffset = connection->GetServerTimeOffsetSeconds();
+    const qint64 uptimeSeconds = now - startTime - serverOffset;
+
+    if (uptimeSeconds < 0)
+        return -1;
+
+    return uptimeSeconds;
 }

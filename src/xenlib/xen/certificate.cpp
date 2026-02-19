@@ -27,6 +27,7 @@
 
 #include "certificate.h"
 #include "network/connection.h"
+#include "../utils/misc.h"
 #include <QDateTime>
 
 Certificate::Certificate(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -53,17 +54,13 @@ QString Certificate::HostRef() const
 QDateTime Certificate::NotBefore() const
 {
     QString dateStr = this->stringProperty("not_before");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QDateTime Certificate::NotAfter() const
 {
     QString dateStr = this->stringProperty("not_after");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QString Certificate::Fingerprint() const

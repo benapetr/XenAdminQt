@@ -27,6 +27,7 @@
 
 #include "hostpatch.h"
 #include "network/connection.h"
+#include "../utils/misc.h"
 #include <QDateTime>
 #include <QMap>
 
@@ -57,9 +58,7 @@ bool HostPatch::Applied() const
 QDateTime HostPatch::TimestampApplied() const
 {
     QString dateStr = this->stringProperty("timestamp_applied");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 qint64 HostPatch::Size() const

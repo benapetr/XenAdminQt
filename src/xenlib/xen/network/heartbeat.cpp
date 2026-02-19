@@ -30,6 +30,7 @@
 #include "../session.h"
 #include "../xenapi/xenapi_Pool.h"
 #include "../xenapi/xenapi_Host.h"
+#include "../../utils/misc.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QRegularExpression>
@@ -270,17 +271,7 @@ void XenHeartbeat::getServerTime()
     // Try ISO 8601 first (native XenAPI format)
     const QString serverTimeStr = serverTimeVar.toString();
     const bool hasExplicitTz = hasExplicitTimeZoneSuffix(serverTimeStr);
-    serverTime = QDateTime::fromString(serverTimeStr, Qt::ISODate);
-    if (!serverTime.isValid())
-    {
-        // Some servers use compact Zulu format: 20250204T120102Z
-        serverTime = QDateTime::fromString(serverTimeStr, QStringLiteral("yyyyMMddTHHmmss'Z'"));
-    }
-    if (!serverTime.isValid())
-    {
-        // Servers can also return ISO without separators: 20251128T11:57:56Z
-        serverTime = QDateTime::fromString(serverTimeStr, QStringLiteral("yyyyMMdd'T'HH:mm:ss'Z'"));
-    }
+    serverTime = Misc::ParseXenDateTime(serverTimeStr);
     if (serverTime.isValid())
     {
         // Xen API times represent UTC values. If timezone is absent (or parser treated trailing 'Z'

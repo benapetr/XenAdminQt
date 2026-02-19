@@ -26,6 +26,7 @@
  */
 
 #include "certificatealert.h"
+#include "../utils/misc.h"
 #include <QXmlStreamReader>
 #include <QDebug>
 
@@ -66,7 +67,7 @@ void CertificateAlert::parseCertificateMessage()
         if (reader.isStartElement() && reader.name() == QLatin1String("date"))
         {
             QString dateStr = reader.readElementText();
-            this->m_expiryDate = QDateTime::fromString(dateStr, Qt::ISODate);
+            this->m_expiryDate = Misc::ParseXenDateTime(dateStr);
             
             if (this->m_expiryDate.isValid())
             {

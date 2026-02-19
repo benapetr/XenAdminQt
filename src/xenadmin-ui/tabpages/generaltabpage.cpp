@@ -567,27 +567,10 @@ void GeneralTabPage::populateVMProperties()
         // VM Uptime - C# line 1069 vm.RunningTime()
         if (powerState == "Running")
         {
-            qint64 startTime = vm->GetStartTime();
-            if (startTime > 0)
+            qint64 uptimeSeconds = vm->GetUptime();
+            if (uptimeSeconds > 0)
             {
-                qint64 uptimeSeconds = QDateTime::fromSecsSinceEpoch(startTime, Qt::UTC)
-                                           .secsTo(QDateTime::currentDateTimeUtc());
-                if (uptimeSeconds > 0)
-                {
-                    int days = uptimeSeconds / 86400;
-                    int hours = (uptimeSeconds % 86400) / 3600;
-                    int minutes = (uptimeSeconds % 3600) / 60;
-
-                    QString uptimeStr;
-                    if (days > 0)
-                        uptimeStr = QString("%1 days, %2 hours, %3 minutes").arg(days).arg(hours).arg(minutes);
-                    else if (hours > 0)
-                        uptimeStr = QString("%1 hours, %2 minutes").arg(hours).arg(minutes);
-                    else
-                        uptimeStr = QString("%1 minutes").arg(minutes);
-
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.uptime", uptimeStr);
-                }
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.uptime", Misc::FormatUptime(uptimeSeconds));
             }
         }
 
@@ -603,7 +586,7 @@ void GeneralTabPage::populateVMProperties()
         if (otherConfig.contains("p2v_import_date"))
         {
             QString importDate = otherConfig.value("p2v_import_date").toString();
-            QDateTime dt = QDateTime::fromString(importDate, Qt::ISODate);
+            QDateTime dt = Misc::ParseXenDateTime(importDate);
             if (dt.isValid())
                 this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_ImportDate", dt.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
         }

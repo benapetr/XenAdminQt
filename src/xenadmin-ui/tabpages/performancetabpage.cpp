@@ -38,6 +38,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xencache.h"
+#include "xenlib/utils/misc.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMenu>
@@ -71,17 +72,7 @@ namespace
         {
             const QString raw = timestampValue.toString().trimmed();
             if (!raw.isEmpty())
-            {
-                timestamp = QDateTime::fromString(raw, Qt::ISODate);
-                if (!timestamp.isValid())
-                    timestamp = QDateTime::fromString(raw, Qt::ISODateWithMs);
-                if (!timestamp.isValid())
-                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyyMMddTHH:mm:ssZ"));
-                if (!timestamp.isValid())
-                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyy-MM-ddTHH:mm:ssZ"));
-                if (!timestamp.isValid())
-                    timestamp = QDateTime::fromString(raw, QStringLiteral("yyyyMMddTHHmmssZ"));
-            }
+                timestamp = Misc::ParseXenDateTime(raw);
         }
 
         if (!timestamp.isValid())

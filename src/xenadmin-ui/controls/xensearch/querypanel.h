@@ -193,7 +193,7 @@ class QueryPanel : public QTreeWidget
         void restoreRowStates();
 
     private:
-        Search* search_;
+        Search* search_ = nullptr;
         
         // Column configuration
         // Map of column name -> visible
@@ -210,7 +210,7 @@ class QueryPanel : public QTreeWidget
         static QList<XenObject*> metricsObjects_;
         
         // Update throttling
-        bool updatePending_;
+        bool updatePending_ = false;
         QTimer* updateThrottleTimer_;
 };
 

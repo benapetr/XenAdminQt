@@ -34,6 +34,7 @@
 #include "vdi.h"
 #include "pif.h"
 #include "pgpu.h"
+#include "../utils/misc.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -351,17 +352,13 @@ QString Pool::TelemetryFrequency() const
 QDateTime Pool::TelemetryNextCollection() const
 {
     QString dateStr = stringProperty("telemetry_next_collection");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QDateTime Pool::LastUpdateSync() const
 {
     QString dateStr = stringProperty("last_update_sync");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QString Pool::UpdateSyncFrequency() const

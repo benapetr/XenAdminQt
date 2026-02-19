@@ -28,6 +28,7 @@
 #include "vdi.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "../utils/misc.h"
 #include "sr.h"
 #include "vbd.h"
 #include <QLocale>
@@ -178,9 +179,7 @@ QStringList VDI::SnapshotRefs() const
 QDateTime VDI::SnapshotTime() const
 {
     QString dateStr = this->stringProperty("snapshot_time");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 bool VDI::AllowCaching() const

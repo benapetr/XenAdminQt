@@ -505,23 +505,10 @@ QVariant PropertyAccessors::UptimeProperty(XenObject* o)
     VM* vm = qobject_cast<VM*>(o);
     if (vm && vm->IsRealVM())
     {
-        QString powerState = vm->GetPowerState();
-        if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
-            return QVariant();
-        
-        qint64 startTime = vm->GetStartTime();
-        if (startTime == 0)
-            return QVariant();
-        
-        // Calculate uptime: current time - start time - server time offset
-        QDateTime now = QDateTime::currentDateTimeUtc();
-        qint64 serverOffset = o->GetConnection()->GetServerTimeOffsetSeconds();
-        qint64 uptimeSeconds = now.toSecsSinceEpoch() - startTime - serverOffset;
-        
+        qint64 uptimeSeconds = vm->GetUptime();
         if (uptimeSeconds < 0)
             return QVariant();
-        
-        // Format as human-readable duration
+
         return Misc::FormatUptime(uptimeSeconds);
     }
     

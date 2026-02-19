@@ -27,6 +27,7 @@
 
 #include "blob.h"
 #include "network/connection.h"
+#include "../utils/misc.h"
 #include <QDateTime>
 
 Blob::Blob(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -47,9 +48,7 @@ bool Blob::IsPublic() const
 QDateTime Blob::LastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QString Blob::MimeType() const

@@ -28,6 +28,7 @@
 #include "vmpp.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "../utils/misc.h"
 #include "vm.h"
 
 VMPP::VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -75,7 +76,7 @@ QDateTime VMPP::BackupLastRunTime() const
     QString timeStr = timeVariant.toString();
     if (!timeStr.isEmpty())
     {
-        QDateTime dt = QDateTime::fromString(timeStr, Qt::ISODate);
+        QDateTime dt = Misc::ParseXenDateTime(timeStr);
         if (dt.isValid())
             return dt;
     }
@@ -118,7 +119,7 @@ QDateTime VMPP::ArchiveLastRunTime() const
     QString timeStr = timeVariant.toString();
     if (!timeStr.isEmpty())
     {
-        QDateTime dt = QDateTime::fromString(timeStr, Qt::ISODate);
+        QDateTime dt = Misc::ParseXenDateTime(timeStr);
         if (dt.isValid())
             return dt;
     }

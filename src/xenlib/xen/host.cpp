@@ -37,6 +37,7 @@
 #include "pbd.h"
 #include "pif.h"
 #include "pgpu.h"
+#include "../utils/misc.h"
 #include <QDateTime>
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -619,9 +620,7 @@ QStringList Host::CrashdumpRefs() const
 QDateTime Host::LastSoftwareUpdate() const
 {
     QString dateStr = this->stringProperty("last_software_update");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    return QDateTime::fromString(dateStr, Qt::ISODate);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QString Host::LatestSyncedUpdatesApplied() const

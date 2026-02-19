@@ -409,7 +409,7 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get VM metrics reference (opaque reference to VM_metrics object)
         QString MetricsRef() const;
 
-        QSharedPointer<VMMetrics> GetMetrics();
+        QSharedPointer<VMMetrics> GetMetrics() const;
 
         //! Get guest metrics reference (opaque reference to VM_guest_metrics object)
         QString GetGuestMetricsRef() const;
@@ -578,12 +578,20 @@ class XENLIB_EXPORT VM : public XenObject
         QList<ComparableAddress> GetIPAddresses() const;
 
         /**
-         * @brief Get start time from guest_metrics
+         * @brief Get start time from VM_metrics
          * @return Start time (epoch seconds), or 0 if not available
          * 
          * C# equivalent: VM.GetStartTime() extension method
          */
         qint64 GetStartTime() const;
+
+        /**
+         * @brief Get VM uptime in seconds
+         * @return Uptime in seconds, or -1 if not available/invalid
+         *
+         * C# equivalent: VM.RunningTime() extension method
+         */
+        qint64 GetUptime() const;
 
     protected:
         XenObjectType GetObjectType() const override { return XenObjectType::VM; }

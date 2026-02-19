@@ -28,6 +28,7 @@
 #include "vmss.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "../utils/misc.h"
 
 VMSS::VMSS(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -69,7 +70,7 @@ QDateTime VMSS::LastRunTime() const
     QString timeStr = timeVariant.toString();
     if (!timeStr.isEmpty())
     {
-        QDateTime dt = QDateTime::fromString(timeStr, Qt::ISODate);
+        QDateTime dt = Misc::ParseXenDateTime(timeStr);
         if (dt.isValid())
             return dt;
     }
