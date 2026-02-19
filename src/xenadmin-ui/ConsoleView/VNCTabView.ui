@@ -332,6 +332,22 @@ QPushButton:disabled {
        </widget>
       </item>
       <item>
+       <widget class="QToolButton" name="specialKeysButton">
+        <property name="text">
+         <string>Special keys</string>
+        </property>
+        <property name="toolTip">
+         <string>Send special key combinations to the virtual machine</string>
+        </property>
+        <property name="popupMode">
+         <enum>QToolButton::InstantPopup</enum>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextOnly</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="scaleCheckBox">
         <property name="text">
          <string>Scale to fit</string>

@@ -285,6 +285,14 @@ void XSVNCScreen::sendCAD()
     }
 }
 
+void XSVNCScreen::sendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber)
+{
+    if (this->_remoteConsole)
+    {
+        this->_remoteConsole->SendFunctionKeyWithModifiers(ctrl, alt, functionNumber);
+    }
+}
+
 /**
  * @brief Capture screenshot from console
  */

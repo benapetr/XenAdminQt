@@ -81,6 +81,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         void Pause() override;
         void Unpause() override;
         void SendCAD() override;
+        void SendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber) override;
         QImage Snapshot() override;
         void SetSendScanCodes(bool value) override;
         bool IsScaling() const override;

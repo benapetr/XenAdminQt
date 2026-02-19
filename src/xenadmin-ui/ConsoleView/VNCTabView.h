@@ -264,6 +264,8 @@ class VNCTabView : public QWidget
          * Reference: VNCTabView.cs lines 930-934
          */
         void onSendCADClicked();
+        void onSendSpecialAltFn(int functionNumber);
+        void onSendSpecialCtrlAltFn(int functionNumber);
 
         /**
          * @brief Handle scale checkbox toggled
@@ -470,6 +472,8 @@ class VNCTabView : public QWidget
          * Reference: VNCTabView.cs lines 1334-1365
          */
         void updateOpenSSHConsoleButtonState();
+        void setupSpecialKeysMenu();
+        void sendSpecialFunctionKey(bool ctrl, bool alt, int functionNumber);
 
         /**
          * @brief Show/hide RDP version warning
@@ -538,6 +542,7 @@ class VNCTabView : public QWidget
         ConsoleKeyHandler m_keyHandler; ///< Keyboard shortcut handler
 
         QTimer* m_insKeyTimer = nullptr; ///< Timer for Ctrl+Alt+Ins detection
+        QMenu* m_specialKeysMenu = nullptr;
 
         // RDP/VNC toggle state
         static constexpr bool RDP = true;   ///< C#: private const bool RDP = true;

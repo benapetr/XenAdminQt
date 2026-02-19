@@ -221,6 +221,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     this->UpdateFullScreenButton();
     this->UpdateDockButton();
     this->SetupCD();
+    this->setupSpecialKeysMenu();
     this->UpdateParentMinimumSize();
     this->updateTooltipOfToggleButton();
     this->updateOpenSSHConsoleButtonState();
@@ -609,6 +610,16 @@ void VNCTabView::onSendCADClicked()
 
     if (this->m_vncScreen)
         this->m_vncScreen->sendCAD();
+}
+
+void VNCTabView::onSendSpecialAltFn(int functionNumber)
+{
+    this->sendSpecialFunctionKey(false, true, functionNumber);
+}
+
+void VNCTabView::onSendSpecialCtrlAltFn(int functionNumber)
+{
+    this->sendSpecialFunctionKey(true, true, functionNumber);
 }
 
 /**
@@ -1620,6 +1631,7 @@ void VNCTabView::vmPowerOff()
 
     // C#: sendCAD.Enabled = false;
     this->ui->sendCADButton->setEnabled(false);
+    this->ui->specialKeysButton->setEnabled(false);
 }
 
 void VNCTabView::vmPowerOn()
@@ -1633,6 +1645,7 @@ void VNCTabView::vmPowerOn()
 
     // C#: sendCAD.Enabled = true;
     this->ui->sendCADButton->setEnabled(true);
+    this->ui->specialKeysButton->setEnabled(true);
 }
 
 bool VNCTabView::canEnableRDP() const
@@ -1707,6 +1720,7 @@ void VNCTabView::updateButtons()
 
     // C#: sendCAD.Enabled = !rdp || vncScreen.UseVNC;
     this->ui->sendCADButton->setEnabled(!rdp || this->m_vncScreen->useVNC());
+    this->ui->specialKeysButton->setEnabled(!rdp || this->m_vncScreen->useVNC());
 
     // C#: FocusVNC();
     // Focus the VNC screen widget
@@ -1726,6 +1740,32 @@ void VNCTabView::updateButtons()
 
     // C#: ignoreScaleChange = false;
     m_ignoreScaleChange = false;
+}
+
+void VNCTabView::setupSpecialKeysMenu()
+{
+    this->m_specialKeysMenu = new QMenu(this->ui->specialKeysButton);
+    QMenu* altFnMenu = this->m_specialKeysMenu->addMenu(tr("Alt + FN"));
+    QMenu* ctrlAltFnMenu = this->m_specialKeysMenu->addMenu(tr("Ctrl + Alt + FN"));
+
+    for (int fn = 1; fn <= 12; ++fn)
+    {
+        QAction* altFnAction = altFnMenu->addAction(tr("Alt+F%1").arg(fn));
+        connect(altFnAction, &QAction::triggered, this, [this, fn]() { this->onSendSpecialAltFn(fn); });
+
+        QAction* ctrlAltFnAction = ctrlAltFnMenu->addAction(tr("Ctrl+Alt+F%1").arg(fn));
+        connect(ctrlAltFnAction, &QAction::triggered, this, [this, fn]() { this->onSendSpecialCtrlAltFn(fn); });
+    }
+
+    this->ui->specialKeysButton->setMenu(this->m_specialKeysMenu);
+}
+
+void VNCTabView::sendSpecialFunctionKey(bool ctrl, bool alt, int functionNumber)
+{
+    if (!this->m_vncScreen || functionNumber < 1 || functionNumber > 12)
+        return;
+
+    this->m_vncScreen->sendFunctionKeyWithModifiers(ctrl, alt, functionNumber);
 }
 
 QString VNCTabView::guessNativeConsoleLabel() const

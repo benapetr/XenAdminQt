@@ -584,6 +584,46 @@ void RdpClient::SendCAD()
 #endif
 }
 
+void RdpClient::SendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber)
+{
+#ifndef HAVE_FREERDP
+    Q_UNUSED(ctrl);
+    Q_UNUSED(alt);
+    Q_UNUSED(functionNumber);
+    qWarning() << "RdpClient: Cannot send special key combo - built without FreeRDP support";
+    return;
+#else
+    if (!_connected || !_rdpInstance || !_rdpContext || functionNumber < 1 || functionNumber > 12)
+    {
+        qWarning() << "RdpClient: Cannot send special key combo - not connected or invalid function key";
+        return;
+    }
+
+    rdpInput* input = _rdpContext->input;
+    if (!input || !input->KeyboardEvent)
+        return;
+
+    const uint32_t ctrlScan = qtKeyToRDPScanCode(Qt::Key_Control, Qt::NoModifier);
+    const uint32_t altScan = qtKeyToRDPScanCode(Qt::Key_Alt, Qt::NoModifier);
+    const uint32_t functionScan = qtKeyToRDPScanCode(static_cast<int>(Qt::Key_F1) + (functionNumber - 1), Qt::NoModifier);
+    if (functionScan == 0)
+        return;
+
+    if (ctrl && ctrlScan != 0)
+        input->KeyboardEvent(input, KBD_FLAGS_DOWN, ctrlScan);
+    if (alt && altScan != 0)
+        input->KeyboardEvent(input, KBD_FLAGS_DOWN, altScan);
+
+    input->KeyboardEvent(input, KBD_FLAGS_DOWN, functionScan);
+    input->KeyboardEvent(input, KBD_FLAGS_RELEASE, functionScan);
+
+    if (alt && altScan != 0)
+        input->KeyboardEvent(input, KBD_FLAGS_RELEASE, altScan);
+    if (ctrl && ctrlScan != 0)
+        input->KeyboardEvent(input, KBD_FLAGS_RELEASE, ctrlScan);
+#endif
+}
+
 QImage RdpClient::Snapshot()
 {
     QMutexLocker locker(&_framebufferMutex);

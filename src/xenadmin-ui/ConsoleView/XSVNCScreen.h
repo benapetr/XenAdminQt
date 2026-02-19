@@ -262,6 +262,14 @@ class XSVNCScreen : public QWidget
         void sendCAD();
 
         /**
+         * @brief Send function-key combo with optional Ctrl/Alt modifiers
+         * @param ctrl Include Ctrl modifier
+         * @param alt Include Alt modifier
+         * @param functionNumber Function key number (1-12)
+         */
+        void sendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber);
+
+        /**
          * @brief Capture screenshot of console
          * Equivalent to C#: public Image Snapshot(...)
          */

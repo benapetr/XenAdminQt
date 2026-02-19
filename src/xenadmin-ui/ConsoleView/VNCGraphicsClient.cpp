@@ -174,6 +174,28 @@ void VNCGraphicsClient::SendCAD()
     sendKeyEvent(0xFFE3, false); // Left Control up
 }
 
+void VNCGraphicsClient::SendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber)
+{
+    if (!this->_connected || functionNumber < 1 || functionNumber > 12)
+        return;
+
+    // X11 keysyms: F1..F12 are contiguous from 0xFFBE.
+    const quint32 functionKeysym = 0xFFBE + static_cast<quint32>(functionNumber - 1);
+
+    if (ctrl)
+        sendKeyEvent(0xFFE3, true); // Left Control down
+    if (alt)
+        sendKeyEvent(0xFFE9, true); // Left Alt down
+
+    sendKeyEvent(functionKeysym, true);
+    sendKeyEvent(functionKeysym, false);
+
+    if (alt)
+        sendKeyEvent(0xFFE9, false); // Left Alt up
+    if (ctrl)
+        sendKeyEvent(0xFFE3, false); // Left Control up
+}
+
 QImage VNCGraphicsClient::Snapshot()
 {
     // Matches C# Snapshot() method

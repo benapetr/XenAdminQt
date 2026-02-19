@@ -87,6 +87,14 @@ class IRemoteConsole
         virtual void SendCAD() = 0;
 
         /**
+         * @brief Send function-key combo with optional Ctrl/Alt modifiers
+         * @param ctrl Include Ctrl modifier
+         * @param alt Include Alt modifier
+         * @param functionNumber Function key number (1-12)
+         */
+        virtual void SendFunctionKeyWithModifiers(bool ctrl, bool alt, int functionNumber) = 0;
+
+        /**
          * @brief Take a Snapshot of the current console display
          * @return QImage containing the Snapshot
          */
