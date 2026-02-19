@@ -26,6 +26,7 @@
  */
 
 #include "vmmetrics.h"
+#include "../utils/misc.h"
 
 VMMetrics::VMMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -65,19 +66,19 @@ QStringList VMMetrics::GetState() const
 QDateTime VMMetrics::GetStartTime() const
 {
     QString dateStr = this->stringProperty("start_time");
-    return parseDateTime(dateStr);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QDateTime VMMetrics::GetInstallTime() const
 {
     QString dateStr = this->stringProperty("install_time");
-    return parseDateTime(dateStr);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QDateTime VMMetrics::GetLastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
-    return parseDateTime(dateStr);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 bool VMMetrics::IsHVM() const
@@ -98,16 +99,4 @@ bool VMMetrics::IsNoMigrate() const
 QString VMMetrics::GetCurrentDomainType() const
 {
     return this->stringProperty("current_domain_type", "unspecified");
-}
-
-QDateTime VMMetrics::parseDateTime(const QString& dateStr) const
-{
-    if (dateStr.isEmpty())
-        return QDateTime();
-    
-    QDateTime dt = QDateTime::fromString(dateStr, Qt::ISODate);
-    if (!dt.isValid())
-        dt = QDateTime::fromString(dateStr, Qt::ISODateWithMs);
-    
-    return dt;
 }

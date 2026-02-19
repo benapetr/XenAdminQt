@@ -26,6 +26,7 @@
  */
 
 #include "hostmetrics.h"
+#include "../utils/misc.h"
 
 HostMetrics::HostMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -50,13 +51,5 @@ qint64 HostMetrics::GetMemoryFree() const
 QDateTime HostMetrics::LastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
-    if (dateStr.isEmpty())
-        return QDateTime();
-    
-    QDateTime dt = QDateTime::fromString(dateStr, Qt::ISODate);
-    if (!dt.isValid())
-        dt = QDateTime::fromString(dateStr, Qt::ISODateWithMs);
-    
-    return dt;
+    return Misc::ParseXenDateTime(dateStr);
 }
-

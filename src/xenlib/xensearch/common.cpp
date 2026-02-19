@@ -39,6 +39,7 @@
 #include "../xen/dockercontainer.h"
 #include "../xen/network/connection.h"
 #include "../xencache.h"
+#include "../utils/misc.h"
 
 
 namespace XenSearch
@@ -521,57 +522,20 @@ QVariant PropertyAccessors::UptimeProperty(XenObject* o)
             return QVariant();
         
         // Format as human-readable duration
-        return FormatDuration(uptimeSeconds);
+        return Misc::FormatUptime(uptimeSeconds);
     }
     
     Host* host = qobject_cast<Host*>(o);
     if (host)
     {
-        double bootTime = host->BootTime();
-        if (bootTime == 0.0)
-            return QVariant();
-        
-        // Calculate uptime: current time - boot time - server time offset
-        QDateTime now = QDateTime::currentDateTimeUtc();
-        qint64 serverOffset = o->GetConnection()->GetServerTimeOffsetSeconds();
-        qint64 uptimeSeconds = now.toSecsSinceEpoch() - static_cast<qint64>(bootTime) - serverOffset;
-        
+        qint64 uptimeSeconds = host->GetUptime();
         if (uptimeSeconds < 0)
             return QVariant();
-        
-        return FormatDuration(uptimeSeconds);
+
+        return Misc::FormatUptime(uptimeSeconds);
     }
     
     return QVariant();
-}
-
-QString PropertyAccessors::FormatDuration(qint64 seconds)
-{
-    if (seconds < 60)
-        return QString("%1 second%2").arg(seconds).arg(seconds == 1 ? "" : "s");
-    
-    qint64 minutes = seconds / 60;
-    if (minutes < 60)
-        return QString("%1 minute%2").arg(minutes).arg(minutes == 1 ? "" : "s");
-    
-    qint64 hours = minutes / 60;
-    if (hours < 24)
-    {
-        qint64 remainingMinutes = minutes % 60;
-        if (remainingMinutes == 0)
-            return QString("%1 hour%2").arg(hours).arg(hours == 1 ? "" : "s");
-        return QString("%1 hour%2, %3 minute%4")
-            .arg(hours).arg(hours == 1 ? "" : "s")
-            .arg(remainingMinutes).arg(remainingMinutes == 1 ? "" : "s");
-    }
-    
-    qint64 days = hours / 24;
-    qint64 remainingHours = hours % 24;
-    if (remainingHours == 0)
-        return QString("%1 day%2").arg(days).arg(days == 1 ? "" : "s");
-    return QString("%1 day%2, %3 hour%4")
-        .arg(days).arg(days == 1 ? "" : "s")
-        .arg(remainingHours).arg(remainingHours == 1 ? "" : "s");
 }
 
 QVariant PropertyAccessors::CPUTextProperty(XenObject* o)

@@ -42,6 +42,7 @@
 #include "vmmetrics.h"
 #include "blob.h"
 #include "pci.h"
+#include "../utils/misc.h"
 #include <QDomDocument>
 #include <algorithm>
 
@@ -1761,8 +1762,8 @@ qint64 VM::GetStartTime() const
                             if (ok)
                                 return epochTime;
                             
-                            // Otherwise try QDateTime parsing
-                            QDateTime dt = QDateTime::fromString(startTimeStr, Qt::ISODate);
+                            // Otherwise parse XenAPI date-time formats used by C# XenAdmin.
+                            QDateTime dt = Misc::ParseXenDateTime(startTimeStr);
                             if (dt.isValid())
                                 return dt.toSecsSinceEpoch();
                         }

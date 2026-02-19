@@ -165,3 +165,55 @@ QString Misc::FormatUptime(qint64 seconds)
 
     return parts.join(", ");
 }
+
+QDateTime Misc::ParseXenDateTime(const QString& dateStr)
+{
+    const QString text = dateStr.trimmed();
+    if (text.isEmpty())
+        return QDateTime();
+
+    auto normalizeToUtc = [](QDateTime dt) -> QDateTime
+    {
+        if (!dt.isValid())
+            return QDateTime();
+        return dt.toUTC();
+    };
+
+    // First handle standard ISO forms (with/without timezone, with/without ms).
+    QDateTime dt = QDateTime::fromString(text, Qt::ISODateWithMs);
+    if (dt.isValid())
+        return normalizeToUtc(dt);
+
+    dt = QDateTime::fromString(text, Qt::ISODate);
+    if (dt.isValid())
+        return normalizeToUtc(dt);
+
+    // C# compact ISO8601: yyyyMMddTHH:mm:ssZ (e.g. 20260204T08:31:23Z).
+    dt = QDateTime::fromString(text, QStringLiteral("yyyyMMdd'T'HH:mm:ss'Z'"));
+    if (dt.isValid())
+    {
+        // Quoted 'Z' is parsed as literal; interpret resulting wall clock time as UTC.
+        dt = QDateTime(dt.date(), dt.time(), Qt::UTC);
+        return normalizeToUtc(dt);
+    }
+
+    // Variant also used by some streams: yyyyMMddTHHmmssZ.
+    dt = QDateTime::fromString(text, QStringLiteral("yyyyMMdd'T'HHmmss'Z'"));
+    if (dt.isValid())
+    {
+        dt = QDateTime(dt.date(), dt.time(), Qt::UTC);
+        return normalizeToUtc(dt);
+    }
+
+    // C# non-iso fallback: yyyy-MM-dd.
+    QDate d = QDate::fromString(text, "yyyy-MM-dd");
+    if (d.isValid())
+        return QDateTime(d, QTime(0, 0), Qt::UTC);
+
+    // C# non-iso fallback: yyyy.MMdd.
+    d = QDate::fromString(text, "yyyy.MMdd");
+    if (d.isValid())
+        return QDateTime(d, QTime(0, 0), Qt::UTC);
+
+    return QDateTime();
+}

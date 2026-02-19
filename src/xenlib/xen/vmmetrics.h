@@ -178,9 +178,6 @@ class XENLIB_EXPORT VMMetrics : public XenObject
 
     protected:
         XenObjectType GetObjectType() const override { return XenObjectType::VMMetrics; }
-
-    private:
-        QDateTime parseDateTime(const QString& dateStr) const;
 };
 
 #endif // VMMETRICS_H

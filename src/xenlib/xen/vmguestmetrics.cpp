@@ -26,6 +26,7 @@
  */
 
 #include "vmguestmetrics.h"
+#include "../utils/misc.h"
 
 VMGuestMetrics::VMGuestMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -69,7 +70,7 @@ QVariantMap VMGuestMetrics::GetOther() const
 QDateTime VMGuestMetrics::GetLastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
-    return this->parseDateTime(dateStr);
+    return Misc::ParseXenDateTime(dateStr);
 }
 
 QVariantMap VMGuestMetrics::GetOtherConfig() const
@@ -95,16 +96,4 @@ QString VMGuestMetrics::GetCanUseHotplugVIF() const
 bool VMGuestMetrics::GetPVDriversDetected() const
 {
     return this->boolProperty("PV_drivers_detected", false);
-}
-
-QDateTime VMGuestMetrics::parseDateTime(const QString& dateStr) const
-{
-    if (dateStr.isEmpty())
-        return QDateTime();
-    
-    QDateTime dt = QDateTime::fromString(dateStr, Qt::ISODate);
-    if (!dt.isValid())
-        dt = QDateTime::fromString(dateStr, Qt::ISODateWithMs);
-    
-    return dt;
 }

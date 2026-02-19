@@ -37,6 +37,7 @@
 #include "pbd.h"
 #include "pif.h"
 #include "pgpu.h"
+#include <QDateTime>
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -277,6 +278,26 @@ double Host::BootTime() const
     double bootTime = otherConfigMap.value("boot_time").toDouble(&ok);
     
     return ok ? bootTime : 0.0;
+}
+
+qint64 Host::GetUptime() const
+{
+    const double bootTime = this->BootTime();
+    if (bootTime <= 0.0)
+        return -1;
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return -1;
+
+    const qint64 now = QDateTime::currentDateTimeUtc().toSecsSinceEpoch();
+    const qint64 serverOffset = connection->GetServerTimeOffsetSeconds();
+    const qint64 uptimeSeconds = now - static_cast<qint64>(bootTime) - serverOffset;
+
+    if (uptimeSeconds < 0)
+        return -1;
+
+    return uptimeSeconds;
 }
 
 QString Host::GetSuspendImageSRRef() const

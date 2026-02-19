@@ -182,13 +182,6 @@ class XENLIB_EXPORT VMGuestMetrics : public XenObject
          */
         bool GetPVDriversDetected() const;
 
-    private:
-        /**
-         * @brief Parse XenServer datetime string
-         * @param dateStr ISO format datetime string
-         * @return Parsed QDateTime
-         */
-        QDateTime parseDateTime(const QString& dateStr) const;
 };
 
 #endif // VMGUESTMETRICS_H

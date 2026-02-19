@@ -48,6 +48,7 @@
 #include "iconmanager.h"
 #include "../../widgets/progressbardelegate.h"
 #include "xenlib/metricupdater.h"
+#include "xenlib/utils/misc.h"
 #include <QHeaderView>
 #include <QMenu>
 #include <QAction>
@@ -930,7 +931,15 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
 
     if (objectType == XenObjectType::Host)
     {
-        return "-";
+        Host* host = dynamic_cast<Host*>(xenObject);
+        if (!host)
+            return "";
+
+        qint64 uptimeSeconds = host->GetUptime();
+        if (uptimeSeconds < 0)
+            return "";
+
+        return Misc::FormatUptime(uptimeSeconds);
     }
 
     return "";

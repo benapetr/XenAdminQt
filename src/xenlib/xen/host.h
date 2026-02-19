@@ -139,6 +139,14 @@ class XENLIB_EXPORT Host : public XenObject
          */
         double BootTime() const;
 
+        /**
+         * @brief Get host uptime in seconds
+         * @return Uptime in seconds, or -1 if not available/invalid
+         *
+         * C# equivalent: Host.Uptime() extension method
+         */
+        qint64 GetUptime() const;
+
         //! Get suspend image SR reference (SR opaque reference)
         QString GetSuspendImageSRRef() const;
 

@@ -30,6 +30,7 @@
 
 #include <QVariant>
 #include <QString>
+#include <QDateTime>
 
 class Misc
 {
@@ -52,6 +53,22 @@ class Misc
         static QString FormatSize(qint64 bytes);
 
         static QString FormatUptime(qint64 seconds);
+
+        /**
+         * @brief Parse XenAPI/C# compatible date-time strings into UTC
+         *
+         * Supports the same core formats as C# Marshalling.ParseDateTime:
+         * - yyyyMMddTHH:mm:ssZ
+         * - yyyy-MM-ddTHH:mm:ssZ
+         * - yyyy-MM-dd
+         * - yyyy.MMdd
+         *
+         * Also accepts Qt ISODate/ISODateWithMs compatible strings.
+         *
+         * @param dateStr Input date-time string
+         * @return Parsed UTC datetime or invalid datetime when parsing fails
+         */
+        static QDateTime ParseXenDateTime(const QString& dateStr);
 };
 
 #endif // MISC_H
