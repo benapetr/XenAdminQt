@@ -28,12 +28,15 @@
 #include "editmultipathaction.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/xen/apiversion.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenapi/xenapi_Host.h"
 #include "xenlib/xen/xenapi/xenapi_PBD.h"
 #include <QDebug>
 
 const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";
+const char* EditMultipathAction::MULTIPATH_KEY = "multipathing";
+const char* EditMultipathAction::MULTIPATH_HANDLE_KEY = "multipathhandle";
 
 EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host, bool enableMultipath, QObject* parent)
     : AsyncOperation(host->GetConnection(),
@@ -45,10 +48,24 @@ EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host, bool enableM
     // Set applies-to context
     if (host)
         this->setAppliesToFromObject(host);
+
+    XenConnection* conn = host ? host->GetConnection() : nullptr;
+    XenAPI::Session* session = conn ? conn->GetSession() : nullptr;
+    const bool supportsSetMultipathing = session && session->ApiVersionMeets(APIVersion::API_2_10);
+
     this->AddApiMethodToRoleCheck("PBD.plug");
     this->AddApiMethodToRoleCheck("PBD.unplug");
-    this->AddApiMethodToRoleCheck("host.add_to_other_config");
+    if (supportsSetMultipathing)
+    {
+        this->AddApiMethodToRoleCheck("host.set_multipathing");
+    } else
+    {
+        this->AddApiMethodToRoleCheck("host.add_to_other_config");
+        this->AddApiMethodToRoleCheck("host.remove_from_other_config");
+    }
     this->AddApiMethodToRoleCheck("host.remove_from_other_config");
+    if (this->m_enableMultipath)
+        this->AddApiMethodToRoleCheck("host.add_to_other_config");
 }
 
 void EditMultipathAction::run()
@@ -96,18 +113,23 @@ void EditMultipathAction::run()
 
         // Step 2: Set multipath configuration
         this->SetDescription("Configuring multipath setting...");
-        
-        // Use other_config method (works on all XenServer versions)
-        // TODO: For XenServer 6.0+ (Kolkata), use Host.set_multipathing() instead
-        XenAPI::Host::remove_from_other_config(sess, hostRef, "multipathing");
-        XenAPI::Host::add_to_other_config(sess, hostRef, "multipathing", 
-                                          this->m_enableMultipath ? "true" : "false");
+
+        const bool supportsSetMultipathing = sess->ApiVersionMeets(APIVersion::API_2_10);
+        if (supportsSetMultipathing)
+        {
+            XenAPI::Host::set_multipathing(sess, hostRef, this->m_enableMultipath);
+        } else
+        {
+            XenAPI::Host::remove_from_other_config(sess, hostRef, MULTIPATH_KEY);
+            XenAPI::Host::add_to_other_config(sess, hostRef, MULTIPATH_KEY,
+                                              this->m_enableMultipath ? "true" : "false");
+        }
 
         // Set multipath handle if enabling
-        XenAPI::Host::remove_from_other_config(sess, hostRef, "multipath-handle");
+        XenAPI::Host::remove_from_other_config(sess, hostRef, MULTIPATH_HANDLE_KEY);
         if (m_enableMultipath)
         {
-            XenAPI::Host::add_to_other_config(sess, hostRef, "multipath-handle", 
+            XenAPI::Host::add_to_other_config(sess, hostRef, MULTIPATH_HANDLE_KEY,
                                              DEFAULT_MULTIPATH_HANDLE);
         }
 

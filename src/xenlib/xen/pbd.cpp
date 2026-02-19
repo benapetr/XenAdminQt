@@ -30,6 +30,7 @@
 #include "sr.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include <QRegularExpression>
 
 PBD::PBD(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -96,6 +97,36 @@ bool PBD::HasOtherConfigKey(const QString& key) const
 {
     QVariantMap config = this->GetOtherConfig();
     return config.contains(key);
+}
+
+bool PBD::MultipathActive() const
+{
+    const QString value = this->GetOtherConfigValue("multipathed");
+    return value.compare("true", Qt::CaseInsensitive) == 0;
+}
+
+int PBD::ISCSISessions() const
+{
+    bool ok = false;
+    const int sessions = this->GetOtherConfigValue("iscsi_sessions").toInt(&ok);
+    return ok ? sessions : -1;
+}
+
+bool PBD::ParsePathCounts(const QString& input, int& currentPaths, int& maxPaths)
+{
+    currentPaths = 0;
+    maxPaths = 0;
+
+    static const QRegularExpression regex("\\[(\\d+)L?,\\s*(\\d+)L?");
+    const QRegularExpressionMatch match = regex.match(input);
+    if (!match.hasMatch() || match.lastCapturedIndex() < 2)
+        return false;
+
+    bool okCurrent = false;
+    bool okMax = false;
+    currentPaths = match.captured(1).toInt(&okCurrent);
+    maxPaths = match.captured(2).toInt(&okMax);
+    return okCurrent && okMax;
 }
 
 QString PBD::StatusString() const

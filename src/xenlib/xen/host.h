@@ -318,7 +318,10 @@ class XENLIB_EXPORT Host : public XenObject
         QString IscsiIQN() const;
 
         //! Check if multipathing is enabled (storage multipathing is enabled)
-        bool Multipathing() const;
+        bool MultipathingEnabled() const;
+
+        //! Get multipath handler value from other_config (C# Host.MultipathHandle()).
+        QString MultipathHandle() const;
 
         //! Get UEFI certificates data
         QString UEFICertificates() const;

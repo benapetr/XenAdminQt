@@ -542,6 +542,20 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 
+    void Host::set_multipathing(Session* session, const QString& host, bool value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.set_multipathing", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
+    }
+
     void Host::syslog_reconfigure(Session* session, const QString& host)
     {
         if (!session || !session->IsLoggedIn())

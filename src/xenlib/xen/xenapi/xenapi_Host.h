@@ -300,6 +300,16 @@ namespace XenAPI
             static void add_to_other_config(Session* session, const QString& host, const QString& key, const QString& value);
 
             /**
+             * @brief Set host multipathing flag
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @param value Multipathing enabled/disabled
+             *
+             * Matches C# Host.set_multipathing()
+             */
+            static void set_multipathing(Session* session, const QString& host, bool value);
+
+            /**
              * @brief Reconfigure syslog logging
              * @param session XenServer session
              * @param host Host opaque reference

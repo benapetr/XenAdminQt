@@ -84,11 +84,8 @@ void HostMultipathPage::SetXenObject(QSharedPointer<XenObject> object,
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
-    // Get multipath setting from other_config
-    // Reference: C# Host.MultipathEnabled() in XenModel/XenObjects/Host.cs
-    QVariantMap otherConfig = objectDataCopy.value("other_config").toMap();
-    QString multipathValue = otherConfig.value("multipathing", "false").toString();
-    this->m_originalMultipathEnabled = (multipathValue.toLower() == "true");
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(object);
+    this->m_originalMultipathEnabled = host && host->MultipathingEnabled();
 
     this->ui->multipathCheckBox->setChecked(this->m_originalMultipathEnabled);
 

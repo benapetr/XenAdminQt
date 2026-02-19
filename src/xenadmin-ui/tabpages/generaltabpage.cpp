@@ -1606,68 +1606,135 @@ void GeneralTabPage::populateMultipathingSection()
         return;
     }
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    if (!cache)
         return;
 
-    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
-    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
+    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>();
 
-    for (const QSharedPointer<Host>& host : allHosts)
+    auto addMultipathLine = [this](const QString& title, int currentPaths, int maxPaths, int iscsiSessions)
     {
-        if (!host || host->IsEvicted())
-            continue;
+        bool degraded = currentPaths < maxPaths || (iscsiSessions != -1 && maxPaths < iscsiSessions);
+        QString row = tr("%1 of %2 paths active").arg(currentPaths).arg(maxPaths);
+        if (iscsiSessions != -1)
+            row += tr(" (%1 iSCSI sessions)").arg(iscsiSessions);
+        this->ui->pdSectionMultipathing->AddEntry(title, row, degraded ? QColor(Qt::red) : QColor());
+    };
 
-        QString hostRef = host->OpaqueRef();
-        QString hostName = host->GetName();
-
-        // Find PBD for this host
-        QString multipathStatus = "Not active";
-        QColor statusColor;
-
+    auto findPbdForHost = [&pbds](const QString& hostRef) -> QSharedPointer<PBD>
+    {
         for (const QSharedPointer<PBD>& pbd : pbds)
         {
-            if (!pbd || pbd->IsEvicted())
+            if (pbd && !pbd->IsEvicted() && pbd->GetHostRef() == hostRef)
+                return pbd;
+        }
+        return QSharedPointer<PBD>();
+    };
+
+    if (sr->LunPerVDI())
+    {
+        const QHash<QString, QHash<QString, QString>> pathStatus = sr->GetMultiPathStatusLunPerVDI();
+        for (const QSharedPointer<Host>& host : allHosts)
+        {
+            if (!host || host->IsEvicted())
                 continue;
 
-            if (pbd->GetHostRef() == hostRef)
+            const QString hostRef = host->OpaqueRef();
+            const QSharedPointer<PBD> pbd = findPbdForHost(hostRef);
+            if (!pbd || !pbd->MultipathActive())
             {
-                // Check if multipath is active on this PBD
-                // C# PBD.MultipathActive() checks device_config["multipathed"] == "true"
-                QString multipathed = pbd->GetDeviceConfigValue("multipathed");
-                bool multipathActive = (multipathed == "true");
+                this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Not active"));
+                continue;
+            }
 
-                if (multipathActive)
+            this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Active"));
+
+            for (auto vmIt = pathStatus.constBegin(); vmIt != pathStatus.constEnd(); ++vmIt)
+            {
+                const QString vmRef = vmIt.key();
+                const QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
+                if (vmData.isEmpty() || vmData.value("resident_on").toString() != hostRef)
+                    continue;
+
+                const QString vmName = vmData.value("name_label").toString();
+                const QHash<QString, QString>& byVdi = vmIt.value();
+
+                bool renderOnOneLine = false;
+                int lastCurrent = -1;
+                int lastMax = -1;
+
+                for (auto vdiIt = byVdi.constBegin(); vdiIt != byVdi.constEnd(); ++vdiIt)
                 {
-                    // Parse path counts from other_config
-                    // C# PBD.ParsePathCounts() extracts "multipath-current-paths" and "multipath-maximum-paths"
-                    int currentPaths = pbd->GetOtherConfigValue("multipath-current-paths").toInt();
-                    int maxPaths = pbd->GetOtherConfigValue("multipath-maximum-paths").toInt();
+                    int currentPaths = 0;
+                    int maxPaths = 0;
+                    if (!PBD::ParsePathCounts(vdiIt.value(), currentPaths, maxPaths))
+                        continue;
 
-                    // Get iSCSI session count if applicable
-                    int iscsiSessions = pbd->GetOtherConfigValue("iscsi_sessions").toInt();
-
-                    // Format status string: "X of Y paths active"
-                    multipathStatus = QString("%1 of %2 paths active").arg(currentPaths).arg(maxPaths);
-
-                    if (iscsiSessions > 0)
+                    if (!renderOnOneLine)
                     {
-                        multipathStatus += QString(" (%1 iSCSI sessions)").arg(iscsiSessions);
+                        renderOnOneLine = true;
+                        lastCurrent = currentPaths;
+                        lastMax = maxPaths;
+                        continue;
                     }
 
-                    // Red if degraded (current < max or max < iscsi sessions)
-                    bool degraded = (currentPaths < maxPaths) || (iscsiSessions > 0 && maxPaths < iscsiSessions);
-                    statusColor = degraded ? Qt::red : QColor();
-                } else
-                {
-                    multipathStatus = "Not active";
-                    statusColor = QColor();
+                    if (lastCurrent == currentPaths && lastMax == maxPaths)
+                        continue;
+
+                    renderOnOneLine = false;
+                    break;
                 }
 
-                break;
+                if (renderOnOneLine)
+                {
+                    addMultipathLine(QString("    %1").arg(vmName), lastCurrent, lastMax, pbd->ISCSISessions());
+                } else
+                {
+                    this->ui->pdSectionMultipathing->AddEntry(QString("    %1").arg(vmName), QString());
+                    for (auto vdiIt = byVdi.constBegin(); vdiIt != byVdi.constEnd(); ++vdiIt)
+                    {
+                        int currentPaths = 0;
+                        int maxPaths = 0;
+                        if (!PBD::ParsePathCounts(vdiIt.value(), currentPaths, maxPaths))
+                            continue;
+
+                        const QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiIt.key());
+                        const QString vdiName = vdiData.value("name_label").toString();
+                        addMultipathLine(QString("        %1").arg(vdiName), currentPaths, maxPaths, pbd->ISCSISessions());
+                    }
+                }
             }
         }
+    } else
+    {
+        const QHash<QString, QString> pathStatus = sr->GetMultiPathStatusLunPerSR();
+        const bool gfs2 = sr->GetType().compare("gfs2", Qt::CaseInsensitive) == 0;
+        for (const QSharedPointer<Host>& host : allHosts)
+        {
+            if (!host || host->IsEvicted())
+                continue;
 
-        this->ui->pdSectionMultipathing->AddEntry(hostName, multipathStatus, statusColor);
+            const QSharedPointer<PBD> pbd = findPbdForHost(host->OpaqueRef());
+            if (!pbd || !pathStatus.contains(pbd->OpaqueRef()))
+            {
+                if (!pbd)
+                    this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Not active"));
+                else if (pbd->MultipathActive())
+                    this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Active"));
+                else if (gfs2)
+                    this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Not active"), QColor(Qt::red));
+                else
+                    this->ui->pdSectionMultipathing->AddEntry(host->GetName(), tr("Not active"));
+
+                continue;
+            }
+
+            int currentPaths = 0;
+            int maxPaths = 0;
+            PBD::ParsePathCounts(pathStatus.value(pbd->OpaqueRef()), currentPaths, maxPaths);
+            addMultipathLine(host->GetName(), currentPaths, maxPaths, pbd->ISCSISessions());
+        }
     }
 
     this->showSectionIfNotEmpty(this->ui->pdSectionMultipathing);

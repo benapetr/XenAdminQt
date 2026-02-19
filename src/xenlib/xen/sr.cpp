@@ -320,6 +320,126 @@ bool SR::HBALunPerVDI() const
     return this->GetType() == "rawhba";
 }
 
+bool SR::LunPerVDI() const
+{
+    const QVariantMap smConfig = this->SMConfig();
+    for (auto it = smConfig.constBegin(); it != smConfig.constEnd(); ++it)
+    {
+        const QString key = it.key();
+        if (key.contains("LUNperVDI") || key.startsWith("scsi-"))
+            return true;
+    }
+    return false;
+}
+
+QHash<QString, QString> SR::GetMultiPathStatusLunPerSR() const
+{
+    QHash<QString, QString> result;
+
+    const QList<QSharedPointer<PBD>> pbds = this->GetPBDs();
+    for (const QSharedPointer<PBD>& pbd : pbds)
+    {
+        if (!pbd || !pbd->IsValid() || !pbd->MultipathActive())
+            continue;
+
+        QString status;
+        const QVariantMap otherConfig = pbd->GetOtherConfig();
+        for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
+        {
+            if (it.key().startsWith("mpath"))
+            {
+                status = it.value().toString();
+                break;
+            }
+        }
+
+        int currentPaths = 0;
+        int maxPaths = 0;
+        if (!PBD::ParsePathCounts(status, currentPaths, maxPaths))
+            continue;
+
+        result.insert(pbd->OpaqueRef(), status);
+    }
+
+    return result;
+}
+
+QHash<QString, QHash<QString, QString>> SR::GetMultiPathStatusLunPerVDI() const
+{
+    QHash<QString, QHash<QString, QString>> result;
+
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return result;
+
+    const QVariantMap smConfig = this->SMConfig();
+    const QList<QSharedPointer<PBD>> pbds = this->GetPBDs();
+    const QStringList vdiRefs = this->GetVDIRefs();
+
+    for (const QSharedPointer<PBD>& pbd : pbds)
+    {
+        if (!pbd || !pbd->IsValid() || !pbd->MultipathActive())
+            continue;
+
+        const QVariantMap otherConfig = pbd->GetOtherConfig();
+        for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
+        {
+            if (!it.key().startsWith("mpath"))
+                continue;
+
+            int currentPaths = 0;
+            int maxPaths = 0;
+            if (!PBD::ParsePathCounts(it.value().toString(), currentPaths, maxPaths))
+                continue;
+
+            const QString scsiIdKey = QString("scsi-%1").arg(it.key().mid(QString("mpath").length() + 1));
+            if (!smConfig.contains(scsiIdKey))
+                continue;
+
+            const QString vdiUuid = smConfig.value(scsiIdKey).toString();
+            if (vdiUuid.isEmpty())
+                continue;
+
+            QString vdiRef;
+            for (const QString& candidateVdiRef : vdiRefs)
+            {
+                const QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, candidateVdiRef);
+                if (vdiData.isEmpty())
+                    continue;
+                if (vdiData.value("uuid").toString() == vdiUuid)
+                {
+                    vdiRef = candidateVdiRef;
+                    break;
+                }
+            }
+
+            if (vdiRef.isEmpty())
+                continue;
+
+            const QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
+            const QVariantList vbdRefs = vdiData.value("VBDs").toList();
+            for (const QVariant& vbdRefVar : vbdRefs)
+            {
+                const QString vbdRef = vbdRefVar.toString();
+                const QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
+                const QString vmRef = vbdData.value("VM").toString();
+                if (vmRef.isEmpty() || vmRef == XENOBJECT_NULL)
+                    continue;
+
+                const QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
+                if (vmData.isEmpty())
+                    continue;
+                if (vmData.value("power_state").toString() != "Running")
+                    continue;
+
+                result[vmRef].insert(vdiRef, it.value().toString());
+            }
+        }
+    }
+
+    return result;
+}
+
 QString SR::HomeRef() const
 {
     if (this->IsShared())
@@ -444,23 +564,29 @@ bool SR::MultipathAOK() const
     if (smConfig.value("multipathable", "false").toString() != "true")
         return true;
 
-    XenCache* cache = this->GetCache();
-
-    QStringList pbdRefs = GetPBDRefs();
-    for (const QString& pbdRef : pbdRefs)
+    if (this->LunPerVDI())
     {
-        QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
-        if (pbdData.isEmpty())
-            continue;
+        const QHash<QString, QHash<QString, QString>> statusByVm = this->GetMultiPathStatusLunPerVDI();
+        for (auto vmIt = statusByVm.constBegin(); vmIt != statusByVm.constEnd(); ++vmIt)
+        {
+            const QHash<QString, QString>& statusByVdi = vmIt.value();
+            for (auto vdiIt = statusByVdi.constBegin(); vdiIt != statusByVdi.constEnd(); ++vdiIt)
+            {
+                int currentPaths = 0;
+                int maxPaths = 0;
+                if (PBD::ParsePathCounts(vdiIt.value(), currentPaths, maxPaths) && currentPaths < maxPaths)
+                    return false;
+            }
+        }
+        return true;
+    }
 
-        const QVariantMap deviceConfig = pbdData.value("device_config").toMap();
-        if (deviceConfig.value("multipathed", "false").toString() != "true")
-            continue;
-
-        const QVariantMap otherConfig = pbdData.value("other_config").toMap();
-        const int currentPaths = otherConfig.value("multipath-current-paths", "0").toString().toInt();
-        const int maxPaths = otherConfig.value("multipath-maximum-paths", "0").toString().toInt();
-        if (maxPaths > 0 && currentPaths < maxPaths)
+    const QHash<QString, QString> statusByPbd = this->GetMultiPathStatusLunPerSR();
+    for (auto it = statusByPbd.constBegin(); it != statusByPbd.constEnd(); ++it)
+    {
+        int currentPaths = 0;
+        int maxPaths = 0;
+        if (PBD::ParsePathCounts(it.value(), currentPaths, maxPaths) && currentPaths < maxPaths)
             return false;
     }
 

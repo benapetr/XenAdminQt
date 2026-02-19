@@ -592,9 +592,21 @@ QString Host::IscsiIQN() const
     return this->stringProperty("iscsi_iqn");
 }
 
-bool Host::Multipathing() const
+bool Host::MultipathingEnabled() const
 {
-    return this->boolProperty("multipathing", false);
+    const QVariant multipathingField = this->property("multipathing");
+    if (multipathingField.isValid() && !multipathingField.isNull())
+        return multipathingField.toBool();
+
+    const QVariantMap otherConfig = this->GetOtherConfig();
+    const QString value = otherConfig.value("multipathing").toString();
+    return value.compare("true", Qt::CaseInsensitive) == 0;
+}
+
+QString Host::MultipathHandle() const
+{
+    const QVariantMap otherConfig = this->GetOtherConfig();
+    return otherConfig.value("multipathhandle").toString();
 }
 
 QString Host::UEFICertificates() const

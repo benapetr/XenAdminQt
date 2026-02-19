@@ -42,7 +42,7 @@ class Host;
  * Changes the multipath setting on a host. This involves:
  * 1. Unplugging all currently attached PBDs
  * 2. Setting host.multipathing (XenServer 6.0+) or host.other_config["multipathing"]
- * 3. Setting host.other_config["multipath-handle"] to "dmp" if enabling
+ * 3. Setting host.other_config["multipathhandle"] to "dmp" if enabling
  * 4. Re-plugging all PBDs
  *
  * The host should be in maintenance mode before running this action to ensure
@@ -69,6 +69,8 @@ class XENLIB_EXPORT EditMultipathAction : public AsyncOperation
         bool m_enableMultipath;
         
         static const char* DEFAULT_MULTIPATH_HANDLE;
+        static const char* MULTIPATH_KEY;
+        static const char* MULTIPATH_HANDLE_KEY;
 };
 
 #endif // EDITMULTIPATHACTION_H

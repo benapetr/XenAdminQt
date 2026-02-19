@@ -29,6 +29,7 @@
 #define SR_H
 
 #include "xenobject.h"
+#include <QHash>
 
 class Host;
 class VDI;
@@ -168,6 +169,15 @@ class XENLIB_EXPORT SR : public XenObject
 
         //! Check if SR is raw HBA LUN-per-VDI (SR type is rawhba)
         bool HBALunPerVDI() const;
+
+        //! Legacy LUN-per-VDI detection based on sm_config mapping keys (C# SR.LunPerVDI()).
+        bool LunPerVDI() const;
+
+        //! LUN-per-SR multipath status map: PBD ref -> raw "mpath*" payload.
+        QHash<QString, QString> GetMultiPathStatusLunPerSR() const;
+
+        //! LUN-per-VDI multipath status map: VM ref -> (VDI ref -> raw "mpath*" payload).
+        QHash<QString, QHash<QString, QString>> GetMultiPathStatusLunPerVDI() const;
 
         /**
          * @brief Get the host for this SR (for shared SRs, returns pool coordinator)

@@ -100,6 +100,18 @@ class XENLIB_EXPORT PBD : public XenObject
         //! @return true if key exists
         bool HasOtherConfigKey(const QString& key) const;
 
+        //! @brief Whether multipath is active for this PBD (other_config["multipathed"])
+        bool MultipathActive() const;
+
+        //! @brief iSCSI session count from other_config, or -1 if unavailable
+        int ISCSISessions() const;
+
+        /**
+         * @brief Parse "[current,max]" multipath status payload
+         * Mirrors C# PBD.ParsePathCounts().
+         */
+        static bool ParsePathCounts(const QString& input, int& currentPaths, int& maxPaths);
+
         /**
          * @brief Get a friendly connection status string for this PBD
          *
