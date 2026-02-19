@@ -87,6 +87,9 @@
         <widget class="PDSection" name="pdSectionGeneral"/>
        </item>
        <item>
+        <widget class="PDSection" name="pdSectionCertificate"/>
+       </item>
+       <item>
         <widget class="PDSection" name="pdSectionBios"/>
        </item>
        <item>

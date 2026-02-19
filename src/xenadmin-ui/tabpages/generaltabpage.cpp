@@ -35,6 +35,7 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/certificate.h"
 #include "xenlib/xen/pif.h"
 #include "xenlib/xen/dockercontainer.h"
 #include "xenlib/xen/vmappliance.h"
@@ -44,6 +45,7 @@
 #include "dialogs/poolpropertiesdialog.h"
 #include "dialogs/storagepropertiesdialog.h"
 #include "dialogs/networkpropertiesdialog.h"
+#include <algorithm>
 #include <QDateTime>
 
 GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::GeneralTabPage)
@@ -51,6 +53,7 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     this->ui->setupUi(this);
 
     this->ui->pdSectionGeneral->SetSectionTitle(tr("General"));
+    this->ui->pdSectionCertificate->SetSectionTitle(tr("Certificates"));
     this->ui->pdSectionBios->SetSectionTitle(tr("BIOS Information"));
     this->ui->pdSectionCustomFields->SetSectionTitle(tr("Custom Fields"));
     this->ui->pdSectionManagementInterfaces->SetSectionTitle(tr("Management Interfaces"));
@@ -83,6 +86,7 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
 
     this->sections_ = {
         this->ui->pdSectionGeneral,
+        this->ui->pdSectionCertificate,
         this->ui->pdSectionBios,
         this->ui->pdSectionCustomFields,
         this->ui->pdSectionManagementInterfaces,
@@ -140,12 +144,8 @@ void GeneralTabPage::refreshContent()
 
     const QString objectName = this->m_object->GetName().isEmpty() ? "N/A" : this->m_object->GetName();
     const QString objectDescription = this->m_object->GetDescription().isEmpty() ? "N/A" : this->m_object->GetDescription();
-    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_label",
-                           objectName,
-                           propertiesMenu);
-    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description",
-                           objectDescription,
-                           propertiesMenu);
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_label", objectName, propertiesMenu);
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description", objectDescription, propertiesMenu);
 
     QStringList tags = this->m_object->GetTags();
     QString tagsValue = tags.isEmpty() ? tr("None") : tags.join(", ");
@@ -184,6 +184,7 @@ void GeneralTabPage::refreshContent()
     }
 
     this->showSectionIfNotEmpty(this->ui->pdSectionGeneral);
+    this->showSectionIfNotEmpty(this->ui->pdSectionCertificate);
     this->showSectionIfNotEmpty(this->ui->pdSectionBios);
     this->showSectionIfNotEmpty(this->ui->pdSectionCustomFields);
     this->showSectionIfNotEmpty(this->ui->pdSectionManagementInterfaces);
@@ -207,6 +208,7 @@ void GeneralTabPage::refreshContent()
 void GeneralTabPage::clearProperties()
 {
     this->ui->pdSectionGeneral->ClearData();
+    this->ui->pdSectionCertificate->ClearData();
     this->ui->pdSectionBios->ClearData();
     this->ui->pdSectionCustomFields->ClearData();
     this->ui->pdSectionManagementInterfaces->ClearData();
@@ -224,6 +226,7 @@ void GeneralTabPage::clearProperties()
     this->ui->pdSectionDeviceSecurity->ClearData();
 
     this->ui->pdSectionGeneral->setVisible(false);
+    this->ui->pdSectionCertificate->setVisible(false);
     this->ui->pdSectionBios->setVisible(false);
     this->ui->pdSectionCustomFields->setVisible(false);
     this->ui->pdSectionManagementInterfaces->setVisible(false);
@@ -278,9 +281,13 @@ QString GeneralTabPage::friendlyName(const QString& key) const
         labels.insert("host.uptime", tr("Server Uptime"));
         labels.insert("host.agentUptime", tr("Toolstack Uptime"));
         labels.insert("host.external_auth_service_name", tr("External Auth Service"));
+        labels.insert("host.certificate_verification", tr("Certificate verification"));
         labels.insert("host.ServerMemory", tr("Server"));
         labels.insert("host.VMMemory", tr("VMs"));
         labels.insert("host.XenMemory", tr("XCP-ng"));
+        labels.insert("pool.cpu_sockets", tr("Number of sockets"));
+        labels.insert("pool.auto_poweron", tr("Autoboot of VMs enabled"));
+        labels.insert("pool.certificate_verification", tr("Certificate verification"));
         labels.insert("pool.master", tr("Master"));
         labels.insert("pool.default_SR", tr("Default SR"));
         labels.insert("pool.ha_enabled", tr("HA Enabled"));
@@ -333,6 +340,40 @@ QString GeneralTabPage::friendlyName(const QString& key) const
     }
 
     return labels.value(key, key);
+}
+
+namespace
+{
+    QString formatCertificateType(const QString& type)
+    {
+        if (type == "ca")
+            return QObject::tr("CA certificate");
+        if (type == "host")
+            return QObject::tr("Host certificate");
+        if (type == "host_internal")
+            return QObject::tr("Internal certificate");
+        return QObject::tr("Unknown certificate");
+    }
+
+    QString formatCertificateValue(const QSharedPointer<Certificate>& certificate)
+    {
+        if (!certificate || !certificate->IsValid())
+            return QString();
+
+        QString validFrom = QObject::tr("Unknown");
+        QString validTo = QObject::tr("Unknown");
+
+        const QDateTime notBefore = certificate->NotBefore();
+        if (notBefore.isValid())
+            validFrom = notBefore.toLocalTime().toString("dd/MM/yyyy HH:mm");
+
+        const QDateTime notAfter = certificate->NotAfter();
+        if (notAfter.isValid())
+            validTo = notAfter.toLocalTime().toString("dd/MM/yyyy HH:mm");
+
+        return QObject::tr("Valid from %1 to %2\nThumbprint: %3")
+            .arg(validFrom, validTo, certificate->Fingerprint());
+    }
 }
 
 void GeneralTabPage::openPropertiesDialog()
@@ -619,6 +660,7 @@ void GeneralTabPage::populateHostProperties()
     // C# Reference: xenadmin/XenAdmin/TabPages/GeneralTabPage.cs lines 953-1032
 
     this->populateGeneralSection();
+    this->populateCertificateSection();
     this->populateBIOSSection();
     this->populateManagementInterfacesSection();
     this->populateMemorySection();
@@ -634,16 +676,39 @@ void GeneralTabPage::populatePoolProperties()
     if (!pool)
         return;
 
-    const QString masterRef = pool->GetMasterHostRef();
-    if (!masterRef.isEmpty())
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.master", masterRef);
+    QSharedPointer<Host> masterHost = pool->GetMasterHost();
+    if (masterHost && masterHost->IsValid())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.master", masterHost->GetName());
 
     const QString defaultSrRef = pool->GetDefaultSRRef();
     if (!defaultSrRef.isEmpty())
         this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.default_SR", defaultSrRef);
 
+    const QVariantMap cpuInfo = pool->CPUInfo();
+    qint64 cpuSockets = cpuInfo.value("cpu_count").toLongLong();
+    if (cpuSockets > 0)
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.cpu_sockets", QString::number(cpuSockets));
+
+    const QVariantMap poolOtherConfig = pool->GetOtherConfig();
+    const bool autoPowerOn = (poolOtherConfig.value("auto_poweron").toString() == "true");
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.auto_poweron", autoPowerOn ? tr("Yes") : tr("No"));
+
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.certificate_verification",
+                           pool->TLSVerificationEnabled() ? tr("Enabled") : tr("Disabled"));
+
+    if (masterHost && masterHost->IsValid())
+    {
+        const QString productBrand = masterHost->ProductBrand();
+        const QString productVersion = masterHost->SoftwareVersion().value("product_version").toString();
+        const QString versionText = QString("%1 %2").arg(productBrand, productVersion).trimmed();
+        if (!versionText.isEmpty())
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "host.product_version", versionText);
+    }
+
     this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.ha_enabled",
                            pool->HAEnabled() ? tr("Yes") : tr("No"));
+
+    this->populateCertificateSection();
 }
 
 void GeneralTabPage::populateSRProperties()
@@ -998,6 +1063,17 @@ void GeneralTabPage::populateGeneralSection()
         this->addPropertyByKey(this->ui->pdSectionGeneral, "host.auto_poweron", autoPowerOn ? tr("Yes") : tr("No"));
     }
 
+    // Certificate verification
+    {
+        bool tlsVerificationEnabled = host->TLSVerificationEnabled();
+        QSharedPointer<Pool> pool = host->GetPool();
+        if (pool && pool->IsValid())
+            tlsVerificationEnabled = pool->TLSVerificationEnabled() && host->TLSVerificationEnabled();
+
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.certificate_verification",
+                               tlsVerificationEnabled ? tr("Enabled") : tr("Disabled"));
+    }
+
     // Log destination
     // C# Reference: lines 1011-1017 - host.GetSysLogDestination() from logging["syslog_destination"]
     {
@@ -1050,8 +1126,80 @@ void GeneralTabPage::populateGeneralSection()
     if (!iscsiIqn.isEmpty())
         this->addPropertyByKey(this->ui->pdSectionGeneral, "host.iscsi_iqn", iscsiIqn);
 
+    // External auth service name
+    {
+        const QString authType = host->ExternalAuthType();
+        const QString serviceName = host->ExternalAuthServiceName();
+        if (authType.compare("AD", Qt::CaseInsensitive) == 0 && !serviceName.isEmpty())
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "host.external_auth_service_name", serviceName);
+    }
+
     // Show section if it has content
     this->showSectionIfNotEmpty(this->ui->pdSectionGeneral);
+}
+
+void GeneralTabPage::populateCertificateSection()
+{
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+
+    if (this->m_objectType == XenObjectType::Host)
+    {
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+        if (!host)
+            return;
+
+        QList<QSharedPointer<Certificate>> certificates;
+        const QStringList refs = host->CertificateRefs();
+        for (const QString& ref : refs)
+        {
+            QSharedPointer<Certificate> cert = cache->ResolveObject<Certificate>(XenObjectType::Certificate, ref);
+            if (cert && cert->IsValid())
+                certificates.append(cert);
+        }
+
+        std::sort(certificates.begin(), certificates.end(),
+                  [](const QSharedPointer<Certificate>& left, const QSharedPointer<Certificate>& right)
+                  {
+                      if (left->Type() != right->Type())
+                          return left->Type() < right->Type();
+                      return left->Name() < right->Name();
+                  });
+
+        for (const QSharedPointer<Certificate>& certificate : certificates)
+        {
+            this->addProperty(this->ui->pdSectionCertificate,
+                              formatCertificateType(certificate->Type()),
+                              formatCertificateValue(certificate));
+        }
+    }
+    else if (this->m_objectType == XenObjectType::Pool)
+    {
+        QList<QSharedPointer<Certificate>> certificates = cache->GetAll<Certificate>(XenObjectType::Certificate);
+        certificates.erase(std::remove_if(certificates.begin(), certificates.end(),
+                                          [](const QSharedPointer<Certificate>& certificate)
+                                          {
+                                              return !certificate || !certificate->IsValid() || certificate->Type() != "ca";
+                                          }),
+                           certificates.end());
+
+        std::sort(certificates.begin(), certificates.end(),
+                  [](const QSharedPointer<Certificate>& left, const QSharedPointer<Certificate>& right)
+                  {
+                      return left->Name() < right->Name();
+                  });
+
+        for (const QSharedPointer<Certificate>& certificate : certificates)
+        {
+            const QString certName = certificate->Name().isEmpty() ? QObject::tr("CA") : certificate->Name();
+            const QString certValue = QString("%1\n%2")
+                                          .arg(formatCertificateType(certificate->Type()),
+                                               formatCertificateValue(certificate));
+            this->addProperty(this->ui->pdSectionCertificate, certName, certValue);
+        }
+    }
 }
 
 void GeneralTabPage::populateBIOSSection()

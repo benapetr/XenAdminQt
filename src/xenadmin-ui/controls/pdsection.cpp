@@ -49,6 +49,7 @@ PDSection::PDSection(QWidget* parent)
     , isExpanded_(true)
     , inLayout_(false)
     , disableFocusEvent_(false)
+    , showCellToolTips_(true)
     , chevronHot_(false)
 {
     this->setMinimumHeight(0);
@@ -171,14 +172,28 @@ void PDSection::SetDisableFocusEvent(bool disable)
 
 void PDSection::SetShowCellToolTips(bool show)
 {
-    Q_UNUSED(show);
-    // Qt handles tooltips per item, so we'll store this for future item creation
-    // For now, we can't retroactively change existing items
+    this->showCellToolTips_ = show;
+
+    // Apply to existing rows
+    for (int row = 0; row < this->tableWidget_->rowCount(); ++row)
+    {
+        for (int col = 0; col < 3; ++col)
+        {
+            QTableWidgetItem* item = this->tableWidget_->item(row, col);
+            if (!item)
+                continue;
+
+            if (this->showCellToolTips_)
+                item->setToolTip(item->text());
+            else
+                item->setToolTip(QString());
+        }
+    }
 }
 
 bool PDSection::GetShowCellToolTips() const
 {
-    return true; // Qt default
+    return this->showCellToolTips_;
 }
 
 void PDSection::Expand()
@@ -432,11 +447,15 @@ void PDSection::addRow(const QString& keyText, const QString& valueText, const Q
     // Key column
     QTableWidgetItem* keyItem = new QTableWidgetItem(keyText);
     keyItem->setFlags(keyItem->flags() & ~Qt::ItemIsEditable);
+    if (this->showCellToolTips_ && !keyText.isEmpty())
+        keyItem->setToolTip(keyText);
     this->tableWidget_->setItem(row, 0, keyItem);
     
     // Value column
     QTableWidgetItem* valueItem = new QTableWidgetItem(valueText);
     valueItem->setFlags(valueItem->flags() & ~Qt::ItemIsEditable);
+    if (this->showCellToolTips_ && !valueText.isEmpty())
+        valueItem->setToolTip(valueText);
     if (fontColor.isValid())
     {
         valueItem->setForeground(QBrush(fontColor));
@@ -453,6 +472,8 @@ void PDSection::addRow(const QString& keyText, const QString& valueText, const Q
     // Notes column
     QTableWidgetItem* noteItem = new QTableWidgetItem(noteText);
     noteItem->setFlags(noteItem->flags() & ~Qt::ItemIsEditable);
+    if (this->showCellToolTips_ && !noteText.isEmpty())
+        noteItem->setToolTip(noteText);
     if (isNoteLink && !noteText.isEmpty())
     {
         QFont linkFont = noteItem->font();

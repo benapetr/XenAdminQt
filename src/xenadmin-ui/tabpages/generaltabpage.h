@@ -100,6 +100,7 @@ class GeneralTabPage : public BaseTabPage
         void populateDockerInfoSection();
         void populateReadCachingSection();
         void populateDeviceSecuritySection();
+        void populateCertificateSection();
 
         // Host section population methods
         void populateGeneralSection();

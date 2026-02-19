@@ -243,6 +243,7 @@ class PDSection : public QWidget
         bool isExpanded_;
         bool inLayout_;
         bool disableFocusEvent_;
+        bool showCellToolTips_;
         QString previousSelectionKey_;
         bool chevronHot_;
 
