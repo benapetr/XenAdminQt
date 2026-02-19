@@ -41,7 +41,7 @@ QString PBD::GetHostRef() const
     return this->stringProperty("host");
 }
 
-QSharedPointer<Host> PBD::GetHost()
+QSharedPointer<Host> PBD::GetHost() const
 {
     QString host_ref = this->GetHostRef();
     if (!this->GetConnection() || host_ref.isEmpty() || host_ref == XENOBJECT_NULL)
@@ -55,7 +55,7 @@ QString PBD::GetSRRef() const
     return this->stringProperty("SR");
 }
 
-QSharedPointer<SR> PBD::GetSR()
+QSharedPointer<SR> PBD::GetSR() const
 {
     QString sr_ref = this->GetSRRef();
     if (!this->GetConnection() || sr_ref.isEmpty() || sr_ref == XENOBJECT_NULL)
@@ -96,4 +96,16 @@ bool PBD::HasOtherConfigKey(const QString& key) const
 {
     QVariantMap config = this->GetOtherConfig();
     return config.contains(key);
+}
+
+QString PBD::StatusString() const
+{
+    if (!IsCurrentlyAttached())
+        return QObject::tr("Unplugged");
+
+    QSharedPointer<Host> host = GetHost();
+    if (!host || !host->IsValid() || !host->IsLive())
+        return QObject::tr("Host not live");
+
+    return QObject::tr("Connected");
 }

@@ -146,7 +146,7 @@ QString ImportVmAction::uploadFile()
         if (sr && sr->IsValid())
         {
             // Try to get SR's preferred host
-            QSharedPointer<Host> host = sr->GetHost(this->GetConnection()->GetCache());
+            QSharedPointer<Host> host = sr->GetHost();
             if (host && host->IsValid())
                 targetHost = host->GetAddress();
         }

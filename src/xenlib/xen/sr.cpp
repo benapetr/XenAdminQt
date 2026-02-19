@@ -33,6 +33,7 @@
 #include "sm.h"
 #include "vdi.h"
 #include "blob.h"
+#include "../utils/misc.h"
 
 namespace
 {
@@ -100,17 +101,18 @@ qint64 SR::FreeSpace() const
 {
     return this->PhysicalSize() - this->PhysicalUtilisation();
 }
-QSharedPointer<Host> SR::GetHost(XenCache* cache) const
+
+QString SR::SizeString() const
 {
-    if (!cache)
-    {
-        XenConnection* connection = this->GetConnection();
-        if (!connection)
-            return QSharedPointer<Host>();
-        cache = connection->GetCache();
-        if (!cache)
-            return QSharedPointer<Host>();
-    }
+    return QObject::tr("%1 used of %2 (%3 allocated)")
+        .arg(Misc::FormatSize(PhysicalUtilisation()))
+        .arg(Misc::FormatSize(PhysicalSize()))
+        .arg(Misc::FormatSize(VirtualAllocation()));
+}
+
+QSharedPointer<Host> SR::GetHost() const
+{
+    XenCache* cache = this->GetCache();
 
     // For shared SRs, return pool coordinator
     if (this->IsShared())
@@ -159,6 +161,7 @@ QString SR::LocationString() const
 
     return XenObject::LocationString();
 }
+
 QStringList SR::GetVDIRefs() const
 {
     return stringListProperty("VDIs");
@@ -202,6 +205,32 @@ QVariantMap SR::SMConfig() const
     return property("sm_config").toMap();
 }
 
+QString SR::GetSCSIID() const
+{
+    const QList<QSharedPointer<PBD>> pbds = GetPBDs();
+    for (const QSharedPointer<PBD>& pbd : pbds)
+    {
+        if (!pbd || !pbd->IsValid())
+            continue;
+
+        const QString scsiId = pbd->GetDeviceConfigValue("SCSIid");
+        if (!scsiId.isEmpty())
+            return scsiId;
+    }
+
+    QString scsiId = SMConfig().value("devserial").toString();
+    if (scsiId.isEmpty())
+        return QString();
+
+    if (scsiId.startsWith("scsi-"))
+        scsiId.remove(0, 5);
+
+    while (scsiId.endsWith(','))
+        scsiId.chop(1);
+
+    return scsiId;
+}
+
 QStringList SR::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
@@ -219,11 +248,7 @@ QVariantMap SR::CurrentOperations() const
 
 bool SR::SupportsTrim() const
 {
-    XenConnection* connection = this->GetConnection();
-    if (!connection)
-        return false;
-
-    XenCache* cache = connection->GetCache();
+    XenCache* cache = this->GetCache();
     if (!cache)
         return false;
 
@@ -319,9 +344,7 @@ Host* SR::GetFirstAttachedStorageHost() const
         return nullptr;
 
     // Iterate through PBDs to find first currently_attached one
-    XenCache* cache = GetConnection()->GetCache();
-    if (!cache)
-        return nullptr;
+    XenCache* cache = this->GetCache();
 
     for (const QString& pbdRef : pbds)
     {
@@ -345,9 +368,7 @@ Host* SR::GetFirstAttachedStorageHost() const
 
 bool SR::HasDriverDomain(QString* outVMRef) const
 {
-    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
-    if (!cache)
-        return false;
+    XenCache* cache = this->GetCache();
 
     QString srRef = this->OpaqueRef();
     if (srRef.isEmpty() || srRef == XENOBJECT_NULL)
@@ -387,13 +408,7 @@ bool SR::HasPBDs() const
 
 bool SR::IsBroken(bool checkAttached) const
 {
-    XenConnection* connection = GetConnection();
-    if (!connection)
-        return true;
-
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-        return true;
+    XenCache* cache = this->GetCache();
 
     QStringList pbdRefs = GetPBDRefs();
     if (pbdRefs.isEmpty())
@@ -425,17 +440,11 @@ bool SR::IsBroken(bool checkAttached) const
 
 bool SR::MultipathAOK() const
 {
-    XenConnection* connection = GetConnection();
-    if (!connection)
-        return true;
-
     const QVariantMap smConfig = SMConfig();
     if (smConfig.value("multipathable", "false").toString() != "true")
         return true;
 
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-        return true;
+    XenCache* cache = this->GetCache();
 
     QStringList pbdRefs = GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
@@ -485,13 +494,7 @@ bool SR::CanRepairAfterUpgradeFromLegacySL() const
 
 bool SR::IsDetached() const
 {
-    XenConnection* connection = GetConnection();
-    if (!connection)
-        return true;
-
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-        return true;
+    XenCache* cache = this->GetCache();
 
     QStringList pbdRefs = GetPBDRefs();
     if (pbdRefs.isEmpty())

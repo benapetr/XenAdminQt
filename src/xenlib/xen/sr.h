@@ -78,6 +78,14 @@ class XENLIB_EXPORT SR : public XenObject
         //! Get free space (free physical space in bytes)
         qint64 FreeSpace() const;
 
+        /**
+         * @brief Get a friendly size summary string for this SR
+         *
+         * Mirrors C# SR.SizeString():
+         * "<used> used of <total> (<allocated> allocated)"
+         */
+        QString SizeString() const;
+
         //! Get list of VDI references (list of VDI opaque references)
         QStringList GetVDIRefs() const;
 
@@ -95,6 +103,18 @@ class XENLIB_EXPORT SR : public XenObject
 
         //! Get SM (storage manager) config (map of SM configuration)
         QVariantMap SMConfig() const;
+
+        /**
+         * @brief Get SCSI identifier for this SR
+         *
+         * Mirrors C# SR.GetSCSIID():
+         * - first tries PBD.device_config["SCSIid"]
+         * - then falls back to sm_config["devserial"] without "scsi-" prefix
+         * - trims trailing commas
+         *
+         * @return SCSI ID string, or empty if unavailable
+         */
+        QString GetSCSIID() const;
 
         static constexpr qint64 DISK_MAX_SIZE = 2LL * 1024 * 1024 * 1024 * 1024; // 2 TiB
 
@@ -155,7 +175,7 @@ class XENLIB_EXPORT SR : public XenObject
          * 
          * C# equivalent: SR.Home() extension method
          */
-        QSharedPointer<Host> GetHost(XenCache* cache = nullptr) const;
+        QSharedPointer<Host> GetHost() const;
 
         QString NameWithLocation() const override;
         QString LocationString() const override;

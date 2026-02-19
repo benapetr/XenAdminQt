@@ -332,6 +332,9 @@ QString GeneralTabPage::friendlyName(const QString& key) const
         labels.insert("SR.size", tr("Total Size"));
         labels.insert("SR.utilisation", tr("Used Space"));
         labels.insert("SR.shared", tr("Shared"));
+        labels.insert("SR.scsiid", tr("SCSI ID"));
+        labels.insert("SR.pool", tr("Pool"));
+        labels.insert("SR.server", tr("Server"));
         labels.insert("network.bridge", tr("Bridge"));
         labels.insert("network.MTU", tr("MTU"));
         labels.insert("network.managed", tr("Managed"));
@@ -728,21 +731,34 @@ void GeneralTabPage::populateSRProperties()
     if (!type.isEmpty())
         this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.type", type);
 
-    qint64 sizeBytes = sr->PhysicalSize();
-    if (sizeBytes > 0)
-    {
-        QString sizeValue = Misc::FormatSize(sizeBytes);
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", sizeValue);
-    }
-
-    qint64 usedBytes = sr->PhysicalUtilisation();
-    if (usedBytes > 0)
-    {
-        QString usedValue = Misc::FormatSize(usedBytes);
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.utilisation", usedValue);
-    }
+    if (sr->ContentType() != "iso" && sr->GetType() != "udev")
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", sr->SizeString());
 
     this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.shared", sr->IsShared() ? tr("Yes") : tr("No"));
+
+    const QString scsiId = sr->GetSCSIID();
+    if (!scsiId.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.scsiid", scsiId);
+
+    if (this->m_connection && this->m_connection->GetCache())
+    {
+        XenCache* cache = this->m_connection->GetCache();
+        QSharedPointer<Pool> pool = cache->GetPool();
+        if (pool && pool->IsValid())
+        {
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.pool", pool->GetName());
+        } else
+        {
+            const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+            for (const QSharedPointer<Host>& host : hosts)
+            {
+                if (!host || !host->IsValid())
+                    continue;
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.server", host->GetName());
+                break;
+            }
+        }
+    }
 
     // Populate SR-specific sections (Status and Multipathing)
     this->populateStatusSection();
@@ -1480,75 +1496,28 @@ void GeneralTabPage::populateStatusSection()
     if (!sr)
         return;
 
-    // Determine SR status (OK, Detached, Broken, Multipath Failure)
     bool broken = false;
-    QString statusString = "OK";
-
-    // Check if SR is detached (no PBDs currently attached)
-    // C# SR.IsDetached() checks if any PBD is currently_attached
-    bool hasAttachedPBD = false;
-    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
-    foreach (QSharedPointer<PBD> pbd, pbds)
-    {
-        if (pbd->IsCurrentlyAttached())
-        {
-            hasAttachedPBD = true;
-            break;
-        }
-    }
-
-    if (pbds.isEmpty())
+    QString statusString = tr("OK");
+    if (sr->IsDetached())
     {
         broken = true;
-        statusString = "Detached (No PBDs)";
-    } else if (!hasAttachedPBD)
+        statusString = tr("Detached");
+    } else if (sr->IsBroken())
     {
         broken = true;
-        statusString = "Detached";
-    } else
+        statusString = tr("Broken");
+    } else if (!sr->MultipathAOK())
     {
-        // Check if SR is broken (wrong number of PBDs or not all attached)
-        // C# SR.IsBroken() checks: standalone = 1 PBD, pooled = PBD per host
-        bool isShared = sr->IsShared();
-        int pbdCount = pbds.size();
-
-        // Get host count to check if we have correct PBD count for pooled SR
-        int expectedPBDCount = 1; // standalone default
-        if (isShared)
-        {
-            // For shared SR, should have PBD for each host in pool
-            QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
-            expectedPBDCount = allHosts.size();
-        }
-
-        if (pbdCount != expectedPBDCount)
-        {
-            broken = true;
-            statusString = "Broken (Wrong PBD count)";
-        } else
-        {
-            // Check if all PBDs are attached
-            foreach (QSharedPointer<PBD> pbd, pbds)
-            {
-                if (!pbd->IsCurrentlyAttached())
-                {
-                    broken = true;
-                    statusString = "Broken (PBD not attached)";
-                    break;
-                }
-            }
-        }
-
-        // TODO: Check multipath status (requires sm_config parsing)
-        // C# checks SR.MultipathAOK() which looks at SM config for multipath health
+        broken = true;
+        statusString = tr("Multipath failure");
     }
 
-    // Show overall status
     this->ui->pdSectionStatus->AddEntry(this->friendlyName("SR.state"), statusString, broken ? QColor(Qt::red) : QColor());
 
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
     bool isShared = sr->IsShared();
+    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
 
     QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
 
@@ -1561,7 +1530,7 @@ void GeneralTabPage::populateStatusSection()
         QString hostName = host->GetName().isEmpty() ? "Unknown" : host->GetName();
 
         // Find PBD for this host
-        QString pbdStatus = "Connected";
+        QString pbdStatus = tr("Connected");
         QColor statusColor;
 
         bool foundPBD = false;
@@ -1571,15 +1540,15 @@ void GeneralTabPage::populateStatusSection()
             if (pbdHost == hostRef)
             {
                 foundPBD = true;
-                if (pbd->IsCurrentlyAttached())
+                pbdStatus = pbd->StatusString();
+                bool pbdConnected = pbd->IsCurrentlyAttached();
+                if (pbdConnected)
                 {
-                    pbdStatus = "Connected";
-                    statusColor = QColor();
-                } else
-                {
-                    pbdStatus = "Disconnected";
-                    statusColor = Qt::red;
+                    QSharedPointer<Host> pbdHostObj = pbd->GetHost();
+                    pbdConnected = pbdHostObj && pbdHostObj->IsValid() && pbdHostObj->IsLive();
                 }
+                if (!pbdConnected)
+                    statusColor = Qt::red;
                 break;
             }
         }
@@ -1589,7 +1558,7 @@ void GeneralTabPage::populateStatusSection()
             // Shared SR missing PBD for this host
             if (isShared)
             {
-                pbdStatus = "Connection missing";
+                pbdStatus = tr("Connection missing");
                 statusColor = Qt::red;
             } else
             {

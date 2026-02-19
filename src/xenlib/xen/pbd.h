@@ -64,13 +64,13 @@ class XENLIB_EXPORT PBD : public XenObject
         //! @return Host opaque reference
         QString GetHostRef() const;
 
-        QSharedPointer<Host> GetHost();
+        QSharedPointer<Host> GetHost() const;
 
         //! @brief Get reference to the SR this PBD provides access to
         //! @return SR opaque reference
         QString GetSRRef() const;
 
-        QSharedPointer<SR> GetSR();
+        QSharedPointer<SR> GetSR() const;
 
         //! @brief Get device configuration map
         //! @return Device config dictionary (string->string)
@@ -99,6 +99,16 @@ class XENLIB_EXPORT PBD : public XenObject
         //! @param key Config key
         //! @return true if key exists
         bool HasOtherConfigKey(const QString& key) const;
+
+        /**
+         * @brief Get a friendly connection status string for this PBD
+         *
+         * Mirrors C# PBD.StatusString():
+         * - Unplugged when not currently attached
+         * - Host not live when attached but host is down
+         * - Connected otherwise
+         */
+        QString StatusString() const;
 };
 
 #endif // PBD_H
