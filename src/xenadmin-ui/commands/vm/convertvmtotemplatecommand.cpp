@@ -72,30 +72,30 @@ void ConvertVMToTemplateCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(MainWindow::instance(), "Not Connected",
-                                 "Not connected to XenServer");
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(vm, MainWindow::instance());
+        VMToTemplateAction* action = new VMToTemplateAction(vm);
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, [vmName, action]()
         {
             MainWindow* mainWindow = MainWindow::instance();
+            if (!mainWindow)
+            {
+                action->deleteLater();
+                return;
+            }
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                if (mainWindow)
-                    mainWindow->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
-                QMessageBox::information(mainWindow, tr("Conversion Complete"),
-                                         tr("VM '%1' has been successfully converted to a template.").arg(vmName));
+                mainWindow->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                if (mainWindow)
-                    mainWindow->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
+                mainWindow->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
