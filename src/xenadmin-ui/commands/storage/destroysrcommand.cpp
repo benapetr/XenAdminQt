@@ -31,6 +31,7 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/sr/destroysraction.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -88,10 +89,16 @@ void DestroySRCommand::Run()
     // Create and run destroy action
     DestroySrAction* action = new DestroySrAction(conn, srRef, srName, nullptr);
 
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [srName, action]()
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
     {
-        MainWindow* mainWindow = MainWindow::instance();
+        action->deleteLater();
+        return;
+    }
+
+    // Connect completion signal for cleanup and status update
+    connect(action, &AsyncOperation::completed, mainWindow, [srName, action, mainWindow]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             if (mainWindow)
@@ -105,7 +112,7 @@ void DestroySRCommand::Run()
         }
         // Auto-delete when complete
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

@@ -32,6 +32,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/vdi/destroydiskaction.h"
+#include <QPointer>
 #include <QMessageBox>
 
 DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
@@ -89,10 +90,16 @@ void DeleteVirtualDiskCommand::Run()
         hasAttachedVBDs, // Allow deletion even if attached (action will detach first)
         nullptr);
 
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [vdiName, vdiType, action]() 
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
     {
-        MainWindow* mainWindow = MainWindow::instance();
+        action->deleteLater();
+        return;
+    }
+
+    // Connect completion signal for cleanup and status update
+    connect(action, &AsyncOperation::completed, mainWindow, [vdiName, vdiType, action, mainWindow]() 
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             if (mainWindow)
@@ -103,7 +110,7 @@ void DeleteVirtualDiskCommand::Run()
         }
         // Auto-delete when complete
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

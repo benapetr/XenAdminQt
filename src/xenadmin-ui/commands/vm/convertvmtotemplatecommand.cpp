@@ -30,6 +30,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmtotemplateaction.h"
+#include <QPointer>
 #include <QMessageBox>
 
 ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
@@ -80,10 +81,16 @@ void ConvertVMToTemplateCommand::Run()
         // Action automatically sets other_config["instant"] = "true"
         VMToTemplateAction* action = new VMToTemplateAction(vm);
 
-        // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, [vmName, action]()
+        QPointer<MainWindow> mainWindow = MainWindow::instance();
+        if (!mainWindow)
         {
-            MainWindow* mainWindow = MainWindow::instance();
+            action->deleteLater();
+            return;
+        }
+
+        // Connect completion signal for cleanup and status update
+        connect(action, &AsyncOperation::completed, mainWindow, [vmName, action, mainWindow]()
+        {
             if (!mainWindow)
             {
                 action->deleteLater();
@@ -99,7 +106,7 @@ void ConvertVMToTemplateCommand::Run()
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
-        });
+        }, Qt::QueuedConnection);
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals

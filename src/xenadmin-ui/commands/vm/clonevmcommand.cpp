@@ -31,6 +31,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vm/vmcloneaction.h"
 #include "xenlib/xencache.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QInputDialog>
 
@@ -103,10 +104,16 @@ void CloneVMCommand::Run()
         // Create VMCloneAction (matches C# VMCloneAction pattern)
         VMCloneAction* action = new VMCloneAction(vm, cloneName, "", MainWindow::instance());
 
-        // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, [vmName, cloneName, action]()
+        QPointer<MainWindow> mainWindow = MainWindow::instance();
+        if (!mainWindow)
         {
-            MainWindow* mainWindow = MainWindow::instance();
+            action->deleteLater();
+            return;
+        }
+
+        // Connect completion signal for cleanup and status update
+        connect(action, &AsyncOperation::completed, mainWindow, [vmName, cloneName, action, mainWindow]()
+        {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 if (mainWindow)
@@ -119,7 +126,7 @@ void CloneVMCommand::Run()
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
-        });
+        }, Qt::QueuedConnection);
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals

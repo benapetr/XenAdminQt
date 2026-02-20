@@ -30,6 +30,7 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/destroypoolaction.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -124,19 +125,26 @@ void DeletePoolCommand::Run()
     // Create and run destroy pool action
     DestroyPoolAction* action = new DestroyPoolAction(pool, nullptr);
 
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
+    {
+        action->deleteLater();
+        return;
+    }
+
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [poolName, action]()
+    connect(action, &AsyncOperation::completed, mainWindow, [poolName, action, mainWindow]()
     {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            MainWindow::instance()->ShowStatusMessage(QString("Successfully deleted pool '%1'").arg(poolName), 5000);
+            mainWindow->ShowStatusMessage(QString("Successfully deleted pool '%1'").arg(poolName), 5000);
         } else
         {
-            QMessageBox::warning(MainWindow::instance(), "Delete Pool Failed", QString("Failed to delete pool '%1'.\n\n%2").arg(poolName, action->GetErrorMessage()));
+            QMessageBox::warning(mainWindow, "Delete Pool Failed", QString("Failed to delete pool '%1'.\n\n%2").arg(poolName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

@@ -42,6 +42,9 @@ VMToTemplateAction::VMToTemplateAction(QSharedPointer<VM> vm,
 
 
     this->m_connection = vm->GetConnection();
+
+    // Add RBAC method checks (matches C# VMToTemplateAction)
+    this->AddApiMethodToRoleCheck("VM.set_is_a_template");
 }
 
 void VMToTemplateAction::run()

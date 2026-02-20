@@ -33,6 +33,7 @@
 #include "xenlib/xen/pif.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -139,19 +140,26 @@ void DestroyBondCommand::Run()
     // Create and run destroy bond action
     DestroyBondAction* action = new DestroyBondAction(connection, bondRef, nullptr);
 
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
+    {
+        action->deleteLater();
+        return;
+    }
+
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [bondName, action]()
+    connect(action, &AsyncOperation::completed, mainWindow, [bondName, action, mainWindow]()
     {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            MainWindow::instance()->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
+            mainWindow->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
         } else
         {
-            QMessageBox::warning(MainWindow::instance(), "Delete Bond Failed", QString("Failed to delete bond '%1'.\n\n%2").arg(bondName, action->GetErrorMessage()));
+            QMessageBox::warning(mainWindow, "Delete Bond Failed", QString("Failed to delete bond '%1'.\n\n%2").arg(bondName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

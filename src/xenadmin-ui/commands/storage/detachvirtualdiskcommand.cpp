@@ -31,6 +31,7 @@
 #include "xen/vm.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "../../mainwindow.h"
+#include <QPointer>
 #include <QMessageBox>
 
 DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
@@ -219,8 +220,14 @@ void DetachVirtualDiskCommand::Run()
 
         // Connect completion signal
         QString vmName = vm->GetName();
-        connect(action, &AsyncOperation::completed, [vdiName, vmName, action]() {
-            MainWindow* mainWindow = MainWindow::instance();
+        QPointer<MainWindow> mainWindow = MainWindow::instance();
+        if (!mainWindow)
+        {
+            action->deleteLater();
+            continue;
+        }
+
+        connect(action, &AsyncOperation::completed, mainWindow, [vdiName, vmName, action, mainWindow]() {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 if (mainWindow)
@@ -236,7 +243,7 @@ void DetachVirtualDiskCommand::Run()
             }
             // Auto-delete when complete
             action->deleteLater();
-        });
+        }, Qt::QueuedConnection);
 
         actions.append(action);
     }

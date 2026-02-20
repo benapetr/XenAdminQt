@@ -31,6 +31,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/sr/srtrimaction.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -101,10 +102,16 @@ void TrimSRCommand::Run()
     // Create and run trim action
     SrTrimAction* action = new SrTrimAction(conn, sr, nullptr);
 
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [srName, action, sr]()
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
     {
-        MainWindow* mainWindow = MainWindow::instance();
+        action->deleteLater();
+        return;
+    }
+
+    // Connect completion signal for cleanup and status update
+    connect(action, &AsyncOperation::completed, mainWindow, [srName, action, sr, mainWindow]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             if (mainWindow)
@@ -123,7 +130,7 @@ void TrimSRCommand::Run()
         // Auto-delete when complete
         action->deleteLater();
         sr->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

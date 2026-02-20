@@ -32,6 +32,7 @@
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
+#include <QPointer>
 #include <QMessageBox>
 
 ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
@@ -120,10 +121,16 @@ void ForgetSRCommand::Run()
     // Create and run forget action
     ForgetSrAction* action = new ForgetSrAction(conn, srRef, srName, nullptr);
 
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [srName, action]()
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
     {
-        MainWindow* mainWindow = MainWindow::instance();
+        action->deleteLater();
+        return;
+    }
+
+    // Connect completion signal for cleanup and status update
+    connect(action, &AsyncOperation::completed, mainWindow, [srName, action, mainWindow]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             if (mainWindow)
@@ -137,7 +144,7 @@ void ForgetSRCommand::Run()
         }
         // Auto-delete when complete
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously
     action->RunAsync();

@@ -32,6 +32,7 @@
 #include "xenlib/xen/connection.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/actions/vm/changevmisoaction.h"
+#include <QPointer>
 #include <QMessageBox>
 #include <QVariantMap>
 #include <QVariantList>
@@ -79,21 +80,28 @@ void ChangeCDISOCommand::run()
 
     // Connect completion signal for cleanup and status update
     QString isoRef = this->m_isoRef;
-    connect(action, &AsyncOperation::completed, [isoRef, action](bool success) {
+    QPointer<MainWindow> mainWindow = MainWindow::instance();
+    if (!mainWindow)
+    {
+        action->deleteLater();
+        return;
+    }
+
+    connect(action, &AsyncOperation::completed, mainWindow, [isoRef, action, mainWindow](bool success) {
         if (success)
         {
             if (isoRef.isEmpty())
             {
-                QMessageBox::information(nullptr, "Success", "ISO image ejected successfully");
+                QMessageBox::information(mainWindow, "Success", "ISO image ejected successfully");
             } else
             {
-                QMessageBox::information(nullptr, "Success", "ISO image inserted successfully");
+                QMessageBox::information(mainWindow, "Success", "ISO image inserted successfully");
             }
             // Cache will be automatically refreshed via event polling
         }
         // Auto-delete when complete (matches C# GC behavior)
         action->deleteLater();
-    });
+    }, Qt::QueuedConnection);
 
     // Run action asynchronously (matches C# pattern)
     // Progress shown in status bar via OperationManager signals
