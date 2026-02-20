@@ -61,6 +61,10 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
     // Get VM name for title
     QString vmName = this->m_vm && this->m_vm->IsValid() ? this->m_vm->GetName() : "VM";
     this->SetTitle(tr("Export %1 to backup file").arg(vmName));
+
+    // RBAC dependencies (matches C# ExportVmAction)
+    this->AddApiMethodToRoleCheck("task.create");
+    this->AddApiMethodToRoleCheck("http/get_export");
 }
 
 ExportVmAction::~ExportVmAction()

@@ -61,6 +61,11 @@ DeleteVIFAction::DeleteVIFAction(XenConnection* connection,
 
     SetTitle(QString("Deleting VIF for %1").arg(m_vmName));
     SetDescription(QString("Deleting %1 from %2").arg(m_networkName, m_vmName));
+
+    // RBAC dependencies (matches C# DeleteVIFAction)
+    this->AddApiMethodToRoleCheck("VIF.get_allowed_operations");
+    this->AddApiMethodToRoleCheck("VIF.unplug");
+    this->AddApiMethodToRoleCheck("VIF.destroy");
 }
 
 void DeleteVIFAction::run()

@@ -50,6 +50,24 @@ MoveVirtualDiskAction::MoveVirtualDiskAction(XenConnection* connection,
                        .arg(vdiName)
                        .arg(oldSR)
                        .arg(newSR));
+
+    // RBAC dependencies (matches C# MoveVirtualDiskAction)
+    this->AddApiMethodToRoleCheck("vdi.destroy");
+    this->AddApiMethodToRoleCheck("vdi.copy");
+
+    XenAPI::Session* session = this->GetConnection() ? this->GetConnection()->GetSession() : nullptr;
+    if (session)
+    {
+        try
+        {
+            QVariantMap vdiRecord = XenAPI::VDI::get_record(session, this->m_vdiRef);
+            if (vdiRecord.value("type").toString() == "suspend")
+                this->AddApiMethodToRoleCheck("vm.set_suspend_VDI");
+        } catch (...)
+        {
+            // Best-effort RBAC enrichment.
+        }
+    }
 }
 
 void MoveVirtualDiskAction::run()

@@ -42,6 +42,10 @@ VMCloneAction::VMCloneAction(QSharedPointer<VM> vm, const QString& name, const Q
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
     this->m_vm = vm;
+
+    // RBAC dependencies (matches C# VMCloneAction.StaticRBACDependencies)
+    this->AddApiMethodToRoleCheck("VM.clone");
+    this->AddApiMethodToRoleCheck("VM.set_name_description");
 }
 
 void VMCloneAction::run()

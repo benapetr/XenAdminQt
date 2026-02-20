@@ -53,6 +53,32 @@ ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
+
+    // RBAC dependencies (matches C# ChangeMemorySettingsAction)
+    const bool staticChanged = (this->m_staticMin != vm->GetMemoryStaticMin() ||
+                                this->m_staticMax != vm->GetMemoryStaticMax());
+    const QString powerState = vm->GetPowerState();
+    const bool needReboot = staticChanged
+                            ? (powerState != "Halted" && !this->m_deferReboot)
+                            : (powerState != "Halted" && powerState != "Running");
+
+    if (staticChanged)
+        this->AddApiMethodToRoleCheck("vm.set_memory_limits");
+    else
+        this->AddApiMethodToRoleCheck("vm.set_memory_dynamic_range");
+
+    if (needReboot)
+    {
+        if (vm->GetAllowedOperations().contains("clean_shutdown"))
+            this->AddApiMethodToRoleCheck("vm.clean_shutdown");
+        else
+            this->AddApiMethodToRoleCheck("vm.hard_shutdown");
+
+        if (vm->GetResidentOnRef().isEmpty() || vm->GetResidentOnRef() == XENOBJECT_NULL)
+            this->AddApiMethodToRoleCheck("vm.start");
+        else
+            this->AddApiMethodToRoleCheck("vm.start_on");
+    }
 }
 
 void ChangeMemorySettingsAction::run()

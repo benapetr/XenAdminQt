@@ -55,6 +55,14 @@ CreateVIFAction::CreateVIFAction(XenConnection* connection,
 
     SetTitle(QString("Creating VIF for %1").arg(m_vmName));
     SetDescription(QString("Creating virtual network interface for %1").arg(m_vmName));
+
+    // RBAC dependencies (matches C# CreateVIFAction)
+    this->AddApiMethodToRoleCheck("VIF.async_create");
+    if (vm && vm->GetPowerState() == "Running")
+    {
+        this->AddApiMethodToRoleCheck("VIF.get_allowed_operations");
+        this->AddApiMethodToRoleCheck("VIF.plug");
+    }
 }
 
 void CreateVIFAction::run()

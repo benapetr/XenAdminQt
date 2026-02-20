@@ -58,6 +58,15 @@ DestroyBondAction::DestroyBondAction(XenConnection* connection, const QString& b
 
     this->SetTitle(QString("Destroying bond %1").arg(this->m_bondName));
     this->SetDescription(QString("Destroying bond %1").arg(this->m_bondName));
+
+    // RBAC dependencies (matches C# DestroyBondAction)
+    this->AddApiMethodToRoleCheck("host.management_reconfigure");
+    this->AddApiMethodToRoleCheck("network.destroy");
+    this->AddApiMethodToRoleCheck("vif.plug");
+    this->AddApiMethodToRoleCheck("vif.unplug");
+    this->AddApiMethodToRoleCheck("pif.reconfigure_ip");
+    this->AddApiMethodToRoleCheck("pif.plug");
+    this->AddApiMethodToRoleCheck("bond.destroy");
 }
 
 void DestroyBondAction::run()

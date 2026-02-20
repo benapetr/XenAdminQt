@@ -66,6 +66,12 @@ UpdateVIFAction::UpdateVIFAction(XenConnection* connection,
 
     SetTitle(QString("Updating VIF for %1").arg(m_vmName));
     SetDescription(QString("Updating %1 on %2").arg(m_networkName, m_vmName));
+
+    // RBAC dependencies (matches C# UpdateVIFAction)
+    this->AddApiMethodToRoleCheck("VIF.unplug");
+    this->AddApiMethodToRoleCheck("VIF.destroy");
+    this->AddApiMethodToRoleCheck("VIF.async_create");
+    this->AddApiMethodToRoleCheck("VIF.plug");
 }
 
 void UpdateVIFAction::run()

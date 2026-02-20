@@ -49,6 +49,24 @@ VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
+
+    // RBAC dependencies (matches C# VMDestroyAction)
+    this->AddApiMethodToRoleCheck("VM.destroy");
+    this->AddApiMethodToRoleCheck("VDI.destroy");
+
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (cache)
+    {
+        for (const QString& snapshotRef : this->m_snapshotsToDelete)
+        {
+            QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(snapshotRef);
+            if (snapshot && snapshot->GetPowerState() == "Suspended")
+            {
+                this->AddApiMethodToRoleCheck("VM.hard_shutdown");
+                break;
+            }
+        }
+    }
 }
 
 VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
@@ -63,6 +81,10 @@ VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
         throw std::invalid_argument("VM cannot be null");
 
     this->m_connection = vm->GetConnection();
+
+    // RBAC dependencies (matches C# VMDestroyAction)
+    this->AddApiMethodToRoleCheck("VM.destroy");
+    this->AddApiMethodToRoleCheck("VDI.destroy");
 
     // If deleteAllOwnerDisks is true, find all VBDs marked as owner
     if (deleteAllOwnerDisks)

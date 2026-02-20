@@ -40,6 +40,10 @@ SetVMStartupOptionsAction::SetVMStartupOptionsAction(XenConnection* connection,
       m_poolRef(poolRef),
       m_vmStartupOptions(vmStartupOptions)
 {
+    // RBAC dependencies (matches C# SetVMStartupOptionsAction)
+    this->AddApiMethodToRoleCheck("VM.set_order");
+    this->AddApiMethodToRoleCheck("VM.set_start_delay");
+    this->AddApiMethodToRoleCheck("Pool.async_sync_database");
 }
 
 void SetVMStartupOptionsAction::run()

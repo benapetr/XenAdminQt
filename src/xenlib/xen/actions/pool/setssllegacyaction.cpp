@@ -41,6 +41,12 @@ SetSslLegacyAction::SetSslLegacyAction(QSharedPointer<Pool> pool, bool enableSsl
     if (!this->m_pool || !this->m_pool->IsValid())
         qWarning() << "SetSslLegacyAction: Invalid pool object";
     this->m_connection = pool->GetConnection();
+
+    // RBAC dependencies (matches C# SetSslLegacyAction)
+    if (this->m_enableSslLegacy_)
+        this->AddApiMethodToRoleCheck("pool.async_enable_ssl_legacy");
+    else
+        this->AddApiMethodToRoleCheck("pool.async_disable_ssl_legacy");
 }
 
 void SetSslLegacyAction::run()

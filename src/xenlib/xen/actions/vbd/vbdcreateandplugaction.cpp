@@ -44,6 +44,14 @@ VbdCreateAndPlugAction::VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVar
     {
         throw std::invalid_argument("VbdCreateAndPlugAction: VM cannot be null");
     }
+
+    // RBAC dependencies (matches C# VbdCreateAndPlugAction)
+    this->AddApiMethodToRoleCheck("vbd.create");
+    if (this->m_vm->IsHVM() || !this->isVBDEmpty())
+    {
+        this->AddApiMethodToRoleCheck("vbd.get_allowed_operations");
+        this->AddApiMethodToRoleCheck("vbd.async_plug");
+    }
 }
 
 void VbdCreateAndPlugAction::run()

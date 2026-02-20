@@ -121,6 +121,40 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
       m_vgpuData(vgpuData),
       m_modifyVgpuSettings(modifyVgpuSettings)
 {
+    // RBAC dependencies (matches C# CreateVMAction)
+    if (this->m_startAfter)
+        this->AddApiMethodToRoleCheck("vm.start");
+
+    if (!this->m_homeServerRef.isEmpty())
+        this->AddApiMethodToRoleCheck("vm.set_affinity");
+
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
+    if (session)
+    {
+        try
+        {
+            QVariantMap templateRecord = XenAPI::VM::get_record(session, this->m_templateRef);
+            qint64 templateDynMin = templateRecord.value("memory_dynamic_min").toLongLong() / (1024 * 1024);
+            qint64 templateDynMax = templateRecord.value("memory_dynamic_max").toLongLong() / (1024 * 1024);
+            qint64 templateStaticMax = templateRecord.value("memory_static_max").toLongLong() / (1024 * 1024);
+
+            if (templateDynMin != this->m_memoryDynamicMinMb ||
+                templateDynMax != this->m_memoryDynamicMaxMb ||
+                templateStaticMax != this->m_memoryStaticMaxMb)
+            {
+                this->AddApiMethodToRoleCheck("vm.set_memory_limits");
+            }
+        } catch (...)
+        {
+            // Best-effort RBAC enrichment.
+        }
+    }
+
+    if (this->m_modifyVgpuSettings || !this->m_vgpuData.isEmpty())
+    {
+        this->AddApiMethodToRoleCheck("VGPU.destroy");
+        this->AddApiMethodToRoleCheck("VGPU.create");
+    }
 }
 
 void CreateVMAction::run()

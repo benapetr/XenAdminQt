@@ -57,6 +57,22 @@ CreatePoolAction::CreatePoolAction(XenConnection* coordinatorConnection,
 {
     // Note: We don't use Host* objects in this simplified version
     // The C# version uses them for licensing and AD checks
+
+    // RBAC dependencies (matches C# CreatePoolAction)
+    this->AddApiMethodToRoleCheck("pool.set_name_label");
+    this->AddApiMethodToRoleCheck("pool.set_name_description");
+    this->AddApiMethodToRoleCheck("pool.set_other_config");
+    this->AddApiMethodToRoleCheck("pool.add_to_other_config");
+    this->AddApiMethodToRoleCheck("pool.set_gui_config");
+    this->AddApiMethodToRoleCheck("pool.add_to_gui_config");
+    this->AddApiMethodToRoleCheck("pool.set_default_SR");
+    this->AddApiMethodToRoleCheck("pool.set_suspend_image_SR");
+    this->AddApiMethodToRoleCheck("pool.set_crash_dump_SR");
+    this->AddApiMethodToRoleCheck("pool.remove_from_other_config");
+    this->AddApiMethodToRoleCheck("pool.remove_tags");
+    this->AddApiMethodToRoleCheck("pool.set_wlb_enabled");
+    this->AddApiMethodToRoleCheck("pool.set_wlb_verify_cert");
+    this->AddApiMethodToRoleCheck("pool.join");
 }
 
 void CreatePoolAction::run()

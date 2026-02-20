@@ -112,6 +112,7 @@ class VerticallyTabbedDialog : public QDialog
         {
             return this->m_objectDataBefore;
         }
+
         QVariantMap objectDataCopy() const
         {
             return this->m_objectDataCopy;

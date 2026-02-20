@@ -44,7 +44,17 @@ ChangeVCPUSettingsAction::ChangeVCPUSettingsAction(QSharedPointer<VM> vm,
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
-    // TODO: Add RBAC method checks (C# adds VM.set_VCPUs_number_live and VM.set_VCPUs_at_startup/VM.set_VCPUs_max).
+
+    // RBAC dependencies (matches C# ChangeVCPUSettingsAction)
+    if (vm->GetPowerState() == "Running")
+    {
+        if (vm->VCPUsAtStartup() <= this->m_vcpusAtStartup)
+            this->AddApiMethodToRoleCheck("VM.set_VCPUs_number_live");
+    } else
+    {
+        this->AddApiMethodToRoleCheck("VM.set_VCPUs_at_startup");
+        this->AddApiMethodToRoleCheck("VM.set_VCPUs_max");
+    }
 }
 
 void ChangeVCPUSettingsAction::run()

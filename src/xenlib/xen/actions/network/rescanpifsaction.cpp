@@ -49,6 +49,9 @@ RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
 
     this->SetTitle(QString("Scanning for NICs on %1").arg(this->m_hostName));
     this->SetDescription(QString("Scanning for physical network interfaces on %1").arg(this->m_hostName));
+
+    // RBAC dependencies (matches C# RescanPIFsAction)
+    this->AddApiMethodToRoleCheck("pif.scan");
 }
 
 void RescanPIFsAction::run()

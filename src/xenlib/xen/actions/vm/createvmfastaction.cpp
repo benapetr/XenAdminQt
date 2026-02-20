@@ -43,6 +43,12 @@ CreateVMFastAction::CreateVMFastAction(XenConnection* connection,
 {
     if (!m_template)
         throw std::invalid_argument("Template VM cannot be null");
+
+    // RBAC dependencies (matches C# CreateVMFastAction)
+    this->AddApiMethodToRoleCheck("vm.clone");
+    this->AddApiMethodToRoleCheck("vm.provision");
+    this->AddApiMethodToRoleCheck("vm.start");
+    this->AddApiMethodToRoleCheck("vm.set_name_label");
 }
 
 void CreateVMFastAction::run()

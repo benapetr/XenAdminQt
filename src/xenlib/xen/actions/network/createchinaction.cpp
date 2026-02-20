@@ -49,6 +49,24 @@ CreateChinAction::CreateChinAction(XenConnection* connection,
         throw std::invalid_argument("New network cannot be null");
     if (!this->m_transportNetwork)
         throw std::invalid_argument("Transport network cannot be null");
+
+    // RBAC dependencies (matches C# CreateChinAction)
+    this->AddApiMethodToRoleCheck("Network.create");
+
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (cache)
+    {
+        const QStringList pifRefs = this->m_transportNetwork->GetPIFRefs();
+        for (const QString& pifRef : pifRefs)
+        {
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+            if (pif && pif->IsValid() && pif->IsManagementInterface())
+            {
+                this->AddApiMethodToRoleCheck("Tunnel.create");
+                break;
+            }
+        }
+    }
 }
 
 void CreateChinAction::run()

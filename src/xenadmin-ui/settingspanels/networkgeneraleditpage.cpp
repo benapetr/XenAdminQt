@@ -268,6 +268,12 @@ void NetworkGeneralEditPage::populateNicList()
                         if (index >= 0)
                             this->ui->nicComboBox->setCurrentIndex(index);
                     }
+                } else
+                {
+                    // C# parity: if no associated physical PIF is found, fall back to the network PIF name.
+                    int index = this->ui->nicComboBox->findText(networkPif->GetName());
+                    if (index >= 0)
+                        this->ui->nicComboBox->setCurrentIndex(index);
                 }
             }
         }
@@ -483,10 +489,8 @@ bool NetworkGeneralEditPage::isSelectedInternal() const
 
 QString NetworkGeneralEditPage::getNetworkPifRef() const
 {
-    if (this->m_hostRef_.isEmpty())
-        return QString();
-
     QVariantList pifRefs = this->m_objectDataCopy_.value("PIFs").toList();
+    QString fallbackPifRef;
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
@@ -494,12 +498,19 @@ QString NetworkGeneralEditPage::getNetworkPifRef() const
         if (!pif || !pif->IsValid())
             continue;
 
+        if (fallbackPifRef.isEmpty())
+            fallbackPifRef = pifRef;
+
+        if (this->m_hostRef_.isEmpty())
+            continue;
+
         QString pifHost = pif->GetData().value("host").toString();
         if (pifHost == this->m_hostRef_)
             return pifRef;
     }
 
-    return QString();
+    // C# parity (Helpers.FindPIF(owner=null) fallback): return first network PIF if host-specific one not found.
+    return fallbackPifRef;
 }
 
 QString NetworkGeneralEditPage::getPhysicalPifRef() const
@@ -575,7 +586,6 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     // Complex PIF reconfiguration requires NetworkAction
     bool isNowInternal = this->isSelectedInternal();
     bool wasInternal = this->m_objectDataBefore_.value("PIFs").toList().isEmpty();
-
     if (wasInternal && isNowInternal)
     {
         // Internal -> Internal: no PIF change needed
@@ -591,7 +601,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
             return nullptr;
 
         qint64 vlan = this->ui->vlanSpinBox->value();
-        
+
         // Use update constructor with changePIFs=true
         NetworkAction* action = new NetworkAction(network, true, true, basePif, vlan, false, this);
         action->SetDescription(tr("Reconfiguring network '%1'").arg(network->GetName()));
@@ -607,7 +617,6 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
             return nullptr;
 
         qint64 vlan = this->ui->vlanSpinBox->value();
-        
         NetworkAction* action = new NetworkAction(network, basePif, vlan, this);
         action->SetDescription(tr("Creating external network '%1'").arg(network->GetName()));
         return action;
@@ -620,7 +629,6 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
         action->SetDescription(tr("Converting network '%1' to internal").arg(network->GetName()));
         return action;
     }
-
     return nullptr;
 }
 
@@ -755,11 +763,12 @@ bool NetworkGeneralEditPage::nicOrVlanHasChanged() const
     if (originalVlan != newVlan)
         return true;
 
-    // Check if physical NIC changed
-    QString originalPhysicalPifRef = this->getPhysicalPifRef();
-    QString selectedPifRef = this->ui->nicComboBox->currentData().toString();
-
-    return originalPhysicalPifRef != selectedPifRef;
+    // Match C# EditNetworkPage.ExternalChangedDeviceOrVlan:
+    // Compare current network PIF against selected virtual PIF
+    // (same NIC name + VLAN + host), not against physical PIF refs.
+    const QString selectedNicName = this->ui->nicComboBox->currentText();
+    const QString selectedVirtualPifRef = this->findVirtualPifRefForSelection(selectedNicName, newVlan);
+    return originalPifRef != selectedVirtualPifRef;
 }
 
 bool NetworkGeneralEditPage::isNicVlanEditable() const
@@ -773,6 +782,33 @@ bool NetworkGeneralEditPage::isNicVlanEditable() const
         return false;
 
     return !networkPif->IsPhysical() && !networkPif->IsTunnelAccessPIF() && !networkPif->IsSriovLogicalPIF();
+}
+
+QString NetworkGeneralEditPage::findVirtualPifRefForSelection(const QString& nicName, int vlan) const
+{
+    if (!this->connection() || !this->connection()->GetCache())
+        return QString();
+
+    const QList<QSharedPointer<PIF>> allPifs = this->connection()->GetCache()->GetAll<PIF>(XenObjectType::PIF);
+    for (const QSharedPointer<PIF>& pif : allPifs)
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+
+        if (!this->m_hostRef_.isEmpty() && pif->GetHostRef() != this->m_hostRef_)
+            continue;
+
+        if (pif->IsPhysical() || pif->IsTunnelAccessPIF() || pif->IsSriovLogicalPIF())
+            continue;
+
+        if (pif->GetVLAN() != vlan)
+            continue;
+
+        if (pif->GetName() == nicName)
+            return pif->OpaqueRef();
+    }
+
+    return QString();
 }
 
 QString NetworkGeneralEditPage::getSelectedBondMode() const

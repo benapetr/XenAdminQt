@@ -53,6 +53,9 @@ EjectHostFromPoolAction::EjectHostFromPoolAction(QSharedPointer<Pool> pool,
 
     this->SetPool(this->m_pool);
     this->SetHost(this->m_hostToEject);
+
+    // RBAC dependencies (matches C# EjectHostFromPoolAction)
+    this->AddApiMethodToRoleCheck("pool.eject");
 }
 
 void EjectHostFromPoolAction::run()

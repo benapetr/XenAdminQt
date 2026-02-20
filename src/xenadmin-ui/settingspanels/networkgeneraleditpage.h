@@ -109,6 +109,7 @@ class NetworkGeneralEditPage : public IEditPage
         QString getSelectedHashingAlgorithm() const;
         QString getNetworkPifRef() const;
         QString getPhysicalPifRef() const;
+        QString findVirtualPifRefForSelection(const QString& nicName, int vlan) const;
 
         Ui::NetworkGeneralEditPage* ui;
 

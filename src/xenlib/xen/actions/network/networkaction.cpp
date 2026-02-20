@@ -35,8 +35,18 @@
 #include "../../xenapi/xenapi_Tunnel.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_PIF.h"
+#include "../../jsonrpcclient.h"
 #include "../../../xencache.h"
-#include <QDebug>
+
+namespace
+{
+    void throwIfJsonError(const char* context)
+    {
+        const QString jsonErr = Xen::JsonRpcClient::lastError();
+        if (!jsonErr.isEmpty())
+            throw std::runtime_error(QString("%1 failed: %2").arg(context, jsonErr).toStdString());
+    }
+}
 
 // Constructor: Create external (VLAN) network
 NetworkAction::NetworkAction(QSharedPointer<Network> network,
@@ -148,13 +158,8 @@ void NetworkAction::destroyPIFs()
             // Destroy associated tunnels
             for (const QString& tunnelRef : tunnelRefs)
             {
-                try
-                {
-                    XenAPI::Tunnel::destroy(this->GetSession(), tunnelRef);
-                } catch (const std::exception& e)
-                {
-                    qWarning() << "Failed to destroy tunnel" << tunnelRef << ":" << e.what();
-                }
+                XenAPI::Tunnel::destroy(this->GetSession(), tunnelRef);
+                throwIfJsonError("Tunnel.destroy");
             }
         }
         else
@@ -170,13 +175,8 @@ void NetworkAction::destroyPIFs()
                     QString vlanMasterRef = pif->VLANMasterOfRef();
                     if (!vlanMasterRef.isEmpty())
                     {
-                        try
-                        {
-                            XenAPI::VLAN::destroy(this->GetSession(), vlanMasterRef);
-                        } catch (const std::exception& e)
-                        {
-                            qWarning() << "Failed to destroy VLAN" << vlanMasterRef << ":" << e.what();
-                        }
+                        XenAPI::VLAN::destroy(this->GetSession(), vlanMasterRef);
+                        throwIfJsonError("VLAN.destroy");
                     }
                 }
 
@@ -198,13 +198,8 @@ void NetworkAction::destroyPIFs()
             else
             {
                 // Physical PIF - forget it
-                try
-                {
-                    XenAPI::PIF::forget(this->GetSession(), pif->OpaqueRef());
-                } catch (const std::exception& e)
-                {
-                    qWarning() << "Failed to forget PIF" << pif->OpaqueRef() << ":" << e.what();
-                }
+                XenAPI::PIF::forget(this->GetSession(), pif->OpaqueRef());
+                throwIfJsonError("PIF.forget");
             }
         }
     }
@@ -238,17 +233,11 @@ void NetworkAction::createVLAN(const QString& networkRef)
     }
 
     // Create VLAN from PIF
-    try
-    {
-        XenAPI::Pool::create_VLAN_from_PIF(this->GetSession(),
-                                            this->m_basePif->OpaqueRef(),
-                                            networkRef,
-                                            this->m_vlan);
-    } catch (const std::exception& e)
-    {
-        qWarning() << "Failed to create VLAN:" << e.what();
-        throw;
-    }
+    XenAPI::Pool::create_VLAN_from_PIF(this->GetSession(),
+                                       this->m_basePif->OpaqueRef(),
+                                       networkRef,
+                                       this->m_vlan);
+    throwIfJsonError("Pool.create_VLAN_from_PIF");
 }
 
 void NetworkAction::run()
@@ -269,6 +258,7 @@ void NetworkAction::run()
                 {
                     const QString ref = this->m_network->OpaqueRef();
                     XenAPI::Network::destroy(this->GetSession(), ref);
+                    throwIfJsonError("Network.destroy");
                     XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
                     if (cache)
                         cache->Remove(XenObjectType::Network, ref);
@@ -337,6 +327,7 @@ void NetworkAction::run()
 
                 // Create the network
                 QString networkRef = XenAPI::Network::create(this->GetSession(), networkRecord);
+                throwIfJsonError("Network.create");
 
                 // Create VLAN if external
                 if (this->m_external)

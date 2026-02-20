@@ -67,6 +67,15 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
     }
     
     this->SetTitle(tr("Importing '%1' to %2").arg(fileInfo.fileName(), poolName));
+
+    // RBAC dependencies (matches C# ImportVmAction)
+    this->AddApiMethodToRoleCheck("vm.set_name_label");
+    this->AddApiMethodToRoleCheck("network.destroy");
+    this->AddApiMethodToRoleCheck("vif.create");
+    this->AddApiMethodToRoleCheck("vif.destroy");
+    this->AddApiMethodToRoleCheck("http/put_import");
+    if (!this->hostRef_.isEmpty())
+        this->AddApiMethodToRoleCheck("vm.set_affinity");
 }
 
 ImportVmAction::~ImportVmAction()

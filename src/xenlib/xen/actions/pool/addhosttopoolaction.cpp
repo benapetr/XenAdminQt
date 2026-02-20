@@ -44,6 +44,22 @@ AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection, XenConne
     // Note: We don't use the Host object in this simplified version
     // The C# version uses it for licensing and AD checks
     this->m_autoDelete = auto_delete;
+
+    // RBAC dependencies (matches C# AddHostToPoolAction)
+    this->AddApiMethodToRoleCheck("pool.set_name_label");
+    this->AddApiMethodToRoleCheck("pool.set_name_description");
+    this->AddApiMethodToRoleCheck("pool.set_other_config");
+    this->AddApiMethodToRoleCheck("pool.add_to_other_config");
+    this->AddApiMethodToRoleCheck("pool.set_gui_config");
+    this->AddApiMethodToRoleCheck("pool.add_to_gui_config");
+    this->AddApiMethodToRoleCheck("pool.set_default_SR");
+    this->AddApiMethodToRoleCheck("pool.set_suspend_image_SR");
+    this->AddApiMethodToRoleCheck("pool.set_crash_dump_SR");
+    this->AddApiMethodToRoleCheck("pool.remove_from_other_config");
+    this->AddApiMethodToRoleCheck("pool.remove_tags");
+    this->AddApiMethodToRoleCheck("pool.set_wlb_enabled");
+    this->AddApiMethodToRoleCheck("pool.set_wlb_verify_cert");
+    this->AddApiMethodToRoleCheck("pool.join");
 }
 
 void AddHostToPoolAction::run()

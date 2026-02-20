@@ -76,6 +76,21 @@ ChangeNetworkingAction::ChangeNetworkingAction(XenConnection* connection,
                       return QString::localeAwareCompare(a->GetName(), b->GetName()) < 0;
                   });
     }
+
+    // RBAC dependencies (matches C# ChangeNetworkingAction)
+    this->AddApiMethodToRoleCheck("vm.set_memory_limits");
+    this->AddApiMethodToRoleCheck("host.management_reconfigure");
+    this->AddApiMethodToRoleCheck("pif.reconfigure_ip");
+    this->AddApiMethodToRoleCheck("pif.plug");
+
+    if (this->m_pool && this->m_pool->IsValid())
+        this->AddApiMethodToRoleCheck("pool.management_reconfigure");
+
+    this->AddApiMethodToRoleCheck("pbd.unplug");
+    this->AddApiMethodToRoleCheck("cluster_host.disable");
+    this->AddApiMethodToRoleCheck("pif.set_disallow_unplug");
+    this->AddApiMethodToRoleCheck("cluster_host.enable");
+    this->AddApiMethodToRoleCheck("pbd.plug");
 }
 
 void ChangeNetworkingAction::run()

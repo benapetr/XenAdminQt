@@ -46,6 +46,9 @@ MigrateVirtualDiskAction::MigrateVirtualDiskAction(XenConnection* connection,
                        .arg(vdiName)
                        .arg(oldSR)
                        .arg(newSR));
+
+    // RBAC dependencies (matches C# MigrateVirtualDiskAction)
+    this->AddApiMethodToRoleCheck("VDI.async_pool_migrate");
 }
 
 void MigrateVirtualDiskAction::run()

@@ -46,6 +46,8 @@ SetSecondaryManagementPurposeAction::SetSecondaryManagementPurposeAction(XenConn
       m_pool(pool),
       m_pifs(pifs)
 {
+    // RBAC dependencies (matches C# SetSecondaryManagementPurposeAction)
+    this->AddApiMethodToRoleCheck("pif.set_other_config");
 }
 
 void SetSecondaryManagementPurposeAction::run()

@@ -56,6 +56,13 @@ PlugVIFAction::PlugVIFAction(XenConnection* connection,
 
     SetTitle(QString("Plugging VIF on %1").arg(m_vmName));
     SetDescription(QString("Plugging virtual network interface on %1").arg(m_vmName));
+
+    // RBAC dependencies (matches C# PlugVIFAction)
+    if (vm && vm->GetPowerState() == "Running")
+    {
+        this->AddApiMethodToRoleCheck("VIF.get_allowed_operations");
+        this->AddApiMethodToRoleCheck("VIF.plug");
+    }
 }
 
 void PlugVIFAction::run()

@@ -32,7 +32,8 @@
 #include "../settingspanels/networkgeneraleditpage.h"
 #include "xenlib/xen/network.h"
 
-NetworkPropertiesDialog::NetworkPropertiesDialog(QSharedPointer<Network> network, QWidget* parent)  : VerticallyTabbedDialog(network, parent)
+NetworkPropertiesDialog::NetworkPropertiesDialog(QSharedPointer<Network> network, QWidget* parent)
+    : VerticallyTabbedDialog(network, parent)
 {
     this->setWindowTitle(tr("'%1' Properties").arg(network->GetName()));
     this->resize(700, 550);

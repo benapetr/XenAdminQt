@@ -53,6 +53,10 @@ CreateSriovAction::CreateSriovAction(XenConnection* connection,
 {
     if (this->m_pifRefs.isEmpty())
         throw std::invalid_argument("PIF list cannot be empty");
+
+    // RBAC dependencies (matches C# CreateSriovAction)
+    this->AddApiMethodToRoleCheck("Network.create");
+    this->AddApiMethodToRoleCheck("Network_sriov.async_create");
 }
 
 void CreateSriovAction::run()

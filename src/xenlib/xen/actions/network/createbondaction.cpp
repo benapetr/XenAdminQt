@@ -62,6 +62,16 @@ CreateBondAction::CreateBondAction(XenConnection* connection,
 {
     if (this->m_pifRefs.isEmpty())
         throw std::invalid_argument("PIF list cannot be empty");
+
+    // RBAC dependencies (matches C# CreateBondAction)
+    this->AddApiMethodToRoleCheck("host.management_reconfigure");
+    this->AddApiMethodToRoleCheck("network.create");
+    this->AddApiMethodToRoleCheck("network.destroy");
+    this->AddApiMethodToRoleCheck("network.remove_from_other_config");
+    this->AddApiMethodToRoleCheck("pif.reconfigure_ip");
+    this->AddApiMethodToRoleCheck("pif.plug");
+    this->AddApiMethodToRoleCheck("bond.create");
+    this->AddApiMethodToRoleCheck("bond.destroy");
 }
 
 void CreateBondAction::run()

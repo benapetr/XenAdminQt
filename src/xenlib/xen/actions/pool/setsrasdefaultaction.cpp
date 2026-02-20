@@ -43,6 +43,11 @@ SetSrAsDefaultAction::SetSrAsDefaultAction(QSharedPointer<Pool> pool, const QStr
     if (!this->m_pool || !this->m_pool->IsValid())
         qWarning() << "SetSrAsDefaultAction: Invalid pool object";
     this->m_connection = pool->GetConnection();
+
+    // RBAC dependencies (matches C# SetSrAsDefaultAction)
+    this->AddApiMethodToRoleCheck("pool.set_crash_dump_SR");
+    this->AddApiMethodToRoleCheck("pool.set_default_SR");
+    this->AddApiMethodToRoleCheck("pool.set_suspend_image_SR");
 }
 
 void SetSrAsDefaultAction::run()

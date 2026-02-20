@@ -56,6 +56,13 @@ UnplugVIFAction::UnplugVIFAction(XenConnection* connection,
 
     SetTitle(QString("Unplugging VIF on %1").arg(m_vmName));
     SetDescription(QString("Unplugging virtual network interface on %1").arg(m_vmName));
+
+    // RBAC dependencies (matches C# UnplugVIFAction)
+    if (vm && vm->GetPowerState() == "Running")
+    {
+        this->AddApiMethodToRoleCheck("VIF.get_allowed_operations");
+        this->AddApiMethodToRoleCheck("VIF.unplug");
+    }
 }
 
 void UnplugVIFAction::run()

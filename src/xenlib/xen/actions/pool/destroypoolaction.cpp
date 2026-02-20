@@ -45,6 +45,10 @@ DestroyPoolAction::DestroyPoolAction(QSharedPointer<Pool> pool,
     {
         throw std::invalid_argument("Invalid pool object");
     }
+
+    // RBAC dependencies (matches C# DestroyPoolAction)
+    this->AddApiMethodToRoleCheck("pool.set_name_label");
+    this->AddApiMethodToRoleCheck("pool.set_name_description");
 }
 
 void DestroyPoolAction::run()
