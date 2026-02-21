@@ -432,11 +432,8 @@ void NavigationView::buildObjectsTree()
 
     if (!this->m_objectsSearch)
     {
-        ObjectTypes types = Search::DefaultObjectTypes();
-        types |= ObjectTypes::Pool;
-        types |= ObjectTypes::DefaultTemplate;
-        types |= ObjectTypes::UserTemplate;
-        types |= ObjectTypes::LocalSR;
+        // Match C# OrganizationViewObjects scope: all searchable objects except folders.
+        ObjectTypes types = ObjectTypes::AllExcFolders;
         QueryScope* scope = new QueryScope(types);
         Query* query = new Query(scope, nullptr);
         this->m_objectsSearch = new Search(query, new TypeGrouping(nullptr), "Objects", QString(), false);

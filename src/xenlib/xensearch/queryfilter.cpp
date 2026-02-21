@@ -73,18 +73,25 @@ QVariant TypePropertyQuery::Match(const QVariantMap& objectData, const QString& 
     // C# equivalent: EnumPropertyQuery<ObjectTypes>.MatchProperty()
     // Compare the object's type with the query type
 
-    // For VMs, we need to distinguish between templates and regular VMs
+    // For VMs, we need to distinguish between templates, snapshots and regular VMs.
     if (m_objectType == "template")
     {
         // Match templates: objectType must be "vm" AND is_a_template must be true
         bool isTemplate = objectData.value("is_a_template", false).toBool();
         bool isMatch = (objectType == "vm" && isTemplate);
         return isMatch == m_equals;
+    } else if (m_objectType == "snapshot")
+    {
+        // Match snapshots: objectType must be "vm" AND is_a_snapshot must be true.
+        bool isSnapshot = objectData.value("is_a_snapshot", false).toBool();
+        bool isMatch = (objectType == "vm" && isSnapshot);
+        return isMatch == m_equals;
     } else if (m_objectType == "vm")
     {
-        // Match VMs (non-templates): objectType must be "vm" AND is_a_template must be false
+        // Match real VMs: objectType must be "vm" and not template/snapshot
         bool isTemplate = objectData.value("is_a_template", false).toBool();
-        bool isMatch = (objectType == "vm" && !isTemplate);
+        bool isSnapshot = objectData.value("is_a_snapshot", false).toBool();
+        bool isMatch = (objectType == "vm" && !isTemplate && !isSnapshot);
         return isMatch == m_equals;
     } else
     {

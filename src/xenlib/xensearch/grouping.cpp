@@ -116,18 +116,24 @@ QString TypeGrouping::getGroupName(const QVariant& group) const
 
     if (objectType == "vm")
         return "Virtual Machines";
+    else if (objectType == "snapshot")
+        return "Snapshots";
     else if (objectType == "host")
         return "Servers";
     else if (objectType == "disconnected_host")
         return "Disconnected Servers";
     else if (objectType == "sr")
         return "Storage";
+    else if (objectType == "vdi")
+        return "Virtual Disks";
     else if (objectType == "network")
         return "Networks";
     else if (objectType == "pool")
         return "Pools";
     else if (objectType == "template")
         return "Templates";
+    else if (objectType == "VM_appliance" || objectType == "vm_appliance")
+        return "VM Appliance";
     else
         return objectType;
 }
@@ -139,11 +145,15 @@ QIcon TypeGrouping::getGroupIcon(const QVariant& group) const
 
     if (objectType == "vm")
         return QIcon(":/tree-icons/vm_generic.png");
+    else if (objectType == "snapshot")
+        return QIcon(":/tree-icons/snapshot.png");
     else if (objectType == "host")
         return QIcon(":/tree-icons/host.png");
     else if (objectType == "disconnected_host")
         return QIcon(":/tree-icons/host_disconnected.png");
     else if (objectType == "sr")
+        return QIcon(":/tree-icons/storage.png");
+    else if (objectType == "vdi")
         return QIcon(":/tree-icons/storage.png");
     else if (objectType == "network")
         return QIcon(":/tree-icons/network.png");
@@ -151,6 +161,8 @@ QIcon TypeGrouping::getGroupIcon(const QVariant& group) const
         return QIcon(":/tree-icons/pool.png");
     else if (objectType == "template")
         return QIcon(":/tree-icons/template.png");
+    else if (objectType == "VM_appliance" || objectType == "vm_appliance")
+        return QIcon(":/tree-icons/vm_generic.png");
     else
         return Grouping::getGroupIcon(group);
 }
@@ -163,6 +175,9 @@ QVariant TypeGrouping::getGroup(const QVariantMap& objectData, const QString& ob
     // For templates, distinguish from regular VMs
     if (objectType == "vm")
     {
+        if (objectData.value("is_a_snapshot", false).toBool())
+            return "snapshot";
+
         bool isTemplate = objectData.value("is_a_template", false).toBool();
         if (isTemplate)
             return "template";

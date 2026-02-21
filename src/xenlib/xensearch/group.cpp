@@ -38,7 +38,9 @@
 #include "../xen/pool.h"
 #include "../xen/host.h"
 #include "../xen/vm.h"
+#include "../xen/vmappliance.h"
 #include "../xen/sr.h"
+#include "../xen/vdi.h"
 #include "../xen/network.h"
 #include <QDebug>
 #include <algorithm>
@@ -124,6 +126,19 @@ namespace XenSearch
                         group->FilterAdd(search->GetQuery(), "vm", ref, vmData, connection);
                 }
 
+                // VM appliances (vApps)
+                QList<QSharedPointer<XenObject>> applianceObjects = cache->GetAll(XenObjectType::VMAppliance);
+                foreach (const QSharedPointer<XenObject>& applianceObj, applianceObjects)
+                {
+                    if (!applianceObj)
+                        continue;
+                    QString ref = applianceObj->OpaqueRef();
+                    QVariantMap applianceData = applianceObj->GetData();
+                    applianceData["__type"] = "VM_appliance";
+                    if (!applianceData.isEmpty() && !Hide("VM_appliance", ref, applianceData, connection))
+                        group->FilterAdd(search->GetQuery(), "VM_appliance", ref, applianceData, connection);
+                }
+
                 // Hosts
                 QList<QSharedPointer<XenObject>> hostObjects = cache->GetAll(XenObjectType::Host);
                 foreach (const QSharedPointer<XenObject>& hostObj, hostObjects)
@@ -161,6 +176,19 @@ namespace XenSearch
                     networkData["__type"] = "network";
                     if (!networkData.isEmpty() && !Hide("network", ref, networkData, connection))
                         group->FilterAdd(search->GetQuery(), "network", ref, networkData, connection);
+                }
+
+                // VDIs
+                QList<QSharedPointer<XenObject>> vdiObjects = cache->GetAll(XenObjectType::VDI);
+                foreach (const QSharedPointer<XenObject>& vdiObj, vdiObjects)
+                {
+                    if (!vdiObj)
+                        continue;
+                    QString ref = vdiObj->OpaqueRef();
+                    QVariantMap vdiData = vdiObj->GetData();
+                    vdiData["__type"] = "vdi";
+                    if (!vdiData.isEmpty() && !Hide("vdi", ref, vdiData, connection))
+                        group->FilterAdd(search->GetQuery(), "vdi", ref, vdiData, connection);
                 }
 
                 // Pools
@@ -213,7 +241,6 @@ namespace XenSearch
         {
             bool isTemplate = objectData.value("is_a_template").toBool();
             bool isControlDomain = objectData.value("is_control_domain").toBool();
-            bool isSnapshot = objectData.value("is_a_snapshot").toBool();
 
             // TODO: Check VTPM restriction when Helpers is ported
             // if (!Helpers::VtpmCanView(conn))
@@ -225,10 +252,6 @@ namespace XenSearch
 
             // Hide templates
             if (isTemplate)
-                return true;
-
-            // Hide snapshots (TODO: make this configurable via grouping settings)
-            if (isSnapshot)
                 return true;
 
             // TODO: Check VM visibility using VM.Show() when that method exists

@@ -70,6 +70,10 @@ namespace
             return XenObjectType::SR;
         if (normalized == "network" || normalized == "networks")
             return XenObjectType::Network;
+        if (normalized == "vdi" || normalized == "vdis")
+            return XenObjectType::VDI;
+        if (normalized == "vm_appliance" || normalized == "vmappliance" || normalized == "vm appliance")
+            return XenObjectType::VMAppliance;
         return XenObjectType::Null;
     }
 }
@@ -94,6 +98,12 @@ QIcon IconManager::GetIconForObject(XenObjectType objectType, const QVariantMap&
             return this->GetIconForSR(objectData);
         case XenObjectType::Network:
             return this->GetIconForNetwork(objectData);
+        case XenObjectType::VDI:
+            return objectData.value("is_a_snapshot", false).toBool()
+                ? QIcon(":/tree-icons/snapshot.png")
+                : QIcon(":/tree-icons/storage.png");
+        case XenObjectType::VMAppliance:
+            return QIcon(":/tree-icons/vm_generic.png");
         default:
             break;
     }
