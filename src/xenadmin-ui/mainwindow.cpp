@@ -1084,19 +1084,25 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     // C# Reference: TabPageBallooning is shown for VMs (MainWindow.cs line 1328)
     else if (isVM)
     {
+        const QSharedPointer<VM> vmObj = qSharedPointerDynamicCast<VM>(xen_obj);
+        const bool isRealVMSelected = vmObj && vmObj->IsRealVM();
+        const bool isSnapshotVm = vmObj && vmObj->IsSnapshot();
+
         if (generalTab)
             newTabs.append(generalTab);
         if (memoryTab)
             newTabs.append(memoryTab);
-        if (vmStorageTab)
+        // Match C# behavior: snapshot VMs should not expose VM Storage.
+        if (vmStorageTab && !isSnapshotVm)
             newTabs.append(vmStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
-        if (snapshotsTab)
+        // Match C# MainWindow.GetNewTabPages(): these tabs are only for real VMs.
+        if (snapshotsTab && isRealVMSelected)
             newTabs.append(snapshotsTab);
-        if (consoleTab)
+        if (consoleTab && isRealVMSelected)
             newTabs.append(consoleTab);
-        if (performanceTab)
+        if (performanceTab && isRealVMSelected)
             newTabs.append(performanceTab);
     }
     // Pool tab order: General, Memory, Storage, Network, Performance
