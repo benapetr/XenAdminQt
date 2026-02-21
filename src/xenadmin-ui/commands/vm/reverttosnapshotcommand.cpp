@@ -71,7 +71,7 @@ void RevertToSnapshotCommand::Run()
 
 bool RevertToSnapshotCommand::CanRun() const
 {
-    if (!MainWindow::instance() || this->m_snapshotUuid.isEmpty())
+    if (!MainWindow::instance())
     {
         return false;
     }
@@ -86,28 +86,32 @@ QString RevertToSnapshotCommand::MenuText() const
 
 bool RevertToSnapshotCommand::canRevertToSnapshot() const
 {
-    if (!MainWindow::instance() || this->m_snapshotUuid.isEmpty())
+    const QString snapshotUuid = this->effectiveSnapshotUuid();
+    if (!MainWindow::instance() || snapshotUuid.isEmpty())
         return false;
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+    QSharedPointer<VM> snapshot = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
 
     if (!snapshot)
     {
-        qDebug() << "RevertToSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
+        qDebug() << "RevertToSnapshotCommand: Snapshot not found in cache:" << snapshotUuid;
         return false;
     }
 
     // Verify it's actually a snapshot
     if (!snapshot->IsSnapshot())
     {
-        qDebug() << "RevertToSnapshotCommand: Object is not a snapshot:" << this->m_snapshotUuid;
+        qDebug() << "RevertToSnapshotCommand: Object is not a snapshot:" << snapshotUuid;
         return false;
     }
 
     // Check if snapshot is being used by any operations
     if (!snapshot->CurrentOperations().isEmpty())
     {
-        qDebug() << "RevertToSnapshotCommand: Snapshot has active operations:" << this->m_snapshotUuid;
+        qDebug() << "RevertToSnapshotCommand: Snapshot has active operations:" << snapshotUuid;
         return false;
     }
 
@@ -115,7 +119,7 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
     QStringList allowed_ops = snapshot->GetAllowedOperations();
     if (!allowed_ops.contains("revert"))
     {
-        qDebug() << "RevertToSnapshotCommand: Revert operation not allowed for snapshot:" << this->m_snapshotUuid;
+        qDebug() << "RevertToSnapshotCommand: Revert operation not allowed for snapshot:" << snapshotUuid;
         return false;
     }
 
@@ -145,17 +149,21 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
 
 bool RevertToSnapshotCommand::showConfirmationDialog()
 {
-    QString snapshotName = this->m_snapshotUuid;
+    const QString snapshotUuid = this->effectiveSnapshotUuid();
+    QString snapshotName = snapshotUuid;
     QString snapshotTime;
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+    QSharedPointer<VM> snapshot = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
 
     if (!snapshot)
         return false;
 
     snapshotName = snapshot->GetName();
     if (snapshotName.isEmpty())
-        snapshotName = this->m_snapshotUuid;
+        snapshotName = snapshotUuid;
 
     snapshotTime = snapshot->SnapshotTime().toString("yyyy-MM-dd HH:mm:ss");
 
@@ -182,7 +190,8 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
 
 void RevertToSnapshotCommand::revertToSnapshot()
 {
-    qDebug() << "RevertToSnapshotCommand: Reverting to snapshot:" << this->m_snapshotUuid;
+    const QString snapshotUuid = this->effectiveSnapshotUuid();
+    qDebug() << "RevertToSnapshotCommand: Reverting to snapshot:" << snapshotUuid;
 
     if (!MainWindow::instance())
     {
@@ -190,7 +199,13 @@ void RevertToSnapshotCommand::revertToSnapshot()
         return;
     }
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+    {
+        qWarning() << "RevertToSnapshotCommand: No selected object";
+        return;
+    }
+    QSharedPointer<VM> snapshot = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
 
     XenConnection* conn = snapshot->GetConnection();
     if (!conn || !conn->IsConnected())
@@ -213,7 +228,6 @@ void RevertToSnapshotCommand::revertToSnapshot()
     VMSnapshotRevertAction* action = new VMSnapshotRevertAction(snapshot, MainWindow::instance());
 
     // Connect completion signal for cleanup and status update
-    QString snapshotUuid = this->m_snapshotUuid;
     connect(action, &AsyncOperation::completed, action, [snapshotUuid, action]()
     {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
@@ -233,4 +247,15 @@ void RevertToSnapshotCommand::revertToSnapshot()
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
     action->RunAsync();
+}
+
+QString RevertToSnapshotCommand::effectiveSnapshotUuid() const
+{
+    if (!this->m_snapshotUuid.isEmpty())
+        return this->m_snapshotUuid;
+
+    if (this->getSelectedObjectType() != XenObjectType::VM)
+        return QString();
+
+    return this->getSelectedObjectRef();
 }

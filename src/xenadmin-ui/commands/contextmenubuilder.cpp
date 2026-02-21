@@ -496,6 +496,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     {
         VMOperationMenu* startOnMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::StartOn, menu);
         menu->addMenu(startOnMenu);
+        startOnMenu->menuAction()->setIcon(QIcon(":/icons/empty_icon.png"));
     }
 
     if (canShowResumeOn())
@@ -508,6 +509,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     {
         VMOperationMenu* migrateMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::Migrate, menu);
         menu->addMenu(migrateMenu);
+        migrateMenu->menuAction()->setIcon(QIcon(":/icons/empty_icon.png"));
     }
 
     this->addSeparator(menu);
@@ -659,7 +661,8 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
     this->addSeparator(menu);
 
-    menu->addAction("Properties");
+    QAction* propertiesAction = menu->addAction("Properties");
+    propertiesAction->setIcon(QIcon(":/icons/empty_icon.png"));
 }
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)

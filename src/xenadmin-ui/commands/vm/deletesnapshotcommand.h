@@ -45,6 +45,7 @@ class DeleteSnapshotCommand : public Command
 
     private:
         QString m_snapshotUuid;
+        QString effectiveSnapshotUuid() const;
 
         // Check if snapshot can be deleted
         bool canDeleteSnapshot() const;

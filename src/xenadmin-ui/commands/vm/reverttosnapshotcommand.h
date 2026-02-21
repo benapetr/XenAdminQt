@@ -45,6 +45,7 @@ class RevertToSnapshotCommand : public Command
 
     private:
         QString m_snapshotUuid;
+        QString effectiveSnapshotUuid() const;
 
         // Check if snapshot can be reverted to
         bool canRevertToSnapshot() const;
