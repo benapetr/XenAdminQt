@@ -79,7 +79,6 @@ protected:
 
 private slots:
     void onNetworkTypeChanged();
-    void onNameChanged();
     void onDetailsInputsChanged();
     void onChinSelectionChanged();
     void onSriovSelectionChanged();

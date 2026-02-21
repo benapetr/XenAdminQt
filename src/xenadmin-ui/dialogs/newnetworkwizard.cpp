@@ -76,9 +76,6 @@ NewNetworkWizard::NewNetworkWizard(XenConnection* connection, const QSharedPoint
     connect(this->ui.radioChin, &QRadioButton::toggled, this, &NewNetworkWizard::onNetworkTypeChanged);
     connect(this->ui.radioSriov, &QRadioButton::toggled, this, &NewNetworkWizard::onNetworkTypeChanged);
 
-    connect(this->ui.nameEdit, &QLineEdit::textChanged, this, &NewNetworkWizard::onNameChanged);
-    connect(this->ui.descriptionEdit, &QTextEdit::textChanged, this, &NewNetworkWizard::onNameChanged);
-
     connect(this->ui.nicCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewNetworkWizard::onDetailsInputsChanged);
     connect(this->ui.vlanSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewNetworkWizard::onDetailsInputsChanged);
     connect(this->ui.mtuSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewNetworkWizard::onDetailsInputsChanged);
@@ -745,11 +742,6 @@ void NewNetworkWizard::onNetworkTypeChanged()
     this->updateTypePage();
     this->updateNamePage();
     this->updateDetailsPage();
-}
-
-void NewNetworkWizard::onNameChanged()
-{
-    this->updateNamePage();
 }
 
 void NewNetworkWizard::onDetailsInputsChanged()
