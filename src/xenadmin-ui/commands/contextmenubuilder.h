@@ -40,6 +40,8 @@ class Host;
 class Pool;
 class SR;
 class Network;
+class VDI;
+class VMAppliance;
 class XenConnection;
 class GroupingTag;
 
@@ -73,6 +75,8 @@ class ContextMenuBuilder : public QObject
         void buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr);
         void buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool);
         void buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network);
+        void buildVDIContextMenu(QMenu* menu, QSharedPointer<VDI> vdi);
+        void buildVMApplianceContextMenu(QMenu* menu, QSharedPointer<VMAppliance> appliance);
         void buildFolderContextMenu(QMenu* menu, QSharedPointer<XenObject> folderObj);
         void buildTagGroupingContextMenu(QMenu* menu, GroupingTag* groupingTag);
         void buildFolderGroupingContextMenu(QMenu* menu, GroupingTag* groupingTag);

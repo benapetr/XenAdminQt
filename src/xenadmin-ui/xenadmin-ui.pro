@@ -49,6 +49,7 @@ SOURCES += \
     dialogs/snapshotpropertiesdialog.cpp \
     dialogs/storagepropertiesdialog.cpp \
     dialogs/networkpropertiesdialog.cpp \
+    dialogs/vmappliancepropertiesdialog.cpp \
     dialogs/networkingpropertiesdialog.cpp \
     dialogs/networkingpropertiespage.cpp \
     dialogs/bondpropertiesdialog.cpp \
@@ -202,6 +203,8 @@ SOURCES += \
     commands/vm/vmrecoverymodecommand.cpp \
     commands/vm/vappstartcommand.cpp \
     commands/vm/vappshutdowncommand.cpp \
+    commands/vm/vappexportcommand.cpp \
+    commands/vm/vapppropertiescommand.cpp \
     commands/vm/exportsnapshotastemplatecommand.cpp \
     commands/vm/newvmfromsnapshotcommand.cpp \
     commands/vm/newtemplatefromsnapshotcommand.cpp \
@@ -350,6 +353,7 @@ HEADERS += \
     dialogs/snapshotpropertiesdialog.h \
     dialogs/storagepropertiesdialog.h \
     dialogs/networkpropertiesdialog.h \
+    dialogs/vmappliancepropertiesdialog.h \
     dialogs/networkingpropertiesdialog.h \
     dialogs/networkingpropertiespage.h \
     dialogs/bondpropertiesdialog.h \
@@ -512,6 +516,8 @@ HEADERS += \
     commands/vm/vmrecoverymodecommand.h \
     commands/vm/vappstartcommand.h \
     commands/vm/vappshutdowncommand.h \
+    commands/vm/vappexportcommand.h \
+    commands/vm/vapppropertiescommand.h \
     commands/vm/exportsnapshotastemplatecommand.h \
     commands/vm/newvmfromsnapshotcommand.h \
     commands/vm/newtemplatefromsnapshotcommand.h \

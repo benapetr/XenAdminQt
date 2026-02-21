@@ -75,6 +75,10 @@
 #include "vm/reverttosnapshotcommand.h"
 #include "vm/exportsnapshotastemplatecommand.h"
 #include "vm/newtemplatefromsnapshotcommand.h"
+#include "vm/vappstartcommand.h"
+#include "vm/vappshutdowncommand.h"
+#include "vm/vappexportcommand.h"
+#include "vm/vapppropertiescommand.h"
 #include "storage/repairsrcommand.h"
 #include "storage/newsrcommand.h"
 #include "storage/detachsrcommand.h"
@@ -83,6 +87,9 @@
 #include "storage/forgetsrcommand.h"
 #include "storage/destroysrcommand.h"
 #include "storage/storagepropertiescommand.h"
+#include "storage/movevirtualdiskcommand.h"
+#include "storage/deletevirtualdiskcommand.h"
+#include "storage/vdieditsizelocationcommand.h"
 #include "template/deletetemplatecommand.h"
 #include "template/exporttemplatecommand.h"
 #include "network/networkpropertiescommand.h"
@@ -101,6 +108,8 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xensearch/grouping.h"
@@ -225,6 +234,18 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         {
             QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(obj);
             this->buildNetworkContextMenu(menu, network);
+            break;
+        }
+        case XenObjectType::VDI:
+        {
+            QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(obj);
+            this->buildVDIContextMenu(menu, vdi);
+            break;
+        }
+        case XenObjectType::VMAppliance:
+        {
+            QSharedPointer<VMAppliance> appliance = qSharedPointerDynamicCast<VMAppliance>(obj);
+            this->buildVMApplianceContextMenu(menu, appliance);
             break;
         }
         case XenObjectType::Folder:
@@ -963,6 +984,77 @@ void ContextMenuBuilder::buildNetworkContextMenu(QMenu* menu, QSharedPointer<Net
 
     // Properties
     NetworkPropertiesCommand* propertiesCmd = new NetworkPropertiesCommand(this->m_mainWindow, this);
+    this->addCommand(menu, propertiesCmd);
+}
+
+void ContextMenuBuilder::buildVDIContextMenu(QMenu* menu, QSharedPointer<VDI> vdi)
+{
+    if (!vdi)
+        return;
+
+    MoveVirtualDiskCommand* moveCmd = new MoveVirtualDiskCommand(this->m_mainWindow, this);
+    this->addCommand(menu, moveCmd);
+
+    DeleteVirtualDiskCommand* deleteCmd = new DeleteVirtualDiskCommand(this->m_mainWindow, this);
+    this->addCommand(menu, deleteCmd);
+
+    bool showProperties = true;
+    if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QList<QSharedPointer<XenObject>> selected = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        if (selected.size() > 1)
+        {
+            bool allVDI = true;
+            for (const QSharedPointer<XenObject>& obj : selected)
+            {
+                if (!obj || obj->GetObjectType() != XenObjectType::VDI)
+                {
+                    allVDI = false;
+                    break;
+                }
+            }
+            if (allVDI)
+                showProperties = false;
+        }
+    }
+
+    if (showProperties)
+    {
+        this->addSeparator(menu);
+        VdiEditSizeLocationCommand* propertiesCmd = new VdiEditSizeLocationCommand(this->m_mainWindow, this);
+        this->addCommand(menu, propertiesCmd);
+    }
+}
+
+void ContextMenuBuilder::buildVMApplianceContextMenu(QMenu* menu, QSharedPointer<VMAppliance> appliance)
+{
+    if (!appliance)
+        return;
+
+    VappStartCommand* startCmd = new VappStartCommand(this->m_mainWindow, this);
+    this->addCommand(menu, startCmd);
+
+    VappShutDownCommand* shutdownCmd = new VappShutDownCommand(this->m_mainWindow, this);
+    this->addCommand(menu, shutdownCmd);
+
+    bool singleVappSelection = false;
+    if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QList<QSharedPointer<XenObject>> selected = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        singleVappSelection = (selected.size() == 1
+                               && selected.first()
+                               && selected.first()->GetObjectType() == XenObjectType::VMAppliance);
+    }
+
+    if (!singleVappSelection)
+        return;
+
+    this->addSeparator(menu);
+    VappExportCommand* exportCmd = new VappExportCommand(this->m_mainWindow, this);
+    this->addCommand(menu, exportCmd);
+
+    this->addSeparator(menu);
+    VappPropertiesCommand* propertiesCmd = new VappPropertiesCommand(this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
