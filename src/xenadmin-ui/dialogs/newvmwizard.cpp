@@ -953,6 +953,14 @@ void NewVMWizard::updateNavigationSelection()
         this->m_navigationPane->setCurrentStep(this->navigationIndexForPageId(currentId()));
 }
 
+void NewVMWizard::syncSelectedHostFromUi()
+{
+    if (this->ui->specificHomeServerRadio->isChecked() && !this->ui->homeServerList->selectedItems().isEmpty())
+        this->m_selectedHost = this->ui->homeServerList->selectedItems().first()->data(Qt::UserRole).toString();
+    else
+        this->m_selectedHost.clear();
+}
+
 void NewVMWizard::initializePage(int id)
 {
     if (id == Page_Storage)
@@ -1002,6 +1010,7 @@ bool NewVMWizard::validateCurrentPage()
                                  tr("Choose a home server or allow automatic placement."));
             return false;
         }
+        this->syncSelectedHostFromUi();
         break;
     case Page_CpuMemory:
     {
@@ -1087,10 +1096,7 @@ void NewVMWizard::accept()
     this->m_bootMode = this->ui->bootModeComboBox->currentData().toString();
     this->m_pvArgs = this->ui->pvBootArgsEdit->toPlainText().trimmed();
 
-    if (this->ui->specificHomeServerRadio->isChecked() && !this->ui->homeServerList->selectedItems().isEmpty())
-        this->m_selectedHost = this->ui->homeServerList->selectedItems().first()->data(Qt::UserRole).toString();
-    else
-        this->m_selectedHost.clear();
+    this->syncSelectedHostFromUi();
 
     this->createVirtualMachine();
     QWizard::accept();

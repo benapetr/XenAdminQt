@@ -352,6 +352,7 @@ void NewVirtualDiskDialog::setWizardContext(const QString& vmName, const QString
     this->m_vmNameOverride = vmName;
     this->m_usedDevices = usedDevices;
     this->m_homeHostRef = homeHostRef;
+    this->populateSRList();
     this->updateDefaultName();
 }
 
@@ -361,6 +362,7 @@ void NewVirtualDiskDialog::setInitialDisk(const QString& name, const QString& de
     this->m_initialDescription = description;
     this->m_initialSizeBytes = sizeBytes;
     this->m_initialSrRef = srRef;
+    this->populateSRList();
     this->applyInitialDisk();
 }
 

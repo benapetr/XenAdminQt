@@ -125,6 +125,7 @@ class NewVMWizard : public QWizard
         void rebuildNavigationSteps();
         int navigationIndexForPageId(int pageId) const;
         void updateNavigationSelection();
+        void syncSelectedHostFromUi();
 
         struct TemplateInfo
         {
