@@ -28,6 +28,9 @@
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QDebug>
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QMenu>
 #include "mainwindow.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
@@ -43,6 +46,7 @@
 #include "ui_nicstabpage.h"
 #include "commands/host/rescanpifscommand.h"
 #include "../dialogs/bondpropertiesdialog.h"
+#include "../widgets/tableclipboardutils.h"
 
 NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICsTabPage)
 {
@@ -53,12 +57,14 @@ NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICs
 
     // Connect signals
     connect(this->ui->nicsTable, &QTableWidget::itemSelectionChanged, this, &NICsTabPage::onSelectionChanged);
+    connect(this->ui->nicsTable, &QTableWidget::customContextMenuRequested, this, &NICsTabPage::showNICsContextMenu);
     connect(this->ui->createBondButton, &QPushButton::clicked, this, &NICsTabPage::onCreateBondClicked);
     connect(this->ui->deleteBondButton, &QPushButton::clicked, this, &NICsTabPage::onDeleteBondClicked);
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &NICsTabPage::onRescanClicked);
 
     // Disable editing
     this->ui->nicsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->nicsTable->setContextMenuPolicy(Qt::CustomContextMenu);
 }
 
 NICsTabPage::~NICsTabPage()
@@ -468,4 +474,81 @@ void NICsTabPage::onRescanClicked()
     RescanPIFsCommand cmd(MainWindow::instance(), this);
     if (cmd.CanRun())
         cmd.Run();
+}
+
+void NICsTabPage::showNICsContextMenu(const QPoint& pos)
+{
+    if (!this->ui || !this->ui->nicsTable)
+        return;
+
+    // Mirror button behavior: right-clicking a row makes it current before building actions.
+    if (QTableWidgetItem* item = this->ui->nicsTable->itemAt(pos))
+    {
+        this->ui->nicsTable->setCurrentCell(item->row(), 0);
+        this->ui->nicsTable->selectRow(item->row());
+    }
+
+    this->updateButtonStates();
+
+    QMenu menu(this);
+
+    // Copy behavior follows other table context menus:
+    // - copy clicked cell text when available
+    // - otherwise copy the selected row values as a single line
+    QString copyText;
+    if (QTableWidgetItem* clickedItem = this->ui->nicsTable->itemAt(pos))
+    {
+        copyText = clickedItem->text();
+    } else
+    {
+        const int row = this->ui->nicsTable->currentRow();
+        if (row >= 0)
+        {
+            QStringList rowValues;
+            for (int col = 0; col < this->ui->nicsTable->columnCount(); ++col)
+            {
+                QTableWidgetItem* cell = this->ui->nicsTable->item(row, col);
+                if (cell && !cell->text().isEmpty())
+                    rowValues.append(cell->text());
+            }
+            copyText = rowValues.join(", ");
+        }
+    }
+
+    if (!copyText.isEmpty())
+    {
+        QAction* copyAction = menu.addAction(tr("Copy"));
+        connect(copyAction, &QAction::triggered, this, [copyText]()
+        {
+            if (QClipboard* clipboard = QGuiApplication::clipboard())
+                clipboard->setText(copyText);
+        });
+    }
+
+    if (this->ui->nicsTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = menu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->nicsTable);
+        });
+    }
+
+    if (!menu.actions().isEmpty())
+        menu.addSeparator();
+
+    QAction* createBondAction = menu.addAction(tr("Create Bond..."));
+    connect(createBondAction, &QAction::triggered, this, &NICsTabPage::onCreateBondClicked);
+
+    QAction* deleteBondAction = menu.addAction(tr("Delete Bond"));
+    deleteBondAction->setEnabled(this->ui->deleteBondButton->isEnabled());
+    connect(deleteBondAction, &QAction::triggered, this, &NICsTabPage::onDeleteBondClicked);
+
+    menu.addSeparator();
+
+    QAction* rescanAction = menu.addAction(tr("Rescan"));
+    rescanAction->setEnabled(this->ui->rescanButton->isEnabled());
+    connect(rescanAction, &QAction::triggered, this, &NICsTabPage::onRescanClicked);
+
+    menu.exec(this->ui->nicsTable->viewport()->mapToGlobal(pos));
 }

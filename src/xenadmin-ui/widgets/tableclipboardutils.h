@@ -25,68 +25,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NICSTABPAGE_H
-#define NICSTABPAGE_H
+#ifndef TABLECLIPBOARDUTILS_H
+#define TABLECLIPBOARDUTILS_H
 
-#include "basetabpage.h"
-#include <QPoint>
-#include <QSharedPointer>
+#include <QList>
+#include <QString>
+#include <QStringList>
 
-QT_BEGIN_NAMESPACE
-namespace Ui
+class QTableWidget;
+
+class TableClipboardUtils
 {
-    class NICsTabPage;
-}
-QT_END_NAMESPACE
-
-class PIF;
-
-/**
- * NICs tab page showing physical network interfaces (PIFs).
- * Matches C# XenAdmin NICPage.cs.
- *
- * Shows: NIC name, MAC, Link Status, Speed, Duplex, Vendor, Device, Bus Path, FCoE, SR-IOV
- *
- * Applicable to Hosts only.
- */
-class NICsTabPage : public BaseTabPage
-{
-    Q_OBJECT
-
     public:
-        explicit NICsTabPage(QWidget* parent = nullptr);
-        ~NICsTabPage();
+        /**
+         * @brief Build CSV text from a table widget.
+         * @param table Source table.
+         * @param skipEmptyDecorativeColumns Skip columns that have empty headers and no visible text values.
+         */
+        static QString BuildCsvFromTable(const QTableWidget* table, bool skipEmptyDecorativeColumns = true);
 
-        QString GetTitle() const override
-        {
-            return "NICs";
-        }
-        Type GetType() const override
-        {
-            return Type::Nics;
-        }
-        QString HelpID() const override
-        {
-            return "TabPageNICs";
-        }
-        bool IsApplicableForObjectType(const QString& objectType) const override;
+        /**
+         * @brief Build CSV text and copy it into the system clipboard.
+         * @param table Source table.
+         * @param skipEmptyDecorativeColumns Skip columns that have empty headers and no visible text values.
+         */
+        static void CopyTableCsvToClipboard(const QTableWidget* table, bool skipEmptyDecorativeColumns = true);
 
-    protected:
-        void refreshContent() override;
+        /**
+         * @brief Escapes one value for RFC4180-style CSV output.
+         */
+        static QString CsvEscapeField(const QString& value);
 
-    private:
-        Ui::NICsTabPage* ui;
+        /**
+         * @brief Builds one CSV row from fields.
+         */
+        static QString CsvJoinRow(const QStringList& fields);
 
-        void populateNICs();
-        void addNICRow(const QSharedPointer<PIF>& pif);
-        void updateButtonStates();
-
-    private slots:
-        void onSelectionChanged();
-        void onCreateBondClicked();
-        void onDeleteBondClicked();
-        void onRescanClicked();
-        void showNICsContextMenu(const QPoint& pos);
+        /**
+         * @brief Builds a CSV document from optional headers and row data.
+         */
+        static QString BuildCsvDocument(const QStringList& headers, const QList<QStringList>& rows);
 };
 
-#endif // NICSTABPAGE_H
+#endif // TABLECLIPBOARDUTILS_H

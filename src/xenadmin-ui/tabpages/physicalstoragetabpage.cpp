@@ -48,6 +48,7 @@
 #include "../commands/storage/trimsrcommand.h"
 #include "../commands/storage/detachsrcommand.h"
 #include "../commands/storage/storagepropertiescommand.h"
+#include "../widgets/tableclipboardutils.h"
 #include "xenlib/operations/parallelaction.h"
 
 PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
@@ -584,6 +585,16 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
     const int selectionCount = selectedSrRefs.size();
 
     QMenu menu(this);
+
+    if (this->ui->storageTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = menu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->storageTable);
+        });
+        menu.addSeparator();
+    }
 
     NewSRCommand newCmd(mainWindow);
     QAction* newAction = menu.addAction(tr("New Storage Repository..."));

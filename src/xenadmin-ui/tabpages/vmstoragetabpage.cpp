@@ -50,6 +50,7 @@
 #include "settingsmanager.h"
 #include "mainwindow.h"
 #include "../widgets/isodropdownbox.h"
+#include "../widgets/tableclipboardutils.h"
 #include "operations/multipleaction.h"
 #include <QTableWidgetItem>
 #include <QSignalBlocker>
@@ -1240,6 +1241,16 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
     }
 
     QMenu contextMenu(this);
+
+    if (this->ui->storageTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = contextMenu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->storageTable);
+        });
+        contextMenu.addSeparator();
+    }
 
     // Build context menu based on object type and button visibility
     // C# Reference: SrStoragePage.cs contextMenuStrip_Opening() lines 379-399

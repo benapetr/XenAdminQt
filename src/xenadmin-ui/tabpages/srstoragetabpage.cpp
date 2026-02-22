@@ -47,6 +47,7 @@
 #include "dialogs/actionprogressdialog.h"
 #include "commands/storage/addvirtualdiskcommand.h"
 #include "mainwindow.h"
+#include "../widgets/tableclipboardutils.h"
 
 namespace
 {
@@ -386,6 +387,16 @@ void SrStorageTabPage::onStorageTableDoubleClicked(const QModelIndex& index)
 void SrStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
 {
     QMenu menu(this);
+
+    if (this->ui->storageTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = menu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->storageTable);
+        });
+        menu.addSeparator();
+    }
 
     QAction* rescanAction = menu.addAction(tr("Rescan"));
     rescanAction->setEnabled(this->ui->rescanButton->isEnabled());

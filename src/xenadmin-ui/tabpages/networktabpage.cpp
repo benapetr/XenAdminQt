@@ -45,6 +45,7 @@
 #include "../dialogs/actionprogressdialog.h"
 #include "../iconmanager.h"
 #include "../mainwindow.h"
+#include "../widgets/tableclipboardutils.h"
 #include "xenlib/xen/actions/vif/deletevifaction.h"
 #include "xenlib/xen/actions/vif/plugvifaction.h"
 #include "xenlib/xen/actions/vif/unplugvifaction.h"
@@ -903,6 +904,15 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
         connect(copyAction, &QAction::triggered, this, [this, cellText]() { this->copyTextToClipboard(cellText); });
     }
 
+    if (this->ui->networksTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = contextMenu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->networksTable);
+        });
+    }
+
     // Add separator before add/edit/remove actions
     if (!contextMenu.actions().isEmpty())
         contextMenu.addSeparator();
@@ -968,9 +978,19 @@ void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
         QString cellText = item->text();
         QAction* copyAction = contextMenu.addAction(tr("Copy"));
         connect(copyAction, &QAction::triggered, this, [this, cellText]() { this->copyTextToClipboard(cellText); });
-
-        contextMenu.addSeparator();
     }
+
+    if (this->ui->ipConfigTable->rowCount() > 0)
+    {
+        QAction* copyCsvAction = contextMenu.addAction(tr("Copy to CSV"));
+        connect(copyCsvAction, &QAction::triggered, this, [this]()
+        {
+            TableClipboardUtils::CopyTableCsvToClipboard(this->ui->ipConfigTable);
+        });
+    }
+
+    if (!contextMenu.actions().isEmpty())
+        contextMenu.addSeparator();
 
     // Add "Configure" action
     QAction* configureAction = contextMenu.addAction(tr("Configure..."));

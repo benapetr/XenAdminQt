@@ -298,6 +298,7 @@ SOURCES += \
     widgets/notificationssubmodeitem.cpp \
     navigation/navigationbuttons.cpp \
     widgets/wizardnavigationpane.cpp \
+    widgets/tableclipboardutils.cpp \
     network/httpconnect.cpp \
     network/xenconnectionui.cpp \
     ConsoleView/ConsoleKeyHandler.cpp \
@@ -611,6 +612,7 @@ HEADERS += \
     widgets/notificationssubmodeitem.h \
     navigation/navigationbuttons.h \
     widgets/wizardnavigationpane.h \
+    widgets/tableclipboardutils.h \
     network/httpconnect.h \
     navigation/navigationhistory.h \
     ConsoleView/IRemoteConsole.h \
