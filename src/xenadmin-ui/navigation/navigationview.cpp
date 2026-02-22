@@ -50,6 +50,7 @@
 #include "xenlib/folders/foldersmanager.h"
 #include <QDebug>
 #include <QDropEvent>
+#include <QItemSelectionModel>
 #include <QMimeData>
 
 using namespace XenSearch;
@@ -193,7 +194,8 @@ void NavigationView::RequestRefreshTreeView()
     }
 
     // Restore selection and expanded nodes AFTER rebuild (matches C# RestoreExpandedNodes)
-    bool selectionRestored = !this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty();
+    const bool selectionRestored = !this->m_savedSelectionKeys.isEmpty()
+        || (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty());
     this->restoreSelectionAndExpansion();
 
     this->ui->treeWidget->setUpdatesEnabled(true); // Resume painting
@@ -701,13 +703,32 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
 
 void NavigationView::persistSelectionAndExpansion()
 {
-    // Save current selection (matches C# PersistSelectedNode)
-    QTreeWidgetItem* selectedItem = this->ui->treeWidget->currentItem();
-    if (selectedItem)
+    // Save all selected XenObject items (multi-selection persistence).
+    this->m_savedSelectionKeys.clear();
+    const QList<QTreeWidgetItem*> selectedItems = this->ui->treeWidget->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
     {
-        QVariant data = selectedItem->data(0, Qt::UserRole);
-        
-        // Check if it's a XenObject
+        if (!item)
+            continue;
+
+        QVariant data = item->data(0, Qt::UserRole);
+        if (data.canConvert<QSharedPointer<XenObject>>())
+        {
+            QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+            if (obj)
+            {
+                const QString key = obj->GetObjectTypeName() + ":" + obj->OpaqueRef();
+                if (!key.isEmpty() && !this->m_savedSelectionKeys.contains(key))
+                    this->m_savedSelectionKeys.append(key);
+            }
+        }
+    }
+
+    // Save primary item (for current-item restoration).
+    QTreeWidgetItem* currentItem = this->ui->treeWidget->currentItem();
+    if (currentItem)
+    {
+        QVariant data = currentItem->data(0, Qt::UserRole);
         if (data.canConvert<QSharedPointer<XenObject>>())
         {
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
@@ -722,7 +743,6 @@ void NavigationView::persistSelectionAndExpansion()
             }
         } else
         {
-            // Not a XenObject (e.g., disconnected server or GroupingTag)
             this->m_savedSelectionType.clear();
             this->m_savedSelectionRef.clear();
         }
@@ -882,17 +902,23 @@ void NavigationView::restoreSelectionAndExpansion()
         }
     }
 
-    // Restore selection (matches C# RestoreSelectedNode)
-    if (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty())
+    // Restore full selection first.
+    this->ui->treeWidget->clearSelection();
+    QTreeWidgetItem* firstRestoredItem = nullptr;
+    for (const QString& key : this->m_savedSelectionKeys)
     {
-        // Search all top-level items
-        int topCount = this->ui->treeWidget->topLevelItemCount();
-        QTreeWidgetItem* itemToSelect = nullptr;
+        const int colon = key.indexOf(':');
+        if (colon <= 0 || colon >= key.length() - 1)
+            continue;
 
+        const QString type = key.left(colon);
+        const QString ref = key.mid(colon + 1);
+        QTreeWidgetItem* itemToSelect = nullptr;
+        const int topCount = this->ui->treeWidget->topLevelItemCount();
         for (int i = 0; i < topCount; ++i)
         {
             QTreeWidgetItem* rootItem = this->ui->treeWidget->topLevelItem(i);
-            itemToSelect = this->findItemByTypeAndRef(this->m_savedSelectionType, this->m_savedSelectionRef, rootItem);
+            itemToSelect = this->findItemByTypeAndRef(type, ref, rootItem);
 
             if (!itemToSelect)
             {
@@ -907,7 +933,7 @@ void NavigationView::restoreSelectionAndExpansion()
                     rootRef = obj->OpaqueRef();
                 }
                 
-                if (rootType == this->m_savedSelectionType && rootRef == this->m_savedSelectionRef)
+                if (rootType == type && rootRef == ref)
                 {
                     itemToSelect = rootItem;
                 }
@@ -919,11 +945,40 @@ void NavigationView::restoreSelectionAndExpansion()
             }
         }
 
-        if (itemToSelect)
+        if (!itemToSelect)
+            continue;
+
+        itemToSelect->setSelected(true);
+        if (!firstRestoredItem)
+            firstRestoredItem = itemToSelect;
+    }
+
+    // Restore primary/current item.
+    QTreeWidgetItem* primaryItem = nullptr;
+    if (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty())
+    {
+        const int topCount = this->ui->treeWidget->topLevelItemCount();
+        for (int i = 0; i < topCount; ++i)
         {
-            this->ui->treeWidget->setCurrentItem(itemToSelect);
+            QTreeWidgetItem* rootItem = this->ui->treeWidget->topLevelItem(i);
+            primaryItem = this->findItemByTypeAndRef(this->m_savedSelectionType, this->m_savedSelectionRef, rootItem);
+            if (!primaryItem)
+            {
+                QVariant data = rootItem->data(0, Qt::UserRole);
+                QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+                if (obj && obj->GetObjectTypeName() == this->m_savedSelectionType && obj->OpaqueRef() == this->m_savedSelectionRef)
+                    primaryItem = rootItem;
+            }
+
+            if (primaryItem)
+                break;
         }
     }
+
+    if (primaryItem)
+        this->ui->treeWidget->setCurrentItem(primaryItem, 0, QItemSelectionModel::NoUpdate);
+    else if (firstRestoredItem)
+        this->ui->treeWidget->setCurrentItem(firstRestoredItem, 0, QItemSelectionModel::NoUpdate);
 
     // Re-enable selection signals
     this->m_suppressSelectionSignals = false;

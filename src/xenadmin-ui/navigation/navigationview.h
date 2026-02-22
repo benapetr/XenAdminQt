@@ -173,6 +173,7 @@ class NavigationView : public QWidget
         // State preservation for tree refresh (matches C# PersistExpandedNodes/RestoreExpandedNodes)
         QString m_savedSelectionType;
         QString m_savedSelectionRef;
+        QStringList m_savedSelectionKeys;
         QStringList m_savedExpandedPaths;
         bool m_suppressSelectionSignals = false; // Block itemSelectionChanged during rebuild
 };
