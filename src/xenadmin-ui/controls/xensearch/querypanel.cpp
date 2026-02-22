@@ -33,7 +33,9 @@
 #include <QDateTime>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QTreeWidgetItemIterator>
 #include <cmath>
+#include <utility>
 #include "querypanel.h"
 #include "treewidgetgroupacceptor.h"
 #include "xenlib/xensearch/search.h"
@@ -56,6 +58,7 @@
 #include "xenlib/xen/vmguestmetrics.h"
 #include "iconmanager.h"
 #include "../../widgets/progressbardelegate.h"
+#include "../../widgets/tableclipboardutils.h"
 #include "xenlib/metricupdater.h"
 #include "xenlib/utils/misc.h"
 
@@ -1159,6 +1162,7 @@ void QueryPanel::contextMenuEvent(QContextMenuEvent* event)
     QMenu menu(this);
     QAction* copyCellAction = menu.addAction(tr("Copy Cell"));
     QAction* copyRowAction = menu.addAction(tr("Copy Row"));
+    QAction* copyCsvAction = menu.addAction(tr("Copy to CSV"));
     menu.addSeparator();
     QAction* columnsAction = menu.addAction(tr("Columns..."));
 
@@ -1178,6 +1182,12 @@ void QueryPanel::contextMenuEvent(QContextMenuEvent* event)
     if (chosen == copyRowAction)
     {
         this->copyRow(item);
+        return;
+    }
+
+    if (chosen == copyCsvAction)
+    {
+        this->copyAllRowsToCsv();
         return;
     }
 
@@ -1244,6 +1254,52 @@ void QueryPanel::copyRow(QTreeWidgetItem* item) const
     QClipboard* clipboard = QGuiApplication::clipboard();
     if (clipboard)
         clipboard->setText(cells.join("\t"));
+}
+
+void QueryPanel::copyAllRowsToCsv()
+{
+    QList<int> exportColumns;
+    exportColumns.reserve(this->columnCount());
+    for (int col = 0; col < this->columnCount(); ++col)
+    {
+        if (!this->isColumnHidden(col))
+            exportColumns.append(col);
+    }
+
+    QStringList headers;
+    headers.reserve(exportColumns.size());
+    for (int col : std::as_const(exportColumns))
+    {
+        QTreeWidgetItem* headerItem = this->headerItem();
+        headers.append(headerItem ? headerItem->text(col) : QString());
+    }
+
+    QList<QStringList> rows;
+    QTreeWidgetItemIterator it(this);
+    while (*it)
+    {
+        QTreeWidgetItem* rowItem = *it;
+
+        // Export only object rows and skip group/no-results rows.
+        const QString objectType = rowItem->data(0, Qt::UserRole + 1).toString();
+        if (objectType.isEmpty())
+        {
+            ++it;
+            continue;
+        }
+
+        QStringList rowValues;
+        rowValues.reserve(exportColumns.size());
+        for (int col : std::as_const(exportColumns))
+            rowValues.append(rowItem->text(col));
+
+        rows.append(rowValues);
+        ++it;
+    }
+
+    const QString csvText = TableClipboardUtils::BuildCsvDocument(headers, rows);
+    if (QClipboard* clipboard = QGuiApplication::clipboard())
+        clipboard->setText(csvText);
 }
 
 void QueryPanel::PanelShown()

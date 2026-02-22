@@ -159,6 +159,7 @@ class QueryPanel : public QTreeWidget
     private:
         void copyCell(QTreeWidgetItem* item, int column) const;
         void copyRow(QTreeWidgetItem* item) const;
+        void copyAllRowsToCsv();
 
         // Column management
         void setupColumns();
