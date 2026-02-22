@@ -7,6 +7,9 @@
         <file alias="pool_new.png">images/000_PoolNew_h32bit_16.png</file>
         <file alias="new_storage.png">images/000_NewStorage_h32bit_16.png</file>
         <file alias="new_vm.png">images/000_CreateVM_h32bit_32.png</file>
+        <file alias="vm_create_16.png">images/001_CreateVM_h32bit_16.png</file>
+        <file alias="migrate_vm.png">images/000_MigrateVM_h32bit_16.png</file>
+        <file alias="server_wlb_16.png">images/000_ServerWlb_h32bit_16.png</file>
         <file alias="start_vm.png">images/000_StartVM_h32bit_16.png</file>
         <file alias="shutdown.png">images/001_ShutDown_h32bit_16.png</file>
         <file alias="reboot.png">images/001_Reboot_h32bit_16.png</file>
@@ -58,6 +61,8 @@
         <file alias="log_destination_16.png">images/log_destination_16.png</file>
         <file alias="enable_power_control_16.png">images/000_EnablePowerControl_h32bit_16.png</file>
         <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
+        <file alias="storage_default.png">images/000_StorageDefault_h32bit_16.png</file>
+        <file alias="storage_broken.png">images/000_StorageBroken_h32bit_16.png</file>
         <file alias="contracted_triangle.png">images/contracted_triangle.png</file>
         <file alias="expanded_triangle.png">images/expanded_triangle.png</file>
         <file alias="empty_icon.png">images/empty_icon.png</file>

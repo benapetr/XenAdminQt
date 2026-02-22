@@ -49,3 +49,8 @@ QString NewPoolCommand::MenuText() const
 {
     return "New Pool...";
 }
+
+QIcon NewPoolCommand::GetIcon() const
+{
+    return QIcon(":/icons/pool_new.png");
+}

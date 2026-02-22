@@ -41,6 +41,7 @@ class NewPoolCommand : public Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 };
 
 #endif // NEWPOOLCOMMAND_H

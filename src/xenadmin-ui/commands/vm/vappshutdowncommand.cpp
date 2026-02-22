@@ -406,6 +406,11 @@ QString VappShutDownCommand::MenuText() const
     return tr("Shut Down v&App");
 }
 
+QIcon VappShutDownCommand::GetIcon() const
+{
+    return QIcon(":/icons/shutdown.png");
+}
+
 bool VappShutDownCommand::canShutDownAppliance(const QSharedPointer<VMAppliance>& appliance) const
 {
     if (!appliance)

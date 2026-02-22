@@ -122,6 +122,11 @@ QString SetDefaultSRCommand::MenuText() const
     return "Set as Default";
 }
 
+QIcon SetDefaultSRCommand::GetIcon() const
+{
+    return QIcon(":/icons/storage_default.png");
+}
+
 void SetDefaultSRCommand::onSetDefaultCompleted()
 {
     if (MainWindow::instance())

@@ -134,3 +134,8 @@ QString CrossPoolMigrateCommand::MenuText() const
         return tr("Cross Pool Move...");
     return tr("Cross Pool Migrate...");
 }
+
+QIcon CrossPoolMigrateCommand::GetIcon() const
+{
+    return QIcon(":/icons/migrate_vm.png");
+}

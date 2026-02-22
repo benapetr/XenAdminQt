@@ -82,6 +82,11 @@ QString NewSRCommand::MenuText() const
     return tr("New Storage Repository...");
 }
 
+QIcon NewSRCommand::GetIcon() const
+{
+    return QIcon(":/icons/new_storage.png");
+}
+
 void NewSRCommand::showNewSRWizard()
 {
     qDebug() << "NewSRCommand: Opening New Storage Repository Wizard";

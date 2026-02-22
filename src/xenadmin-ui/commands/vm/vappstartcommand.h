@@ -83,6 +83,7 @@ class VappStartCommand : public Command
          * @return "Start vApp"
          */
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
     private:
         /**

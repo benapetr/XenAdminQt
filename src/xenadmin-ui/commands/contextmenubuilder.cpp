@@ -39,11 +39,14 @@
 #include "host/reconnecthostcommand.h"
 #include "host/removehostcommand.h"
 #include "host/hostreconnectascommand.h"
+#include "host/connectallhostscommand.h"
+#include "host/disconnectallhostscommand.h"
 #include "connection/cancelhostconnectioncommand.h"
 #include "connection/disconnecthostsandpoolscommand.h"
 #include "connection/forgetsavedpasswordcommand.h"
 #include "../selectionmanager.h"
 #include "pool/joinpoolcommand.h"
+#include "pool/newpoolcommand.h"
 #include "pool/removehostfrompoolcommand.h"
 #include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
@@ -116,6 +119,7 @@
 #include "xenlib/xensearch/groupingtag.h"
 #include <QAction>
 #include <QDebug>
+#include <QMetaObject>
 #include <QTreeWidget>
 #include <QMap>
 #include <QSet>
@@ -128,6 +132,12 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
 {
     if (!item)
         return nullptr;
+
+    if (QMenu* rootMenu = this->buildRootSpecialContextMenu(item, parent))
+    {
+        this->addTreeContextMenuExtras(rootMenu);
+        return rootMenu;
+    }
 
     QVariant data = item->data(0, Qt::UserRole);
     QVariant groupingTagVar = item->data(0, Qt::UserRole + 3);
@@ -158,12 +168,14 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
             if (dynamic_cast<TagsGrouping*>(groupingTag->getGrouping()))
             {
                 this->buildTagGroupingContextMenu(menu, groupingTag);
+                this->addTreeContextMenuExtras(menu);
                 return menu;
             }
 
             if (dynamic_cast<FolderGrouping*>(groupingTag->getGrouping()))
             {
                 this->buildFolderGroupingContextMenu(menu, groupingTag);
+                this->addTreeContextMenuExtras(menu);
                 return menu;
             }
         }
@@ -191,11 +203,15 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     {
         // C# pattern: disconnected servers show Connect, Forget Password, Remove menu items
         this->buildDisconnectedHostContextMenu(menu, item);
+        this->addTreeContextMenuExtras(menu);
         return menu;
     }
 
     if (!obj)
+    {
+        this->addTreeContextMenuExtras(menu);
         return menu;
+    }
 
     switch (objectType)
     {
@@ -257,7 +273,233 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
             break;
     }
 
+    this->addTreeContextMenuExtras(menu);
     return menu;
+}
+
+QMenu* ContextMenuBuilder::buildRootSpecialContextMenu(QTreeWidgetItem* item, QWidget* parent)
+{
+    if (!item || !this->m_mainWindow)
+        return nullptr;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return nullptr;
+
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    if (selectedItems.size() != 1 || selectedItems.first() != item || item->parent() != nullptr)
+        return nullptr;
+
+    const QVariant objectVar = item->data(0, Qt::UserRole);
+    const QVariant groupingTagVar = item->data(0, Qt::UserRole + 3);
+    GroupingTag* groupingTag = groupingTagVar.canConvert<GroupingTag*>()
+        ? groupingTagVar.value<GroupingTag*>()
+        : nullptr;
+
+    // Infrastructure root: Add server/new pool/connect all/disconnect all.
+    if (!objectVar.isValid() && !groupingTag)
+    {
+        QMenu* menu = new QMenu(parent);
+
+        QAction* addServerAction = menu->addAction(tr("Add New Server..."));
+        addServerAction->setIcon(QIcon(":/icons/add_server.png"));
+        connect(addServerAction, &QAction::triggered, this, &ContextMenuBuilder::onConnectToServerRequested);
+
+        this->addCommand(menu, new NewPoolCommand(this->m_mainWindow, this));
+        this->addCommand(menu, new ConnectAllHostsCommand(this->m_mainWindow, this));
+        this->addCommand(menu, new DisconnectAllHostsCommand(this->m_mainWindow, this));
+        return menu;
+    }
+
+    // Folders org root: New Folder.
+    if (groupingTag && dynamic_cast<FolderGrouping*>(groupingTag->getGrouping()))
+    {
+        QMenu* menu = new QMenu(parent);
+        this->addCommand(menu, new NewFolderCommand(this->m_mainWindow, this));
+        return menu;
+    }
+
+    return nullptr;
+}
+
+void ContextMenuBuilder::addTreeContextMenuExtras(QMenu* menu)
+{
+    if (!menu || !this->m_mainWindow || this->m_handlingTreeExpandCollapse)
+        return;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return;
+
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    QAction* insertBefore = this->findInsertBeforePropertiesAction(menu);
+
+    if (this->hasExpandableSelection(selectedItems))
+    {
+        auto insertAtTarget = [&](QAction* action)
+        {
+            if (insertBefore)
+                menu->insertAction(insertBefore, action);
+            else
+                menu->addAction(action);
+        };
+
+        QAction* previousBeforeInsert = nullptr;
+        const QList<QAction*> existingActions = menu->actions();
+        if (insertBefore)
+        {
+            for (QAction* action : existingActions)
+            {
+                if (action == insertBefore)
+                    break;
+                previousBeforeInsert = action;
+            }
+        } else if (!existingActions.isEmpty())
+        {
+            previousBeforeInsert = existingActions.last();
+        }
+
+        // Add a leading separator only when there is a non-separated section before us.
+        if (previousBeforeInsert && !previousBeforeInsert->isSeparator())
+        {
+            QAction* leadingSeparator = new QAction(menu);
+            leadingSeparator->setSeparator(true);
+            insertAtTarget(leadingSeparator);
+        }
+
+        QAction* collapseAction = new QAction(tr("Collapse Child Nodes"), menu);
+        collapseAction->setIcon(QIcon(":/icons/empty_icon.png"));
+        connect(collapseAction, &QAction::triggered, this, &ContextMenuBuilder::onCollapseChildNodesRequested);
+        insertAtTarget(collapseAction);
+
+        QAction* expandAction = new QAction(tr("Expand Child Nodes"), menu);
+        expandAction->setIcon(QIcon(":/icons/empty_icon.png"));
+        connect(expandAction, &QAction::triggered, this, &ContextMenuBuilder::onExpandChildNodesRequested);
+        insertAtTarget(expandAction);
+
+        // If there is a continuation of the menu after this section (e.g. Properties),
+        // terminate the section with a separator.
+        if (insertBefore && !insertBefore->isSeparator())
+        {
+            QAction* trailingSeparator = new QAction(menu);
+            trailingSeparator->setSeparator(true);
+            insertAtTarget(trailingSeparator);
+        }
+    }
+
+    if (this->isOrganizationNavigationMode() && !selectedItems.isEmpty())
+        this->addCommandAt(menu, new RemoveFromFolderCommand(this->m_mainWindow, this), insertBefore);
+}
+
+QAction* ContextMenuBuilder::findInsertBeforePropertiesAction(QMenu* menu) const
+{
+    if (!menu)
+        return nullptr;
+
+    const QList<QAction*> actions = menu->actions();
+    if (actions.isEmpty())
+        return nullptr;
+
+    QAction* lastAction = actions.last();
+    QString text = lastAction->text();
+    text.remove('&');
+    if (text.startsWith(QStringLiteral("Properties"), Qt::CaseInsensitive))
+        return lastAction;
+
+    return nullptr;
+}
+
+bool ContextMenuBuilder::hasExpandableSelection(const QList<QTreeWidgetItem*>& selectedItems) const
+{
+    for (QTreeWidgetItem* selected : selectedItems)
+    {
+        if (selected && selected->childCount() > 0)
+            return true;
+    }
+
+    return false;
+}
+
+bool ContextMenuBuilder::isOrganizationNavigationMode() const
+{
+    if (!this->m_mainWindow)
+        return false;
+
+    const NavigationPane::NavigationMode mode = this->m_mainWindow->GetNavigationMode();
+    return mode != NavigationPane::Infrastructure
+        && mode != NavigationPane::SavedSearch
+        && mode != NavigationPane::Notifications;
+}
+
+void ContextMenuBuilder::setSubtreeExpanded(QTreeWidgetItem* node, bool expanded)
+{
+    if (!node)
+        return;
+
+    for (int i = 0; i < node->childCount(); ++i)
+    {
+        QTreeWidgetItem* child = node->child(i);
+        if (!child)
+            continue;
+
+        child->setExpanded(expanded);
+        this->setSubtreeExpanded(child, expanded);
+    }
+}
+
+void ContextMenuBuilder::onConnectToServerRequested()
+{
+    if (this->m_mainWindow)
+        QMetaObject::invokeMethod(this->m_mainWindow, "connectToServer", Qt::QueuedConnection);
+}
+
+void ContextMenuBuilder::onExpandChildNodesRequested()
+{
+    if (!this->m_mainWindow)
+        return;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return;
+
+    this->m_handlingTreeExpandCollapse = true;
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+        this->setSubtreeExpanded(item, true);
+    this->m_handlingTreeExpandCollapse = false;
+}
+
+void ContextMenuBuilder::onCollapseChildNodesRequested()
+{
+    if (!this->m_mainWindow)
+        return;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return;
+
+    this->m_handlingTreeExpandCollapse = true;
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+        this->setSubtreeExpanded(item, false);
+    this->m_handlingTreeExpandCollapse = false;
+}
+
+void ContextMenuBuilder::addCommandAt(QMenu* menu, Command* command, QAction* insertBefore)
+{
+    if (!command || !menu || !command->CanRun())
+        return;
+
+    QAction* action = new QAction(command->MenuText(), menu);
+    QIcon icon = command->GetIcon();
+    if (!icon.isNull())
+        action->setIcon(icon);
+    connect(action, &QAction::triggered, command, &Command::Run);
+
+    if (insertBefore)
+        menu->insertAction(insertBefore, action);
+    else
+        menu->addAction(action);
 }
 
 void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
@@ -496,20 +738,21 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     {
         VMOperationMenu* startOnMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::StartOn, menu);
         menu->addMenu(startOnMenu);
-        startOnMenu->menuAction()->setIcon(QIcon(":/icons/empty_icon.png"));
+        startOnMenu->menuAction()->setIcon(QIcon(":/icons/start_vm.png"));
     }
 
     if (canShowResumeOn())
     {
         VMOperationMenu* resumeOnMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::ResumeOn, menu);
         menu->addMenu(resumeOnMenu);
+        resumeOnMenu->menuAction()->setIcon(QIcon(":/icons/resume.png"));
     }
 
     if (canShowMigrate())
     {
         VMOperationMenu* migrateMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::Migrate, menu);
         menu->addMenu(migrateMenu);
-        migrateMenu->menuAction()->setIcon(QIcon(":/icons/empty_icon.png"));
+        migrateMenu->menuAction()->setIcon(QIcon(":/icons/migrate_vm.png"));
     }
 
     this->addSeparator(menu);
@@ -940,6 +1183,15 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
     QMenu* haMenu = new QMenu(tr("High Availability"), menu);
     this->addCommandAlways(haMenu, new HAConfigureCommand(this->m_mainWindow, this));
     this->addCommandAlways(haMenu, new HADisableCommand(this->m_mainWindow, this));
+
+    // Keep submenu and its entries aligned with icon-bearing actions.
+    haMenu->menuAction()->setIcon(QIcon(":/icons/empty_icon.png"));
+    for (QAction* action : haMenu->actions())
+    {
+        if (action && action->icon().isNull())
+            action->setIcon(QIcon(":/icons/empty_icon.png"));
+    }
+
     if (!haMenu->actions().isEmpty())
     {
         this->addSeparator(menu);
@@ -1104,14 +1356,7 @@ void ContextMenuBuilder::buildFolderGroupingContextMenu(QMenu* menu, GroupingTag
 
 void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)
 {
-    if (!command || !command->CanRun())
-        return;
-
-    QAction* action = menu->addAction(command->MenuText());
-    QIcon icon = command->GetIcon();
-    if (!icon.isNull())
-        action->setIcon(icon);
-    connect(action, &QAction::triggered, command, &Command::Run);
+    this->addCommandAt(menu, command, nullptr);
 }
 
 void ContextMenuBuilder::addCommandAlways(QMenu* menu, Command* command)

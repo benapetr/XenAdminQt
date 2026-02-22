@@ -85,6 +85,7 @@ class VappShutDownCommand : public Command
          * @return "Shut Down vApp"
          */
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
     private:
         /**

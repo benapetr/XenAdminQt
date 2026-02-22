@@ -65,6 +65,7 @@ class ContextMenuBuilder : public QObject
 
     private:
         MainWindow* m_mainWindow;
+        bool m_handlingTreeExpandCollapse = false;
 
         // Builders for specific object types
         void buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm);
@@ -86,6 +87,26 @@ class ContextMenuBuilder : public QObject
         QList<XenConnection*> getSelectedConnections() const;
 
         // Helper methods
+        //! Builds special root-node menus (infrastructure root and folder root); returns null when not applicable.
+        QMenu* buildRootSpecialContextMenu(QTreeWidgetItem* item, QWidget* parent);
+        //! Injects common tree extras such as expand/collapse actions and org-mode folder actions.
+        void addTreeContextMenuExtras(QMenu* menu);
+        //! Finds the properties action anchor so extra actions can be inserted before it.
+        QAction* findInsertBeforePropertiesAction(QMenu* menu) const;
+        //! Returns true when any selected tree node has children.
+        bool hasExpandableSelection(const QList<QTreeWidgetItem*>& selectedItems) const;
+        //! Returns true when current navigation mode is one of the organization views.
+        bool isOrganizationNavigationMode() const;
+        //! Recursively expands or collapses all descendants of the given node.
+        void setSubtreeExpanded(QTreeWidgetItem* node, bool expanded);
+        //! Adds a command action to a menu, optionally inserting it before another action.
+        void addCommandAt(QMenu* menu, Command* command, QAction* insertBefore = nullptr);
+        //! Handles Add New Server root action by delegating to MainWindow connection flow.
+        void onConnectToServerRequested();
+        //! Expands child nodes for the current tree selection.
+        void onExpandChildNodesRequested();
+        //! Collapses child nodes for the current tree selection.
+        void onCollapseChildNodesRequested();
         void addCommand(QMenu* menu, Command* command);
         void addCommandAlways(QMenu* menu, Command* command);
         void addSeparator(QMenu* menu);

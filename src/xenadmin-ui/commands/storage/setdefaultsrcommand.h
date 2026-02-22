@@ -48,6 +48,7 @@ class SetDefaultSRCommand : public SRCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
     private slots:
         void onSetDefaultCompleted();

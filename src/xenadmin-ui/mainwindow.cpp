@@ -1488,7 +1488,6 @@ void MainWindow::showTreeContextMenu(const QPoint& position)
     else
         tree->setCurrentItem(item, 0, QItemSelectionModel::ClearAndSelect);
 
-    // Use ContextMenuBuilder to create the appropriate menu
     ContextMenuBuilder builder(this);
     QMenu* contextMenu = builder.BuildContextMenu(item, this);
 
@@ -1515,6 +1514,11 @@ QTreeWidget* MainWindow::GetServerTreeWidget() const
         }
     }
     return nullptr;
+}
+
+NavigationPane::NavigationMode MainWindow::GetNavigationMode() const
+{
+    return this->m_navigationPane ? this->m_navigationPane->GetCurrentMode() : NavigationPane::Infrastructure;
 }
 
 void MainWindow::ShowStatusMessage(const QString& message, int timeout)

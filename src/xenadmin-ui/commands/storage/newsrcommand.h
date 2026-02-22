@@ -40,6 +40,7 @@ class NewSRCommand : public Command
         void Run() override;
         bool CanRun() const override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
     private:
         void showNewSRWizard();

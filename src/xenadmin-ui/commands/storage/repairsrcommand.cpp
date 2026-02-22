@@ -78,3 +78,8 @@ QString RepairSRCommand::MenuText() const
 {
     return "Repair";
 }
+
+QIcon RepairSRCommand::GetIcon() const
+{
+    return QIcon(":/icons/storage_broken.png");
+}

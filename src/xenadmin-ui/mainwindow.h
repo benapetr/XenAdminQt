@@ -87,6 +87,8 @@ class MainWindow : public QMainWindow
         }
 
         QTreeWidget* GetServerTreeWidget() const;
+        //! Returns the currently selected navigation mode from the navigation pane.
+        NavigationPane::NavigationMode GetNavigationMode() const;
         void ShowStatusMessage(const QString& message, int timeout = 0);
         void RefreshServerTree();
 

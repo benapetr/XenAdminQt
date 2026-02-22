@@ -82,6 +82,11 @@ QString NewVMCommand::MenuText() const
     return tr("New VM...");
 }
 
+QIcon NewVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/vm_create_16.png");
+}
+
 void NewVMCommand::showNewVMWizard()
 {
     // qDebug() << "NewVMCommand: Opening New VM Wizard";

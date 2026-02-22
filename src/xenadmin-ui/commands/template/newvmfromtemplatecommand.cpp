@@ -93,6 +93,11 @@ QString NewVMFromTemplateCommand::MenuText() const
     return "New VM from Template";
 }
 
+QIcon NewVMFromTemplateCommand::GetIcon() const
+{
+    return QIcon(":/icons/vm_create_16.png");
+}
+
 QString NewVMFromTemplateCommand::getSelectedTemplateRef() const
 {
     if (this->getSelectedObjectType() != XenObjectType::VM)

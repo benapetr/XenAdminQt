@@ -77,6 +77,18 @@ VMOperationMenu::VMOperationMenu(MainWindow* main_window, const QList<QSharedPoi
 {
     this->m_operationName = this->getOperationName();
     this->setTitle(this->getMenuText());
+    switch (this->m_operation)
+    {
+        case Operation::StartOn:
+            this->menuAction()->setIcon(QIcon(":/icons/start_vm.png"));
+            break;
+        case Operation::ResumeOn:
+            this->menuAction()->setIcon(QIcon(":/icons/resume.png"));
+            break;
+        case Operation::Migrate:
+            this->menuAction()->setIcon(QIcon(":/icons/migrate_vm.png"));
+            break;
+    }
     
     // Populate menu when it's about to be shown
     connect(this, &QMenu::aboutToShow, this, &VMOperationMenu::aboutToShowMenu);
@@ -331,6 +343,7 @@ void VMOperationMenu::populate()
     firstItem->starRating = 0.0;
     firstItem->canRunAny = false;
     firstItem->action = this->addAction(wlbEnabled ? tr("Optimal Server") : tr("Home Server"));
+    firstItem->action->setIcon(wlbEnabled ? QIcon(":/icons/server_wlb_16.png") : QIcon(":/icons/server_home_16.png"));
     firstItem->action->setEnabled(false);  // Will be enabled in updateHostList
     this->m_hostMenuItems.append(firstItem);
 

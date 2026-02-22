@@ -367,6 +367,11 @@ QString VappStartCommand::MenuText() const
     return tr("Start v&App");
 }
 
+QIcon VappStartCommand::GetIcon() const
+{
+    return QIcon(":/icons/start_vm.png");
+}
+
 bool VappStartCommand::canStartAppliance(const QSharedPointer<VMAppliance>& appliance) const
 {
     if (!appliance)
