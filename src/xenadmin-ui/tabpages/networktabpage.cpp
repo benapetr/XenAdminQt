@@ -68,6 +68,10 @@ NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     // Set up table properties
     this->ui->networksTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->ipConfigTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->networksTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->ipConfigTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->networksTable->setSortingEnabled(true);
+    this->ui->ipConfigTable->setSortingEnabled(true);
     this->ui->networksTable->setIconSize(QSize(16, 16));
     this->ui->ipConfigTable->setIconSize(QSize(16, 16));
 
@@ -228,6 +232,9 @@ void NetworkTabPage::setupNetworkColumns()
 
 void NetworkTabPage::populateVIFsForVM()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->networksTable);
+    this->ui->networksTable->setSortingEnabled(false);
+
     // Clear the table
     this->ui->networksTable->setRowCount(0);
 
@@ -236,12 +243,14 @@ void NetworkTabPage::populateVIFsForVM()
     if (!vm)
     {
         qDebug() << "NetworkTabPage::populateVIFsForVM - No object";
+        TableClipboardUtils::RestoreSortState(this->ui->networksTable, sortState, 1, Qt::AscendingOrder);
         return;
     }
 
     if (!vm->GetConnection())
     {
         qDebug() << "NetworkTabPage::populateVIFsForVM - No connection";
+        TableClipboardUtils::RestoreSortState(this->ui->networksTable, sortState, 1, Qt::AscendingOrder);
         return;
     }
 
@@ -410,13 +419,20 @@ void NetworkTabPage::populateVIFsForVM()
     }
 
     // Update button states after populating (matches C# UpdateEnablement call)
+    TableClipboardUtils::RestoreSortState(this->ui->networksTable, sortState, 1, Qt::AscendingOrder);
     updateButtonStates();
 }
 
 void NetworkTabPage::populateNetworksForHost()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->networksTable);
+    this->ui->networksTable->setSortingEnabled(false);
+
     if (!this->m_object)
+    {
+        TableClipboardUtils::RestoreSortState(this->ui->networksTable, sortState, 1, Qt::AscendingOrder);
         return;
+    }
 
     this->ui->networksTable->setRowCount(0);
 
@@ -435,6 +451,8 @@ void NetworkTabPage::populateNetworksForHost()
 
         this->addNetworkRow(network);
     }
+
+    TableClipboardUtils::RestoreSortState(this->ui->networksTable, sortState, 1, Qt::AscendingOrder);
 
     //qDebug() << "NetworkTabPage::populateNetworksForHost - Added" << this->ui->networksTable->rowCount() << "rows";
 }
@@ -589,22 +607,35 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
 
 void NetworkTabPage::populateIPConfigForHost()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->ipConfigTable);
+    this->ui->ipConfigTable->setSortingEnabled(false);
+
     this->ui->ipConfigTable->setRowCount(0);
 
     QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
     if (!host)
+    {
+        TableClipboardUtils::RestoreSortState(this->ui->ipConfigTable, sortState, 0, Qt::AscendingOrder);
         return;
+    }
 
     this->addIPConfigRowsForHost(host);
+    TableClipboardUtils::RestoreSortState(this->ui->ipConfigTable, sortState, 0, Qt::AscendingOrder);
 }
 
 void NetworkTabPage::populateIPConfigForPool()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->ipConfigTable);
+    this->ui->ipConfigTable->setSortingEnabled(false);
+
     this->ui->ipConfigTable->setRowCount(0);
 
     QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
     if (!pool)
+    {
+        TableClipboardUtils::RestoreSortState(this->ui->ipConfigTable, sortState, 0, Qt::AscendingOrder);
         return;
+    }
 
     // For pools, show management interfaces from all hosts
     QList<QSharedPointer<Host>> hosts = pool->GetHosts();
@@ -612,6 +643,8 @@ void NetworkTabPage::populateIPConfigForPool()
     {
         this->addIPConfigRowsForHost(host);
     }
+
+    TableClipboardUtils::RestoreSortState(this->ui->ipConfigTable, sortState, 0, Qt::AscendingOrder);
 }
 
 void NetworkTabPage::addIPConfigRowsForHost(const QSharedPointer<Host>& host)

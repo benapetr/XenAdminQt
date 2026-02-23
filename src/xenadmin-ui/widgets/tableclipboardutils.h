@@ -31,12 +31,21 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
+#include <Qt>
 
 class QTableWidget;
 
 class TableClipboardUtils
 {
     public:
+        struct SortState
+        {
+            int column = -1;
+            Qt::SortOrder order;
+            bool wasSortingEnabled = false;
+            bool hasValidSort = false;
+        };
+
         /**
          * @brief Build CSV text from a table widget.
          * @param table Source table.
@@ -65,6 +74,17 @@ class TableClipboardUtils
          * @brief Builds a CSV document from optional headers and row data.
          */
         static QString BuildCsvDocument(const QStringList& headers, const QList<QStringList>& rows);
+
+        /**
+         * @brief Captures current sort settings so they can be restored after a table rebuild.
+         */
+        static SortState CaptureSortState(const QTableWidget* table);
+
+        /**
+         * @brief Restores sorting after table rebuild and reapplies either previous or default sort.
+         */
+        static void RestoreSortState(QTableWidget* table, const SortState& state,
+                                     int defaultColumn = -1, Qt::SortOrder defaultOrder = Qt::AscendingOrder);
 };
 
 #endif // TABLECLIPBOARDUTILS_H

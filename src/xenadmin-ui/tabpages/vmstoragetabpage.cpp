@@ -266,6 +266,7 @@ void VMStorageTabPage::populateVMStorage()
         selectedVbdSet.insert(ref);
     }
 
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->storageTable);
     this->ui->storageTable->setSortingEnabled(false);
     this->ui->storageTable->setRowCount(0);
     this->m_storageVbdRefs.clear();
@@ -383,8 +384,7 @@ void VMStorageTabPage::populateVMStorage()
         this->ui->storageTable->resizeColumnToContents(i);
     }
 
-    this->ui->storageTable->setSortingEnabled(true);
-    this->ui->storageTable->sortItems(kColumnPosition, Qt::AscendingOrder);
+    TableClipboardUtils::RestoreSortState(this->ui->storageTable, sortState, kColumnPosition, Qt::AscendingOrder);
 
     QItemSelectionModel* selectionModel = this->ui->storageTable->selectionModel();
     if (selectionModel)

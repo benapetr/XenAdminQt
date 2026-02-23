@@ -28,6 +28,7 @@
 #include "tableclipboardutils.h"
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QHeaderView>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <utility>
@@ -123,4 +124,43 @@ QString TableClipboardUtils::BuildCsvDocument(const QStringList& headers, const 
         lines.append(CsvJoinRow(row));
 
     return lines.join('\n');
+}
+
+TableClipboardUtils::SortState TableClipboardUtils::CaptureSortState(const QTableWidget* table)
+{
+    SortState state;
+    state.order = Qt::AscendingOrder;
+
+    if (!table)
+        return state;
+
+    state.wasSortingEnabled = table->isSortingEnabled();
+    const QHeaderView* header = table->horizontalHeader();
+    if (!header)
+        return state;
+
+    const int sortColumn = header->sortIndicatorSection();
+    state.column = sortColumn;
+    state.order = header->sortIndicatorOrder();
+    state.hasValidSort = sortColumn >= 0 && sortColumn < table->columnCount();
+    return state;
+}
+
+void TableClipboardUtils::RestoreSortState(QTableWidget* table, const SortState& state, int defaultColumn, Qt::SortOrder defaultOrder)
+{
+    if (!table)
+        return;
+
+    if (!state.wasSortingEnabled && defaultColumn < 0)
+    {
+        table->setSortingEnabled(false);
+        return;
+    }
+
+    table->setSortingEnabled(true);
+
+    int sortColumn = state.hasValidSort ? state.column : defaultColumn;
+    Qt::SortOrder sortOrder = state.hasValidSort ? state.order : defaultOrder;
+    if (sortColumn >= 0 && sortColumn < table->columnCount())
+        table->sortItems(sortColumn, sortOrder);
 }

@@ -37,6 +37,7 @@
 #include "snapshotstabpage.h"
 #include "ui_snapshotstabpage.h"
 #include "../mainwindow.h"
+#include "../widgets/tableclipboardutils.h"
 #include "../commands/vm/takesnapshotcommand.h"
 #include "../commands/vm/deletesnapshotcommand.h"
 #include "../commands/vm/reverttosnapshotcommand.h"
@@ -89,10 +90,12 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent) : BaseTabPage(parent), ui(ne
 
     this->ui->snapshotTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->snapshotTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    this->ui->snapshotTable->horizontalHeader()->setSortIndicatorShown(true);
     this->ui->snapshotTable->verticalHeader()->setVisible(false);
     this->ui->snapshotTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     this->ui->snapshotTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     this->ui->snapshotTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    this->ui->snapshotTable->setSortingEnabled(true);
     this->ui->snapshotTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     auto* operationManager = OperationManager::instance();
@@ -199,6 +202,9 @@ void SnapshotsTabPage::refreshContent()
 
 void SnapshotsTabPage::populateSnapshotTree()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->snapshotTable);
+    this->ui->snapshotTable->setSortingEnabled(false);
+
     SnapshotTreeView* tree = this->ui->snapshotTree;
     tree->setUpdatesEnabled(false);
     tree->Clear();
@@ -206,6 +212,7 @@ void SnapshotsTabPage::populateSnapshotTree()
 
     if (!this->m_vm || !this->m_connection || !this->m_connection->GetCache())
     {
+        TableClipboardUtils::RestoreSortState(this->ui->snapshotTable, sortState);
         tree->setUpdatesEnabled(true);
         return;
     }
@@ -213,6 +220,7 @@ void SnapshotsTabPage::populateSnapshotTree()
     const QStringList snapshotRefs = this->m_vm->GetSnapshotRefs();
     if (snapshotRefs.isEmpty())
     {
+        TableClipboardUtils::RestoreSortState(this->ui->snapshotTable, sortState);
         tree->setUpdatesEnabled(true);
         return;
     }
@@ -236,6 +244,7 @@ void SnapshotsTabPage::populateSnapshotTree()
 
     if (snapshots.isEmpty())
     {
+        TableClipboardUtils::RestoreSortState(this->ui->snapshotTable, sortState);
         tree->setUpdatesEnabled(true);
         return;
     }
@@ -339,6 +348,7 @@ void SnapshotsTabPage::populateSnapshotTree()
         this->buildSnapshotTree(rootRef, rootIcon, snapshots, childrenByParent);
     }
 
+    TableClipboardUtils::RestoreSortState(this->ui->snapshotTable, sortState);
     tree->setUpdatesEnabled(true);
     if (tree->selectedItems().isEmpty())
         tree->setCurrentItem(rootIcon);

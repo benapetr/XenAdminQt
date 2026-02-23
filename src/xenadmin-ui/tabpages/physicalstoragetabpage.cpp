@@ -55,6 +55,8 @@ PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(pa
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->storageTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->storageTable->setSortingEnabled(true);
     this->ui->storageTable->setIconSize(QSize(16, 16));
     this->ui->storageTable->setColumnWidth(0, 24);
 
@@ -91,11 +93,15 @@ bool PhysicalStorageTabPage::IsApplicableForObjectType(const QString& objectType
 
 void PhysicalStorageTabPage::refreshContent()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->storageTable);
+    this->ui->storageTable->setSortingEnabled(false);
+
     // Clear table
     this->ui->storageTable->setRowCount(0);
 
     if (!this->m_connection || this->m_objectRef.isEmpty())
     {
+        TableClipboardUtils::RestoreSortState(this->ui->storageTable, sortState, 1, Qt::AscendingOrder);
         this->updateButtonStates();
         return;
     }
@@ -107,6 +113,8 @@ void PhysicalStorageTabPage::refreshContent()
     {
         this->populatePoolStorage();
     }
+
+    TableClipboardUtils::RestoreSortState(this->ui->storageTable, sortState, 1, Qt::AscendingOrder);
 
     // Update button states after populating table
     this->updateButtonStates();

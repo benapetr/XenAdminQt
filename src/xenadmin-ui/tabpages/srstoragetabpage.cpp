@@ -130,6 +130,7 @@ void SrStorageTabPage::populateSRStorage()
         return;
 
     const QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->storageTable);
 
     this->ui->storageTable->setColumnCount(5);
     this->ui->storageTable->setHorizontalHeaderLabels(QStringList() << "Name" << "Description" << "Size" << "VM" << "CBT");
@@ -188,7 +189,7 @@ void SrStorageTabPage::populateSRStorage()
         this->ui->storageTable->setItem(row, 4, new QTableWidgetItem(cbtStatus));
     }
 
-    this->ui->storageTable->setSortingEnabled(true);
+    TableClipboardUtils::RestoreSortState(this->ui->storageTable, sortState, 0, Qt::AscendingOrder);
 
     for (int i = 0; i < this->ui->storageTable->columnCount(); ++i)
     {

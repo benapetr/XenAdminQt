@@ -30,6 +30,7 @@
 #include "../commands/pool/haconfigurecommand.h"
 #include "../commands/pool/hadisablecommand.h"
 #include "../mainwindow.h"
+#include "../widgets/tableclipboardutils.h"
 #include "xenlib/operations/operationmanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/disablehaaction.h"
@@ -67,6 +68,8 @@ HATabPage::HATabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::HATabPag
     this->ui->heartbeatTable->verticalHeader()->setVisible(false);
     this->ui->heartbeatTable->horizontalHeader()->setStretchLastSection(false);
     this->ui->heartbeatTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    this->ui->heartbeatTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->heartbeatTable->setSortingEnabled(true);
     this->ui->heartbeatTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(this->ui->configureButton, &QPushButton::clicked, this, &HATabPage::onConfigureClicked);
@@ -225,6 +228,8 @@ QString HATabPage::formatCurrentCapacity(const QSharedPointer<Pool>& pool) const
 
 void HATabPage::rebuildHeartbeatTable(const QSharedPointer<Pool>& pool)
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->heartbeatTable);
+    this->ui->heartbeatTable->setSortingEnabled(false);
     this->ui->heartbeatTable->clear();
     this->ui->heartbeatTable->setRowCount(0);
     this->ui->heartbeatTable->setColumnCount(0);
@@ -297,6 +302,8 @@ void HATabPage::rebuildHeartbeatTable(const QSharedPointer<Pool>& pool)
             this->ui->heartbeatTable->setItem(row, 2 + i, new QTableWidgetItem(healthy ? tr("Healthy") : tr("Unhealthy")));
         }
     }
+
+    TableClipboardUtils::RestoreSortState(this->ui->heartbeatTable, sortState, 0, Qt::AscendingOrder);
 }
 
 void HATabPage::updateCommandButtonStates(const QSharedPointer<Pool>& pool)

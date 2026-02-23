@@ -45,6 +45,7 @@
 #include "alertsummarypage.h"
 #include "ui_alertsummarypage.h"
 #include "../settingsmanager.h"
+#include "../widgets/tableclipboardutils.h"
 #include "xenlib/alerts/alertmanager.h"
 #include "xenlib/alerts/alert.h"
 
@@ -55,6 +56,8 @@ AlertSummaryPage::AlertSummaryPage(QWidget* parent) : NotificationsBasePage(pare
     this->ui->setupUi(this);
     this->ui->alertsTable->sortByColumn(4, Qt::DescendingOrder);
     this->ui->alertsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    this->ui->alertsTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->alertsTable->setSortingEnabled(true);
     this->ui->alertsTable->setContextMenuPolicy(Qt::CustomContextMenu);
     
     // Connect table cell clicks for expand/collapse (C# Reference: GridViewAlerts_CellClick)
@@ -96,11 +99,8 @@ void AlertSummaryPage::buildAlertList()
     if (!this->isVisible())
         return;
 
-    const bool sortingEnabled = this->ui->alertsTable->isSortingEnabled();
-    const int sortColumn = this->ui->alertsTable->horizontalHeader()->sortIndicatorSection();
-    const Qt::SortOrder sortOrder = this->ui->alertsTable->horizontalHeader()->sortIndicatorOrder();
-    if (sortingEnabled)
-        this->ui->alertsTable->setSortingEnabled(false);
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->alertsTable);
+    this->ui->alertsTable->setSortingEnabled(false);
 
     this->ui->alertsTable->setUpdatesEnabled(false);
     this->ui->alertsTable->setRowCount(0);
@@ -178,11 +178,7 @@ void AlertSummaryPage::buildAlertList()
     }
 
     this->ui->alertsTable->setUpdatesEnabled(true);
-    if (sortingEnabled)
-    {
-        this->ui->alertsTable->setSortingEnabled(true);
-        this->ui->alertsTable->sortItems(sortColumn, sortOrder);
-    }
+    TableClipboardUtils::RestoreSortState(this->ui->alertsTable, sortState, 4, Qt::DescendingOrder);
 }
 
 bool AlertSummaryPage::filterAlert(Alert* alert) const

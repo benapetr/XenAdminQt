@@ -54,6 +54,8 @@ NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICs
 
     // Set up table properties
     this->ui->nicsTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->nicsTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->nicsTable->setSortingEnabled(true);
 
     // Connect signals
     connect(this->ui->nicsTable, &QTableWidget::itemSelectionChanged, this, &NICsTabPage::onSelectionChanged);
@@ -80,14 +82,18 @@ bool NICsTabPage::IsApplicableForObjectType(const QString& objectType) const
 
 void NICsTabPage::refreshContent()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->nicsTable);
+    this->ui->nicsTable->setSortingEnabled(false);
     this->ui->nicsTable->setRowCount(0);
 
     if (this->m_objectData.isEmpty() || this->m_objectType != XenObjectType::Host)
     {
+        TableClipboardUtils::RestoreSortState(this->ui->nicsTable, sortState, 0, Qt::AscendingOrder);
         return;
     }
 
     this->populateNICs();
+    TableClipboardUtils::RestoreSortState(this->ui->nicsTable, sortState, 0, Qt::AscendingOrder);
     this->updateButtonStates();
 }
 

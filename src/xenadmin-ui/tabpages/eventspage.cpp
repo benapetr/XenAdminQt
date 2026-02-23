@@ -29,6 +29,7 @@
 #include "ui_eventspage.h"
 #include "../iconmanager.h"
 #include "../settingsmanager.h"
+#include "../widgets/tableclipboardutils.h"
 #include "operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include <QDebug>
@@ -67,6 +68,8 @@ EventsPage::EventsPage(QWidget* parent) : NotificationsBasePage(parent), ui(new 
     // Setup table appearance
     this->ui->eventsTable->horizontalHeader()->setStretchLastSection(false);
     this->ui->eventsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // Message column
+    this->ui->eventsTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->eventsTable->setSortingEnabled(true);
     this->ui->eventsTable->setWordWrap(true);
     this->ui->eventsTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     this->ui->eventsTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -141,11 +144,8 @@ void EventsPage::buildRowList()
     if (!this->isVisible())
         return;
 
-    const bool sortingEnabled = this->ui->eventsTable->isSortingEnabled();
-    const int sortColumn = this->ui->eventsTable->horizontalHeader()->sortIndicatorSection();
-    const Qt::SortOrder sortOrder = this->ui->eventsTable->horizontalHeader()->sortIndicatorOrder();
-    if (sortingEnabled)
-        this->ui->eventsTable->setSortingEnabled(false);
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->eventsTable);
+    this->ui->eventsTable->setSortingEnabled(false);
 
     this->ui->eventsTable->setRowCount(0);
 
@@ -169,11 +169,7 @@ void EventsPage::buildRowList()
         this->createRecordRow(record);
     }
 
-    if (sortingEnabled)
-    {
-        this->ui->eventsTable->setSortingEnabled(true);
-        this->ui->eventsTable->sortItems(sortColumn, sortOrder);
-    }
+    TableClipboardUtils::RestoreSortState(this->ui->eventsTable, sortState, 4, Qt::DescendingOrder);
 
     this->updateButtons();
 }

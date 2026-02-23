@@ -39,6 +39,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xencache.h"
 #include "xenlib/utils/misc.h"
+#include "../widgets/tableclipboardutils.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMenu>
@@ -519,6 +520,7 @@ bool PerformanceTabPage::showGraphDetailsDialog(DesignedGraph& graph, bool editM
 
     auto repopulateTable = [&]()
     {
+        const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(sourceTable);
         sourceTable->setSortingEnabled(false);
         sourceTable->setRowCount(0);
 
@@ -561,8 +563,7 @@ bool PerformanceTabPage::showGraphDetailsDialog(DesignedGraph& graph, bool editM
             sourceTable->setItem(row, 3, descItem);
         }
 
-        sourceTable->setSortingEnabled(true);
-        sourceTable->sortItems(0, Qt::AscendingOrder);
+        TableClipboardUtils::RestoreSortState(sourceTable, sortState, 0, Qt::AscendingOrder);
         updateEnableButtonState();
     };
 
