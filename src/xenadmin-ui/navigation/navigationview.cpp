@@ -52,6 +52,7 @@
 #include <QDropEvent>
 #include <QItemSelectionModel>
 #include <QMimeData>
+#include <QScrollBar>
 
 using namespace XenSearch;
 
@@ -89,6 +90,22 @@ QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenC
         cache->Update(XenObjectType::Host, ref, record);
 
     return QSharedPointer<Host>(new Host(connection, ref));
+}
+
+static bool isTypeRelevantForTree(const QString& type)
+{
+    const QString normalized = type.toLower();
+
+    return normalized == "pool" ||
+           normalized == "host" ||
+           normalized == "vm" ||
+           normalized == "sr" ||
+           normalized == "vdi" ||
+           normalized == "network" ||
+           normalized == "folder" ||
+           normalized == "vm_appliance" ||
+           normalized == "vmappliance" ||
+           normalized == "appliance";
 }
 
 NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
@@ -169,6 +186,10 @@ void NavigationView::RequestRefreshTreeView()
     this->m_suppressSelectionSignals = true;
 
     this->ui->treeWidget->setUpdatesEnabled(false); // Suspend painting
+    QScrollBar* verticalBar = this->ui->treeWidget->verticalScrollBar();
+    QScrollBar* horizontalBar = this->ui->treeWidget->horizontalScrollBar();
+    const int savedVertical = verticalBar ? verticalBar->value() : 0;
+    const int savedHorizontal = horizontalBar ? horizontalBar->value() : 0;
 
     // Persist current selection and expanded nodes BEFORE rebuild (matches C# PersistExpandedNodes)
     this->persistSelectionAndExpansion();
@@ -199,6 +220,10 @@ void NavigationView::RequestRefreshTreeView()
     this->restoreSelectionAndExpansion();
 
     this->ui->treeWidget->setUpdatesEnabled(true); // Resume painting
+    if (verticalBar)
+        verticalBar->setValue(savedVertical);
+    if (horizontalBar)
+        horizontalBar->setValue(savedHorizontal);
 
     // Re-enable selection signals and emit a single change notification if we restored selection
     this->m_suppressSelectionSignals = false;
@@ -269,11 +294,7 @@ void NavigationView::onCacheObjectChanged(XenConnection* connection, const QStri
     Q_UNUSED(ref);
     Q_UNUSED(connection);
 
-    // Only refresh for object types that appear in the tree
-    // This avoids unnecessary refreshes for metrics, tasks, etc.
-    if (type == "vm" || type == "host" || type == "pool" ||
-        type == "sr" || type == "network" || type == "vbd" ||
-        type == "vdi" || type == "vif")
+    if (isTypeRelevantForTree(type))
     {
         this->scheduleRefresh();
     }
