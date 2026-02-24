@@ -42,6 +42,7 @@
 #include <QVector>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QXmlStreamReader>
 
 #include "newsrwizard.h"
 #include "ui_newsrwizard.h"
@@ -61,6 +62,33 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/network/connectionsmanager.h"
+
+namespace
+{
+    static bool extractProbeXmlFromFailure(const QString& error, QString& xmlOut)
+    {
+        if (!(error.contains("SR_BACKEND_FAILURE_90") || error.contains("SR_BACKEND_FAILURE_107")))
+            return false;
+
+        int xmlStart = error.indexOf("<?xml");
+        if (xmlStart < 0)
+            xmlStart = error.indexOf("<Devlist>");
+        if (xmlStart < 0)
+            return false;
+
+        int xmlEnd = error.lastIndexOf("</Devlist>");
+        if (xmlEnd >= 0)
+            xmlEnd += QString("</Devlist>").size();
+        else
+            xmlEnd = error.length();
+
+        if (xmlEnd <= xmlStart)
+            return false;
+
+        xmlOut = error.mid(xmlStart, xmlEnd - xmlStart).trimmed();
+        return !xmlOut.isEmpty();
+    }
+}
 
 NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent) : QWizard(parent),
       m_mainWindow(parent),
@@ -1165,27 +1193,55 @@ void NewSRWizard::onScanFibreDevices()
 
     const QString masterRef = pools.first().value("master").toString();
     const QString srTypeStr = (this->m_selectedSRType == SRType::HBA) ? this->getSelectedBlockSrType() : "lvmofcoe";
+    const bool useProbeExt = (srTypeStr == "gfs2");
 
     QVariantMap deviceConfig;
-    if (this->m_selectedSRType == SRType::FCoE)
-        deviceConfig["provider"] = "fcoe";
+    if (useProbeExt)
+    {
+        deviceConfig["provider"] = (this->m_selectedSRType == SRType::FCoE) ? "fcoe" : "hba";
+    }
 
-    QSharedPointer<QVariantList> probeResult(new QVariantList());
+    QSharedPointer<QVariantList> probeExtResult(new QVariantList());
+    QSharedPointer<QString> probeXmlResult(new QString());
     QSharedPointer<QString> probeError(new QString());
 
     auto* action = new DelegatedAsyncOperation(
         this->m_connection,
         tr("Scanning Fibre Channel devices"),
         tr("Scanning storage devices..."),
-        [masterRef, srTypeStr, deviceConfig, probeResult, probeError](DelegatedAsyncOperation* op)
+        [masterRef, srTypeStr, useProbeExt, deviceConfig, probeExtResult, probeXmlResult, probeError](DelegatedAsyncOperation* op)
         {
             try
             {
-                *probeResult = XenAPI::SR::probe_ext(op->GetSession(),
-                                                     masterRef,
-                                                     deviceConfig,
-                                                     srTypeStr,
-                                                     QVariantMap());
+                if (useProbeExt)
+                {
+                    *probeExtResult = XenAPI::SR::probe_ext(op->GetSession(),
+                                                            masterRef,
+                                                            deviceConfig,
+                                                            srTypeStr,
+                                                            QVariantMap());
+                } else
+                {
+                    try
+                    {
+                        *probeXmlResult = XenAPI::SR::probe(op->GetSession(),
+                                                            masterRef,
+                                                            QVariantMap(),
+                                                            srTypeStr,
+                                                            QVariantMap());
+                    } catch (const std::exception& ex)
+                    {
+                        const QString err = QString::fromUtf8(ex.what());
+                        QString extractedXml;
+                        if (extractProbeXmlFromFailure(err, extractedXml))
+                        {
+                            *probeXmlResult = extractedXml;
+                        } else
+                        {
+                            throw;
+                        }
+                    }
+                }
             } catch (const std::exception& ex)
             {
                 *probeError = QString::fromUtf8(ex.what());
@@ -1214,52 +1270,122 @@ void NewSRWizard::onScanFibreDevices()
         this->m_discoveredFibreDevices.clear();
         this->ui->fibreDevicesList->clear();
 
-        for (const QVariant& resultVar : *probeResult)
+        auto addDeviceToUi = [this](const FibreChannelDevice& device)
         {
-            QVariantMap result = resultVar.toMap();
-            QVariantMap config = result.value("configuration").toMap();
-            QVariantMap extra = result.value("extra_info").toMap();
-
-            FibreChannelDevice device;
-            device.scsiId = config.value("SCSIid", config.value("scsiid")).toString();
-            device.vendor = config.value("vendor").toString();
-            device.serial = config.value("serial").toString();
-            device.path = config.value("path").toString();
-            device.adapter = config.value("adapter").toString();
-            device.channel = config.value("channel").toString();
-            device.id = config.value("id").toString();
-            device.lun = config.value("lun").toString();
-            device.nameLabel = config.value("name_label").toString();
-            device.nameDescription = config.value("name_description").toString();
-            device.eth = config.value("eth").toString();
-            device.poolMetadataDetected = config.value("pool_metadata_detected", false).toBool();
-            device.existingSrUuid = result.value("uuid").toString();
-            device.existingSrConfiguration = config;
-
-            QString sizeStr = config.value("size").toString();
-            device.size = config.value("size").toLongLong();
-            if (!sizeStr.isEmpty())
-            {
-                bool ok = false;
-                qint64 sizeVal = sizeStr.toLongLong(&ok);
-                if (ok)
-                    device.size = sizeVal;
-            }
-
-            if (device.scsiId.isEmpty())
-                continue;
+            if (device.scsiId.isEmpty() && device.path.isEmpty())
+                return;
 
             this->m_discoveredFibreDevices.append(device);
 
             QString displayText = QString("%1 %2").arg(device.vendor, device.serial);
             if (device.size > 0)
                 displayText += QString(" (%1 GB)").arg(device.size / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
-            displayText += QString(" - %1").arg(device.scsiId);
+            displayText += QString(" - %1").arg(!device.scsiId.isEmpty() ? device.scsiId : device.path);
 
             QListWidgetItem* item = new QListWidgetItem(displayText);
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Unchecked);
             this->ui->fibreDevicesList->addItem(item);
+        };
+
+        if (useProbeExt)
+        {
+            for (const QVariant& resultVar : *probeExtResult)
+            {
+                QVariantMap result = resultVar.toMap();
+                QVariantMap config = result.value("configuration").toMap();
+                const QVariantMap extra = result.value("extra_info").toMap();
+                for (auto it = extra.constBegin(); it != extra.constEnd(); ++it)
+                    config.insert(it.key(), it.value());
+
+                FibreChannelDevice device;
+                device.scsiId = config.value("SCSIid", config.value("scsiid")).toString();
+                device.vendor = config.value("vendor").toString();
+                device.serial = config.value("serial").toString();
+                device.path = config.value("path").toString();
+                device.adapter = config.value("adapter").toString();
+                device.channel = config.value("channel").toString();
+                device.id = config.value("id").toString();
+                device.lun = config.value("lun").toString();
+                device.nameLabel = config.value("name_label").toString();
+                device.nameDescription = config.value("name_description").toString();
+                device.eth = config.value("eth").toString();
+                device.poolMetadataDetected = config.value("pool_metadata_detected", false).toBool();
+                device.existingSrUuid = result.value("uuid").toString();
+                device.existingSrConfiguration = config;
+
+                QString sizeStr = config.value("size").toString().trimmed().toLower();
+                device.size = config.value("size").toLongLong();
+                if (!sizeStr.isEmpty())
+                {
+                    bool ok = false;
+                    qint64 sizeVal = sizeStr.toLongLong(&ok);
+                    if (!ok)
+                    {
+                        if (sizeStr.endsWith("kb"))
+                            sizeVal = sizeStr.left(sizeStr.size() - 2).toLongLong(&ok) * 1024LL;
+                        else if (sizeStr.endsWith("mb"))
+                            sizeVal = sizeStr.left(sizeStr.size() - 2).toLongLong(&ok) * 1024LL * 1024LL;
+                        else if (sizeStr.endsWith("gb"))
+                            sizeVal = sizeStr.left(sizeStr.size() - 2).toLongLong(&ok) * 1024LL * 1024LL * 1024LL;
+                    }
+                    if (ok)
+                        device.size = sizeVal;
+                }
+
+                addDeviceToUi(device);
+            }
+        } else
+        {
+            QXmlStreamReader reader(*probeXmlResult);
+            while (!reader.atEnd())
+            {
+                reader.readNext();
+                if (!reader.isStartElement() || reader.name().toString() != "BlockDevice")
+                    continue;
+
+                FibreChannelDevice device;
+                while (!(reader.isEndElement() && reader.name().toString() == "BlockDevice") && !reader.atEnd())
+                {
+                    reader.readNext();
+                    if (!reader.isStartElement())
+                        continue;
+
+                    const QString key = reader.name().toString().toLower();
+                    const QString value = reader.readElementText().trimmed();
+                    if (key == "vendor") device.vendor = value;
+                    else if (key == "serial") device.serial = value;
+                    else if (key == "path") device.path = value;
+                    else if (key == "adapter") device.adapter = value;
+                    else if (key == "channel") device.channel = value;
+                    else if (key == "id") device.id = value;
+                    else if (key == "lun") device.lun = value;
+                    else if (key == "name_label") device.nameLabel = value;
+                    else if (key == "name_description") device.nameDescription = value;
+                    else if (key == "eth") device.eth = value;
+                    else if (key == "pool_metadata_detected") device.poolMetadataDetected = (value.toLower() == "true");
+                    else if (key == "scsiid") device.scsiId = value;
+                    else if (key == "size")
+                    {
+                        bool ok = false;
+                        qint64 sizeVal = value.toLongLong(&ok);
+                        QString lower = value.toLower();
+                        if (!ok)
+                        {
+                            if (lower.endsWith("kb"))
+                                sizeVal = lower.left(lower.size() - 2).toLongLong(&ok) * 1024LL;
+                            else if (lower.endsWith("mb"))
+                                sizeVal = lower.left(lower.size() - 2).toLongLong(&ok) * 1024LL * 1024LL;
+                            else if (lower.endsWith("gb"))
+                                sizeVal = lower.left(lower.size() - 2).toLongLong(&ok) * 1024LL * 1024LL * 1024LL;
+                        }
+                        if (ok)
+                            device.size = sizeVal;
+                    }
+                }
+
+                addDeviceToUi(device);
+            }
         }
 
         if (this->m_discoveredFibreDevices.isEmpty())
@@ -1649,6 +1775,8 @@ bool NewSRWizard::evaluateFibreProbeDecision()
         probeConfig["SCSIid"] = device.scsiId;
         if (this->m_selectedSRType == SRType::FCoE)
             probeConfig["path"] = device.path;
+        if (this->getSelectedBlockSrType() == "gfs2")
+            probeConfig["provider"] = (this->m_selectedSRType == SRType::FCoE) ? "fcoe" : "hba";
 
         QString usedType;
         QString probeError;
@@ -1839,6 +1967,8 @@ QList<NewSRWizard::PlannedAction> NewSRWizard::buildPlannedActions(const QShared
             {
                 deviceConfig["path"] = device.path;
             }
+            if (defaultType == "gfs2")
+                deviceConfig["provider"] = (this->m_selectedSRType == SRType::FCoE) ? "fcoe" : "hba";
 
             // If probe found an existing SR on this LUN, prefer its device config/uuid.
             const QString existingUuid = device.existingSrUuid.trimmed();

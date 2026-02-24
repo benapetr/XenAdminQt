@@ -28,6 +28,7 @@
 #include "xenapi_SR.h"
 #include "../api.h"
 #include "../session.h"
+#include "../jsonrpcclient.h"
 #include <stdexcept>
 
 namespace XenAPI
@@ -274,7 +275,32 @@ namespace XenAPI
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.SR.probe", params);
         QByteArray response = session->SendApiRequest(request);
-        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
+        QVariant result = api.ParseJsonRpcResponse(response);
+        const QString parseError = Xen::JsonRpcClient::lastError();
+        if (!parseError.isEmpty())
+            throw std::runtime_error(parseError.toStdString());
+        return result.toString(); // Returns task ref
+    }
+
+    QString SR::probe(Session* session, const QString& host,
+                      const QVariantMap& device_config,
+                      const QString& type,
+                      const QVariantMap& sm_config)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << device_config << type << sm_config;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("SR.probe", params);
+        QByteArray response = session->SendApiRequest(request);
+        QVariant result = api.ParseJsonRpcResponse(response);
+        const QString parseError = Xen::JsonRpcClient::lastError();
+        if (!parseError.isEmpty())
+            throw std::runtime_error(parseError.toStdString());
+        return result.toString();
     }
 
     QVariantList SR::probe_ext(Session* session, const QString& host,
@@ -291,7 +317,11 @@ namespace XenAPI
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("SR.probe_ext", params);
         QByteArray response = session->SendApiRequest(request);
-        return api.ParseJsonRpcResponse(response).toList();
+        QVariant result = api.ParseJsonRpcResponse(response);
+        const QString parseError = Xen::JsonRpcClient::lastError();
+        if (!parseError.isEmpty())
+            throw std::runtime_error(parseError.toStdString());
+        return result.toList();
     }
 
     QString SR::async_create(Session* session,

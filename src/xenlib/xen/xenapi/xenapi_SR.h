@@ -210,6 +210,22 @@ namespace XenAPI
                                        const QVariantMap& sm_config);
 
             /**
+             * @brief Probe for storage devices/SRs (synchronous XML result)
+             * @param session Active XenSession
+             * @param host Host to probe from
+             * @param device_config Device configuration
+             * @param type SR type
+             * @param sm_config SM configuration
+             * @return XML string result from SR.probe
+             *
+             * C# equivalent: SR.probe()
+             */
+            static QString probe(Session* session, const QString& host,
+                                 const QVariantMap& device_config,
+                                 const QString& type,
+                                 const QVariantMap& sm_config);
+
+            /**
              * @brief Probe for existing SRs (extended version)
              * @param session Active XenSession
              * @param host Host to probe from
