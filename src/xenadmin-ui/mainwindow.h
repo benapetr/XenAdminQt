@@ -263,6 +263,7 @@ class MainWindow : public QMainWindow
         void updateActions();
         void updateViewMenu(NavigationPane::NavigationMode mode);
         void applyViewSettingsToMenu();
+        void applyDebugMenuVisibility();
         void onViewSettingsChanged();
         bool mixedVmTemplateSelection() const;
         void initializeToolbar();                                        // Initialize toolbar buttons matching C# MainWindow.Designer.cs

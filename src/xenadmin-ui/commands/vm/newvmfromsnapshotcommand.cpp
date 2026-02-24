@@ -93,7 +93,7 @@ void NewVMFromSnapshotCommand::Run()
         return;
     }
 
-    NewVMWizard wizard(connection, MainWindow::instance());
+    NewVMWizard wizard(connection, QString(), MainWindow::instance());
     wizard.exec();
 }
 

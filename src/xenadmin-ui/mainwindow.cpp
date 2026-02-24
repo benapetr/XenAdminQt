@@ -545,8 +545,9 @@ void MainWindow::showOptions()
     OptionsDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted)
     {
-        // Settings were saved, might need to apply some changes
-        // (In C# this happens in OptionsDialog.okButton_Click)
+        // Settings were saved, apply menu visibility changes immediately.
+        this->applyViewSettingsToMenu();
+        this->applyDebugMenuVisibility();
     }
 }
 
@@ -1612,6 +1613,7 @@ void MainWindow::loadSettings()
     }
 
     this->applyViewSettingsToMenu();
+    this->applyDebugMenuVisibility();
     if (this->m_navigationPane)
     {
         this->updateViewMenu(this->m_navigationPane->GetCurrentMode());
@@ -1801,6 +1803,13 @@ void MainWindow::applyViewSettingsToMenu()
     this->ui->viewCustomTemplatesAction->setChecked(settings.GetUserTemplatesVisible());
     this->ui->viewLocalStorageAction->setChecked(settings.GetLocalSRsVisible());
     this->ui->viewShowHiddenObjectsAction->setChecked(settings.GetShowHiddenObjects());
+}
+
+void MainWindow::applyDebugMenuVisibility()
+{
+    SettingsManager& settings = SettingsManager::instance();
+    if (this->ui->menuDebug)
+        this->ui->menuDebug->menuAction()->setVisible(settings.GetShowDebugMenu());
 }
 
 void MainWindow::updateViewMenu(NavigationPane::NavigationMode mode)

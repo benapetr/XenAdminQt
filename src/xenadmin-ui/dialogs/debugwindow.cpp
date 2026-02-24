@@ -42,8 +42,7 @@ DebugWindow* DebugWindow::s_instance = nullptr;
 QtMessageHandler DebugWindow::s_originalHandler = nullptr;
 QMutex DebugWindow::s_mutex;
 
-DebugWindow::DebugWindow(QWidget* parent)
-    : QDialog(parent), ui(new Ui::DebugWindow), m_autoScroll(true), m_messageCount(0), m_currentLogLevel(0) // Show all messages by default
+DebugWindow::DebugWindow(QWidget* parent) : QDialog(parent), ui(new Ui::DebugWindow)
 {
     this->ui->setupUi(this);
 
@@ -117,19 +116,19 @@ void DebugWindow::messageHandler(QtMsgType type, const QMessageLogContext& conte
         int messageLevel = 0; // Debug
         switch (type)
         {
-        case QtInfoMsg:
-            messageLevel = 1;
-            break;
-        case QtWarningMsg:
-            messageLevel = 2;
-            break;
-        case QtCriticalMsg:
-        case QtFatalMsg:
-            messageLevel = 3;
-            break;
-        default:
-            messageLevel = 0;
-            break;
+            case QtInfoMsg:
+                messageLevel = 1;
+                break;
+            case QtWarningMsg:
+                messageLevel = 2;
+                break;
+            case QtCriticalMsg:
+            case QtFatalMsg:
+                messageLevel = 3;
+                break;
+            default:
+                messageLevel = 0;
+                break;
         }
 
         if (messageLevel >= DebugWindow::s_instance->m_currentLogLevel)
@@ -147,26 +146,26 @@ QString DebugWindow::formatMessage(QtMsgType type, const QMessageLogContext& con
 
     switch (type)
     {
-    case QtDebugMsg:
-        typeStr = "DEBUG";
-        color = "gray";
-        break;
-    case QtInfoMsg:
-        typeStr = "INFO ";
-        color = "blue";
-        break;
-    case QtWarningMsg:
-        typeStr = "WARN ";
-        color = "orange";
-        break;
-    case QtCriticalMsg:
-        typeStr = "ERROR";
-        color = "red";
-        break;
-    case QtFatalMsg:
-        typeStr = "FATAL";
-        color = "darkred";
-        break;
+        case QtDebugMsg:
+            typeStr = "DEBUG";
+            color = "gray";
+            break;
+        case QtInfoMsg:
+            typeStr = "INFO ";
+            color = "blue";
+            break;
+        case QtWarningMsg:
+            typeStr = "WARN ";
+            color = "orange";
+            break;
+        case QtCriticalMsg:
+            typeStr = "ERROR";
+            color = "red";
+            break;
+        case QtFatalMsg:
+            typeStr = "FATAL";
+            color = "darkred";
+            break;
     }
 
     QString location;
@@ -176,8 +175,7 @@ QString DebugWindow::formatMessage(QtMsgType type, const QMessageLogContext& con
         location = QString(" [%1:%2]").arg(fileName).arg(context.line);
     }
 
-    return QString("<span style=\"color: %1;\">[%2] %3%4: %5</span>")
-        .arg(color, timestamp, typeStr, location, msg.toHtmlEscaped());
+    return QString("<span style=\"color: %1;\">[%2] %3%4: %5</span>").arg(color, timestamp, typeStr, location, msg.toHtmlEscaped());
 }
 
 void DebugWindow::appendMessage(const QString& message)

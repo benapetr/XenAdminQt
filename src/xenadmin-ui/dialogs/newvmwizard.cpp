@@ -30,6 +30,7 @@
 #include <QHeaderView>
 #include <QDomDocument>
 #include <algorithm>
+#include <utility>
 
 #include "newvmwizard.h"
 #include "ui_newvmwizard.h"
@@ -52,7 +53,8 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/vmhelpers.h"
 
-NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent) : QWizard(parent), m_connection(connection), ui(new Ui::NewVMWizard)
+NewVMWizard::NewVMWizard(XenConnection* connection, const QString& defaultTemplateRef, QWidget* parent)
+    : QWizard(parent), m_connection(connection), ui(new Ui::NewVMWizard), m_initialTemplateRef(defaultTemplateRef)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(tr("New Virtual Machine Wizard"));
@@ -229,8 +231,30 @@ void NewVMWizard::loadTemplates()
         this->m_templateItems.append(info);
     }
 
-    if (!this->m_templateItems.isEmpty())
-        this->ui->templateTree->setCurrentItem(this->m_templateItems.first().item);
+    if (this->m_templateItems.isEmpty())
+        return;
+
+    QTreeWidgetItem* selectedItem = nullptr;
+    if (!this->m_initialTemplateRef.isEmpty())
+    {
+        for (const TemplateInfo& info : std::as_const(this->m_templateItems))
+        {
+            if (info.ref == this->m_initialTemplateRef && info.item)
+            {
+                selectedItem = info.item;
+                break;
+            }
+        }
+    }
+
+    if (!selectedItem)
+        selectedItem = this->m_templateItems.first().item;
+
+    if (selectedItem)
+    {
+        this->ui->templateTree->setCurrentItem(selectedItem);
+        this->ui->templateTree->scrollToItem(selectedItem);
+    }
 }
 
 void NewVMWizard::filterTemplates(const QString& filterText)

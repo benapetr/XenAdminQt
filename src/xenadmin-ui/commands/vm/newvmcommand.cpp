@@ -114,13 +114,10 @@ void NewVMCommand::showNewVMWizard()
         return;
     }
 
-    NewVMWizard wizard(connection, MainWindow::instance());
-
-    // If we have a default template, we could set it here
     if (!this->m_defaultTemplateUuid.isEmpty())
-    {
         qDebug() << "NewVMCommand: Using default template:" << this->m_defaultTemplateUuid;
-    }
+
+    NewVMWizard wizard(connection, this->m_defaultTemplateUuid, MainWindow::instance());
 
     if (wizard.exec() == QDialog::Accepted)
     {

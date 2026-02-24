@@ -76,9 +76,9 @@ class DebugWindow : public QDialog
 
         Ui::DebugWindow* ui;
 
-        bool m_autoScroll;
-        int m_messageCount;
-        int m_currentLogLevel; // 0=Debug, 1=Info, 2=Warning, 3=Critical
+        bool m_autoScroll = true;
+        int m_messageCount = 0;
+        int m_currentLogLevel = 0; // 0=Debug, 1=Info, 2=Warning, 3=Critical
 };
 
 #endif // DEBUGWINDOW_H

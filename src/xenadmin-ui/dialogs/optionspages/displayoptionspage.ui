@@ -88,10 +88,26 @@
       <string>Tab Pages</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
+     <item>
        <widget class="QCheckBox" name="checkBoxStoreTab">
         <property name="text">
          <string>Remember the last selected tab for each object</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="menusGroupBox">
+     <property name="title">
+      <string>Menus</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <widget class="QCheckBox" name="showDebugMenuCheckBox">
+        <property name="text">
+         <string>Show Debug menu</string>
         </property>
        </widget>
       </item>

@@ -71,6 +71,9 @@ void DisplayOptionsPage::Build()
     // Remember last selected tab
     this->ui->checkBoxStoreTab->setChecked(settings.GetRememberLastSelectedTab());
 
+    // Debug menu visibility
+    this->ui->showDebugMenuCheckBox->setChecked(settings.GetShowDebugMenu());
+
     // Show timestamps in updates log
     this->ui->showTimestampsCheckBox->setChecked(
         settings.GetValue("Display/ShowTimestampsInUpdatesLog", true).toBool());
@@ -107,6 +110,9 @@ void DisplayOptionsPage::Save()
 
     // Remember last selected tab
     settings.SetRememberLastSelectedTab(this->ui->checkBoxStoreTab->isChecked());
+
+    // Debug menu visibility
+    settings.SetShowDebugMenu(this->ui->showDebugMenuCheckBox->isChecked());
 
     // Show timestamps in updates log
     settings.SetValue("Display/ShowTimestampsInUpdatesLog", this->ui->showTimestampsCheckBox->isChecked());

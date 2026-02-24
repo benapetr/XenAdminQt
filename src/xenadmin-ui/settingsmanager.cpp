@@ -112,6 +112,7 @@ void SettingsManager::Load()
     this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
     this->m_fillAreaUnderGraphs = this->m_settings->value("Display/FillAreaUnderGraphs", false).toBool();
     this->m_rememberLastSelectedTab = this->m_settings->value("Display/RememberLastSelectedTab", true).toBool();
+    this->m_showDebugMenu = this->m_settings->value("Display/ShowDebugMenu", false).toBool();
     this->m_doNotConfirmDismissAlerts = this->m_settings->value("Confirmation/DoNotConfirmDismissAlerts", false).toBool();
     this->m_doNotConfirmDismissUpdates = this->m_settings->value("Confirmation/DoNotConfirmDismissUpdates", false).toBool();
     this->m_doNotConfirmDismissEvents = this->m_settings->value("Confirmation/DoNotConfirmDismissEvents", false).toBool();
@@ -179,6 +180,7 @@ void SettingsManager::Save()
     this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
     this->m_settings->setValue("Display/FillAreaUnderGraphs", this->m_fillAreaUnderGraphs);
     this->m_settings->setValue("Display/RememberLastSelectedTab", this->m_rememberLastSelectedTab);
+    this->m_settings->setValue("Display/ShowDebugMenu", this->m_showDebugMenu);
     this->m_settings->setValue("Confirmation/DoNotConfirmDismissAlerts", this->m_doNotConfirmDismissAlerts);
     this->m_settings->setValue("Confirmation/DoNotConfirmDismissUpdates", this->m_doNotConfirmDismissUpdates);
     this->m_settings->setValue("Confirmation/DoNotConfirmDismissEvents", this->m_doNotConfirmDismissEvents);
@@ -728,6 +730,17 @@ void SettingsManager::SetRememberLastSelectedTab(bool remember)
 {
     this->m_rememberLastSelectedTab = remember;
     emit settingsChanged("Display/RememberLastSelectedTab");
+}
+
+bool SettingsManager::GetShowDebugMenu() const
+{
+    return this->m_showDebugMenu;
+}
+
+void SettingsManager::SetShowDebugMenu(bool show)
+{
+    this->m_showDebugMenu = show;
+    emit settingsChanged("Display/ShowDebugMenu");
 }
 
 bool SettingsManager::GetDoNotConfirmDismissAlerts() const

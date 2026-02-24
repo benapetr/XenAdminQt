@@ -150,6 +150,8 @@ class SettingsManager : public QObject
         void SetFillAreaUnderGraphs(bool fill);
         bool GetRememberLastSelectedTab() const;
         void SetRememberLastSelectedTab(bool remember);
+        bool GetShowDebugMenu() const;
+        void SetShowDebugMenu(bool show);
         
         // Confirmation settings
         bool GetDoNotConfirmDismissAlerts() const;
@@ -298,6 +300,7 @@ class SettingsManager : public QObject
         int m_graphUpdateInterval;
         bool m_fillAreaUnderGraphs;
         bool m_rememberLastSelectedTab;
+        bool m_showDebugMenu;
         bool m_doNotConfirmDismissAlerts;
         bool m_doNotConfirmDismissUpdates;
         bool m_doNotConfirmDismissEvents;

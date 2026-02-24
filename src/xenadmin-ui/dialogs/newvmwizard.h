@@ -64,7 +64,7 @@ class NewVMWizard : public QWizard
             Page_Finish
         };
 
-        explicit NewVMWizard(XenConnection* connection, QWidget* parent = nullptr);
+        explicit NewVMWizard(XenConnection* connection, const QString& defaultTemplateRef = QString(), QWidget* parent = nullptr);
         ~NewVMWizard() override;
 
     protected:
@@ -227,6 +227,7 @@ class NewVMWizard : public QWizard
         QVector<HostInfo> m_hosts;
         QVector<StorageRepositoryInfo> m_storageRepositories;
         QVector<NetworkInfo> m_availableNetworks;
+        QString m_initialTemplateRef;
 };
 
 #endif // NEWVMWIZARD_H

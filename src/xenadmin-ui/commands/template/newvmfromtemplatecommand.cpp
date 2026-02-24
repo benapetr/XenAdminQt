@@ -27,7 +27,7 @@
 
 #include "newvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
-#include "../../dialogs/newvmwizard.h"
+#include "../vm/newvmcommand.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
@@ -78,14 +78,9 @@ void NewVMFromTemplateCommand::Run()
         return;
     }
 
-    // Launch New VM wizard with template as source
-    if (!selectedObject->GetConnection())
-        return;
-
-    NewVMWizard* wizard = new NewVMWizard(selectedObject->GetConnection(), MainWindow::instance());
-    // TODO: Set template as wizard source
-    // wizard->setSourceTemplate(templateRef);
-    wizard->show();
+    // Delegate to NewVMCommand to keep one wizard launch path.
+    NewVMCommand* newVmCmd = new NewVMCommand(templateRef, MainWindow::instance(), this);
+    newVmCmd->Run();
 }
 
 QString NewVMFromTemplateCommand::MenuText() const
