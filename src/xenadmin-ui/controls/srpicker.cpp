@@ -35,8 +35,32 @@
 #include "xen/pool.h"
 #include "xen/sr.h"
 #include "xen/vdi.h"
+#include "../widgets/tableclipboardutils.h"
 #include <QHeaderView>
 #include <QTableWidgetItem>
+
+namespace
+{
+    constexpr int kRoleSrEnabled = Qt::UserRole + 50;
+
+    class SrPickerTableItem : public QTableWidgetItem
+    {
+        public:
+            explicit SrPickerTableItem(const QString& text) : QTableWidgetItem(text)
+            {
+            }
+
+            bool operator<(const QTableWidgetItem& other) const override
+            {
+                const bool thisEnabled = this->data(kRoleSrEnabled).toBool();
+                const bool otherEnabled = other.data(kRoleSrEnabled).toBool();
+                if (thisEnabled != otherEnabled)
+                    return thisEnabled && !otherEnabled;
+
+                return QString::compare(this->text(), other.text(), Qt::CaseInsensitive) < 0;
+            }
+    };
+}
 
 SrPicker::SrPicker(QWidget* parent) : QWidget(parent), ui(new Ui::SrPicker), m_connection(nullptr), m_usage(VM), m_runningScans(0)
 {
@@ -46,6 +70,8 @@ SrPicker::SrPicker(QWidget* parent) : QWidget(parent), ui(new Ui::SrPicker), m_c
     this->ui->srTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->srTable->setSelectionMode(QAbstractItemView::SingleSelection);
     this->ui->srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->ui->srTable->horizontalHeader()->setSortIndicatorShown(true);
+    this->ui->srTable->setSortingEnabled(true);
 
     // Connect signals
     connect(this->ui->srTable, &QTableWidget::itemSelectionChanged, this, &SrPicker::onSelectionChanged);
@@ -110,11 +136,16 @@ void SrPicker::Populate(SRPickerType usage, XenConnection* connection, const QSt
 
 void SrPicker::populateSRList()
 {
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->srTable);
+    this->ui->srTable->setSortingEnabled(false);
     this->ui->srTable->setRowCount(0);
     this->m_srItems.clear();
 
     if (!this->m_connection)
+    {
+        TableClipboardUtils::RestoreSortState(this->ui->srTable, sortState, 0, Qt::AscendingOrder);
         return;
+    }
 
     QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>();
     for (const QSharedPointer<SR>& sr : allSRs)
@@ -126,6 +157,7 @@ void SrPicker::populateSRList()
     }
 
     // Auto-select default or preselected SR
+    TableClipboardUtils::RestoreSortState(this->ui->srTable, sortState, 0, Qt::AscendingOrder);
     this->selectDefaultSR();
     this->onCanBeScannedChanged();
 }
@@ -156,21 +188,26 @@ void SrPicker::addSR(const QSharedPointer<SR>& sr)
     this->ui->srTable->insertRow(row);
 
     // Column 0: Name
-    QTableWidgetItem* nameItem = new QTableWidgetItem(item.name);
+    const bool rowEnabled = item.enabled && !item.scanning;
+
+    QTableWidgetItem* nameItem = new SrPickerTableItem(item.name);
     nameItem->setData(Qt::UserRole, sr->OpaqueRef());
-    if (!item.enabled)
+    nameItem->setData(kRoleSrEnabled, rowEnabled);
+    if (!rowEnabled)
     {
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEnabled);
     }
     this->ui->srTable->setItem(row, 0, nameItem);
 
     // Column 1: Description/Status
-    QString statusText = item.enabled ? 
+    QString statusText = item.scanning ? "Scanning..." :
+        (item.enabled ?
         QString("Free: %1 of %2").arg(this->formatSize(item.freeSpace)).arg(this->formatSize(item.physicalSize)) :
-        item.disableReason;
+        item.disableReason);
 
-    QTableWidgetItem* statusItem = new QTableWidgetItem(statusText);
-    if (!item.enabled)
+    QTableWidgetItem* statusItem = new SrPickerTableItem(statusText);
+    statusItem->setData(kRoleSrEnabled, rowEnabled);
+    if (!rowEnabled)
     {
         statusItem->setFlags(statusItem->flags() & ~Qt::ItemIsEnabled);
     }
@@ -180,16 +217,7 @@ void SrPicker::addSR(const QSharedPointer<SR>& sr)
 void SrPicker::updateSRItem(const QString& srRef)
 {
     // Find item
-    int itemIndex = -1;
-    for (int i = 0; i < this->m_srItems.count(); ++i)
-    {
-        if (this->m_srItems[i].ref == srRef)
-        {
-            itemIndex = i;
-            break;
-        }
-    }
-
+    const int itemIndex = this->findSRItemIndex(srRef);
     if (itemIndex == -1)
         return;
 
@@ -207,6 +235,7 @@ void SrPicker::updateSRItem(const QString& srRef)
     QString disableReason;
     item.enabled = this->canBeEnabled(sr, disableReason);
     item.disableReason = disableReason;
+    const bool rowEnabled = item.enabled && !item.scanning;
 
     // Update table row
     for (int row = 0; row < this->ui->srTable->rowCount(); ++row)
@@ -216,7 +245,8 @@ void SrPicker::updateSRItem(const QString& srRef)
         {
             // Update name
             nameItem->setText(item.name);
-            if (!item.enabled)
+            nameItem->setData(kRoleSrEnabled, rowEnabled);
+            if (!rowEnabled)
                 nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEnabled);
             else
                 nameItem->setFlags(nameItem->flags() | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
@@ -231,10 +261,11 @@ void SrPicker::updateSRItem(const QString& srRef)
             if (statusItem)
             {
                 statusItem->setText(statusText);
-                if (!item.enabled)
+                statusItem->setData(kRoleSrEnabled, rowEnabled);
+                if (!rowEnabled)
                     statusItem->setFlags(statusItem->flags() & ~Qt::ItemIsEnabled);
                 else
-                    statusItem->setFlags(statusItem->flags() | Qt::ItemIsEnabled);
+                    statusItem->setFlags(statusItem->flags() | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
             }
 
             break;
@@ -389,7 +420,8 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         else if (found)
         {
             // SR exists and we have it - update it
-            this->updateSRItem(ref);
+            if (!this->isSRScanning(ref))
+                this->updateSRItem(ref);
         }
         else
         {
@@ -410,8 +442,11 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         QString srRef = pbd ? pbd->GetSRRef() : QString();
         if (!srRef.isEmpty())
         {
-            this->updateSRItem(srRef);
-            this->onCanBeScannedChanged();
+            if (!this->isSRScanning(srRef))
+            {
+                this->updateSRItem(srRef);
+                this->onCanBeScannedChanged();
+            }
         }
         return;
     }
@@ -516,6 +551,22 @@ void SrPicker::startNextScan()
             }
         }
     }
+}
+
+int SrPicker::findSRItemIndex(const QString& srRef) const
+{
+    for (int i = 0; i < this->m_srItems.count(); ++i)
+    {
+        if (this->m_srItems[i].ref == srRef)
+            return i;
+    }
+    return -1;
+}
+
+bool SrPicker::isSRScanning(const QString& srRef) const
+{
+    const int index = this->findSRItemIndex(srRef);
+    return index >= 0 && index < this->m_srItems.size() && this->m_srItems[index].scanning;
 }
 
 bool SrPicker::isValidSR(const QSharedPointer<SR>& sr) const
@@ -714,7 +765,7 @@ void SrPicker::selectDefaultSR()
             if (item && item->data(Qt::UserRole).toString() == this->m_preselectedSRRef)
             {
                 // Check if enabled
-                if ((item->flags() & Qt::ItemIsEnabled) && !this->m_srItems[row].scanning)
+                if (item->flags() & Qt::ItemIsEnabled)
                 {
                     this->ui->srTable->selectRow(row);
                     return;
@@ -732,7 +783,7 @@ void SrPicker::selectDefaultSR()
             if (item && item->data(Qt::UserRole).toString() == this->m_defaultSRRef)
             {
                 // Check if enabled
-                if ((item->flags() & Qt::ItemIsEnabled) && !this->m_srItems[row].scanning)
+                if (item->flags() & Qt::ItemIsEnabled)
                 {
                     this->ui->srTable->selectRow(row);
                     return;
@@ -745,7 +796,7 @@ void SrPicker::selectDefaultSR()
     for (int row = 0; row < this->ui->srTable->rowCount(); ++row)
     {
         QTableWidgetItem* item = this->ui->srTable->item(row, 0);
-        if (item && (item->flags() & Qt::ItemIsEnabled) && !this->m_srItems[row].scanning)
+        if (item && (item->flags() & Qt::ItemIsEnabled))
         {
             this->ui->srTable->selectRow(row);
             return;

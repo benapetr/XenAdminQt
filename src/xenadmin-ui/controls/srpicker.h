@@ -164,6 +164,8 @@ class SrPicker : public QWidget
         void addSR(const QSharedPointer<SR>& sr);
         void updateSRItem(const QString& srRef);
         void removeSR(const QString& srRef);
+        int findSRItemIndex(const QString& srRef) const;
+        bool isSRScanning(const QString& srRef) const;
         bool isValidSR(const QSharedPointer<SR>& sr) const;
         bool canBeEnabled(const QSharedPointer<SR>& sr, QString& reason) const;
         qint64 calculateFreeSpace(const QSharedPointer<SR>& sr) const;
