@@ -92,8 +92,18 @@ void MeddlingAction::onCancel()
 
 void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleting)
 {
+    // When the task object is deleted from server, EventPoller only provides taskRef,
+    // so manager calls us with empty taskData + taskDeleting=true.
+    // In that case we must still transition to Completed.
     if (taskData.isEmpty())
+    {
+        if (taskDeleting)
+        {
+            this->SetPercentComplete(100);
+            this->setState(Completed);
+        }
         return;
+    }
 
     // Update title/description from task
     this->updateTitleFromTask(taskData);
