@@ -208,6 +208,7 @@ HEADERS += \
     xen/actions/vm/changevcpusettingsaction.h \
     xen/actions/vm/vmenlightenmentaction.h \
     xen/actions/vm/setvmstartupoptionsaction.h \
+    xen/actions/vm/setvmotherconfigaction.h \
     xen/actions/vm/gpuassignaction.h \
     xen/actions/vm/vmmigrateaction.h \
     xen/actions/vm/vmcrosspoolmigrateaction.h \
@@ -445,6 +446,7 @@ SOURCES += \
     xen/actions/vm/changevcpusettingsaction.cpp \
     xen/actions/vm/vmenlightenmentaction.cpp \
     xen/actions/vm/setvmstartupoptionsaction.cpp \
+    xen/actions/vm/setvmotherconfigaction.cpp \
     xen/actions/vm/gpuassignaction.cpp \
     xen/actions/vm/vmmigrateaction.cpp \
     xen/actions/vm/vmcrosspoolmigrateaction.cpp \

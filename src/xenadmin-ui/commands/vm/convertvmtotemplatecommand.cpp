@@ -29,8 +29,8 @@
 #include "../../mainwindow.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/setvmotherconfigaction.h"
 #include "xenlib/xen/actions/vm/vmtotemplateaction.h"
-#include <QPointer>
 #include <QMessageBox>
 
 ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
@@ -39,6 +39,10 @@ ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, Q
 
 bool ConvertVMToTemplateCommand::CanRun() const
 {
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+    if (selectedObjects.size() != 1)
+        return false;
+
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return false;
@@ -77,40 +81,16 @@ void ConvertVMToTemplateCommand::Run()
             return;
         }
 
-        // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
-        // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(vm);
+        QList<AsyncOperation*> actions;
+        actions.append(new SetVMOtherConfigAction(vm, "instant", "true"));
+        actions.append(new VMToTemplateAction(vm));
 
-        QPointer<MainWindow> mainWindow = MainWindow::instance();
-        if (!mainWindow)
-        {
-            action->deleteLater();
-            return;
-        }
-
-        // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, mainWindow, [vmName, action, mainWindow]()
-        {
-            if (!mainWindow)
-            {
-                action->deleteLater();
-                return;
-            }
-            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
-            {
-                mainWindow->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
-                // Cache will be automatically refreshed via event polling
-            } else
-            {
-                mainWindow->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
-            }
-            // Auto-delete when complete (matches C# GC behavior)
-            action->deleteLater();
-        }, Qt::QueuedConnection);
-
-        // Run action asynchronously (matches C# pattern - no modal dialog)
-        // Progress shown in status bar via OperationManager signals
-        action->RunAsync();
+        this->RunMultipleActions(actions,
+                                 tr("Templatizing VM '%1'").arg(vmName),
+                                 tr("Converting VM to template..."),
+                                 tr("VM converted to template"),
+                                 true,
+                                 true);
     }
 }
 
@@ -125,18 +105,11 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate() const
     if (!vm)
         return false;
 
-    // Check if it's already a template
     if (vm->IsTemplate())
         return false;
 
-    // Check if it's a snapshot
-    if (vm->IsSnapshot())
+    if (vm->IsLocked())
         return false;
 
-    // Check power state - must be halted
-    if (vm->GetPowerState() != "Halted")
-        return false;
-
-    // Check if the operation is allowed
     return vm->GetAllowedOperations().contains("make_into_template");
 }
