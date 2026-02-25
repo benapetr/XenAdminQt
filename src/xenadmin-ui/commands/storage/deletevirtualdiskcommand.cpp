@@ -32,6 +32,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/vdi/destroydiskaction.h"
+#include "deactivatevbdcommand.h"
 #include <QPointer>
 #include <QMessageBox>
 
@@ -39,27 +40,75 @@ DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObje
 {
 }
 
+QList<QSharedPointer<VDI>> DeleteVirtualDiskCommand::getSelectedVDIs() const
+{
+    QList<QSharedPointer<VDI>> vdis;
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+    vdis.reserve(selectedObjects.size());
+    for (const QSharedPointer<XenObject>& object : selectedObjects)
+    {
+        QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(object);
+        if (!vdi || !vdi->IsValid())
+            return {};
+        vdis.append(vdi);
+    }
+    return vdis;
+}
+
 bool DeleteVirtualDiskCommand::CanRun() const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
-        return false;
+    QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
+    {
+        QSharedPointer<VDI> vdi = this->getVDI();
+        if (!vdi || !vdi->IsValid())
+            return false;
+        vdis.append(vdi);
+    }
 
-    return this->canVDIBeDeleted(vdi);
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (!this->canVDIBeDeleted(vdi))
+            return false;
+    }
+
+    return true;
 }
 
 void DeleteVirtualDiskCommand::Run()
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
+    QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
+    {
+        QSharedPointer<VDI> vdi = this->getVDI();
+        if (!vdi || !vdi->IsValid())
+            return;
+        vdis.append(vdi);
+    }
+    if (vdis.isEmpty())
         return;
 
-    QString vdiName = vdi->GetName();
-    QString vdiType = this->getVDIType(vdi);
-    QString confirmTitle = this->getConfirmationTitle(vdiType);
-    QString confirmText = this->getConfirmationText(vdiType, vdiName);
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (!this->canVDIBeDeleted(vdi))
+            return;
+    }
 
-    // Show confirmation dialog
+    QString confirmTitle;
+    QString confirmText;
+    if (vdis.size() == 1)
+    {
+        QString vdiName = vdis.first()->GetName();
+        QString vdiType = this->getVDIType(vdis.first());
+        confirmTitle = this->getConfirmationTitle(vdiType);
+        confirmText = this->getConfirmationText(vdiType, vdiName);
+    }
+    else
+    {
+        confirmTitle = tr("Delete Virtual Disks");
+        confirmText = tr("Are you sure you want to permanently delete the selected virtual disks?\n\nThis operation cannot be undone.");
+    }
+
     QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
@@ -72,53 +121,45 @@ void DeleteVirtualDiskCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Check if VDI is attached to running VMs
-    bool hasAttachedVBDs = false;
-    const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
-    for (const QSharedPointer<VBD>& vbd : vbds)
+    QList<AsyncOperation*> actions;
+    actions.reserve(vdis.size());
+    for (const QSharedPointer<VDI>& vdi : vdis)
     {
-        if (vbd && vbd->CurrentlyAttached())
+        bool hasAttachedVBDs = false;
+        const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            hasAttachedVBDs = true;
-            break;
+            if (vbd && vbd->CurrentlyAttached())
+            {
+                hasAttachedVBDs = true;
+                break;
+            }
         }
+
+        auto* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(),
+                                             this->m_allowRunningVMDelete && hasAttachedVBDs,
+                                             this->mainWindow());
+        actions.append(action);
     }
 
-    // Create and run destroy action
-    // allowRunningVMDelete = true if VDI is attached, action will handle detaching first
-    DestroyDiskAction* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(),
-        hasAttachedVBDs, // Allow deletion even if attached (action will detach first)
-        nullptr);
+    if (actions.isEmpty())
+        return;
 
-    QPointer<MainWindow> mainWindow = MainWindow::instance();
-    if (!mainWindow)
+    if (actions.size() == 1)
     {
-        action->deleteLater();
+        actions.first()->RunAsync();
         return;
     }
-
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, mainWindow, [vdiName, vdiType, action, mainWindow]() 
-    {
-        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
-        {
-            if (mainWindow)
-                mainWindow->ShowStatusMessage(QString("Successfully deleted %1 '%2'").arg(vdiType, vdiName), 5000);
-        } else
-        {
-            QMessageBox::warning(mainWindow, QString("Delete %1 Failed").arg(vdiType), QString("Failed to delete %1 '%2'.\n\n%3").arg(vdiType, vdiName, action->GetErrorMessage()));
-        }
-        // Auto-delete when complete
-        action->deleteLater();
-    }, Qt::QueuedConnection);
-
-    // Run action asynchronously
-    action->RunAsync();
+    this->RunMultipleActions(actions, tr("Delete Virtual Disks"), tr("Deleting virtual disks..."), tr("Completed"), true, true);
 }
 
 QString DeleteVirtualDiskCommand::MenuText() const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
+    QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.size() > 1)
+        return tr("Delete Virtual Disks");
+
+    QSharedPointer<VDI> vdi = vdis.isEmpty() ? this->getVDI() : vdis.first();
     if (!vdi || !vdi->IsValid())
         return "Delete Virtual Disk";
 
@@ -128,7 +169,6 @@ QString DeleteVirtualDiskCommand::MenuText() const
 
 bool DeleteVirtualDiskCommand::canVDIBeDeleted(QSharedPointer<VDI> vdi) const
 {
-    // Cannot delete locked VDI
     if (vdi->IsLocked())
         return false;
 
@@ -136,31 +176,25 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(QSharedPointer<VDI> vdi) const
     if (!sr)
         return false;
 
-    // Cannot delete VDI on physical SR
-    if (sr->GetType() == "udev") // Physical device SR
+    if (sr->GetType() == "udev")
         return false;
 
-    // Cannot delete VDI on tools SR
     if (sr->ContentType() == "tools")
         return false;
 
-    // Check if VDI is used for HA (metadata VDI)
     if (vdi->GetOtherConfig().contains("ha_metadata"))
         return false;
 
-    // Check allowed operations
-    if (!vdi->AllowedOperations().contains("destroy"))
+    const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+    if (vbds.size() > 1 && !this->m_allowMultipleVBDDelete)
         return false;
 
-    // Check VBDs - cannot delete if attached to running system disk
     QString type = vdi->GetType();
-    const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
     for (const QSharedPointer<VBD>& vbd : vbds)
     {
         if (!vbd || !vbd->IsValid())
             continue;
 
-        // If system disk, check if VM is running
         if (type == "system")
         {
             QSharedPointer<VM> vm = vbd->GetVM();
@@ -171,9 +205,29 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(QSharedPointer<VDI> vdi) const
             }
         }
 
-        // Check if VBD is locked
         if (vbd->IsLocked())
             return false;
+
+        if (vbd->CurrentlyAttached())
+        {
+            if (!this->m_allowRunningVMDelete)
+                return false;
+
+            DeactivateVBDCommand cmd(this->mainWindow(), nullptr);
+            cmd.SetSelectionOverride(QList<QSharedPointer<XenObject>>{vbd});
+            if (!cmd.CanRun())
+                return false;
+        }
+    }
+
+    if (sr->HBALunPerVDI())
+        return true;
+
+    if (!vdi->AllowedOperations().contains("destroy"))
+    {
+        if (this->m_allowRunningVMDelete)
+            return true;
+        return false;
     }
 
     return true;

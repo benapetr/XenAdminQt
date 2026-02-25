@@ -39,15 +39,14 @@
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/sr/srrefreshaction.h"
-#include "xenlib/xen/actions/vdi/destroydiskaction.h"
 #include "xenlib/xen/sr.h"
 #include "srstoragetabpage.h"
 #include "ui_srstoragetabpage.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
-#include "dialogs/actionprogressdialog.h"
 #include "commands/command.h"
 #include "commands/storage/addvirtualdiskcommand.h"
+#include "commands/storage/deletevirtualdiskcommand.h"
 #include "mainwindow.h"
 #include "../widgets/tableclipboardutils.h"
 #include <memory>
@@ -284,6 +283,27 @@ bool SrStorageTabPage::canMoveVDIs(const QList<QSharedPointer<VDI>>& vdis) const
     return moveCommand && moveCommand->CanRun();
 }
 
+bool SrStorageTabPage::canDeleteVDIs(const QList<QSharedPointer<VDI>>& vdis) const
+{
+    if (vdis.isEmpty())
+        return false;
+
+    QList<QSharedPointer<XenObject>> selection;
+    selection.reserve(vdis.size());
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (!vdi || !vdi->IsValid())
+            return false;
+        selection.append(vdi);
+    }
+
+    DeleteVirtualDiskCommand deleteCommand(MainWindow::instance(), nullptr);
+    deleteCommand.SetAllowMultipleVBDDelete(true);
+    deleteCommand.SetAllowRunningVMDelete(false);
+    deleteCommand.SetSelectionOverride(selection);
+    return deleteCommand.CanRun();
+}
+
 void SrStorageTabPage::updateButtonStates()
 {
     QSharedPointer<SR> sr = this->GetSR();
@@ -291,6 +311,7 @@ void SrStorageTabPage::updateButtonStates()
     const bool hasSelection = !selectedRefs.isEmpty();
     const bool hasSingleSelection = selectedRefs.size() == 1;
     const QList<QSharedPointer<VDI>> selectedVdis = hasSelection ? this->getSelectedVDIs() : QList<QSharedPointer<VDI>>();
+    const bool allSelectedResolved = selectedVdis.size() == selectedRefs.size();
     bool srAvailable = sr && sr->IsValid();
 
     const QStringList srAllowedOps = sr ? sr->AllowedOperations() : QStringList();
@@ -321,12 +342,11 @@ void SrStorageTabPage::updateButtonStates()
         QStringList vdiAllowed = vdi ? vdi->AllowedOperations() : QStringList();
         bool vdiLocked = vdiAllowed.isEmpty();
         this->ui->editButton->setEnabled(!isSnapshot && !vdiLocked && !srLocked);
-        this->ui->deleteButton->setEnabled(!srLocked);
     } else
     {
         this->ui->editButton->setEnabled(false);
-        this->ui->deleteButton->setEnabled(false);
     }
+    this->ui->deleteButton->setEnabled(hasSelection && allSelectedResolved && this->canDeleteVDIs(selectedVdis));
 }
 
 void SrStorageTabPage::onRescanButtonClicked()
@@ -374,56 +394,33 @@ void SrStorageTabPage::onMoveButtonClicked()
 
 void SrStorageTabPage::onDeleteButtonClicked()
 {
-    QSharedPointer<VDI> vdi = this->getSelectedVDI();
-    if (!vdi)
+    const QStringList selectedRefs = this->getSelectedVDIRefs();
+    if (selectedRefs.isEmpty())
         return;
 
-    QString vdiName = vdi->GetName();
-    if (vdiName.isEmpty())
-        vdiName = tr("Virtual Disk");
-
-    QMessageBox::StandardButton confirm = QMessageBox::question(
-        this,
-        tr("Delete Virtual Disk"),
-        tr("Are you sure you want to permanently delete '%1'?\n\nThis operation cannot be undone.").arg(vdiName),
-        QMessageBox::Yes | QMessageBox::No);
-
-    if (confirm != QMessageBox::Yes)
-    {
+    const QList<QSharedPointer<VDI>> selectedVdis = this->getSelectedVDIs();
+    if (selectedVdis.size() != selectedRefs.size())
         return;
-    }
 
-    bool allowRunningDelete = false;
-    const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
-    for (const QSharedPointer<VBD>& vbd : vbds)
+    QList<QSharedPointer<XenObject>> selection;
+    selection.reserve(selectedVdis.size());
+    for (const QSharedPointer<VDI>& vdi : selectedVdis)
     {
-        if (!vbd)
-            continue;
-
-        if (vbd->CurrentlyAttached())
-        {
-            QMessageBox::StandardButton attachedConfirm = QMessageBox::question(
-                this,
-                tr("Disk Currently Attached"),
-                tr("'%1' is currently attached to one or more VMs.\n\nDo you want to detach it and delete it anyway?").arg(vdiName),
-                QMessageBox::Yes | QMessageBox::No);
-
-            if (attachedConfirm != QMessageBox::Yes)
-            {
-                return;
-            }
-
-            allowRunningDelete = true;
-            break;
-        }
+        if (vdi && vdi->IsValid())
+            selection.append(vdi);
     }
+    if (selection.isEmpty())
+        return;
 
-    DestroyDiskAction* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(), allowRunningDelete, this);
-    ActionProgressDialog* dialog = new ActionProgressDialog(action, this);
-    dialog->exec();
-    delete dialog;
+    DeleteVirtualDiskCommand command(MainWindow::instance(), this);
+    command.SetAllowMultipleVBDDelete(true);
+    command.SetAllowRunningVMDelete(false);
+    command.SetSelectionOverride(selection);
+    if (!command.CanRun())
+        return;
+    command.Run();
 
-    this->requestSrRefresh();
+    this->requestSrRefresh(1000);
 }
 
 void SrStorageTabPage::onEditButtonClicked()

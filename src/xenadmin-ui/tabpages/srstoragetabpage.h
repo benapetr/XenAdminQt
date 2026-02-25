@@ -86,6 +86,7 @@ class SrStorageTabPage : public BaseTabPage
         QStringList getSelectedVDIRefs() const;
         QSharedPointer<VDI> getSelectedVDI() const;
         QList<QSharedPointer<VDI>> getSelectedVDIs() const;
+        bool canDeleteVDIs(const QList<QSharedPointer<VDI>>& vdis) const;
         bool canMoveVDIs(const QList<QSharedPointer<VDI>>& vdis) const;
         void updateButtonStates();
         void requestSrRefresh(int delayMs = 0);

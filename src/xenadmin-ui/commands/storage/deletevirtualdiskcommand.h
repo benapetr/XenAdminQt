@@ -49,12 +49,22 @@ class DeleteVirtualDiskCommand : public VDICommand
 
     public:
         explicit DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        void SetAllowRunningVMDelete(bool allow)
+        {
+            this->m_allowRunningVMDelete = allow;
+        }
+        void SetAllowMultipleVBDDelete(bool allow)
+        {
+            this->m_allowMultipleVBDDelete = allow;
+        }
 
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
 
     private:
+        QList<QSharedPointer<VDI>> getSelectedVDIs() const;
+
         /**
          * @brief Check if VDI can be deleted
          * @param vdi VDI data from cache
@@ -83,6 +93,9 @@ class DeleteVirtualDiskCommand : public VDICommand
          * @return Dialog title
          */
         QString getConfirmationTitle(const QString& vdiType) const;
+
+        bool m_allowRunningVMDelete = false;
+        bool m_allowMultipleVBDDelete = false;
 };
 
 #endif // DELETEVIRTUALDISKCOMMAND_H
