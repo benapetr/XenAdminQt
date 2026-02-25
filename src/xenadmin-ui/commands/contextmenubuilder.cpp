@@ -104,6 +104,7 @@
 #include "tag/edittagscommand.h"
 #include "tag/renametagcommand.h"
 #include "../mainwindow.h"
+#include "../dialogs/movevirtualdiskdialog.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/folder.h"
 #include "xenlib/xen/vm.h"
@@ -1261,7 +1262,20 @@ void ContextMenuBuilder::buildVDIContextMenu(QMenu* menu, QSharedPointer<VDI> vd
     if (!vdi)
         return;
 
-    MoveVirtualDiskCommand* moveCmd = new MoveVirtualDiskCommand(this->m_mainWindow, this);
+    QList<QSharedPointer<XenObject>> selection;
+    if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QList<QSharedPointer<XenObject>> selected = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        for (const QSharedPointer<XenObject>& obj : selected)
+        {
+            if (obj && obj->GetObjectType() == XenObjectType::VDI)
+                selection.append(obj);
+        }
+    }
+    if (selection.isEmpty())
+        selection.append(vdi);
+
+    Command* moveCmd = MoveVirtualDiskDialog::MoveMigrateCommand(this->m_mainWindow, selection, this);
     this->addCommand(menu, moveCmd);
 
     DeleteVirtualDiskCommand* deleteCmd = new DeleteVirtualDiskCommand(this->m_mainWindow, this);

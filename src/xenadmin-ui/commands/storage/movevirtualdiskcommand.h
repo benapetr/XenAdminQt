@@ -62,6 +62,7 @@ class MoveVirtualDiskCommand : public VDICommand
         QString MenuText() const override;
 
     private:
+        QList<QSharedPointer<VDI>> getSelectedVDIs() const;
         /**
          * @brief Check if a VDI can be moved
          * @param vdi VDI object

@@ -39,30 +39,39 @@ MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QOb
 
 bool MigrateVirtualDiskCommand::CanRun() const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
+    const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
         return false;
 
-    QString reason;
-    return this->canBeMigrated(vdi, reason);
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        QString reason;
+        if (!this->canBeMigrated(vdi, reason))
+            return false;
+    }
+
+    return true;
 }
 
 void MigrateVirtualDiskCommand::Run()
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
+    const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
         return;
 
     // Double-check migration eligibility with detailed error messages
-    QString reason;
-    if (!this->canBeMigrated(vdi, reason))
+    for (const QSharedPointer<VDI>& vdi : vdis)
     {
-        QMessageBox::information(MainWindow::instance(), tr("Cannot Migrate"), reason);
-        return;
+        QString reason;
+        if (!this->canBeMigrated(vdi, reason))
+        {
+            QMessageBox::information(MainWindow::instance(), tr("Cannot Migrate"), reason);
+            return;
+        }
     }
 
     // Open migrate dialog
-    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi, MainWindow::instance());
+    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdis, MainWindow::instance());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -71,6 +80,31 @@ void MigrateVirtualDiskCommand::Run()
 QString MigrateVirtualDiskCommand::MenuText() const
 {
     return tr("&Migrate Virtual Disk...");
+}
+
+QList<QSharedPointer<VDI>> MigrateVirtualDiskCommand::getSelectedVDIs() const
+{
+    QList<QSharedPointer<VDI>> vdis;
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+
+    for (const QSharedPointer<XenObject>& obj : selectedObjects)
+    {
+        if (!obj || obj->GetObjectType() != XenObjectType::VDI)
+            continue;
+
+        QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(obj);
+        if (vdi && vdi->IsValid())
+            vdis.append(vdi);
+    }
+
+    if (!vdis.isEmpty())
+        return vdis;
+
+    QSharedPointer<VDI> singleVdi = this->getVDI();
+    if (singleVdi && singleVdi->IsValid())
+        vdis.append(singleVdi);
+
+    return vdis;
 }
 
 bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI>& vdi, QString& reason) const

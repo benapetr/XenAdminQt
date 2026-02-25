@@ -42,6 +42,9 @@ namespace Ui
 
 class XenConnection;
 class VDI;
+class XenObject;
+class MainWindow;
+class Command;
 
 /**
  * @brief Dialog for moving one or more VDIs to a different SR
@@ -66,6 +69,14 @@ class MoveVirtualDiskDialog : public QDialog
     Q_OBJECT
 
     public:
+        /**
+         * @brief C#-style MoveMigrateCommand chooser.
+         *
+         * Returns a configured MigrateVirtualDiskCommand when migration is allowed for
+         * all selected VDIs, otherwise falls back to MoveVirtualDiskCommand.
+         */
+        static Command* MoveMigrateCommand(MainWindow* mainWindow, const QList<QSharedPointer<XenObject>>& selection, QObject* parent = nullptr);
+
         /**
          * @brief Constructor for single VDI move
          * @param vdi VDI to move

@@ -71,6 +71,7 @@ class MigrateVirtualDiskCommand : public VDICommand
         QString MenuText() const override;
 
     private:
+        QList<QSharedPointer<VDI>> getSelectedVDIs() const;
         /**
          * @brief Check if VDI can be migrated
          * @param vdi VDI object

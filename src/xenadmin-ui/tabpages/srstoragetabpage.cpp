@@ -46,10 +46,11 @@
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
+#include "commands/command.h"
 #include "commands/storage/addvirtualdiskcommand.h"
-#include "commands/storage/movevirtualdiskcommand.h"
 #include "mainwindow.h"
 #include "../widgets/tableclipboardutils.h"
+#include <memory>
 
 namespace
 {
@@ -270,18 +271,17 @@ bool SrStorageTabPage::canMoveVDIs(const QList<QSharedPointer<VDI>>& vdis) const
     if (vdis.isEmpty())
         return false;
 
+    QList<QSharedPointer<XenObject>> selection;
+    selection.reserve(vdis.size());
     for (const QSharedPointer<VDI>& vdi : vdis)
     {
         if (!vdi || !vdi->IsValid())
             return false;
-
-        MoveVirtualDiskCommand moveCommand(MainWindow::instance(), nullptr);
-        moveCommand.SetSelectionOverride(QList<QSharedPointer<XenObject>>{vdi});
-        if (!moveCommand.CanRun())
-            return false;
+        selection.append(vdi);
     }
 
-    return true;
+    std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), selection));
+    return moveCommand && moveCommand->CanRun();
 }
 
 void SrStorageTabPage::updateButtonStates()
@@ -356,14 +356,20 @@ void SrStorageTabPage::onAddButtonClicked()
 void SrStorageTabPage::onMoveButtonClicked()
 {
     const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
-    if (!this->canMoveVDIs(vdis))
+    if (vdis.isEmpty())
         return;
 
-    MoveVirtualDiskDialog dialog(vdis, this);
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        this->requestSrRefresh(1000);
-    }
+    QList<QSharedPointer<XenObject>> selection;
+    selection.reserve(vdis.size());
+    for (const QSharedPointer<VDI>& vdi : vdis)
+        selection.append(vdi);
+
+    std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), selection, this));
+    if (!moveCommand || !moveCommand->CanRun())
+        return;
+
+    moveCommand->Run();
+    this->requestSrRefresh(1000);
 }
 
 void SrStorageTabPage::onDeleteButtonClicked()

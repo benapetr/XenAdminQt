@@ -40,21 +40,27 @@ MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* 
 
 bool MoveVirtualDiskCommand::CanRun() const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
+    const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
         return false;
 
-    return this->canBeMoved(vdi);
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (!this->canBeMoved(vdi))
+            return false;
+    }
+
+    return true;
 }
 
 void MoveVirtualDiskCommand::Run()
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->IsValid())
+    const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (vdis.isEmpty())
         return;
 
     // Open the move virtual disk dialog
-    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi, MainWindow::instance());
+    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdis, MainWindow::instance());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -62,7 +68,32 @@ void MoveVirtualDiskCommand::Run()
 
 QString MoveVirtualDiskCommand::MenuText() const
 {
-    return tr("Move...");
+    return this->getSelectedVDIs().size() > 1 ? tr("Move...") : tr("Move...");
+}
+
+QList<QSharedPointer<VDI>> MoveVirtualDiskCommand::getSelectedVDIs() const
+{
+    QList<QSharedPointer<VDI>> vdis;
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+
+    for (const QSharedPointer<XenObject>& obj : selectedObjects)
+    {
+        if (!obj || obj->GetObjectType() != XenObjectType::VDI)
+            continue;
+
+        QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(obj);
+        if (vdi && vdi->IsValid())
+            vdis.append(vdi);
+    }
+
+    if (!vdis.isEmpty())
+        return vdis;
+
+    QSharedPointer<VDI> singleVdi = this->getVDI();
+    if (singleVdi && singleVdi->IsValid())
+        vdis.append(singleVdi);
+
+    return vdis;
 }
 
 bool MoveVirtualDiskCommand::canBeMoved(QSharedPointer<VDI> vdi) const

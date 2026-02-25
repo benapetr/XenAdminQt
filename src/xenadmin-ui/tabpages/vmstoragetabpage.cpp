@@ -46,6 +46,7 @@
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
+#include "commands/command.h"
 #include "commands/storage/addvirtualdiskcommand.h"
 #include "settingsmanager.h"
 #include "mainwindow.h"
@@ -60,6 +61,7 @@
 #include <QAction>
 #include <QKeyEvent>
 #include <QItemSelectionModel>
+#include <memory>
 
 namespace
 {
@@ -802,7 +804,24 @@ void VMStorageTabPage::updateStorageButtons()
         // Detach/Delete/Move: enable if at least one selected VDI is eligible
         this->ui->detachButton->setEnabled(hasSelection && hasVDI && anyDetachEligible);
         this->ui->deleteButton->setEnabled(hasSelection && hasVDI && anyDeleteEligible);
-        this->ui->moveButton->setEnabled(hasSelection && hasVDI && anyMoveEligible);
+
+        bool moveSelectionEligible = false;
+        if (hasSelection && hasVDI && this->m_connection && this->m_connection->GetCache())
+        {
+            QList<QSharedPointer<XenObject>> moveSelection;
+            moveSelection.reserve(vdiRefs.size());
+            for (const QString& vdiRef : vdiRefs)
+            {
+                QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
+                if (vdi && vdi->IsValid())
+                    moveSelection.append(vdi);
+            }
+
+            std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), moveSelection));
+            moveSelectionEligible = moveCommand && moveCommand->CanRun();
+        }
+
+        this->ui->moveButton->setEnabled(moveSelectionEligible && anyMoveEligible);
 
         // Properties/Edit: Enabled for single selection
         bool singleSelection = (vbdRefs.size() == 1);
@@ -1473,11 +1492,17 @@ void VMStorageTabPage::onMoveButtonClicked()
     if (vdis.isEmpty())
         return;
 
-    MoveVirtualDiskDialog dialog(vdis, this);
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        this->refreshContent();
-    }
+    QList<QSharedPointer<XenObject>> selection;
+    selection.reserve(vdis.size());
+    for (const QSharedPointer<VDI>& vdi : vdis)
+        selection.append(vdi);
+
+    std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), selection, this));
+    if (!moveCommand || !moveCommand->CanRun())
+        return;
+
+    moveCommand->Run();
+    this->refreshContent();
 }
 
 void VMStorageTabPage::onDetachButtonClicked()

@@ -27,6 +27,9 @@
 
 #include "movevirtualdiskdialog.h"
 #include "ui_movevirtualdiskdialog.h"
+#include "commands/command.h"
+#include "commands/storage/migratevirtualdiskcommand.h"
+#include "commands/storage/movevirtualdiskcommand.h"
 #include "xen/network/connection.h"
 #include "xen/vdi.h"
 #include "xen/sr.h"
@@ -45,6 +48,19 @@ static QStringList buildVdiRefs(const QList<QSharedPointer<VDI>>& vdis)
             refs.append(vdi->OpaqueRef());
     }
     return refs;
+}
+
+Command* MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow* mainWindow, const QList<QSharedPointer<XenObject>>& selection, QObject* parent)
+{
+    MigrateVirtualDiskCommand* migrateCmd = new MigrateVirtualDiskCommand(mainWindow, parent);
+    migrateCmd->SetSelectionOverride(selection);
+    if (migrateCmd->CanRun())
+        return migrateCmd;
+
+    delete migrateCmd;
+    MoveVirtualDiskCommand* moveCmd = new MoveVirtualDiskCommand(mainWindow, parent);
+    moveCmd->SetSelectionOverride(selection);
+    return moveCmd;
 }
 
 MoveVirtualDiskDialog::MoveVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(vdi ? vdi->GetConnection() : nullptr)
