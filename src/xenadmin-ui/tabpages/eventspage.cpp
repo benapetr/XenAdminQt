@@ -51,6 +51,9 @@
 #include <QClipboard>
 #include <QApplication>
 #include <QItemSelectionModel>
+#include <QProgressBar>
+#include <QLabel>
+#include <QVBoxLayout>
 #include <algorithm>
 
 // Register OperationRecord pointer as a metatype so it can be used in QVariant
@@ -236,10 +239,10 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
     this->ui->eventsTable->setItem(row, 0, expanderItem);
 
     // Column 1: Status icon/text
-    QTableWidgetItem* statusItem = new QTableWidgetItem(this->getStatusText(record->state));
+    QTableWidgetItem* statusItem = new QTableWidgetItem();
     statusItem->setData(Qt::UserRole, QVariant::fromValue(record));
-    statusItem->setIcon(this->getStatusIcon(record->state));
     this->ui->eventsTable->setItem(row, 1, statusItem);
+    this->updateStatusCell(row, record);
 
     // Column 2: Message/Title
     QString title = this->buildRecordTitle(record);
@@ -338,6 +341,82 @@ QIcon EventsPage::getStatusIcon(AsyncOperation::OperationState state) const
     }
 }
 
+QProgressBar* EventsPage::createStatusProgressBar(int progress) const
+{
+    QProgressBar* bar = new QProgressBar(this->ui->eventsTable);
+    bar->setRange(0, 100);
+    bar->setValue(qBound(0, progress, 100));
+    bar->setTextVisible(false);
+    bar->setAlignment(Qt::AlignCenter);
+    bar->setFormat(QStringLiteral("%p%"));
+    bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    return bar;
+}
+
+QWidget* EventsPage::createRunningStatusWidget(int progress) const
+{
+    QWidget* container = new QWidget(this->ui->eventsTable);
+    QVBoxLayout* layout = new QVBoxLayout(container);
+    layout->setContentsMargins(8, 2, 8, 2);
+    layout->setSpacing(2);
+
+    QLabel* label = new QLabel(this->getStatusText(AsyncOperation::Running), container);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    QProgressBar* bar = this->createStatusProgressBar(progress);
+    bar->setParent(container);
+
+    layout->addWidget(label);
+    layout->addWidget(bar);
+    return container;
+}
+
+void EventsPage::updateStatusCell(int row, OperationManager::OperationRecord* record)
+{
+    if (!record || row < 0 || row >= this->ui->eventsTable->rowCount())
+        return;
+
+    QTableWidgetItem* statusItem = this->ui->eventsTable->item(row, 1);
+    if (!statusItem)
+        return;
+
+    // Keep comparable/sortable data on the item itself.
+    statusItem->setText(this->getStatusText(record->state));
+    statusItem->setData(Qt::UserRole + 1, record->progress);
+
+    // Keep only one rendering path active: widget for running, icon/text otherwise.
+    QWidget* existingWidget = this->ui->eventsTable->cellWidget(row, 1);
+    if (record->state == AsyncOperation::Running)
+    {
+        QWidget* container = qobject_cast<QWidget*>(existingWidget);
+        QProgressBar* bar = container ? container->findChild<QProgressBar*>() : nullptr;
+        QLabel* label = container ? container->findChild<QLabel*>() : nullptr;
+        if (!container || !bar || !label)
+        {
+            if (existingWidget)
+                this->ui->eventsTable->removeCellWidget(row, 1);
+            container = this->createRunningStatusWidget(record->progress);
+            bar = container->findChild<QProgressBar*>();
+            this->ui->eventsTable->setCellWidget(row, 1, container);
+        }
+        if (bar)
+        {
+            bar->setValue(qBound(0, record->progress, 100));
+        }
+        if (label)
+            label->setText(this->getStatusText(AsyncOperation::Running));
+        statusItem->setText(QString());
+        statusItem->setIcon(QIcon());
+        return;
+    }
+
+    if (existingWidget)
+        this->ui->eventsTable->removeCellWidget(row, 1);
+
+    statusItem->setIcon(this->getStatusIcon(record->state));
+}
+
 int EventsPage::findRowFromRecord(OperationManager::OperationRecord* record)
 {
     // C# Reference: HistoryPage.FindRowFromAction() line 281
@@ -365,13 +444,7 @@ void EventsPage::updateRecordRow(OperationManager::OperationRecord* record)
     if (row < 0)
         return;
 
-    // Update status
-    QTableWidgetItem* statusItem = this->ui->eventsTable->item(row, 1);
-    if (statusItem)
-    {
-        statusItem->setText(this->getStatusText(record->state));
-        statusItem->setIcon(this->getStatusIcon(record->state));
-    }
+    this->updateStatusCell(row, record);
 
     // Update message if it changed
     QTableWidgetItem* messageItem = this->ui->eventsTable->item(row, 2);

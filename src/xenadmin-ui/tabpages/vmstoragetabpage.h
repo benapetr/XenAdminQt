@@ -114,6 +114,7 @@ class VMStorageTabPage : public BaseTabPage
         QString getSelectedVDIRef() const;
         QStringList getSelectedVBDRefs() const;
         QStringList getSelectedVDIRefs() const;
+        bool canRunMoveForSelectedVDIs(const QStringList& vdiRefs) const;
 
         bool canActivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const;
         bool canDeactivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const;

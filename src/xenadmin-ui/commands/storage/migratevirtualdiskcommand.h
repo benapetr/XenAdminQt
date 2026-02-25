@@ -95,27 +95,6 @@ class MigrateVirtualDiskCommand : public VDICommand
          * @return true if VDI is HA type
          */
         bool isHAType(const QSharedPointer<VDI> &vdi) const;
-
-        /**
-         * @brief Check if VDI is metadata for DR
-         * @param vdi VDI object
-         * @return true if VDI is DR metadata
-         */
-        bool isMetadataForDR(const QSharedPointer<VDI> &vdi) const;
-
-        /**
-         * @brief Check if SR is HBA LUN-per-VDI type
-         * @param sr SR object
-         * @return true if SR is HBA LUN-per-VDI
-         */
-        bool isHBALunPerVDI(const QSharedPointer<SR> &sr) const;
-
-        /**
-         * @brief Check if SR supports storage migration
-         * @param sr SR object
-         * @return true if SR supports migration
-         */
-        bool supportsStorageMigration(const QSharedPointer<SR> &sr) const;
 };
 
 #endif // MIGRATEVIRTUALDISKCOMMAND_H

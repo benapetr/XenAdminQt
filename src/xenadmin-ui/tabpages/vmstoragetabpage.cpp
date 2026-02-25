@@ -739,7 +739,6 @@ void VMStorageTabPage::updateStorageButtons()
         bool anyDeactivateEligible = false;
         bool anyDetachEligible = false;
         bool anyDeleteEligible = false;
-        bool anyMoveEligible = false;
 
         if (hasSelection && this->m_connection && this->m_connection->GetCache() && this->m_vm)
         {
@@ -775,7 +774,6 @@ void VMStorageTabPage::updateStorageButtons()
                 {
                     anyDetachEligible = true;
                     anyDeleteEligible = true;
-                    anyMoveEligible = true;
                 }
             }
         }
@@ -805,23 +803,7 @@ void VMStorageTabPage::updateStorageButtons()
         this->ui->detachButton->setEnabled(hasSelection && hasVDI && anyDetachEligible);
         this->ui->deleteButton->setEnabled(hasSelection && hasVDI && anyDeleteEligible);
 
-        bool moveSelectionEligible = false;
-        if (hasSelection && hasVDI && this->m_connection && this->m_connection->GetCache())
-        {
-            QList<QSharedPointer<XenObject>> moveSelection;
-            moveSelection.reserve(vdiRefs.size());
-            for (const QString& vdiRef : vdiRefs)
-            {
-                QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
-                if (vdi && vdi->IsValid())
-                    moveSelection.append(vdi);
-            }
-
-            std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), moveSelection));
-            moveSelectionEligible = moveCommand && moveCommand->CanRun();
-        }
-
-        this->ui->moveButton->setEnabled(moveSelectionEligible && anyMoveEligible);
+        this->ui->moveButton->setEnabled(hasSelection && hasVDI && this->canRunMoveForSelectedVDIs(vdiRefs));
 
         // Properties/Edit: Enabled for single selection
         bool singleSelection = (vbdRefs.size() == 1);
@@ -924,6 +906,24 @@ QStringList VMStorageTabPage::getSelectedVDIRefs() const
     }
 
     return refs;
+}
+
+bool VMStorageTabPage::canRunMoveForSelectedVDIs(const QStringList& vdiRefs) const
+{
+    if (vdiRefs.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
+        return false;
+
+    QList<QSharedPointer<XenObject>> moveSelection;
+    moveSelection.reserve(vdiRefs.size());
+    for (const QString& vdiRef : vdiRefs)
+    {
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
+        if (vdi && vdi->IsValid())
+            moveSelection.append(vdi);
+    }
+
+    std::unique_ptr<Command> moveCommand(MoveVirtualDiskDialog::MoveMigrateCommand(MainWindow::instance(), moveSelection));
+    return moveCommand && moveCommand->CanRun();
 }
 
 bool VMStorageTabPage::canActivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const
@@ -1319,7 +1319,7 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
         if (this->ui->moveButton->isVisible())
         {
             QAction* moveAction = contextMenu.addAction("Move Virtual Disk...");
-            moveAction->setEnabled(this->ui->moveButton->isEnabled());
+            moveAction->setEnabled(this->canRunMoveForSelectedVDIs(this->getSelectedVDIRefs()));
             connect(moveAction, &QAction::triggered, this, &VMStorageTabPage::onMoveButtonClicked);
             hasVisibleAction = true;
             hasPrimaryAction = true;

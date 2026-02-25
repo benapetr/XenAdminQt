@@ -28,7 +28,6 @@
 #include "migratevirtualdiskcommand.h"
 #include "mainwindow.h"
 #include "xen/vdi.h"
-#include "xen/vbd.h"
 #include "xen/sr.h"
 #include "dialogs/migratevirtualdiskdialog.h"
 #include <QMessageBox>
@@ -140,14 +139,8 @@ bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI>& vdi, QS
         return false;
     }
 
-    if (this->isMetadataForDR(vdi))
-    {
-        reason = tr("Cannot migrate: VDI is metadata for disaster recovery.");
-        return false;
-    }
-
-    // Check that VDI has at least one VBD
-    if (vdi->GetVBDs().isEmpty())
+    // Check that VDI has at least one VBD ref (C# checks vdi.VBDs count after resolve-all).
+    if (vdi->GetVBDRefs().isEmpty())
     {
         reason = tr("Cannot migrate: VDI has no VBDs attached.");
         return false;
@@ -161,13 +154,13 @@ bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI>& vdi, QS
         return false;
     }
 
-    if (this->isHBALunPerVDI(sr))
+    if (sr->HBALunPerVDI())
     {
         reason = tr("Cannot migrate: Unsupported SR type (HBA LUN-per-VDI).");
         return false;
     }
 
-    if (!this->supportsStorageMigration(sr))
+    if (!sr->SupportsStorageMigration())
     {
         reason = tr("Cannot migrate: SR does not support storage migration.");
         return false;
@@ -183,55 +176,5 @@ bool MigrateVirtualDiskCommand::isHAType(const QSharedPointer<VDI> &vdi) const
         return false;
 
     QString type = vdi->GetType();
-    return (type == "ha_statefile" || type == "redo_log");
-}
-
-bool MigrateVirtualDiskCommand::isMetadataForDR(const QSharedPointer<VDI> &vdi) const
-{
-    // Check if VDI has metadata_of_pool set (indicates DR metadata)
-    if (!vdi)
-        return false;
-
-    QString metadataOfPool = vdi->MetadataOfPoolRef();
-    return !metadataOfPool.isEmpty() && metadataOfPool != XENOBJECT_NULL;
-}
-
-bool MigrateVirtualDiskCommand::isHBALunPerVDI(const QSharedPointer<SR> &sr) const
-{
-    // HBA SRs have is_tools_sr = false and type = "lvmohba"
-    // Additionally check sm_config for "allocation" = "thick"
-    if (!sr)
-        return false;
-
-    QString srType = sr->GetType();
-
-    if (srType == "lvmohba" || srType == "lvmofc")
-    {
-        // These are HBA types - check if LUN-per-VDI
-        QVariantMap smConfig = sr->SMConfig();
-        QString allocation = smConfig.value("allocation", "").toString();
-
-        // LUN-per-VDI uses thick allocation
-        return (allocation == "thick");
-    }
-
-    return false;
-}
-
-bool MigrateVirtualDiskCommand::supportsStorageMigration(const QSharedPointer<SR> &sr) const
-{
-    if (!sr)
-        return false;
-
-    // Look for "VDI_MIRROR" capability which indicates migration support
-    if (sr->GetCapabilities().contains("VDI_MIRROR"))
-        return true;
-
-    // Also check if SR type is known to support migration
-    QString srType = sr->GetType();
-    QStringList supportedTypes = {
-        "lvm", "ext", "nfs", "lvmoiscsi", "lvmohba",
-        "smb", "cifs", "cslg", "gfs2"};
-
-    return supportedTypes.contains(srType);
+    return type == "ha";
 }

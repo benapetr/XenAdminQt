@@ -33,6 +33,8 @@
 #include <QTableWidgetItem>
 #include <QIcon>
 #include <QPoint>
+#include <QProgressBar>
+#include <QWidget>
 #include <xen/asyncoperation.h>
 
 namespace Ui {
@@ -144,6 +146,9 @@ class EventsPage : public NotificationsBasePage
          */
         QString getStatusText(AsyncOperation::OperationState state) const;
         QIcon getStatusIcon(AsyncOperation::OperationState state) const;
+        QProgressBar* createStatusProgressBar(int progress) const;
+        QWidget* createRunningStatusWidget(int progress) const;
+        void updateStatusCell(int row, OperationManager::OperationRecord* record);
 
         /**
          * Update button states based on selection.
