@@ -30,6 +30,8 @@
 
 #include "../command.h"
 
+class VM;
+
 class DeleteSnapshotCommand : public Command
 {
     Q_OBJECT
@@ -46,6 +48,8 @@ class DeleteSnapshotCommand : public Command
     private:
         QString m_snapshotUuid;
         QString effectiveSnapshotUuid() const;
+        QList<QSharedPointer<VM>> collectSelectedSnapshots() const;
+        bool canDeleteSnapshot(const QSharedPointer<VM>& snapshot) const;
 
         // Check if snapshot can be deleted
         bool canDeleteSnapshot() const;

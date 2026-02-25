@@ -70,6 +70,7 @@ class ContextMenuBuilder : public QObject
         // Builders for specific object types
         void buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm);
         void buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot);
+        void buildMultipleSnapshotsContextMenu(QMenu* menu);
         void buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM);
         void buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host);
         void buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidgetItem* item);
@@ -85,6 +86,7 @@ class ContextMenuBuilder : public QObject
         QList<QSharedPointer<VM>> getSelectedVMs() const;
         QList<QSharedPointer<Host>> getSelectedHosts() const;
         QList<XenConnection*> getSelectedConnections() const;
+        bool isMultiSnapshotSelection() const;
 
         // Helper methods
         //! Builds special root-node menus (infrastructure root and folder root); returns null when not applicable.

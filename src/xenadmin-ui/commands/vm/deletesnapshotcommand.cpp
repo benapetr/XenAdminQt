@@ -81,78 +81,54 @@ bool DeleteSnapshotCommand::CanRun() const
 
 QString DeleteSnapshotCommand::MenuText() const
 {
-    return tr("Delete Snapshot");
+    const QList<QSharedPointer<VM>> snapshots = this->collectSelectedSnapshots();
+    return snapshots.size() > 1 ? tr("&Delete") : tr("Delete Snapshot");
 }
 
 bool DeleteSnapshotCommand::canDeleteSnapshot() const
 {
-    const QString snapshotUuid = this->effectiveSnapshotUuid();
-    if (snapshotUuid.isEmpty() || !MainWindow::instance())
+    const QList<QSharedPointer<VM>> snapshots = this->collectSelectedSnapshots();
+    if (snapshots.isEmpty() || !MainWindow::instance())
         return false;
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
-        return false;
-
-    // Get snapshot data from cache
-    XenCache* cache = selectedObject->GetCache();
-
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
-    if (!snapshot)
+    for (const QSharedPointer<VM>& snapshot : snapshots)
     {
-        qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << snapshotUuid;
-        return false;
+        if (!this->canDeleteSnapshot(snapshot))
+            return false;
     }
-
-    // Verify it's actually a snapshot
-    if (!snapshot->IsSnapshot())
-    {
-        qDebug() << "DeleteSnapshotCommand: Object is not a snapshot:" << snapshotUuid;
-        return false;
-    }
-
-    // Check if snapshot is being used by any operations
-    if (!snapshot->CurrentOperations().isEmpty())
-    {
-        qDebug() << "DeleteSnapshotCommand: Snapshot has active operations:" << snapshotUuid;
-        return false;
-    }
-
-    // Check allowed operations
-    QStringList allowedOps = snapshot->GetAllowedOperations();
-    if (!allowedOps.contains("destroy"))
-    {
-        qDebug() << "DeleteSnapshotCommand: Destroy operation not allowed for snapshot:" << snapshotUuid;
-        return false;
-    }
-
     return true;
 }
 
 bool DeleteSnapshotCommand::showConfirmationDialog()
 {
-    const QString snapshotUuid = this->effectiveSnapshotUuid();
-    QString snapshotName = snapshotUuid;
-
-    // Try to get snapshot name from cache
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
+    const QList<QSharedPointer<VM>> snapshots = this->collectSelectedSnapshots();
+    if (snapshots.isEmpty())
         return false;
-    QSharedPointer<VM> snapshot = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
-    if (snapshot)
+
+    QString title = tr("Delete Snapshot");
+    QString message;
+    if (snapshots.size() == 1)
     {
-        snapshotName = snapshot->GetName();
+        const QSharedPointer<VM> snapshot = snapshots.first();
+        QString snapshotName = snapshot ? snapshot->GetName() : QString();
         if (snapshotName.isEmpty())
-            snapshotName = snapshotUuid;
+            snapshotName = snapshot ? snapshot->OpaqueRef() : QString();
+        message = tr("Are you sure you want to delete this snapshot?\n\n"
+                     "This action cannot be undone.\n\n"
+                     "Snapshot: %1")
+                      .arg(snapshotName);
+    } else
+    {
+        title = tr("Delete Snapshots");
+        message = tr("Are you sure you want to delete %1 snapshots?\n\n"
+                     "This action cannot be undone.")
+                      .arg(snapshots.size());
     }
 
     QMessageBox::StandardButton reply = QMessageBox::question(
         MainWindow::instance(),
-        tr("Delete Snapshot"),
-        tr("Are you sure you want to delete this snapshot?\n\n"
-           "This action cannot be undone.\n\n"
-           "Snapshot: %1")
-            .arg(snapshotName),
+        title,
+        message,
         QMessageBox::Yes | QMessageBox::No,
         QMessageBox::No);
 
@@ -161,8 +137,12 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
 
 void DeleteSnapshotCommand::deleteSnapshot()
 {
-    const QString snapshotUuid = this->effectiveSnapshotUuid();
-    qDebug() << "DeleteSnapshotCommand: Deleting snapshot:" << snapshotUuid;
+    const QList<QSharedPointer<VM>> snapshots = this->collectSelectedSnapshots();
+    if (snapshots.isEmpty())
+    {
+        qWarning() << "DeleteSnapshotCommand: No snapshots selected";
+        return;
+    }
 
     if (!MainWindow::instance())
     {
@@ -170,52 +150,134 @@ void DeleteSnapshotCommand::deleteSnapshot()
         return;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
+    for (const QSharedPointer<VM>& snapshot : snapshots)
     {
-        qWarning() << "DeleteSnapshotCommand: No selected object";
-        return;
+        if (!snapshot || !snapshot->IsValid())
+        {
+            qWarning() << "DeleteSnapshotCommand: Failed to resolve snapshot VM";
+            continue;
+        }
+
+        XenConnection* conn = snapshot->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            qWarning() << "DeleteSnapshotCommand: Not connected";
+            continue;
+        }
+
+        const QString snapshotRef = snapshot->OpaqueRef();
+        qDebug() << "DeleteSnapshotCommand: Deleting snapshot:" << snapshotRef;
+
+        // Create VMSnapshotDeleteAction (matches C# VMSnapshotDeleteAction pattern)
+        // Action handles task polling, history tracking, and automatic cache refresh
+        VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, MainWindow::instance());
+
+        // Connect completion signal for cleanup and status update
+        connect(action, &AsyncOperation::completed, action, [snapshotRef, action]()
+        {
+            bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
+            if (success)
+            {
+                qDebug() << "DeleteSnapshotCommand: Snapshot deleted successfully:" << snapshotRef;
+                // Cache will be automatically refreshed via event polling
+            } else
+            {
+                qWarning() << "DeleteSnapshotCommand: Failed to delete snapshot:" << snapshotRef;
+            }
+            // Auto-delete when complete (matches C# GC behavior)
+            action->deleteLater();
+        });
+
+        // Run action asynchronously (matches C# pattern - no modal dialog)
+        // Progress shown in status bar via OperationManager signals
+        action->RunAsync();
+    }
+}
+
+QList<QSharedPointer<VM>> DeleteSnapshotCommand::collectSelectedSnapshots() const
+{
+    QList<QSharedPointer<VM>> snapshots;
+
+    if (!this->m_snapshotUuid.isEmpty())
+    {
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        if (!selectedObject)
+            return snapshots;
+
+        XenCache* cache = selectedObject->GetCache();
+        if (!cache)
+            return snapshots;
+
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
+        if (snapshot)
+            snapshots.append(snapshot);
+        return snapshots;
     }
 
-    QSharedPointer<VM> snapshot = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
-    if (!snapshot || !snapshot->IsValid())
+    const QList<QSharedPointer<XenObject>> selectedObjects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : selectedObjects)
     {
-        qWarning() << "DeleteSnapshotCommand: Failed to resolve snapshot VM";
-        QMessageBox::critical(MainWindow::instance(), tr("Delete Error"), tr("Failed to resolve snapshot VM."));
-        return;
+        if (!obj || obj->GetObjectType() != XenObjectType::VM)
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
+        if (vm)
+            snapshots.append(vm);
+    }
+
+    if (!snapshots.isEmpty())
+        return snapshots;
+
+    const QString snapshotUuid = this->effectiveSnapshotUuid();
+    if (snapshotUuid.isEmpty())
+        return snapshots;
+
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return snapshots;
+
+    XenCache* cache = selectedObject->GetCache();
+    if (!cache)
+        return snapshots;
+
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotUuid);
+    if (snapshot)
+        snapshots.append(snapshot);
+
+    return snapshots;
+}
+
+bool DeleteSnapshotCommand::canDeleteSnapshot(const QSharedPointer<VM>& snapshot) const
+{
+    if (!snapshot)
+        return false;
+
+    if (!snapshot->IsSnapshot())
+    {
+        qDebug() << "DeleteSnapshotCommand: Object is not a snapshot:" << snapshot->OpaqueRef();
+        return false;
+    }
+
+    if (!snapshot->CurrentOperations().isEmpty())
+    {
+        qDebug() << "DeleteSnapshotCommand: Snapshot has active operations:" << snapshot->OpaqueRef();
+        return false;
+    }
+
+    if (!snapshot->GetAllowedOperations().contains("destroy"))
+    {
+        qDebug() << "DeleteSnapshotCommand: Destroy operation not allowed for snapshot:" << snapshot->OpaqueRef();
+        return false;
     }
 
     XenConnection* conn = snapshot->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        qWarning() << "DeleteSnapshotCommand: Not connected";
-        QMessageBox::critical(MainWindow::instance(), tr("Delete Error"), tr("Not connected to XenServer."));
-        return;
+        qDebug() << "DeleteSnapshotCommand: Snapshot connection is not active:" << snapshot->OpaqueRef();
+        return false;
     }
 
-    // Create VMSnapshotDeleteAction (matches C# VMSnapshotDeleteAction pattern)
-    // Action handles task polling, history tracking, and automatic cache refresh
-    VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, MainWindow::instance());
-
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, action, [snapshotUuid, action]()
-    {
-        bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
-        if (success)
-        {
-            qDebug() << "DeleteSnapshotCommand: Snapshot deleted successfully:" << snapshotUuid;
-            // Cache will be automatically refreshed via event polling
-        } else
-        {
-            qWarning() << "DeleteSnapshotCommand: Failed to delete snapshot";
-        }
-        // Auto-delete when complete (matches C# GC behavior)
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (matches C# pattern - no modal dialog)
-    // Progress shown in status bar via OperationManager signals
-    action->RunAsync();
+    return true;
 }
 
 QString DeleteSnapshotCommand::effectiveSnapshotUuid() const

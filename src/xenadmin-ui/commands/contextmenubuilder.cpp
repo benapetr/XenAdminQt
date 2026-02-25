@@ -220,7 +220,9 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
             QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
             if (!vm)
                 break;
-            if (vm->IsSnapshot())
+            if (this->isMultiSnapshotSelection())
+                this->buildMultipleSnapshotsContextMenu(menu);
+            else if (vm->IsSnapshot())
                 this->buildSnapshotContextMenu(menu, vm);
             else if (vm->IsTemplate())
                 this->buildTemplateContextMenu(menu, vm);
@@ -848,6 +850,18 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
     this->addCommand(menu, propertiesCmd);
 }
 
+void ContextMenuBuilder::buildMultipleSnapshotsContextMenu(QMenu* menu)
+{
+    if (!menu)
+        return;
+
+    EditTagsCommand* editTagsCmd = new EditTagsCommand(this->m_mainWindow, this);
+    this->addCommand(menu, editTagsCmd);
+
+    DeleteSnapshotCommand* deleteCmd = new DeleteSnapshotCommand(this->m_mainWindow, this);
+    this->addCommand(menu, deleteCmd);
+}
+
 void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM)
 {
     if (!templateVM)
@@ -1396,4 +1410,19 @@ QList<XenConnection*> ContextMenuBuilder::getSelectedConnections() const
     return this->m_mainWindow && this->m_mainWindow->GetSelectionManager()
         ? this->m_mainWindow->GetSelectionManager()->SelectedConnections()
         : QList<XenConnection*>();
+}
+
+bool ContextMenuBuilder::isMultiSnapshotSelection() const
+{
+    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    if (selectedVms.size() <= 1)
+        return false;
+
+    for (const QSharedPointer<VM>& vm : selectedVms)
+    {
+        if (!vm || !vm->IsSnapshot())
+            return false;
+    }
+
+    return true;
 }
