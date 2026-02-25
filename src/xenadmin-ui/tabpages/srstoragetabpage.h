@@ -29,6 +29,7 @@
 #define SRSTORAGETABPAGE_H
 
 #include "basetabpage.h"
+#include <QStringList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -82,7 +83,10 @@ class SrStorageTabPage : public BaseTabPage
     private:
         void populateSRStorage();
         QString getSelectedVDIRef() const;
+        QStringList getSelectedVDIRefs() const;
         QSharedPointer<VDI> getSelectedVDI() const;
+        QList<QSharedPointer<VDI>> getSelectedVDIs() const;
+        bool canMoveVDIs(const QList<QSharedPointer<VDI>>& vdis) const;
         void updateButtonStates();
         void requestSrRefresh(int delayMs = 0);
 

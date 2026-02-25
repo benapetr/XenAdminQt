@@ -30,6 +30,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
+#include <QSet>
 #include "xenlib/xencache.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xen/network/connection.h"
@@ -46,6 +47,7 @@
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
 #include "commands/storage/addvirtualdiskcommand.h"
+#include "commands/storage/movevirtualdiskcommand.h"
 #include "mainwindow.h"
 #include "../widgets/tableclipboardutils.h"
 
@@ -199,17 +201,37 @@ void SrStorageTabPage::populateSRStorage()
 
 QString SrStorageTabPage::getSelectedVDIRef() const
 {
-    QList<QTableWidgetItem*> selectedItems = this->ui->storageTable->selectedItems();
-    if (selectedItems.isEmpty())
+    const QStringList selected = this->getSelectedVDIRefs();
+    if (selected.isEmpty())
         return QString();
 
-    int row = selectedItems.first()->row();
+    return selected.first();
+}
 
-    QTableWidgetItem* item = this->ui->storageTable->item(row, 0);
-    if (!item)
-        return QString();
+QStringList SrStorageTabPage::getSelectedVDIRefs() const
+{
+    QStringList refs;
+    QSet<QString> seen;
+    const QList<QTableWidgetSelectionRange> ranges = this->ui->storageTable->selectedRanges();
 
-    return item->data(Qt::UserRole).toString();
+    for (const QTableWidgetSelectionRange& range : ranges)
+    {
+        for (int row = range.topRow(); row <= range.bottomRow(); ++row)
+        {
+            QTableWidgetItem* item = this->ui->storageTable->item(row, 0);
+            if (!item)
+                continue;
+
+            const QString ref = item->data(Qt::UserRole).toString();
+            if (ref.isEmpty() || seen.contains(ref))
+                continue;
+
+            seen.insert(ref);
+            refs.append(ref);
+        }
+    }
+
+    return refs;
 }
 
 QSharedPointer<VDI> SrStorageTabPage::getSelectedVDI() const
@@ -224,10 +246,51 @@ QSharedPointer<VDI> SrStorageTabPage::getSelectedVDI() const
     return this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
 }
 
+QList<QSharedPointer<VDI>> SrStorageTabPage::getSelectedVDIs() const
+{
+    QList<QSharedPointer<VDI>> vdis;
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return vdis;
+
+    const QStringList refs = this->getSelectedVDIRefs();
+    vdis.reserve(refs.size());
+
+    for (const QString& ref : refs)
+    {
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(ref);
+        if (vdi && vdi->IsValid())
+            vdis.append(vdi);
+    }
+
+    return vdis;
+}
+
+bool SrStorageTabPage::canMoveVDIs(const QList<QSharedPointer<VDI>>& vdis) const
+{
+    if (vdis.isEmpty())
+        return false;
+
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (!vdi || !vdi->IsValid())
+            return false;
+
+        MoveVirtualDiskCommand moveCommand(MainWindow::instance(), nullptr);
+        moveCommand.SetSelectionOverride(QList<QSharedPointer<XenObject>>{vdi});
+        if (!moveCommand.CanRun())
+            return false;
+    }
+
+    return true;
+}
+
 void SrStorageTabPage::updateButtonStates()
 {
     QSharedPointer<SR> sr = this->GetSR();
-    bool hasSelection = !this->getSelectedVDIRef().isEmpty();
+    const QStringList selectedRefs = this->getSelectedVDIRefs();
+    const bool hasSelection = !selectedRefs.isEmpty();
+    const bool hasSingleSelection = selectedRefs.size() == 1;
+    const QList<QSharedPointer<VDI>> selectedVdis = hasSelection ? this->getSelectedVDIs() : QList<QSharedPointer<VDI>>();
     bool srAvailable = sr && sr->IsValid();
 
     const QStringList srAllowedOps = sr ? sr->AllowedOperations() : QStringList();
@@ -249,9 +312,9 @@ void SrStorageTabPage::updateButtonStates()
 
     this->ui->rescanButton->setEnabled(srAvailable && !srLocked && !srDetached);
     this->ui->addButton->setEnabled(srAvailable && !srLocked);
-    this->ui->moveButton->setEnabled(hasSelection);
+    this->ui->moveButton->setEnabled(this->canMoveVDIs(selectedVdis));
 
-    if (hasSelection && this->m_connection)
+    if (hasSingleSelection && this->m_connection)
     {
         QSharedPointer<VDI> vdi = this->getSelectedVDI();
         bool isSnapshot = vdi && vdi->IsSnapshot();
@@ -292,11 +355,11 @@ void SrStorageTabPage::onAddButtonClicked()
 
 void SrStorageTabPage::onMoveButtonClicked()
 {
-    QSharedPointer<VDI> vdi = this->getSelectedVDI();
-    if (!vdi || !vdi->IsValid())
+    const QList<QSharedPointer<VDI>> vdis = this->getSelectedVDIs();
+    if (!this->canMoveVDIs(vdis))
         return;
 
-    MoveVirtualDiskDialog dialog(vdi, this);
+    MoveVirtualDiskDialog dialog(vdis, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         this->requestSrRefresh(1000);
