@@ -98,6 +98,7 @@ void SettingsManager::Load()
     this->m_defaultTemplatesVisible = this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
     this->m_userTemplatesVisible = this->m_settings->value("View/userTemplatesVisible", true).toBool();
     this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
+    this->m_showAllServerEvents = this->m_settings->value("View/showAllServerEvents", false).toBool();
     this->m_consoleRefreshInterval = this->m_settings->value("Console/refreshInterval", 5).toInt();
     this->m_consoleFullScreenShortcutKey = this->m_settings->value("Console/FullScreenShortcutKey", 0).toInt();
     this->m_consoleDockShortcutKey = this->m_settings->value("Console/DockShortcutKey", 1).toInt();
@@ -166,6 +167,7 @@ void SettingsManager::Save()
     this->m_settings->setValue("View/defaultTemplatesVisible", this->m_defaultTemplatesVisible);
     this->m_settings->setValue("View/userTemplatesVisible", this->m_userTemplatesVisible);
     this->m_settings->setValue("View/localSRsVisible", this->m_localSRsVisible);
+    this->m_settings->setValue("View/showAllServerEvents", this->m_showAllServerEvents);
     this->m_settings->setValue("Console/refreshInterval", this->m_consoleRefreshInterval);
     this->m_settings->setValue("Console/FullScreenShortcutKey", this->m_consoleFullScreenShortcutKey);
     this->m_settings->setValue("Console/DockShortcutKey", this->m_consoleDockShortcutKey);
@@ -576,6 +578,17 @@ void SettingsManager::SetLocalSRsVisible(bool visible)
 {
     this->m_localSRsVisible = visible;
     emit settingsChanged("View/localSRsVisible");
+}
+
+bool SettingsManager::GetShowAllServerEvents() const
+{
+    return this->m_showAllServerEvents;
+}
+
+void SettingsManager::SetShowAllServerEvents(bool show)
+{
+    this->m_showAllServerEvents = show;
+    emit settingsChanged("View/showAllServerEvents");
 }
 
 int SettingsManager::GetConsoleRefreshInterval() const

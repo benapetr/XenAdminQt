@@ -144,6 +144,7 @@ class MainWindow : public QMainWindow
         void onViewCustomTemplatesToggled(bool checked);
         void onViewLocalStorageToggled(bool checked);
         void onViewShowHiddenObjectsToggled(bool checked);
+        void onViewShowAllServerEventsToggled(bool checked);
 
         // Cache update handler for refreshing selected object
         void onCacheObjectChanged(XenConnection *connection, const QString& objectType, const QString& objectRef);

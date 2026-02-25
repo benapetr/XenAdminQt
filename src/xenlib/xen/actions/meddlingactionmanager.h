@@ -67,6 +67,8 @@ class MeddlingActionManager : public QObject
          * to identify our tasks after reconnect.
          */
         static QString applicationUuid();
+        void SetShowAllServerEvents(bool showAll);
+        bool GetShowAllServerEvents() const;
 
         /**
          * @brief Rehydrate tasks for a connection after reconnect
@@ -151,6 +153,7 @@ class MeddlingActionManager : public QObject
 
         /// Application UUID (generated once at startup)
         static QString s_applicationUuid;
+        bool m_showAllServerEvents = false;
 };
 
 #endif // MEDDLINGACTIONMANAGER_H

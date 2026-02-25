@@ -1586,6 +1586,8 @@ bool MainWindow::IsConnected()
 void MainWindow::loadSettings()
 {
     SettingsManager& settings = SettingsManager::instance();
+    if (OperationManager::instance()->GetMeddlingActionManager())
+        OperationManager::instance()->GetMeddlingActionManager()->SetShowAllServerEvents(settings.GetShowAllServerEvents());
 
     // Restore window geometry and state
     QByteArray geometry = settings.LoadMainWindowGeometry();
@@ -1791,6 +1793,47 @@ void MainWindow::onViewShowHiddenObjectsToggled(bool checked)
     this->onViewSettingsChanged();
 }
 
+void MainWindow::onViewShowAllServerEventsToggled(bool checked)
+{
+    SettingsManager::instance().SetShowAllServerEvents(checked);
+
+    OperationManager* opManager = OperationManager::instance();
+    if (opManager && opManager->GetMeddlingActionManager())
+        opManager->GetMeddlingActionManager()->SetShowAllServerEvents(checked);
+
+    if (checked)
+    {
+        // Rehydrate to include events previously filtered out by default C#-style filtering.
+        const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
+        for (XenConnection* conn : connections)
+        {
+            if (conn && conn->IsConnected() && opManager && opManager->GetMeddlingActionManager())
+                opManager->GetMeddlingActionManager()->rehydrateTasks(conn);
+        }
+    }
+    else
+    {
+        // Hide unknown meddling events immediately.
+        QList<OperationManager::OperationRecord*> toRemove;
+        const QList<OperationManager::OperationRecord*>& records = opManager->GetRecords();
+        for (OperationManager::OperationRecord* record : records)
+        {
+            if (!record)
+                continue;
+
+            AsyncOperation* op = record->operation.data();
+            MeddlingAction* meddling = qobject_cast<MeddlingAction*>(op);
+            if (meddling && !meddling->IsRecognizedOperation())
+                toRemove.append(record);
+        }
+
+        if (!toRemove.isEmpty())
+            opManager->RemoveRecords(toRemove);
+    }
+
+    this->onViewSettingsChanged();
+}
+
 void MainWindow::onViewSettingsChanged()
 {
     this->m_navigationPane->UpdateSearch();
@@ -1803,6 +1846,7 @@ void MainWindow::applyViewSettingsToMenu()
     this->ui->viewCustomTemplatesAction->setChecked(settings.GetUserTemplatesVisible());
     this->ui->viewLocalStorageAction->setChecked(settings.GetLocalSRsVisible());
     this->ui->viewShowHiddenObjectsAction->setChecked(settings.GetShowHiddenObjects());
+    this->ui->viewShowAllServerEventsAction->setChecked(settings.GetShowAllServerEvents());
 }
 
 void MainWindow::applyDebugMenuVisibility()
@@ -1823,8 +1867,10 @@ void MainWindow::updateViewMenu(NavigationPane::NavigationMode mode)
     this->ui->viewMenuSeparator1->setVisible(isInfrastructure);
 
     const bool showHiddenVisible = !isNotifications;
+    const bool showAllServerEventsVisible = isNotifications;
     this->ui->viewShowHiddenObjectsAction->setVisible(showHiddenVisible);
-    this->ui->viewMenuSeparator2->setVisible(showHiddenVisible);
+    this->ui->viewShowAllServerEventsAction->setVisible(showAllServerEventsVisible);
+    this->ui->viewMenuSeparator2->setVisible(showHiddenVisible || showAllServerEventsVisible);
 }
 
 void MainWindow::onNotificationsSubModeChanged(int subMode)
@@ -3574,6 +3620,7 @@ void MainWindow::connectMenuActions()
     connect(this->ui->viewCustomTemplatesAction, &QAction::toggled, this, &MainWindow::onViewCustomTemplatesToggled);
     connect(this->ui->viewLocalStorageAction, &QAction::toggled, this, &MainWindow::onViewLocalStorageToggled);
     connect(this->ui->viewShowHiddenObjectsAction, &QAction::toggled, this, &MainWindow::onViewShowHiddenObjectsToggled);
+    connect(this->ui->viewShowAllServerEventsAction, &QAction::toggled, this, &MainWindow::onViewShowAllServerEventsToggled);
 
     qDebug() << "Connected menu actions to command slots";
 }

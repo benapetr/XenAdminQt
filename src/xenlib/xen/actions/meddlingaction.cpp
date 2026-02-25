@@ -107,6 +107,7 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
 
     // Update title/description from task
     this->updateTitleFromTask(taskData);
+    this->m_isRecognizedOperation = MeddlingAction::isRecognizedOperation(taskData);
 
     // Update progress
     if (taskData.contains("progress"))
@@ -196,7 +197,7 @@ QString MeddlingAction::getVmOperationTitle(const QString& operation) const
     return operationTitles.value(operation, QString());
 }
 
-bool MeddlingAction::isTaskUnwanted(const QVariantMap& taskData, const QString& ourUuid)
+bool MeddlingAction::isTaskUnwanted(const QVariantMap& taskData, const QString& ourUuid, bool showAllServerEvents)
 {
     // Check if this is our task (already have an AsyncOperation for it)
     QVariantMap otherConfig = taskData.value("other_config").toMap();
@@ -214,14 +215,58 @@ bool MeddlingAction::isTaskUnwanted(const QVariantMap& taskData, const QString& 
         return true;
     }
 
-    // Check if this is a recognized VM operation
+    // C# parity: hide unrecognized server tasks by default.
+    if (!showAllServerEvents && !MeddlingAction::isRecognizedOperation(taskData))
+        return true;
+
+    return false;
+}
+
+bool MeddlingAction::isRecognizedOperation(const QVariantMap& taskData)
+{
+    QVariantMap otherConfig = taskData.value("other_config").toMap();
     QString vmOp = otherConfig.value("vm_operation").toString();
-    if (vmOp == "unknown" || vmOp.isEmpty())
+    if (vmOp.isEmpty())
+        vmOp = otherConfig.value("vm-operation").toString();
+
+    // Match C# RecognisedVmOperations list.
+    static const QSet<QString> recognized = {
+        "clean_reboot",
+        "clean_shutdown",
+        "clone",
+        "hard_reboot",
+        "hard_shutdown",
+        "migrate_send",
+        "pool_migrate",
+        "resume",
+        "resume_on",
+        "start",
+        "start_on",
+        "suspend",
+        "checkpoint",
+        "snapshot",
+        "export",
+        "import"
+    };
+
+    if (recognized.contains(vmOp))
+        return true;
+
+    // C# fallback: infer from task.name_label when other_config doesn't provide vm_operation.
+    QString nameLabel = taskData.value("name_label").toString();
+    QString normalized = nameLabel;
+    if (normalized.startsWith("Async."))
+        normalized = normalized.mid(QStringLiteral("Async.").size());
+
+    if (normalized.startsWith("VM."))
     {
-        // Not a recognized operation - might be internal task
-        // For now, allow it (C# has more complex logic here)
-        // TODO: Add full operation recognition logic
+        QString op = normalized.mid(QStringLiteral("VM.").size()).trimmed();
+        return recognized.contains(op);
     }
+
+    // C# special cases
+    if (nameLabel == "VM import" || nameLabel.startsWith("Export of VM: "))
+        return true;
 
     return false;
 }

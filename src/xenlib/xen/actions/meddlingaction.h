@@ -31,6 +31,7 @@
 #include <xen/asyncoperation.h>
 #include <QtCore/QString>
 #include <QtCore/QDateTime>
+#include <QtCore/QSet>
 
 class XenConnection;
 
@@ -71,6 +72,14 @@ class MeddlingAction : public AsyncOperation
         }
 
         /**
+         * @brief True when this task maps to a recognized VM operation (C# IsTaskUnwanted filter parity).
+         */
+        bool IsRecognizedOperation() const
+        {
+            return m_isRecognizedOperation;
+        }
+
+        /**
          * @brief Update operation state from task record
          * @param taskData Task record as QVariantMap
          * @param taskDeleting True if task is being deleted from server
@@ -89,7 +98,7 @@ class MeddlingAction : public AsyncOperation
          * @param ourUuid Our application UUID
          * @return true if task should be ignored
          */
-        static bool isTaskUnwanted(const QVariantMap& taskData, const QString& ourUuid);
+        static bool isTaskUnwanted(const QVariantMap& taskData, const QString& ourUuid, bool showAllServerEvents = false);
 
         /**
          * @brief Determine if a task is suitable for creating a MeddlingOperation
@@ -118,6 +127,8 @@ class MeddlingAction : public AsyncOperation
         void onCancel() override;
 
     private:
+        static bool isRecognizedOperation(const QVariantMap& taskData);
+
         /**
          * @brief Extract and set operation title/description from task
          */
@@ -135,6 +146,7 @@ class MeddlingAction : public AsyncOperation
 
     private:
         bool m_isOurTask; ///< true if this was our task (task rehydration)
+        bool m_isRecognizedOperation = false;
 
         // Heuristic: 5 seconds window for aware clients to set appliesTo
         static const qint64 AWARE_CLIENT_HEURISTIC_MS = 5000;

@@ -31,7 +31,10 @@
 #include "../settingsmanager.h"
 #include "../widgets/tableclipboardutils.h"
 #include "operations/operationmanager.h"
+#include "xen/actions/meddlingactionmanager.h"
 #include "xen/network/connection.h"
+#include "xen/network/connectionsmanager.h"
+#include "xen/actions/meddlingaction.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QPushButton>
@@ -960,6 +963,10 @@ void EventsPage::onEventsContextMenuRequested(const QPoint& pos)
     QMenu menu(this->ui->eventsTable);
     QAction* copyAction = menu.addAction(tr("Copy"));
     QAction* dismissAction = menu.addAction(tr("Dismiss"));
+    menu.addSeparator();
+    QAction* showAllServerEventsAction = menu.addAction(tr("Show all server events"));
+    showAllServerEventsAction->setCheckable(true);
+    showAllServerEventsAction->setChecked(SettingsManager::instance().GetShowAllServerEvents());
     copyAction->setEnabled(!selectedRows.isEmpty());
     dismissAction->setEnabled(!completedRecords.isEmpty());
 
@@ -979,6 +986,47 @@ void EventsPage::onEventsContextMenuRequested(const QPoint& pos)
                                  ? tr("Are you sure you want to dismiss 1 selected completed event?")
                                  : tr("Are you sure you want to dismiss %1 selected completed events?").arg(completedRecords.size());
         this->dismissRecords(completedRecords, true, tr("Dismiss Selected Events"), text);
+        return;
+    }
+
+    if (chosen == showAllServerEventsAction)
+    {
+        const bool checked = showAllServerEventsAction->isChecked();
+        SettingsManager::instance().SetShowAllServerEvents(checked);
+
+        OperationManager* opManager = OperationManager::instance();
+        if (opManager && opManager->GetMeddlingActionManager())
+            opManager->GetMeddlingActionManager()->SetShowAllServerEvents(checked);
+
+        if (checked)
+        {
+            const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
+            for (XenConnection* conn : connections)
+            {
+                if (conn && conn->IsConnected() && opManager && opManager->GetMeddlingActionManager())
+                    opManager->GetMeddlingActionManager()->rehydrateTasks(conn);
+            }
+        }
+        else if (opManager)
+        {
+            QList<OperationManager::OperationRecord*> toRemove;
+            const QList<OperationManager::OperationRecord*>& records = opManager->GetRecords();
+            for (OperationManager::OperationRecord* record : records)
+            {
+                if (!record)
+                    continue;
+
+                AsyncOperation* op = record->operation.data();
+                MeddlingAction* meddling = qobject_cast<MeddlingAction*>(op);
+                if (meddling && !meddling->IsRecognizedOperation())
+                    toRemove.append(record);
+            }
+
+            if (!toRemove.isEmpty())
+                opManager->RemoveRecords(toRemove);
+        }
+
+        this->buildRowList();
     }
 }
 

@@ -76,6 +76,7 @@
     <addaction name="viewLocalStorageAction"/>
     <addaction name="separator"/>
     <addaction name="viewShowHiddenObjectsAction"/>
+    <addaction name="viewShowAllServerEventsAction"/>
     <addaction name="separator"/>
     <addaction name="xenCacheExplorerAction"/>
    </widget>
@@ -639,6 +640,14 @@
    </property>
    <property name="text">
     <string>Show Hidden Objects</string>
+   </property>
+  </action>
+  <action name="viewShowAllServerEventsAction">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show all server events</string>
    </property>
   </action>
   <action name="viewMenuSeparator1">

@@ -53,6 +53,16 @@ QString MeddlingActionManager::applicationUuid()
     return s_applicationUuid;
 }
 
+void MeddlingActionManager::SetShowAllServerEvents(bool showAll)
+{
+    this->m_showAllServerEvents = showAll;
+}
+
+bool MeddlingActionManager::GetShowAllServerEvents() const
+{
+    return this->m_showAllServerEvents;
+}
+
 void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
 {
     if (!connection)
@@ -124,7 +134,7 @@ void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const Q
     {
         qint64 serverTimeOffset = this->getServerTimeOffset(connection);
 
-        if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid))
+        if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid, this->m_showAllServerEvents))
         {
             qDebug() << "MeddlingActionManager: Unmatched task is now unwanted:" << taskRef;
             this->m_unmatchedTasks.remove(taskRef);
@@ -187,7 +197,7 @@ void MeddlingActionManager::categorizeTask(XenConnection* connection, const QStr
     qint64 serverTimeOffset = this->getServerTimeOffset(connection);
 
     // Check if task is unwanted (our own task, subtask, etc.)
-    if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid))
+    if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid, this->m_showAllServerEvents))
     {
         qDebug() << "MeddlingActionManager: Task is unwanted (our own or subtask):" << taskRef;
         return;

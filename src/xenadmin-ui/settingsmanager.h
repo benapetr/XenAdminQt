@@ -118,6 +118,8 @@ class SettingsManager : public QObject
 
         bool GetLocalSRsVisible() const;
         void SetLocalSRsVisible(bool visible);
+        bool GetShowAllServerEvents() const;
+        void SetShowAllServerEvents(bool show);
 
         int GetConsoleRefreshInterval() const;
         void SetConsoleRefreshInterval(int seconds);
@@ -286,6 +288,7 @@ class SettingsManager : public QObject
         bool m_defaultTemplatesVisible;
         bool m_userTemplatesVisible;
         bool m_localSRsVisible;
+        bool m_showAllServerEvents;
         int m_consoleRefreshInterval;
         int m_consoleFullScreenShortcutKey;
         int m_consoleDockShortcutKey;
