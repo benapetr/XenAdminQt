@@ -115,6 +115,14 @@ class MeddlingAction : public AsyncOperation
          */
         static bool isTaskSuitable(const QVariantMap& taskData, qint64 serverTimeOffset);
 
+        /**
+         * @brief Determine whether a task reached a terminal state
+         *
+         * Mirrors C# behavior by treating finished timestamp as terminal, and
+         * also handling explicit terminal status values.
+         */
+        static bool isTaskTerminal(const QVariantMap& taskData);
+
     protected:
         /**
          * @brief Run method - polls existing task instead of creating new one

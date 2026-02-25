@@ -32,6 +32,19 @@
 #include "xenlib/xen/api.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/utils/misc.h"
+
+namespace
+{
+QDateTime parseTaskDateTime(const QVariant& value)
+{
+    const QDateTime direct = value.toDateTime();
+    if (direct.isValid())
+        return direct.toUTC();
+
+    return Misc::ParseXenDateTime(value.toString());
+}
+}
 
 MeddlingAction::MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask, QObject* parent) : AsyncOperation(connection, "Task", QString(), false, parent), m_isOurTask(isOurTask)
 {
@@ -117,9 +130,10 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
     }
 
     // Update state
-    QString status = taskData.value("status").toString();
+    const QString status = taskData.value("status").toString().trimmed().toLower();
+    const bool hasFinishedTimestamp = parseTaskDateTime(taskData.value("finished")).isValid();
 
-    if (taskDeleting || status == "success")
+    if (taskDeleting || status == "success" || (hasFinishedTimestamp && status != "failure" && status != "cancelled" && status != "cancelling"))
     {
         this->SetPercentComplete(100);
         this->setState(Completed);
@@ -133,7 +147,7 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
         QString errorMsg = errors.isEmpty() ? "Unknown error" : errors.first();
         this->setError(errorMsg, errors);
         this->setState(Failed);
-    } else if (status == "cancelled")
+    } else if (status == "cancelled" || status == "cancelling")
     {
         this->setState(Cancelled);
     }
@@ -283,7 +297,7 @@ bool MeddlingAction::isTaskSuitable(const QVariantMap& taskData, qint64 serverTi
     }
 
     // Give clients time to set appliesTo (5 second window)
-    QDateTime created = taskData.value("created").toDateTime();
+    QDateTime created = parseTaskDateTime(taskData.value("created"));
     if (!created.isValid())
         return false;
 
@@ -295,4 +309,13 @@ bool MeddlingAction::isTaskSuitable(const QVariantMap& taskData, qint64 serverTi
 
     // If task is older than heuristic window, assume non-aware client
     return ageMs >= AWARE_CLIENT_HEURISTIC_MS;
+}
+
+bool MeddlingAction::isTaskTerminal(const QVariantMap& taskData)
+{
+    const QString status = taskData.value("status").toString().trimmed().toLower();
+    if (status == "success" || status == "failure" || status == "cancelled" || status == "cancelling")
+        return true;
+
+    return parseTaskDateTime(taskData.value("finished")).isValid();
 }

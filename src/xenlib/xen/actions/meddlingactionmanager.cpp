@@ -155,10 +155,10 @@ void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const Q
         {
             op->updateFromTask(taskData, false);
 
-            // Remove from tracking if completed
-            QString status = taskData.value("status").toString();
-            if (status == "success" || status == "failure" || status == "cancelled")
+            // Remove from tracking when terminal, matching C# finished/status semantics.
+            if (MeddlingAction::isTaskTerminal(taskData))
             {
+                const QString status = taskData.value("status").toString();
                 qDebug() << "MeddlingActionManager: Task completed:" << taskRef << status;
                 this->m_matchedTasks.remove(taskRef);
                 // Don't delete - OperationManager owns it
@@ -222,9 +222,11 @@ void MeddlingActionManager::categorizeTask(XenConnection* connection, const QStr
     // Create MeddlingAction
     MeddlingAction* op = new MeddlingAction(taskRef, connection, isOurTask, this);
     op->updateFromTask(taskData, false);
-
-    // Track it
-    this->m_matchedTasks[taskRef] = op;
+    if (!MeddlingAction::isTaskTerminal(taskData))
+    {
+        // Track only active tasks; terminal tasks can stay in history without polling state.
+        this->m_matchedTasks[taskRef] = op;
+    }
 
     // Notify (OperationManager will register it)
     emit meddlingOperationCreated(op);
