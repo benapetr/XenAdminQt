@@ -31,12 +31,30 @@
 #include <QDebug>
 #include "attachvirtualdiskdialog.h"
 #include "ui_attachvirtualdiskdialog.h"
+#include "../widgets/tableclipboardutils.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xencache.h"
+
+namespace
+{
+class SizeTableWidgetItem : public QTableWidgetItem
+{
+    public:
+        explicit SizeTableWidgetItem(const QString& text, qint64 sizeBytes) : QTableWidgetItem(text)
+        {
+            this->setData(Qt::UserRole, sizeBytes);
+        }
+
+        bool operator<(const QTableWidgetItem& other) const override
+        {
+            return this->data(Qt::UserRole).toLongLong() < other.data(Qt::UserRole).toLongLong();
+        }
+};
+}
 
 AttachVirtualDiskDialog::AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget* parent) : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_vm(vm)
 {
@@ -45,6 +63,8 @@ AttachVirtualDiskDialog::AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget*
     // Set table properties
     this->ui->vdiTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->vdiTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->vdiTable->setSortingEnabled(true);
+    this->ui->vdiTable->horizontalHeader()->setSortIndicatorShown(true);
 
     // Connect signals
     connect(this->ui->srComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AttachVirtualDiskDialog::onSRFilterChanged);
@@ -102,10 +122,17 @@ void AttachVirtualDiskDialog::populateSRFilter()
 
 void AttachVirtualDiskDialog::populateVDITable()
 {
-    this->ui->vdiTable->setRowCount(0);
-
     if (!this->m_vm)
+    {
+        this->ui->vdiTable->setRowCount(0);
         return;
+    }
+
+    const QString previouslySelectedVdiRef = this->getSelectedVDIRef();
+    const TableClipboardUtils::SortState sortState = TableClipboardUtils::CaptureSortState(this->ui->vdiTable);
+
+    this->ui->vdiTable->setSortingEnabled(false);
+    this->ui->vdiTable->setRowCount(0);
 
     QString selectedSR = this->ui->srComboBox->currentData().toString();
     XenCache* cache = this->m_vm->GetCache();
@@ -205,8 +232,23 @@ void AttachVirtualDiskDialog::populateVDITable()
         this->ui->vdiTable->setItem(row, 0, nameItem);
 
         this->ui->vdiTable->setItem(row, 1, new QTableWidgetItem(description));
-        this->ui->vdiTable->setItem(row, 2, new QTableWidgetItem(size));
+        this->ui->vdiTable->setItem(row, 2, new SizeTableWidgetItem(size, virtualSize));
         this->ui->vdiTable->setItem(row, 3, new QTableWidgetItem(srName));
+    }
+
+    TableClipboardUtils::RestoreSortState(this->ui->vdiTable, sortState, 0, Qt::AscendingOrder);
+
+    if (!previouslySelectedVdiRef.isEmpty())
+    {
+        for (int row = 0; row < this->ui->vdiTable->rowCount(); ++row)
+        {
+            QTableWidgetItem* nameItem = this->ui->vdiTable->item(row, 0);
+            if (nameItem && nameItem->data(Qt::UserRole).toString() == previouslySelectedVdiRef)
+            {
+                this->ui->vdiTable->selectRow(row);
+                break;
+            }
+        }
     }
 
     // Resize columns to content
