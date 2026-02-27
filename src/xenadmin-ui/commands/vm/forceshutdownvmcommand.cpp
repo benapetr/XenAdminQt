@@ -74,7 +74,7 @@ bool ForceShutdownVMCommand::CanRun() const
 
 void ForceShutdownVMCommand::Run()
 {
-    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    auto runForVm = [](const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return;

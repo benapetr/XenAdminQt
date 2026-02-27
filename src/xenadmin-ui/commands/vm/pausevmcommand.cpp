@@ -68,7 +68,7 @@ bool PauseVMCommand::CanRun() const
 
 void PauseVMCommand::Run()
 {
-    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    auto runForVm = [](const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return;

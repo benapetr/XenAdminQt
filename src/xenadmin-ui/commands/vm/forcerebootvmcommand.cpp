@@ -107,7 +107,7 @@ bool ForceRebootVMCommand::CanRun() const
 
 void ForceRebootVMCommand::Run()
 {
-    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    auto runForVm = [](const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return;

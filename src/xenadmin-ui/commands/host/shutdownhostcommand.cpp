@@ -112,7 +112,8 @@ void ShutdownHostCommand::Run()
             }
 
             const QString hostName = host->GetName();
-            auto ntolPrompt = [this](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
+            auto ntolPrompt = [](QSharedPointer<Pool> pool, qint64 current, qint64 target)
+            {
                 const QString poolName = pool ? pool->GetName() : QString();
                 const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
                 const QString text = QString("HA is enabled for %1.\n\n"
