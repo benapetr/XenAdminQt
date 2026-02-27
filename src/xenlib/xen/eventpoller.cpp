@@ -36,15 +36,6 @@
 
 using namespace XenAPI;
 
-namespace
-{
-bool taskFlowDebugEnabled()
-{
-    // TODO(petr): remove temporary always-on task flow diagnostics after Linux stuck-task issue is resolved.
-    return true;
-}
-}
-
 class EventPoller::Private
 {
     public:
@@ -355,21 +346,6 @@ void EventPoller::pollEvents()
 
                 if (eventClass.toLower() == "task" && !opaqueRef.isEmpty())
                 {
-                    if (taskFlowDebugEnabled())
-                    {
-                        const QVariant snapshotVar = eventData.value("snapshot");
-                        const QVariantMap snapshot = snapshotVar.toMap();
-                        qDebug().noquote()
-                            << QString("[TaskFlow][EventPoller] op=%1 ref=%2 snapshotValid=%3 snapshotMap=%4 status=%5 finished=%6 created=%7")
-                                   .arg(operation,
-                                        opaqueRef,
-                                        snapshotVar.isValid() ? "true" : "false",
-                                        snapshot.isEmpty() ? "false" : "true",
-                                        snapshot.value("status").toString(),
-                                        snapshot.value("finished").toString(),
-                                        snapshot.value("created").toString());
-                    }
-
                     if (operation == "add")
                     {
                         QVariantMap snapshot = eventData.value("snapshot").toMap();

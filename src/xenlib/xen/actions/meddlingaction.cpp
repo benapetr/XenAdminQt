@@ -36,12 +36,6 @@
 
 namespace
 {
-bool taskFlowDebugEnabled()
-{
-    // TODO(petr): remove temporary always-on task flow diagnostics after Linux stuck-task issue is resolved.
-    return true;
-}
-
 QDateTime parseTaskDateTime(const QVariant& value)
 {
     const QDateTime direct = value.toDateTime();
@@ -139,18 +133,6 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
     const QString status = taskData.value("status").toString().trimmed().toLower();
     const QDateTime finished = parseTaskDateTime(taskData.value("finished"));
     const bool hasFinishedTimestamp = finished.isValid();
-
-    if (taskFlowDebugEnabled())
-    {
-        qDebug().noquote()
-            << QString("[TaskFlow][Action] ref=%1 deleting=%2 status=%3 finishedRaw=%4 finishedValid=%5 progress=%6")
-                   .arg(this->GetRelatedTaskRef(),
-                        taskDeleting ? "true" : "false",
-                        status,
-                        taskData.value("finished").toString(),
-                        hasFinishedTimestamp ? "true" : "false",
-                        taskData.value("progress").toString());
-    }
 
     if (taskDeleting || status == "success" || (hasFinishedTimestamp && status != "failure" && status != "cancelled" && status != "cancelling"))
     {
@@ -318,15 +300,7 @@ bool MeddlingAction::isTaskSuitable(const QVariantMap& taskData, qint64 serverTi
     // Give clients time to set appliesTo (5 second window)
     QDateTime created = parseTaskDateTime(taskData.value("created"));
     if (!created.isValid())
-    {
-        if (taskFlowDebugEnabled())
-        {
-            qDebug().noquote()
-                << QString("[TaskFlow][Action] suitable=false reason=invalid-created raw=%1")
-                       .arg(taskData.value("created").toString());
-        }
         return false;
-    }
 
     // Apply server time offset
     QDateTime createdLocal = created.addMSecs(serverTimeOffset);
@@ -335,17 +309,7 @@ bool MeddlingAction::isTaskSuitable(const QVariantMap& taskData, qint64 serverTi
     qint64 ageMs = createdLocal.msecsTo(now);
 
     // If task is older than heuristic window, assume non-aware client
-    const bool suitable = ageMs >= AWARE_CLIENT_HEURISTIC_MS;
-    if (taskFlowDebugEnabled())
-    {
-        qDebug().noquote()
-            << QString("[TaskFlow][Action] suitable=%1 createdRaw=%2 ageMs=%3 heuristicMs=%4")
-                   .arg(suitable ? "true" : "false",
-                        taskData.value("created").toString(),
-                        QString::number(ageMs),
-                        QString::number(AWARE_CLIENT_HEURISTIC_MS));
-    }
-    return suitable;
+    return ageMs >= AWARE_CLIENT_HEURISTIC_MS;
 }
 
 bool MeddlingAction::isTaskTerminal(const QVariantMap& taskData)
