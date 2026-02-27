@@ -53,7 +53,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent), ui(new Ui::AboutDia
                            "<h3>License Information</h3>"
                            "%3"
                            "<h3>Copyright</h3>"
-                           "<p>Copyright © 2025-2026 XenAdmin Qt Project Contributors</p>"
+                           "<p>Copyright © 2025-2026 Petr Bena and other XenAdmin Qt Project Contributors</p>"
                            "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
                            "<h3>License</h3>"
                            "<p>This software is open source and distributed under the BSD license.</p>")
