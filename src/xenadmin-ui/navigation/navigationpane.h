@@ -199,4 +199,7 @@ class NavigationPane : public QWidget
         NotificationButtonSmall* m_buttonNotifySmall;
 };
 
+Q_DECLARE_METATYPE(NavigationPane::NavigationMode)
+Q_DECLARE_METATYPE(NavigationPane::NotificationsSubMode)
+
 #endif // NAVIGATIONPANE_H

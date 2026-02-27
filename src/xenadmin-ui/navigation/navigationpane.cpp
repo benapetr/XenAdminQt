@@ -34,9 +34,14 @@
 #include <QVBoxLayout>
 #include <QResizeEvent>
 #include <QDebug>
+#include <QMetaType>
 
 NavigationPane::NavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::NavigationPane), m_currentMode(Infrastructure), m_lastNotificationsMode(Alerts), m_buttonInfraBig(nullptr), m_buttonObjectsBig(nullptr), m_buttonOrganizationBig(nullptr), m_buttonSearchesBig(nullptr), m_buttonNotifyBig(nullptr), m_buttonInfraSmall(nullptr), m_buttonObjectsSmall(nullptr), m_buttonOrganizationSmall(nullptr), m_buttonSearchesSmall(nullptr), m_buttonNotifySmall(nullptr)
 {
+    // Required for queued delivery of navigation enums on Qt5.
+    qRegisterMetaType<NavigationPane::NavigationMode>("NavigationPane::NavigationMode");
+    qRegisterMetaType<NavigationPane::NotificationsSubMode>("NavigationPane::NotificationsSubMode");
+
     this->ui->setupUi(this);
 
     // Create NavigationView and NotificationsView

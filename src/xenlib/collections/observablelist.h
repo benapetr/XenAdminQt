@@ -70,6 +70,8 @@ protected:
     }
 };
 
+Q_DECLARE_METATYPE(ObservableListBase::CollectionChangeAction)
+
 template <typename T>
 class XENLIB_EXPORT ObservableList : public ObservableListBase
 {

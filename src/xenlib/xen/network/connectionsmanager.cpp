@@ -32,6 +32,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QDateTime>
+#include <QtCore/QMetaType>
 
 using namespace Xen;
 
@@ -61,6 +62,9 @@ ConnectionsManager* ConnectionsManager::instance()
 ConnectionsManager::ConnectionsManager(QObject* parent)
     : QObject(parent), m_connections(new ObservableList<XenConnection*>(this)), m_monitoringTimer(new QTimer(this)), m_isMonitoring(false), m_autoReconnectionEnabled(false)
 {
+    // Required for queued cross-thread delivery of ObservableList collectionChanged on Qt5.
+    qRegisterMetaType<ObservableListBase::CollectionChangeAction>("ObservableListBase::CollectionChangeAction");
+
     // Connect to collection events
     connect(this->m_connections, &ObservableListBase::collectionChanged,
             this, &ConnectionsManager::connectionsChanged);
