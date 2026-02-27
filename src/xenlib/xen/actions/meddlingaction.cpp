@@ -131,7 +131,8 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
 
     // Update state
     const QString status = taskData.value("status").toString().trimmed().toLower();
-    const bool hasFinishedTimestamp = parseTaskDateTime(taskData.value("finished")).isValid();
+    const QDateTime finished = parseTaskDateTime(taskData.value("finished"));
+    const bool hasFinishedTimestamp = finished.isValid();
 
     if (taskDeleting || status == "success" || (hasFinishedTimestamp && status != "failure" && status != "cancelled" && status != "cancelling"))
     {
