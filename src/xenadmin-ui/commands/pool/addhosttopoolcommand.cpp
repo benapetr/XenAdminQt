@@ -30,9 +30,25 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/pooljoinrules.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/actions/pool/addhosttopoolaction.h"
 #include "xenlib/xencache.h"
+#include "../../dialogs/warningdialogs/warningdialog.h"
 #include <QMessageBox>
+
+namespace
+{
+QString buildHostNameList(const QList<QSharedPointer<Host>>& hosts)
+{
+    QStringList names;
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (host && host->IsValid())
+            names.append(host->GetName());
+    }
+    return names.join("\n");
+}
+}
 
 AddHostToPoolCommand::AddHostToPoolCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QSharedPointer<Pool> pool, bool confirm)
     : Command(mainWindow), hosts_(hosts), m_pool(pool), confirm_(confirm)
@@ -125,7 +141,8 @@ void AddHostToPoolCommand::Run()
     if (!this->getPermissionForAdConfig(coordinator))
         return;
     
-    // TODO: Get permission for CPU feature levelling when HelpersGUI::GetPermissionForCpuFeatureLevelling is ported
+    if (!this->getPermissionForCpuFeatureLevelling(this->m_pool))
+        return;
     
     // Select pool in tree
     MainWindow::instance()->SelectObjectInTree("pool", this->m_pool->OpaqueRef());
@@ -208,28 +225,111 @@ bool AddHostToPoolCommand::showConfirmationDialog()
 
 bool AddHostToPoolCommand::checkSuppPacksAndWarn()
 {
-    // TODO: Implement PoolJoinRules::HomogeneousSuppPacksDiffering when ported
-    // For now, return true (no warning)
-    return true;
+    const QList<QString> badSuppPacks = PoolJoinRules::HomogeneousSuppPacksDiffering(
+        this->hosts_, qSharedPointerCast<XenObject>(this->m_pool));
+    if (badSuppPacks.isEmpty())
+        return true;
+
+    const QString message = tr("Some supplemental packs differ across hosts:\n%1")
+        .arg(badSuppPacks.join("\n"));
+    WarningDialog dialog(message, tr("Supplemental Packs"),
+                         { {tr("Proceed"), WarningDialog::Result::Yes},
+                           {tr("Cancel"), WarningDialog::Result::Cancel} },
+                         MainWindow::instance());
+    dialog.exec();
+    return dialog.GetResult() == WarningDialog::Result::Yes;
 }
 
 bool AddHostToPoolCommand::getPermissionForLicensing(QSharedPointer<Host> coordinator)
 {
-    // TODO: Implement PoolJoinRules::FreeHostPaidCoordinator check when ported
-    // For now, return true (no licensing changes needed)
-    return true;
+    QList<QSharedPointer<Host>> affectedHosts;
+    for (const QSharedPointer<Host>& host : this->hosts_)
+    {
+        if (PoolJoinRules::FreeHostPaidCoordinator(host, coordinator, false))
+            affectedHosts.append(host);
+    }
+
+    if (affectedHosts.isEmpty())
+        return true;
+
+    const QString message = tr("The following hosts will be relicensed to match the coordinator:\n%1")
+        .arg(buildHostNameList(affectedHosts));
+    return WarningDialog::ShowYesNo(message, tr("License Warning"), MainWindow::instance()) == WarningDialog::Result::Yes;
 }
 
 bool AddHostToPoolCommand::getPermissionForCpuMasking(QSharedPointer<Host> coordinator)
 {
-    // TODO: Implement PoolJoinRules::CompatibleCPUs check when ported
-    // For now, return true (CPUs are compatible)
-    return true;
+    QList<QSharedPointer<Host>> affectedHosts;
+    for (const QSharedPointer<Host>& host : this->hosts_)
+    {
+        if (!PoolJoinRules::CompatibleCPUs(host, coordinator))
+            affectedHosts.append(host);
+    }
+
+    if (affectedHosts.isEmpty())
+        return true;
+
+    const QString message = tr("CPU masking will be required for:\n%1")
+        .arg(buildHostNameList(affectedHosts));
+    return WarningDialog::ShowYesNo(message, tr("CPU Masking"), MainWindow::instance()) == WarningDialog::Result::Yes;
 }
 
 bool AddHostToPoolCommand::getPermissionForAdConfig(QSharedPointer<Host> coordinator)
 {
-    // TODO: Implement PoolJoinRules::CompatibleAdConfig check when ported
-    // For now, return true (AD configs are compatible)
+    QList<QSharedPointer<Host>> affectedHosts;
+    for (const QSharedPointer<Host>& host : this->hosts_)
+    {
+        if (!PoolJoinRules::CompatibleAdConfig(host, coordinator, false))
+            affectedHosts.append(host);
+    }
+
+    if (affectedHosts.isEmpty())
+        return true;
+
+    const QString message = tr("Active Directory configuration will be updated for:\n%1")
+        .arg(buildHostNameList(affectedHosts));
+    return WarningDialog::ShowYesNo(message, tr("Active Directory"), MainWindow::instance()) == WarningDialog::Result::Yes;
+}
+
+bool AddHostToPoolCommand::getPermissionForCpuFeatureLevelling(QSharedPointer<Pool> coordinatorPool)
+{
+    if (!coordinatorPool)
+        return true;
+
+    QList<QSharedPointer<Host>> hostsWithFewerFeatures;
+    QList<QSharedPointer<Host>> hostsWithMoreFeatures;
+
+    for (const QSharedPointer<Host>& host : this->hosts_)
+    {
+        if (!host || !host->IsValid())
+            continue;
+
+        if (PoolJoinRules::HostHasFewerFeatures(host, coordinatorPool))
+            hostsWithFewerFeatures.append(host);
+        if (PoolJoinRules::HostHasMoreFeatures(host, coordinatorPool))
+            hostsWithMoreFeatures.append(host);
+    }
+
+    if (!hostsWithFewerFeatures.isEmpty() && !hostsWithMoreFeatures.isEmpty())
+    {
+        const QString message = tr("CPU feature levelling will down-level both pool and host CPUs for:\n%1")
+            .arg(buildHostNameList(hostsWithFewerFeatures + hostsWithMoreFeatures));
+        return WarningDialog::ShowYesNo(message, tr("CPU Feature Levelling"), MainWindow::instance()) == WarningDialog::Result::Yes;
+    }
+
+    if (!hostsWithFewerFeatures.isEmpty())
+    {
+        const QString message = tr("CPU feature levelling will down-level the pool CPUs for:\n%1")
+            .arg(buildHostNameList(hostsWithFewerFeatures));
+        return WarningDialog::ShowYesNo(message, tr("CPU Feature Levelling"), MainWindow::instance()) == WarningDialog::Result::Yes;
+    }
+
+    if (!hostsWithMoreFeatures.isEmpty())
+    {
+        const QString message = tr("CPU feature levelling will down-level host CPUs for:\n%1")
+            .arg(buildHostNameList(hostsWithMoreFeatures));
+        return WarningDialog::ShowYesNo(message, tr("CPU Feature Levelling"), MainWindow::instance()) == WarningDialog::Result::Yes;
+    }
+
     return true;
 }

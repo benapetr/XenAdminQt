@@ -103,6 +103,13 @@ class AddHostToPoolCommand : public Command
         * @return true if user granted permission, false if cancelled
         */
         bool getPermissionForAdConfig(QSharedPointer<Host> coordinator);
+
+        /**
+        * @brief Get permission for CPU feature levelling changes
+        * @param coordinatorPool Pool used for CPU feature comparison
+        * @return true if user granted permission, false if cancelled
+        */
+        bool getPermissionForCpuFeatureLevelling(QSharedPointer<Pool> coordinatorPool);
 };
 
 #endif // ADDHOSTTOPOOLCOMMAND_H

@@ -70,7 +70,8 @@ bool UnpauseVMCommand::CanRun() const
 
 void UnpauseVMCommand::Run()
 {
-    auto runForVm = [](const QSharedPointer<VM>& vm) {
+    auto runForVm = [](const QSharedPointer<VM>& vm)
+    {
         if (!vm)
             return;
 
