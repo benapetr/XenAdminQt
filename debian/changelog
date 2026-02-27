@@ -1,3 +1,11 @@
+xenadmin-qt (0.0.5) unstable; urgency=medium
+
+  * Many smaller stability fixes
+  * Fixed missing icons and overhaul of tree view
+  * GPU support
+
+ -- Petr Bena <petr@bena.rocks>  Fri, 27 Feb 2026 12:00:00 +0100
+
 xenadmin-qt (0.0.4) unstable; urgency=medium
 
   * Refine networking and storage command handling.

@@ -30,7 +30,7 @@
 
 #include <QtGlobal>
 
-#define XENADMIN_VERSION "0.0.4"
+#define XENADMIN_VERSION "0.0.5"
 
 // Shown on places like tree view root
 #define XENADMIN_BRANDING_NAME "XenAdmin"
