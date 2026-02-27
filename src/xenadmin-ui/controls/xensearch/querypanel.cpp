@@ -444,7 +444,9 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
         if (!host)
             return "-";
 
-        int cpuCount = host->GetData().value("cpu_count", 0).toInt();
+        int cpuCount = host->GetCPUCount();
+        if (cpuCount <= 0)
+            cpuCount = host->GetHostCpuCount();
         if (cpuCount == 0)
             return "-";
 
