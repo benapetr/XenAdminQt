@@ -276,4 +276,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         bool m_ownsSession = false;
 };
 
+Q_DECLARE_METATYPE(AsyncOperation::OperationState)
+
 #endif // ASYNCOPERATION_H

@@ -28,6 +28,7 @@
 #include <QDebug>
 #include <QCoreApplication>
 #include <QUuid>
+#include <QMetaType>
 #include <utility>
 #include "operationmanager.h"
 #include "xenlib/xen/actions/meddlingaction.h"
@@ -37,6 +38,9 @@ OperationManager* OperationManager::s_instance = nullptr;
 
 OperationManager::OperationManager(QObject* parent) : QObject(parent), m_rehydrationManager(new MeddlingActionManager(this))
 {
+    // Required for queued cross-thread delivery of AsyncOperation::stateChanged on Qt5.
+    qRegisterMetaType<AsyncOperation::OperationState>("AsyncOperation::OperationState");
+
     // Connect rehydration manager's meddlingOperationCreated signal
     connect(this->m_rehydrationManager, &MeddlingActionManager::meddlingOperationCreated, this, &OperationManager::RegisterOperation);
 }
