@@ -34,6 +34,15 @@
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/api.h"
 
+namespace
+{
+bool taskFlowDebugEnabled()
+{
+    // TODO(petr): remove temporary always-on task flow diagnostics after Linux stuck-task issue is resolved.
+    return true;
+}
+}
+
 // Initialize static member
 QString MeddlingActionManager::s_applicationUuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
@@ -126,8 +135,25 @@ void MeddlingActionManager::handleTaskAdded(XenConnection* connection, const QSt
 
 void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData)
 {
+    if (taskFlowDebugEnabled())
+    {
+        qDebug().noquote()
+            << QString("[TaskFlow][Manager] update ref=%1 empty=%2 status=%3 finished=%4 created=%5 matched=%6 unmatched=%7")
+                   .arg(taskRef,
+                        taskData.isEmpty() ? "true" : "false",
+                        taskData.value("status").toString(),
+                        taskData.value("finished").toString(),
+                        taskData.value("created").toString(),
+                        this->m_matchedTasks.contains(taskRef) ? "true" : "false",
+                        this->m_unmatchedTasks.contains(taskRef) ? "true" : "false");
+    }
+
     if (taskRef.isEmpty() || taskData.isEmpty())
+    {
+        if (taskFlowDebugEnabled())
+            qDebug().noquote() << QString("[TaskFlow][Manager] update ignored ref=%1 reason=empty").arg(taskRef);
         return;
+    }
 
     // Check if this is an unmatched task that's now suitable
     if (this->m_unmatchedTasks.contains(taskRef))
@@ -195,6 +221,16 @@ void MeddlingActionManager::handleTaskRemoved(XenConnection* connection, const Q
 void MeddlingActionManager::categorizeTask(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData)
 {
     qint64 serverTimeOffset = this->getServerTimeOffset(connection);
+
+    if (taskFlowDebugEnabled())
+    {
+        qDebug().noquote()
+            << QString("[TaskFlow][Manager] categorize ref=%1 status=%2 finished=%3 created=%4")
+                   .arg(taskRef,
+                        taskData.value("status").toString(),
+                        taskData.value("finished").toString(),
+                        taskData.value("created").toString());
+    }
 
     // Check if task is unwanted (our own task, subtask, etc.)
     if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid, this->m_showAllServerEvents))
