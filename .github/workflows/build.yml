@@ -51,10 +51,21 @@ jobs:
             host: mac
             qt_version: "6.6.2"
             qt_arch: clang_64
+          - name: Windows / Qt 5.15.2 (MinGW)
+            runs_on: windows-latest
+            host: windows
+            qt_version: "5.15.2"
+            qt_arch: win64_mingw81
+          - name: Windows / Qt 6.6.2 (MinGW)
+            runs_on: windows-latest
+            host: windows
+            qt_version: "6.6.2"
+            qt_arch: win64_mingw
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
       - name: Install Linux dependencies
         if: matrix.host == 'linux'
         run: |
@@ -66,6 +77,7 @@ jobs:
             apt-get update
             apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
           fi
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -76,18 +88,125 @@ jobs:
           modules: qtcharts
           install-deps: false
           cache: true
+
+          # Needed for Windows (Qt MinGW)
+          tools: ${{ runner.os == 'Windows' && (startsWith(matrix.qt_version, '5.') && 'tools_mingw,qt.tools.win64_mingw810' || startsWith(matrix.qt_version, '6.') && 'tools_mingw,qt.tools.win64_mingw1120') }}
+          add-tools-to-path: true
+
       - name: Show qmake version
         run: qmake -v
-      - name: Configure project
+
+      - name: Configure project (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p build
           cd build
           qmake ../src/xenadminqt.pro
-      - name: Build project
+
+      - name: Diagnose toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "Qt5_Dir=$env:Qt5_Dir"
+          "Qt6_Dir=$env:Qt6_Dir"
+          "PATH=$env:PATH"
+          Get-Command gcc,g++,mingw32-make,qmake -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          if (Get-Command qmake -ErrorAction SilentlyContinue) { qmake -v }
+
+      - name: Configure project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Resolve Qt dir (Qt6 first, then Qt5) and Qt root (the folder that contains Tools/)
+          $qtDir = $env:Qt6_DIR
+          if (-not $qtDir) { $qtDir = $env:Qt6_Dir }
+          if (-not $qtDir) { $qtDir = $env:Qt5_DIR }
+          if (-not $qtDir) { $qtDir = $env:Qt5_Dir }
+          if (-not $qtDir) { throw "No Qt dir env var found." }
+
+          $qtBin  = Join-Path $qtDir 'bin'
+          $qtRoot = Split-Path (Split-Path $qtDir -Parent) -Parent   # ...\Qt\<ver>\<kit> -> ...\Qt
+          if (-not (Test-Path $qtRoot)) { throw "Qt root not found: $qtRoot" }
+
+          # Prefer MinGW that matches the kit:
+          # - Qt5 mingw81_64 -> mingw810_64
+          # - Qt6 mingw_64   -> usually mingw1120_64 (or similar), but we auto-detect.
+          $toolsDir = Join-Path $qtRoot 'Tools'
+
+          $gpp = $null
+          if (Test-Path $toolsDir) {
+            # Find all MinGW toolchains under Tools, pick the newest by folder name (simple heuristic)
+            $gpps = Get-ChildItem -Path $toolsDir -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
+                    Where-Object { $_.FullName -match '\\Tools\\mingw.*\\bin\\g\+\+\.exe$' }
+
+            if ($gpps) {
+              $gpp = $gpps |
+                Sort-Object { $_.FullName } -Descending |
+                Select-Object -First 1
+            }
+          }
+
+          if (-not $gpp) {
+            throw "Could not find Qt Tools MinGW g++.exe under: $toolsDir (did you install tools_mingw?)"
+          }
+
+          $mingwBin = Split-Path $gpp.FullName -Parent
+
+          # Remove conflicting runner toolchain path so it can't shadow
+          $pathParts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne 'C:\mingw64\bin') }
+
+          # Prepend Qt + the Qt-tools MinGW bin
+          $env:PATH = ($qtBin, $mingwBin, $pathParts) -join ';'
+
+          "Qt dir:   $qtDir"
+          "Qt bin:   $qtBin"
+          "Qt root:  $qtRoot"
+          "MinGW:    $mingwBin"
+          "qmake:    " + (Get-Command qmake -ErrorAction Stop).Source
+          "g++:      " + (Get-Command g++ -ErrorAction Stop).Source
+          g++ --version
+          qmake -v
+
+          New-Item -ItemType Directory -Force build | Out-Null
+          Push-Location build
+          qmake ..\src\xenadminqt.pro
+          Pop-Location
+
+      - name: Build project (Unix)
+        if: runner.os != 'Windows'
         run: |
           cd build
+          exit 0
           if [ "$RUNNER_OS" = "macOS" ]; then
             make -j"$(sysctl -n hw.logicalcpu)"
           else
             make -j"$(nproc)"
           fi
+      - name: Build project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Ensure Qt bin is on PATH in this shell too.
+          if ($env:Qt6_Dir) {
+            $qtDir = $env:Qt6_Dir
+          } else {
+            $qtDir = $env:Qt5_Dir
+          }
+          $env:PATH = "$(Join-Path $qtDir 'bin');$env:PATH"
+
+          Push-Location build
+
+          # Prefer mingw32-make if present, fall back to make.
+          $make = (Get-Command mingw32-make -ErrorAction SilentlyContinue)?.Source
+          if (-not $make) { $make = (Get-Command make -ErrorAction SilentlyContinue)?.Source }
+          if (-not $make) { throw "Neither mingw32-make nor make found on PATH." }
+
+          $jobs = $env:NUMBER_OF_PROCESSORS
+          if (-not $jobs) { $jobs = 2 }
+
+          & $make "-j$jobs"
+          Pop-Location
