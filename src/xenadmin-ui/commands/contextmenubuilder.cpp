@@ -95,6 +95,7 @@
 #include "storage/vdieditsizelocationcommand.h"
 #include "template/deletetemplatecommand.h"
 #include "template/exporttemplatecommand.h"
+#include "template/copytemplatecommand.h"
 #include "network/networkpropertiescommand.h"
 #include "folder/newfoldercommand.h"
 #include "folder/deletefoldercommand.h"
@@ -904,6 +905,9 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
     // Template operations
     ExportTemplateCommand* exportCmd = new ExportTemplateCommand(this->m_mainWindow, this);
     this->addCommand(menu, exportCmd);
+
+    CopyTemplateCommand* copyCmd = new CopyTemplateCommand(this->m_mainWindow, this);
+    this->addCommand(menu, copyCmd);
 
     this->addSeparator(menu);
 

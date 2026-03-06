@@ -27,6 +27,9 @@
 
 #include "copytemplatecommand.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/crosspoolmigratewizard.h"
+#include "../../dialogs/copyvmdialog.h"
+#include "../vm/crosspoolmigratecommand.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
@@ -75,14 +78,15 @@ void CopyTemplateCommand::Run()
         return;
     }
 
-    // TODO: Implement template copy
-    // if (canLaunchMigrateWizard(templateData)) {
-    //     // Launch CrossPoolMigrateWizard
-    // } else {
-    //     // Launch CopyVMDialog for local copy
-    // }
+    if (this->canLaunchMigrateWizard(templateVm))
+    {
+        CrossPoolMigrateWizard wizard(MainWindow::instance(), templateVm, CrossPoolMigrateWizard::WizardMode::Copy);
+        wizard.exec();
+        return;
+    }
 
-    QMessageBox::information(MainWindow::instance(), "Not Implemented", "Template copy will be implemented using CopyVMDialog or CrossPoolMigrateWizard.");
+    CopyVMDialog dialog(templateVm, MainWindow::instance());
+    dialog.exec();
 }
 
 QString CopyTemplateCommand::MenuText() const
@@ -150,11 +154,8 @@ bool CopyTemplateCommand::canLaunchMigrateWizard(const QSharedPointer<VM>& templ
     // 1. Not a default template
     // 2. CrossPoolMigrateCommand can run
 
-    if (templateVm->IsDefaultTemplate())
+    if (!templateVm || templateVm->IsDefaultTemplate())
         return false;
 
-    // TODO: Implement CrossPoolMigrateCommand.CanRun check
-    // This would check if template can be migrated to another pool
-
-    return false; // Disabled for now
+    return CrossPoolMigrateCommand::CanRun(templateVm);
 }

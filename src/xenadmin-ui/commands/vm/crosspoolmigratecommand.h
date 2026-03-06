@@ -31,6 +31,8 @@
 #include "vmcommand.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
 
+class Host;
+
 /**
  * @brief Cross-pool migrate command
  *
@@ -50,6 +52,11 @@ class CrossPoolMigrateCommand : public VMCommand
         void Run() override;
         QString MenuText() const override;
         QIcon GetIcon() const override;
+
+        // C# parity helper: evaluate cross-pool migrate eligibility for a specific VM.
+        static bool CanRun(const QSharedPointer<VM>& vm,
+                           const QSharedPointer<Host>& preSelectedHost = QSharedPointer<Host>(),
+                           QString* failureReason = nullptr);
 
     private:
         CrossPoolMigrateWizard::WizardMode m_mode;

@@ -71,28 +71,62 @@ bool CrossPoolMigrateCommand::CanRun() const
 
     for (const QSharedPointer<VM>& vmItem : vms)
     {
-        if (!vmItem)
+        if (!CrossPoolMigrateCommand::CanRun(vmItem))
             return false;
+    }
 
-        if (!vmItem->GetAllowedOperations().contains("migrate_send"))
-            return false;
+    return true;
+}
 
-        const QList<QSharedPointer<VBD>> vbds = vmItem->GetVBDs();
-        for (const QSharedPointer<VBD>& vbd : vbds)
+bool CrossPoolMigrateCommand::CanRun(const QSharedPointer<VM>& vm,
+                                     const QSharedPointer<Host>& preSelectedHost,
+                                     QString* failureReason)
+{
+    Q_UNUSED(preSelectedHost);
+
+    if (!vm)
+    {
+        if (failureReason)
+            *failureReason = QObject::tr("No VM selected.");
+        return false;
+    }
+
+    XenConnection* connection = vm->GetConnection();
+    if (!connection || !connection->IsConnected())
+    {
+        if (failureReason)
+            *failureReason = QObject::tr("Not connected to XenServer.");
+        return false;
+    }
+
+    if (!vm->GetAllowedOperations().contains(QStringLiteral("migrate_send")))
+    {
+        if (failureReason)
+            *failureReason = QObject::tr("Migration is not allowed for this VM.");
+        return false;
+    }
+
+    const QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
+    {
+        if (!vbd)
+            continue;
+
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi)
+            continue;
+
+        QSharedPointer<SR> srObj = vdi->GetSR();
+        if (srObj && srObj->HBALunPerVDI())
         {
-            if (!vbd)
-                continue;
-
-            QSharedPointer<VDI> vdi = vbd->GetVDI();
-            if (!vdi)
-                continue;
-
-            QSharedPointer<SR> srObj = vdi->GetSR();
-            if (srObj && srObj->HBALunPerVDI())
-                return false;
+            if (failureReason)
+                *failureReason = QObject::tr("Migration is not supported for HBA LUN-per-VDI storage.");
+            return false;
         }
     }
 
+    if (failureReason)
+        failureReason->clear();
     return true;
 }
 
