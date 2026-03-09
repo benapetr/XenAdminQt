@@ -36,6 +36,16 @@ Authentication and session lifecycle management. The session ID must be the firs
 | `session.change_password` | Change password for the session user |
 | `session.slave_local_login_with_password` | Login to pool slave (deprecated) |
 
+### Additional Endpoints Present in `xen-api`
+
+| Function | Purpose |
+|----------|---------|
+| `session.slave_login` | Authenticate slave host to pool master using pool secret |
+| `session.slave_local_login` | Emergency local slave login with pool secret |
+| `session.create_from_db_file` | Create session from a database dump file |
+| `session.local_logout` | Log out a local session |
+| `session.logout_subject_identifier` | Log out all sessions for a specific subject identifier |
+
 **Example**:
 ```json
 {
@@ -152,6 +162,46 @@ Virtual machine management and operations.
 
 Most operations have `async_*` versions that return a Task OpaqueRef instead of blocking: `VM.async_start`, `VM.async_shutdown`, `VM.async_clone`, etc.
 
+### Additional Endpoints Present in `xen-api`
+
+| Function | Purpose |
+|----------|---------|
+| `VM.set_memory_dynamic_range` | Set dynamic memory min/max in one call |
+| `VM.set_memory_static_range` | Set static memory min/max in one call |
+| `VM.set_memory_limits` | Set static/dynamic limits together |
+| `VM.set_memory` | Set VM memory (legacy combined setter) |
+| `VM.set_memory_target_live` | Live-adjust memory target for running VM |
+| `VM.wait_memory_target_live` | Wait for live memory target convergence |
+| `VM.set_VCPUs_number_live` | Live-adjust active vCPU count |
+| `VM.set_shadow_multiplier_live` | Live-adjust HVM shadow multiplier |
+| `VM.add_to_VCPUs_params_live` | Live-update a key in VCPU params |
+| `VM.call_plugin` | Invoke a plugin in VM context |
+| `VM.call_host_plugin` | Invoke a plugin on a specified host |
+| `VM.assert_agile` | Verify VM satisfies agility requirements |
+| `VM.assert_can_migrate` | Validate VM can migrate to a target |
+| `VM.assert_can_migrate_sender` | Validate sender-side migration constraints |
+| `VM.get_possible_hosts` | Return hosts currently eligible for placement |
+| `VM.get_data_sources` | List VM performance/data sources |
+| `VM.record_data_source` | Record a specific VM data source |
+| `VM.query_data_source` | Query one VM data source value |
+| `VM.forget_data_source_archives` | Drop archived VM data source history |
+| `VM.create_new_blob` | Create a Blob linked to the VM |
+| `VM.set_bios_strings` | Set SMBIOS/BIOS strings |
+| `VM.copy_bios_strings` | Copy BIOS strings from another VM |
+| `VM.s3_suspend` | Enter guest S3 suspend state |
+| `VM.s3_resume` | Resume guest from S3 state |
+| `VM.set_blocked_operations` | Replace blocked operation map |
+| `VM.add_to_blocked_operations` | Block a specific operation with reason |
+| `VM.remove_from_blocked_operations` | Unblock a specific operation |
+| `VM.get_secureboot_readiness` | Check secure boot readiness of VM config |
+| `VM.set_uefi_mode` | Set VM UEFI mode configuration |
+| `VM.sysprep` | Trigger guest sysprep customization workflow |
+| `VM.restart_device_models` | Restart device model processes |
+| `VM.assert_can_be_recovered` | Check DR recovery preconditions |
+| `VM.get_SRs_required_for_recovery` | List SRs required for VM recovery |
+| `VM.recover` | Recover VM via DR workflow |
+| `VM.retrieve_wlb_recommendations` | Fetch workload-balancing recommendations |
+
 ---
 
 ## Host
@@ -210,6 +260,42 @@ Physical hypervisor host management.
 | `host.get_vms_which_prevent_evacuation` | Get VMs blocking evacuation |
 | `host.get_system_status_capabilities` | Get status-report capabilities |
 
+### Additional Endpoints Present in `xen-api`
+
+| Function | Purpose |
+|----------|---------|
+| `host.call_plugin` | Run host plugin call on the target host |
+| `host.call_extension` | Run extension endpoint on the host |
+| `host.list_methods` | List host extension/plugin methods |
+| `host.has_extension` | Check whether a host extension is available |
+| `host.get_data_sources` | List host performance/data sources |
+| `host.record_data_source` | Record a specific host data source |
+| `host.query_data_source` | Query one host data source value |
+| `host.forget_data_source_archives` | Drop archived host data source history |
+| `host.set_iscsi_iqn` | Set host iSCSI initiator IQN |
+| `host.set_multipathing` | Enable or disable host multipathing |
+| `host.enable_ssh` | Enable SSH access on host |
+| `host.disable_ssh` | Disable SSH access on host |
+| `host.set_ssh_auto_mode` | Configure SSH auto-enable behavior |
+| `host.set_ssh_enabled_timeout` | Set automatic SSH disable timeout |
+| `host.set_ntp_mode` | Configure host NTP mode |
+| `host.set_ntp_custom_servers` | Configure custom NTP servers |
+| `host.get_ntp_servers_status` | Get status for configured NTP servers |
+| `host.get_ntp_synchronized` | Report whether host clock is synchronized |
+| `host.prepare_for_poweroff` | Prepare host services/state for poweroff |
+| `host.shutdown_agent` | Stop xapi agent services on host |
+| `host.dmesg` | Fetch host kernel ring buffer |
+| `host.dmesg_clear` | Clear host kernel ring buffer |
+| `host.get_log` | Retrieve host log bundle/content |
+| `host.send_debug_keys` | Send debug key sequence to hypervisor |
+| `host.apply_updates` | Apply pending updates on host |
+| `host.apply_recommended_guidances` | Apply recommended post-update guidance |
+| `host.set_uefi_certificates` | Set host UEFI certificate bundle |
+| `host.write_uefi_certificates_to_disk` | Persist host UEFI certificates to disk |
+| `host.set_https_only` | Enforce HTTPS-only API mode on host |
+| `host.set_ssl_legacy` | Toggle legacy SSL compatibility mode |
+| `host.create_new_blob` | Create a Blob attached to host |
+
 ---
 
 ## Pool
@@ -254,6 +340,45 @@ Resource pool management (cluster of hosts).
 | `pool.sync_database` | Synchronize database |
 | `pool.certificate_install` | Install SSL certificate |
 | `pool.certificate_uninstall` | Remove SSL certificate |
+
+### Additional Endpoints Present in `xen-api`
+
+| Function | Purpose |
+|----------|---------|
+| `pool.join_force` | Force-join host to pool in recovery workflows |
+| `pool.hello` | Handshake call used during host/pool coordination |
+| `pool.initial_auth` | Bootstrap authentication state for joining host |
+| `pool.management_reconfigure` | Reconfigure management interface in pool context |
+| `pool.enable_binary_storage` | Enable binary/object storage in database layer |
+| `pool.disable_binary_storage` | Disable binary/object storage in database layer |
+| `pool.enable_ssh` | Enable SSH access across pool |
+| `pool.disable_ssh` | Disable SSH access across pool |
+| `pool.set_ssh_auto_mode` | Configure pool-wide SSH auto-enable behavior |
+| `pool.set_ssh_enabled_timeout` | Configure pool-wide SSH timeout |
+| `pool.enable_ssl_legacy` | Enable legacy SSL compatibility mode |
+| `pool.disable_ssl_legacy` | Disable legacy SSL compatibility mode |
+| `pool.set_https_only` | Enforce HTTPS-only API mode pool-wide |
+| `pool.set_console_idle_timeout` | Set pool-wide console idle timeout |
+| `pool.enable_client_certificate_auth` | Require client certificate authentication |
+| `pool.disable_client_certificate_auth` | Disable client certificate requirement |
+| `pool.enable_local_storage_caching` | Enable local SR caching behavior |
+| `pool.disable_local_storage_caching` | Disable local SR caching behavior |
+| `pool.set_repositories` | Set update repository list |
+| `pool.add_repository` | Add update repository |
+| `pool.remove_repository` | Remove update repository |
+| `pool.configure_repository_proxy` | Configure proxy used for repositories |
+| `pool.disable_repository_proxy` | Disable repository proxy |
+| `pool.configure_update_sync` | Configure update sync scheduler/settings |
+| `pool.set_update_sync_enabled` | Enable or disable automatic update sync |
+| `pool.sync_updates` | Trigger immediate update metadata sync |
+| `pool.get_license_state` | Get pool license state summary |
+| `pool.check_update_readiness` | Validate pool readiness for updates |
+| `pool.set_uefi_certificates` | Set pool UEFI certificates |
+| `pool.set_custom_uefi_certificates` | Set custom pool UEFI certificates |
+| `pool.reset_telemetry_uuid` | Rotate/reset telemetry UUID |
+| `pool.set_telemetry_next_collection` | Set next telemetry collection timestamp |
+| `pool.create_new_blob` | Create a Blob at pool scope |
+| `pool.ha_schedule_plan_recomputation` | Request HA failover plan recomputation |
 
 ---
 
