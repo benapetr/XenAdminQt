@@ -36,12 +36,14 @@ class PoolAdvancedEditPage;
 }
 
 class AsyncOperation;
+class Pool;
 
 /**
  * @brief Advanced pool settings edit page
  *
  * Qt equivalent of C# XenAdmin.SettingsPanels.PoolAdvancedEditPage
- * Allows configuration of advanced pool settings (currently migration compression).
+ * Allows configuration of advanced pool settings such as migration
+ * compression and migration network override.
  *
  * C# Reference: xenadmin/XenAdmin/SettingsPanels/PoolAdvancedEditPage.cs
  */
@@ -70,6 +72,10 @@ class PoolAdvancedEditPage : public IEditPage
         void Cleanup() override;
 
     private:
+        void populateMigrationNetworkCombo(const QSharedPointer<Pool>& pool);
+        QString currentMigrationNetworkRef() const;
+        QString originalMigrationNetworkRef() const;
+
         Ui::PoolAdvancedEditPage* ui;
 
         QString m_poolRef_;

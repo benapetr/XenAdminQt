@@ -29,7 +29,9 @@
 #include "pooladvancededitpage.h"
 #include "ui_pooladvancededitpage.h"
 #include "xenlib/xencache.h"
+#include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
+#include "xenlib/xen/network.h"
 #include "xenlib/xen/pool.h"
 
 PoolAdvancedEditPage::PoolAdvancedEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::PoolAdvancedEditPage)
@@ -94,34 +96,70 @@ void PoolAdvancedEditPage::SetXenObject(QSharedPointer<XenObject> object,
     // Read migration_compression property from pool
     bool compressionEnabled = this->m_objectDataCopy_.value("migration_compression", false).toBool();
     this->ui->checkBoxCompression->setChecked(compressionEnabled);
+
+    XenCache* cache = this->connection() ? this->connection()->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->ResolveObject<Pool>(this->m_poolRef_) : QSharedPointer<Pool>();
+    this->populateMigrationNetworkCombo(pool);
 }
 
 AsyncOperation* PoolAdvancedEditPage::SaveSettings()
 {
-    bool newValue = this->ui->checkBoxCompression->isChecked();
-    
-    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>(this->m_poolRef_);
+    bool newCompressionValue = this->ui->checkBoxCompression->isChecked();
+    const QString newMigrationNetworkRef = this->currentMigrationNetworkRef();
+
+    XenCache* cache = this->connection() ? this->connection()->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->ResolveObject<Pool>(this->m_poolRef_) : QSharedPointer<Pool>();
     if (!pool || !pool->IsValid())
     {
         qWarning() << "PoolAdvancedEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;
         return nullptr;
     }
-    
-    // Use SetPoolPropertyAction to set migration_compression
-    return new SetPoolPropertyAction(
-        pool,
-        "migration_compression",
-        newValue,
-        tr("Updating migration compression"),
-        this
-    );
+
+    QList<AsyncOperation*> operations;
+
+    if (this->m_objectDataBefore_.value("migration_compression", false).toBool() != newCompressionValue)
+    {
+        operations.append(new SetPoolPropertyAction(
+            pool,
+            "migration_compression",
+            newCompressionValue,
+            tr("Updating migration compression"),
+            this));
+    }
+
+    if (this->originalMigrationNetworkRef() != newMigrationNetworkRef)
+    {
+        operations.append(new SetPoolPropertyAction(
+            pool,
+            "xo_migration_network",
+            newMigrationNetworkRef,
+            tr("Updating migration network override"),
+            this));
+    }
+
+    if (operations.isEmpty())
+        return nullptr;
+
+    if (operations.size() == 1)
+        return operations.first();
+
+    return new MultipleAction(
+        pool->GetConnection(),
+        tr("Updating pool advanced options"),
+        tr("Updating pool advanced options..."),
+        tr("Pool advanced options updated"),
+        operations,
+        false,
+        false,
+        true,
+        this);
 }
 
 bool PoolAdvancedEditPage::HasChanged() const
 {
     bool original = this->m_objectDataBefore_.value("migration_compression", false).toBool();
     bool current = this->ui->checkBoxCompression->isChecked();
-    return original != current;
+    return original != current || this->originalMigrationNetworkRef() != this->currentMigrationNetworkRef();
 }
 
 bool PoolAdvancedEditPage::IsValidToSave() const
@@ -142,4 +180,46 @@ void PoolAdvancedEditPage::HideLocalValidationMessages()
 void PoolAdvancedEditPage::Cleanup()
 {
     // Nothing to clean up
+}
+
+void PoolAdvancedEditPage::populateMigrationNetworkCombo(const QSharedPointer<Pool>& pool)
+{
+    this->ui->comboMigrationNetwork->clear();
+    this->ui->comboMigrationNetwork->addItem(tr("<default>"), QString());
+
+    if (!pool || !pool->GetCache())
+        return;
+
+    const QString selectedRef = this->originalMigrationNetworkRef();
+    bool selectedFound = selectedRef.isEmpty();
+
+    QList<QSharedPointer<Network>> networks = pool->GetCache()->GetAll<Network>(XenObjectType::Network);
+    for (const QSharedPointer<Network>& network : networks)
+    {
+        if (!network || !network->IsValid())
+            continue;
+
+        this->ui->comboMigrationNetwork->addItem(network->GetName(), network->OpaqueRef());
+        if (network->OpaqueRef() == selectedRef)
+            selectedFound = true;
+    }
+
+    if (!selectedRef.isEmpty() && !selectedFound)
+        this->ui->comboMigrationNetwork->addItem(selectedRef, selectedRef);
+
+    int selectedIndex = this->ui->comboMigrationNetwork->findData(selectedRef);
+    if (selectedIndex < 0)
+        selectedIndex = 0;
+    this->ui->comboMigrationNetwork->setCurrentIndex(selectedIndex);
+}
+
+QString PoolAdvancedEditPage::currentMigrationNetworkRef() const
+{
+    return this->ui->comboMigrationNetwork->currentData().toString();
+}
+
+QString PoolAdvancedEditPage::originalMigrationNetworkRef() const
+{
+    const QVariantMap otherConfig = this->m_objectDataBefore_.value("other_config").toMap();
+    return otherConfig.value("xo:migrationNetwork").toString();
 }

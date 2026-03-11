@@ -47,7 +47,16 @@ SetPoolPropertyAction::SetPoolPropertyAction(QSharedPointer<Pool> pool,
         qWarning() << "SetPoolPropertyAction: Invalid pool object";
     }
 
-    this->m_connection = pool->GetConnection();
+    this->m_connection = pool ? pool->GetConnection() : nullptr;
+
+    if (this->m_propertyName == "migration_compression")
+        this->AddApiMethodToRoleCheck("pool.set_migration_compression");
+    else if (this->m_propertyName == "live_patching_disabled")
+        this->AddApiMethodToRoleCheck("pool.set_live_patching_disabled");
+    else if (this->m_propertyName == "igmp_snooping_enabled")
+        this->AddApiMethodToRoleCheck("pool.set_igmp_snooping_enabled");
+    else if (this->m_propertyName == "xo_migration_network")
+        this->AddApiMethodToRoleCheck("pool.set_other_config");
 }
 
 void SetPoolPropertyAction::run()
@@ -89,6 +98,23 @@ void SetPoolPropertyAction::run()
         else if (this->m_propertyName == "igmp_snooping_enabled")
         {
             XenAPI::Pool::set_igmp_snooping_enabled(session, poolRef, this->m_value.toBool());
+        }
+        else if (this->m_propertyName == "xo_migration_network")
+        {
+            QVariantMap otherConfig = this->m_pool->GetOtherConfig();
+            const QString networkRef = this->m_value.toString();
+
+            if (networkRef.isEmpty())
+                otherConfig.remove("xo:migrationNetwork");
+            else
+                otherConfig["xo:migrationNetwork"] = networkRef;
+
+            XenAPI::Pool::set_other_config(session, poolRef, otherConfig);
+
+            QVariantMap poolData = this->m_pool->GetData();
+            poolData["other_config"] = otherConfig;
+            this->m_pool->SetLocalData(poolData);
+            this->m_pool->Refresh();
         }
         else
         {

@@ -38,7 +38,10 @@ class Host;
  * @brief Action to migrate a VM to another host in the same pool
  *
  * Performs live migration of a running or suspended VM to a different
- * host within the same resource pool using VM.async_pool_migrate.
+ * host within the same resource pool. By default this uses
+ * VM.async_pool_migrate. If a migration network is provided (or discovered
+ * from pool.other_config["xo:migrationNetwork"]) it uses
+ * Host.migrate_receive + VM.async_migrate_send.
  *
  * Equivalent to C# XenAdmin VMMigrateAction.
  */
@@ -47,21 +50,30 @@ class VMMigrateAction : public AsyncOperation
     Q_OBJECT
 
     public:
+        explicit VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent = nullptr);
+
         /**
          * @brief Construct VM migration action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
-         * @param destinationHostRef Destination host opaque reference
+         * @param vm VM object to migrate
+         * @param host Destination host object
+         * @param migrationNetworkRef Optional transfer network ref override
          * @param parent Parent QObject
          */
-        explicit VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent = nullptr);
+        explicit VMMigrateAction(QSharedPointer<VM> vm,
+                                 QSharedPointer<Host> host,
+                                 const QString& migrationNetworkRef = QString(),
+                                 QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
+        QString resolveMigrationNetworkRef() const;
+        bool hostHasUsableMigrationPif(const QString& networkRef) const;
+
         QSharedPointer<VM> m_vm;
         QSharedPointer<Host> m_host;
+        QString m_migrationNetworkRef;
 };
 
 #endif // VMMIGRATEACTION_H

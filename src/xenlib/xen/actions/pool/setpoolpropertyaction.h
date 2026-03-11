@@ -35,7 +35,8 @@
  * @brief Generic action to set a pool property
  *
  * This action sets a boolean or string property on a pool using the XenAPI.
- * Handles properties like migration_compression, live_patching_disabled, etc.
+ * Handles properties like migration_compression, live_patching_disabled,
+ * igmp_snooping_enabled and xo_migration_network.
  *
  * C# Reference: Uses DelegatedAsyncAction with Pool.set_* methods
  */

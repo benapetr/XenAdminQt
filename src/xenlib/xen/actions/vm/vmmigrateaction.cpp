@@ -26,16 +26,27 @@
  */
 
 #include "vmmigrateaction.h"
-#include "../../../xen/network/connection.h"
+#include "xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../../xencache.h"
+#include "../../xenapi/xenapi_Host.h"
+#include "xencache.h"
 #include "../../failure.h"
 #include "xen/host.h"
+#include "xen/pif.h"
+#include "xen/pool.h"
 #include "xen/vm.h"
 #include <stdexcept>
 
 VMMigrateAction::VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent)
-    : AsyncOperation(QString("Migrating VM"), QString("Migrating VM to another host"), parent), m_vm(vm), m_host(host)
+    : VMMigrateAction(vm, host, QString(), parent)
+{
+}
+
+VMMigrateAction::VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, const QString& migrationNetworkRef, QObject* parent)
+    : AsyncOperation(QString("Migrating VM"), QString("Migrating VM to another host"), parent),
+      m_vm(vm),
+      m_host(host),
+      m_migrationNetworkRef(migrationNetworkRef)
 {
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
@@ -43,14 +54,16 @@ VMMigrateAction::VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> hos
     this->m_connection = vm->GetConnection();
 
     this->AddApiMethodToRoleCheck("VM.async_pool_migrate");
+    this->AddApiMethodToRoleCheck("Host.migrate_receive");
+    this->AddApiMethodToRoleCheck("VM.async_migrate_send");
 }
 
 void VMMigrateAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Preparing migration...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Preparing migration...");
 
         QString vmName = this->m_vm->GetName();
         QString hostName = this->m_host->GetName();
@@ -64,35 +77,55 @@ void VMMigrateAction::run()
             QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData(XenObjectType::Host, residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();
 
-            SetTitle(QString("Migrating %1 from %2 to %3").arg(vmName).arg(sourceHostName).arg(hostName));
+            this->SetTitle(QString("Migrating %1 from %2 to %3").arg(vmName).arg(sourceHostName).arg(hostName));
         } else
         {
-            SetTitle(QString("Migrating %1 to %2").arg(vmName).arg(hostName));
+            this->SetTitle(QString("Migrating %1 to %2").arg(vmName).arg(hostName));
         }
 
-        SetPercentComplete(10);
-        SetDescription(QString("Migrating %1 to %2...").arg(vmName).arg(hostName));
+        this->SetPercentComplete(10);
+        this->SetDescription(QString("Migrating %1 to %2...").arg(vmName).arg(hostName));
 
-        // Start the migration with live migration enabled
-        QVariantMap options;
-        options["live"] = "true";
+        QString taskRef;
+        const QString migrationNetworkRef = this->resolveMigrationNetworkRef();
+        const bool useTransferNetwork = !migrationNetworkRef.isEmpty() && hostHasUsableMigrationPif(migrationNetworkRef);
 
-        QString taskRef = XenAPI::VM::async_pool_migrate(GetSession(), this->m_vm->OpaqueRef(), this->m_host->OpaqueRef(), options);
+        if (useTransferNetwork)
+        {
+            QVariantMap receiveData = XenAPI::Host::migrate_receive(GetSession(),
+                                                                    this->m_host->OpaqueRef(),
+                                                                    migrationNetworkRef,
+                                                                    QVariantMap());
+
+            taskRef = XenAPI::VM::async_migrate_send(GetSession(),
+                                                     this->m_vm->OpaqueRef(),
+                                                     receiveData,
+                                                     true,
+                                                     QVariantMap(),
+                                                     QVariantMap(),
+                                                     QVariantMap());
+        } else
+        {
+            // Start migration with live migration enabled
+            QVariantMap options;
+            options["live"] = "true";
+            taskRef = XenAPI::VM::async_pool_migrate(GetSession(), this->m_vm->OpaqueRef(), this->m_host->OpaqueRef(), options);
+        }
 
         // Poll the task to completion
-        pollToCompletion(taskRef, 10, 100);
+        this->pollToCompletion(taskRef, 10, 100);
 
-        SetDescription(QString("VM migrated successfully to %1").arg(hostName));
+        this->SetDescription(QString("VM migrated successfully to %1").arg(hostName));
 
     } catch (const Failure& failure)
     {
         QStringList params = failure.errorDescription();
         if (params.size() >= 5 && params[0] == "VM_MIGRATE_FAILED" && params[4].contains("VDI_MISSING"))
         {
-            setError("Migration failed: Please eject any mounted ISOs (especially XenServer Tools) and try again");
+            this->setError("Migration failed: Please eject any mounted ISOs (especially XenServer Tools) and try again");
         } else
         {
-            setError(QString("Failed to migrate VM: %1").arg(failure.message()));
+            this->setError(QString("Failed to migrate VM: %1").arg(failure.message()));
         }
     } catch (const std::exception& e)
     {
@@ -101,10 +134,50 @@ void VMMigrateAction::run()
         // Check for specific error about VDI_MISSING (tools ISO issue)
         if (errorMsg.contains("VM_MIGRATE_FAILED") && errorMsg.contains("VDI_MISSING"))
         {
-            setError("Migration failed: Please eject any mounted ISOs (especially XenServer Tools) and try again");
+            this->setError("Migration failed: Please eject any mounted ISOs (especially XenServer Tools) and try again");
         } else
         {
-            setError(QString("Failed to migrate VM: %1").arg(errorMsg));
+            this->setError(QString("Failed to migrate VM: %1").arg(errorMsg));
         }
     }
+}
+
+QString VMMigrateAction::resolveMigrationNetworkRef() const
+{
+    if (!this->m_migrationNetworkRef.isEmpty())
+        return this->m_migrationNetworkRef;
+
+    if (!this->m_host)
+        return QString();
+
+    QSharedPointer<Pool> pool = this->m_host->GetPool();
+    if (!pool || !pool->IsValid())
+        return QString();
+
+    return pool->GetOtherConfig().value("xo:migrationNetwork").toString();
+}
+
+bool VMMigrateAction::hostHasUsableMigrationPif(const QString& networkRef) const
+{
+    if (networkRef.isEmpty() || !m_host || !GetConnection() || !GetConnection()->GetCache())
+        return false;
+
+    XenCache* cache = GetConnection()->GetCache();
+    QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
+
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+        if (pif->GetHostRef() != m_host->OpaqueRef())
+            continue;
+        if (pif->GetNetworkRef() != networkRef)
+            continue;
+        if (pif->IP().isEmpty())
+            continue;
+
+        return true;
+    }
+
+    return false;
 }

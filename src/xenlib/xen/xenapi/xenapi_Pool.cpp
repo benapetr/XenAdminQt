@@ -247,6 +247,20 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response);
     }
 
+    void Pool::set_other_config(Session* session, const QString& pool, const QVariantMap& otherConfig)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << pool << otherConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_other_config", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     void Pool::set_migration_compression(Session* session, const QString& pool, bool enabled)
     {
         if (!session || !session->IsLoggedIn())

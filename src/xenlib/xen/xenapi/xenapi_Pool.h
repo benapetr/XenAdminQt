@@ -186,6 +186,14 @@ namespace XenAPI
             static void set_gui_config(Session* session, const QString& pool, const QVariantMap& guiConfig);
 
             /**
+             * @brief Set pool other_config map
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param otherConfig Full other_config map to store
+             */
+            static void set_other_config(Session* session, const QString& pool, const QVariantMap& otherConfig);
+
+            /**
              * @brief Set migration compression flag
              * @param session Active XenSession
              * @param pool Pool opaque reference
