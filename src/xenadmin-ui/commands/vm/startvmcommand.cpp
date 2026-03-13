@@ -121,7 +121,7 @@ namespace
         {
             if (!vbd || !vbd->IsValid())
                 continue;
-            if (!vbd->IsCD() || vbd->Empty())
+            if (!vbd->IsCD() || vbd->IsEmpty())
                 continue;
 
             QSharedPointer<VDI> vdi = vbd->GetVDI();

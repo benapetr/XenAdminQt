@@ -32,6 +32,7 @@
 #include "../../mappings/vmmapping.h"
 
 class XenConnection;
+class XenCache;
 
 /**
  * @brief Cross-pool migrate action for a VM
@@ -58,6 +59,8 @@ class VMCrossPoolMigrateAction : public AsyncOperation
         void run() override;
 
     private:
+        QString resolveTransferNetworkRef(XenCache* destCache) const;
+
         XenConnection* m_destinationConnection;
         QString m_vmRef;
         QString m_destinationHostRef;

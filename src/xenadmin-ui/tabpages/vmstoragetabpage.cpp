@@ -495,7 +495,7 @@ void VMStorageTabPage::refreshISOList()
 
     QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>(this->m_currentVBDRef);
     QString currentVdiRef = vbd ? vbd->GetVDIRef() : QString();
-    bool empty = vbd ? vbd->Empty() : true;
+    bool empty = vbd ? vbd->IsEmpty() : true;
 
     if (!empty && !currentVdiRef.isEmpty())
     {
@@ -543,7 +543,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
         return;
 
     QString currentVdiRef = vbd->GetVDIRef();
-    bool empty = vbd->Empty();
+    bool empty = vbd->IsEmpty();
 
     if ((vdiRef.isEmpty() && empty) || (!vdiRef.isEmpty() && vdiRef == currentVdiRef && !empty))
         return;

@@ -220,7 +220,7 @@ void VMMoveAction::run()
         newVBDRecord["bootable"] = oldVBD->IsBootable();
         newVBDRecord["mode"] = oldVBD->GetMode();
         newVBDRecord["type"] = oldVBD->GetType();
-        newVBDRecord["unpluggable"] = oldVBD->Unpluggable();
+        newVBDRecord["unpluggable"] = oldVBD->IsUnpluggable();
         newVBDRecord["other_config"] = oldVBD->GetOtherConfig();
         newVBDRecord["VDI"] = newVDIRef;
         newVBDRecord["VM"] = this->m_vm->OpaqueRef();

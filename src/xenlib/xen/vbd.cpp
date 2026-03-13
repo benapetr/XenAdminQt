@@ -112,7 +112,7 @@ bool VBD::IsFloppyDrive() const
     return false;
 }
 
-bool VBD::Unpluggable() const
+bool VBD::IsUnpluggable() const
 {
     return this->boolProperty("unpluggable");
 }
@@ -122,7 +122,7 @@ bool VBD::CurrentlyAttached() const
     return this->boolProperty("currently_attached");
 }
 
-bool VBD::Empty() const
+bool VBD::IsEmpty() const
 {
     return this->boolProperty("empty");
 }
