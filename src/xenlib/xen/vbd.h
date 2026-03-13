@@ -102,13 +102,13 @@ class XENLIB_EXPORT VBD : public XenObject
         bool IsFloppyDrive() const;
 
         //! Check if device can be unplugged
-        bool Unpluggable() const;
+        bool IsUnpluggable() const;
 
         //! Check if device is currently attached to VM
         bool CurrentlyAttached() const;
 
         //! Check if VDI is empty (CD with no disc)
-        bool Empty() const;
+        bool IsEmpty() const;
 
         //! Get allowed operations on this VBD (e.g., "plug", "unplug")
         QStringList AllowedOperations() const;

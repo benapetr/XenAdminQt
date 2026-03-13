@@ -638,24 +638,19 @@ void CrossPoolMigrateWizard::initializePage(int id)
     if (id == Page_Destination)
     {
         this->populateDestinationHosts();
-    }
-    else if (id == Page_RbacWarning)
+    } else if (id == Page_RbacWarning)
     {
         this->updateRbacRequirement();
-    }
-    else if (id == Page_Storage)
+    } else if (id == Page_Storage)
     {
         this->populateStorageMappings();
-    }
-    else if (id == Page_Network)
+    } else if (id == Page_Network)
     {
         this->populateNetworkMappings();
-    }
-    else if (id == Page_TransferNetwork)
+    } else if (id == Page_TransferNetwork)
     {
         this->populateTransferNetworks();
-    }
-    else if (id == Page_Finish)
+    } else if (id == Page_Finish)
     {
         this->updateSummary();
     }
@@ -801,10 +796,9 @@ void CrossPoolMigrateWizard::accept()
         }
     }
 
-    if (!this->m_targetConnection || this->m_targetHostRef.isEmpty() ||
-        (this->requiresTransferNetwork() && this->m_transferNetworkRef.isEmpty()))
+    if (!this->m_targetConnection || this->m_targetHostRef.isEmpty())
     {
-        QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Missing destination or transfer network."));
+        QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Missing destination."));
         return;
     }
 
@@ -883,7 +877,7 @@ void CrossPoolMigrateWizard::accept()
             } else
             {
                 QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->m_targetHostRef);
-                migrateAction = new VMMigrateAction(vm, host, nullptr);
+                migrateAction = new VMMigrateAction(vm, host, this->m_transferNetworkRef, nullptr);
             }
 
             if (this->m_resumeAfterMigrate && this->m_mode == WizardMode::Migrate && migrateAction)
@@ -1272,8 +1266,8 @@ void CrossPoolMigrateWizard::populateStorageMappings()
                 continue;
 
             QString vdiName = vdi->GetName();
-            QString vdiType = vdi->GetType();
-            if (vdiType == "iso")
+            //QString vdiType = vdi->GetType();
+            if (vbd->IsCD())
                 continue;
 
             this->m_storageTable->insertRow(row);
@@ -1402,6 +1396,7 @@ void CrossPoolMigrateWizard::populateTransferNetworks()
         return;
 
     this->m_transferNetworkCombo->clear();
+    this->m_transferNetworkCombo->addItem(tr("<default>"), QString());
 
     XenCache* targetCache = this->m_targetConnection->GetCache();
     if (!targetCache)
@@ -1415,8 +1410,7 @@ void CrossPoolMigrateWizard::populateTransferNetworks()
         this->m_transferNetworkCombo->addItem(network->GetName(), network->OpaqueRef());
     }
 
-    if (this->m_transferNetworkCombo->count() > 0)
-        this->m_transferNetworkCombo->setCurrentIndex(0);
+    this->m_transferNetworkCombo->setCurrentIndex(0);
 } 
 
 void CrossPoolMigrateWizard::updateSummary()

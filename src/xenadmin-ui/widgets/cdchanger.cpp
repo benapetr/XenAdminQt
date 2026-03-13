@@ -87,7 +87,7 @@ void CDChanger::updateSelectedCd()
 {
     QString vdiRef;
     
-    if (this->cdrom_ && !this->cdrom_->Empty())
+    if (this->cdrom_ && !this->cdrom_->IsEmpty())
     {
         vdiRef = this->cdrom_->GetVDIRef();
     }
@@ -114,7 +114,7 @@ void CDChanger::onCurrentIndexChanged(int index)
         return;
     
     // Don't change if we go from <empty> to <empty>
-    QString currentVdiRef = this->cdrom_->Empty() ? QString() : this->cdrom_->GetVDIRef();
+    QString currentVdiRef = this->cdrom_->IsEmpty() ? QString() : this->cdrom_->GetVDIRef();
     if (selectedVdiRef.isEmpty() && currentVdiRef.isEmpty())
         return;
     

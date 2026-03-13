@@ -32,6 +32,8 @@
 #include "../../../xencache.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_Host.h"
+#include "xen/pif.h"
+#include "xen/pool.h"
 #include <stdexcept>
 
 VMCrossPoolMigrateAction::VMCrossPoolMigrateAction(XenConnection* sourceConnection,
@@ -53,10 +55,10 @@ VMCrossPoolMigrateAction::VMCrossPoolMigrateAction(XenConnection* sourceConnecti
       m_mapping(mapping),
       m_copy(copy)
 {
-    AddApiMethodToRoleCheck("Host.migrate_receive");
-    AddApiMethodToRoleCheck("VM.migrate_send");
-    AddApiMethodToRoleCheck("VM.async_migrate_send");
-    AddApiMethodToRoleCheck("VM.assert_can_migrate");
+    this->AddApiMethodToRoleCheck("Host.migrate_receive");
+    this->AddApiMethodToRoleCheck("VM.migrate_send");
+    this->AddApiMethodToRoleCheck("VM.async_migrate_send");
+    this->AddApiMethodToRoleCheck("VM.assert_can_migrate");
 }
 
 QString VMCrossPoolMigrateAction::GetTitle(const QVariantMap& vmData, const QVariantMap& hostData, bool copy)
@@ -72,79 +74,142 @@ QString VMCrossPoolMigrateAction::GetTitle(const QVariantMap& vmData, const QVar
 
 void VMCrossPoolMigrateAction::run()
 {
-    if (!GetConnection() || !GetConnection()->IsConnected())
+    if (!this->GetConnection() || !this->GetConnection()->IsConnected())
     {
-        setError("Not connected to server");
+        this->setError("Not connected to server");
         return;
     }
 
-    if (!m_destinationConnection || !m_destinationConnection->IsConnected())
+    if (!this->m_destinationConnection || !this->m_destinationConnection->IsConnected())
     {
-        setError("Destination connection is not connected");
+        this->setError("Destination connection is not connected");
         return;
     }
 
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Preparing migration...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Preparing migration...");
 
-        XenCache* sourceCache = GetConnection()->GetCache();
-        XenCache* destCache = m_destinationConnection->GetCache();
+        XenCache* sourceCache = this->GetConnection()->GetCache();
+        XenCache* destCache = this->m_destinationConnection->GetCache();
         if (!sourceCache || !destCache)
             throw std::runtime_error("Cache not available");
 
-        QVariantMap vmData = sourceCache->ResolveObjectData(XenObjectType::VM, m_vmRef);
+        QVariantMap vmData = sourceCache->ResolveObjectData(XenObjectType::VM, this->m_vmRef);
         if (vmData.isEmpty())
             throw std::runtime_error("VM not found in cache");
 
-        QVariantMap hostData = destCache->ResolveObjectData(XenObjectType::Host, m_destinationHostRef);
+        QVariantMap hostData = destCache->ResolveObjectData(XenObjectType::Host, this->m_destinationHostRef);
         if (hostData.isEmpty())
             throw std::runtime_error("Destination host not found in cache");
 
-        SetTitle(GetTitle(vmData, hostData, m_copy));
-        SetDescription(m_copy ? "Copying VM..." : "Migrating VM...");
+        this->SetTitle(GetTitle(vmData, hostData, this->m_copy));
+        this->SetDescription(this->m_copy ? "Copying VM..." : "Migrating VM...");
 
-        XenAPI::Session* destSession = XenAPI::Session::DuplicateSession(m_destinationConnection->GetSession(), nullptr);
+        XenAPI::Session* destSession = XenAPI::Session::DuplicateSession(this->m_destinationConnection->GetSession(), nullptr);
         if (!destSession || !destSession->IsLoggedIn())
             throw std::runtime_error("Failed to create destination session");
 
+        const QString transferNetworkRef = this->resolveTransferNetworkRef(destCache);
+        if (transferNetworkRef.isEmpty())
+            throw std::runtime_error("No transfer network available on destination host");
+
         QVariantMap sendData = XenAPI::Host::migrate_receive(destSession,
-                                                             m_destinationHostRef,
-                                                             m_transferNetworkRef,
+                                                             this->m_destinationHostRef,
+                                                             transferNetworkRef,
                                                              QVariantMap());
-        SetPercentComplete(5);
+        this->SetPercentComplete(5);
 
         QVariantMap options;
-        if (m_copy)
+        if (this->m_copy)
             options.insert("copy", "true");
 
         QVariantMap vdiMap;
-        for (auto it = m_mapping.storage.cbegin(); it != m_mapping.storage.cend(); ++it)
+        for (auto it = this->m_mapping.storage.cbegin(); it != this->m_mapping.storage.cend(); ++it)
             vdiMap.insert(it.key(), it.value());
 
         QVariantMap vifMap;
-        for (auto it = m_mapping.vifs.cbegin(); it != m_mapping.vifs.cend(); ++it)
+        for (auto it = this->m_mapping.vifs.cbegin(); it != this->m_mapping.vifs.cend(); ++it)
             vifMap.insert(it.key(), it.value());
 
-        QString taskRef = XenAPI::VM::async_migrate_send(GetSession(),
-                                                         m_vmRef,
+        QString taskRef = XenAPI::VM::async_migrate_send(this->GetSession(),
+                                                         this->m_vmRef,
                                                          sendData,
                                                          true,
                                                          vdiMap,
                                                          vifMap,
                                                          options);
 
-        pollToCompletion(taskRef, 5, 100);
+        this->pollToCompletion(taskRef, 5, 100);
 
-        SetDescription(m_copy ? "VM copied successfully" : "VM migrated successfully");
+        this->SetDescription(this->m_copy ? "VM copied successfully" : "VM migrated successfully");
     }
     catch (const Failure& failure)
     {
-        setError(failure.message());
+        this->setError(failure.message());
     }
     catch (const std::exception& e)
     {
-        setError(QString("Failed to migrate VM: %1").arg(QString::fromUtf8(e.what())));
+        this->setError(QString("Failed to migrate VM: %1").arg(QString::fromUtf8(e.what())));
     }
+}
+
+QString VMCrossPoolMigrateAction::resolveTransferNetworkRef(XenCache* destCache) const
+{
+    if (!destCache)
+        return QString();
+
+    auto hasUsablePifOnHost = [this, destCache](const QString& networkRef) -> bool
+    {
+        if (networkRef.isEmpty())
+            return false;
+
+        QList<QSharedPointer<PIF>> pifs = destCache->GetAll<PIF>(XenObjectType::PIF);
+        for (const QSharedPointer<PIF>& pif : pifs)
+        {
+            if (!pif || !pif->IsValid())
+                continue;
+            if (pif->GetHostRef() != this->m_destinationHostRef)
+                continue;
+            if (pif->GetNetworkRef() != networkRef)
+                continue;
+            if (pif->IP().isEmpty())
+                continue;
+            return true;
+        }
+
+        return false;
+    };
+
+    if (hasUsablePifOnHost(this->m_transferNetworkRef))
+        return this->m_transferNetworkRef;
+
+    QSharedPointer<Pool> pool = destCache->GetPool();
+    if (pool && pool->IsValid())
+    {
+        const QString xoNetworkRef = pool->GetOtherConfig().value("xo:migrationNetwork").toString();
+        if (hasUsablePifOnHost(xoNetworkRef))
+            return xoNetworkRef;
+    }
+
+    QList<QSharedPointer<PIF>> pifs = destCache->GetAll<PIF>(XenObjectType::PIF);
+    QString firstHostNetworkRef;
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+        if (pif->GetHostRef() != this->m_destinationHostRef)
+            continue;
+        if (pif->IP().isEmpty())
+            continue;
+
+        if (firstHostNetworkRef.isEmpty())
+            firstHostNetworkRef = pif->GetNetworkRef();
+
+        if (pif->Management())
+            return pif->GetNetworkRef();
+    }
+
+    return firstHostNetworkRef;
 }

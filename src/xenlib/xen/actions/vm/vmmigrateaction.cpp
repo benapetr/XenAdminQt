@@ -35,6 +35,8 @@
 #include "xen/pif.h"
 #include "xen/pool.h"
 #include "xen/vm.h"
+#include "xen/vbd.h"
+#include "xen/vdi.h"
 #include <stdexcept>
 
 VMMigrateAction::VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent)
@@ -97,11 +99,32 @@ void VMMigrateAction::run()
                                                                     migrationNetworkRef,
                                                                     QVariantMap());
 
+            // VM.migrate_send requires every non-CD, non-empty VDI to be present
+            // in the vdi_map even for intra-pool migration with no storage motion.
+            // We build an identity map (VDI ref -> its current SR ref) so xapi's
+            // check_vdi_map passes while no actual data movement is triggered.
+            QVariantMap vdiMap;
+            const QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+            for (const QSharedPointer<VBD>& vbd : vbds)
+            {
+                if (!vbd || !vbd->IsValid())
+                    continue;
+                if (vbd->IsCD() || vbd->IsEmpty())
+                    continue;
+                QSharedPointer<VDI> vdi = vbd->GetVDI();
+                if (!vdi || !vdi->IsValid())
+                    continue;
+                const QString vdiRef = vdi->OpaqueRef();
+                const QString srRef = vdi->SRRef();
+                if (!vdiRef.isEmpty() && !srRef.isEmpty())
+                    vdiMap.insert(vdiRef, srRef);
+            }
+
             taskRef = XenAPI::VM::async_migrate_send(GetSession(),
                                                      this->m_vm->OpaqueRef(),
                                                      receiveData,
                                                      true,
-                                                     QVariantMap(),
+                                                     vdiMap,
                                                      QVariantMap(),
                                                      QVariantMap());
         } else
