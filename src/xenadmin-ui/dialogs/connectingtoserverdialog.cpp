@@ -37,39 +37,39 @@ ConnectingToServerDialog::ConnectingToServerDialog(XenConnection* connection, QW
       ui(new Ui::ConnectingToServerDialog),
       m_connection(connection)
 {
-    ui->setupUi(this);
-    ui->progressBar1->setRange(0, 0);
+    this->ui->setupUi(this);
+    this->ui->progressBar1->setRange(0, 0);
 
-    const QString host = m_connection ? m_connection->GetHostname() : QString();
-    ui->lblStatus->setText(QString("Attempting to connect to %1...").arg(host));
+    const QString host = this->m_connection ? this->m_connection->GetHostname() : QString();
+    this->ui->lblStatus->setText(QString("Attempting to connect to %1...").arg(host));
 
-    connect(ui->btnCancel, &QPushButton::clicked, this, &ConnectingToServerDialog::btnCancel_Click);
+    connect(this->ui->btnCancel, &QPushButton::clicked, this, &ConnectingToServerDialog::btnCancel_Click);
 }
 
 ConnectingToServerDialog::~ConnectingToServerDialog()
 {
-    UnregisterEventHandlers();
-    delete ui;
+    this->UnregisterEventHandlers();
+    delete this->ui;
 }
 
 bool ConnectingToServerDialog::BeginConnect(QWidget* owner, bool initiateCoordinatorSearch)
 {
-    if (!m_connection)
+    if (!this->m_connection)
         return false;
 
-    m_ownerForm = owner;
+    this->m_ownerForm = owner;
 
-    RegisterEventHandlers();
-    m_connection->BeginConnect(initiateCoordinatorSearch, [this](const QString& oldPassword, QString* newPassword) {
-        return HideAndPromptForNewPassword(oldPassword, newPassword);
+    this->RegisterEventHandlers();
+    this->m_connection->BeginConnect(initiateCoordinatorSearch, [this](const QString& oldPassword, QString* newPassword) {
+        return this->HideAndPromptForNewPassword(oldPassword, newPassword);
     });
 
-    if (m_connection->InProgress())
+    if (this->m_connection->InProgress())
     {
-        if (!isVisible())
-            show();
-        raise();
-        activateWindow();
+        if (!this->isVisible())
+            this->show();
+        this->raise();
+        this->activateWindow();
         return true;
     }
 
@@ -78,53 +78,50 @@ bool ConnectingToServerDialog::BeginConnect(QWidget* owner, bool initiateCoordin
 
 QWidget* ConnectingToServerDialog::GetOwnerWidget() const
 {
-    if (m_ownerForm && !m_ownerForm->isHidden())
-        return m_ownerForm;
+    if (this->m_ownerForm && !this->m_ownerForm->isHidden())
+        return this->m_ownerForm;
 
-    return parentWidget();
+    return this->parentWidget();
 }
 
 void ConnectingToServerDialog::closeEvent(QCloseEvent* event)
 {
-    if (m_connection && m_connection->InProgress() && !m_connection->IsConnected() && !m_endBegun)
+    if (this->m_connection && this->m_connection->InProgress() && !this->m_connection->IsConnected() && !this->m_endBegun)
     {
-        m_endBegun = true;
-        m_connection->EndConnect();
+        this->m_endBegun = true;
+        this->m_connection->EndConnect();
         event->ignore();
         return;
     }
 
-    UnregisterEventHandlers();
+    this->UnregisterEventHandlers();
     QDialog::closeEvent(event);
 }
 
 void ConnectingToServerDialog::RegisterEventHandlers()
 {
-    UnregisterEventHandlers();
+    this->UnregisterEventHandlers();
 
-    if (!m_connection)
+    if (!this->m_connection)
         return;
 
-    m_closedConn = connect(m_connection, &XenConnection::ConnectionClosed,
-                           this, &ConnectingToServerDialog::Connection_ConnectionClosed);
-    m_beforeEndConn = connect(m_connection, &XenConnection::BeforeConnectionEnd,
-                              this, &ConnectingToServerDialog::Connection_BeforeConnectionEnd);
-    m_messageConn = connect(m_connection, &XenConnection::ConnectionMessageChanged,
-                            this, &ConnectingToServerDialog::Connection_ConnectionMessageChanged);
+    this->m_closedConn = connect(this->m_connection, &XenConnection::ConnectionClosed, this, &ConnectingToServerDialog::Connection_ConnectionClosed);
+    this->m_beforeEndConn = connect(this->m_connection, &XenConnection::BeforeConnectionEnd, this, &ConnectingToServerDialog::Connection_BeforeConnectionEnd);
+    this->m_messageConn = connect(this->m_connection, &XenConnection::ConnectionMessageChanged, this, &ConnectingToServerDialog::Connection_ConnectionMessageChanged);
 }
 
 void ConnectingToServerDialog::UnregisterEventHandlers()
 {
-    if (m_closedConn)
-        disconnect(m_closedConn);
-    if (m_beforeEndConn)
-        disconnect(m_beforeEndConn);
-    if (m_messageConn)
-        disconnect(m_messageConn);
+    if (this->m_closedConn)
+        disconnect(this->m_closedConn);
+    if (this->m_beforeEndConn)
+        disconnect(this->m_beforeEndConn);
+    if (this->m_messageConn)
+        disconnect(this->m_messageConn);
 
-    m_closedConn = QMetaObject::Connection();
-    m_beforeEndConn = QMetaObject::Connection();
-    m_messageConn = QMetaObject::Connection();
+    this->m_closedConn = QMetaObject::Connection();
+    this->m_beforeEndConn = QMetaObject::Connection();
+    this->m_messageConn = QMetaObject::Connection();
 }
 
 void ConnectingToServerDialog::Connection_ConnectionClosed()
@@ -140,16 +137,16 @@ void ConnectingToServerDialog::Connection_BeforeConnectionEnd()
 void ConnectingToServerDialog::Connection_ConnectionMessageChanged(const QString& message)
 {
     QMetaObject::invokeMethod(this, [this, message]() {
-        if (isVisible())
-            ui->lblStatus->setText(message);
+        if (this->isVisible())
+            this->ui->lblStatus->setText(message);
     }, Qt::QueuedConnection);
 }
 
 void ConnectingToServerDialog::CloseConnectingDialog()
 {
-    UnregisterEventHandlers();
+    this->UnregisterEventHandlers();
     QMetaObject::invokeMethod(this, [this]() {
-        close();
+        this->close();
     }, Qt::QueuedConnection);
 }
 
@@ -159,11 +156,11 @@ bool ConnectingToServerDialog::HideAndPromptForNewPassword(const QString& oldPas
     bool result = false;
 
     QMetaObject::invokeMethod(this, [this, &result, newPassword]() {
-        const bool wasVisible = isVisible();
+        const bool wasVisible = this->isVisible();
         if (wasVisible)
-            hide();
+            this->hide();
 
-        AddServerDialog dialog(m_connection, true, GetOwnerWidget());
+        AddServerDialog dialog(this->m_connection, true, this->GetOwnerWidget());
         if (dialog.exec() == QDialog::Accepted)
         {
             result = true;
@@ -172,7 +169,7 @@ bool ConnectingToServerDialog::HideAndPromptForNewPassword(const QString& oldPas
         }
 
         if (result && wasVisible)
-            show();
+            this->show();
     }, Qt::BlockingQueuedConnection);
 
     return result;

@@ -105,6 +105,12 @@ RepairSRDialog::RepairSRDialog(QList<QSharedPointer<SR>> srs, bool runAction, QW
 
 RepairSRDialog::~RepairSRDialog()
 {
+    if (this->repairAction)
+    {
+        disconnect(this->repairAction, nullptr, this, nullptr);
+        this->repairAction = nullptr;
+    }
+
     // Disconnect signals
     for (const auto& sr : this->srList)
     {
@@ -126,7 +132,7 @@ RepairSRDialog::~RepairSRDialog()
 
 AsyncOperation* RepairSRDialog::GetRepairAction() const
 {
-    return this->repairAction;
+    return this->repairAction.data();
 }
 
 bool RepairSRDialog::SucceededWithWarning() const
@@ -380,6 +386,15 @@ void RepairSRDialog::onActionChanged()
 
 void RepairSRDialog::onActionCompleted()
 {
+    AsyncOperation* completedAction = qobject_cast<AsyncOperation*>(sender());
+    if (!completedAction)
+        completedAction = this->repairAction.data();
+    if (!completedAction)
+        return;
+
+    if (this->repairAction && completedAction != this->repairAction.data())
+        return;
+
     // Check for multipath warnings
     for (const auto& sr : this->srList)
     {
@@ -395,14 +410,13 @@ void RepairSRDialog::onActionCompleted()
     }
     
     // Rebuild tree for MultipleOperation case
-    if (qobject_cast<MultipleAction*>(this->repairAction))
+    if (qobject_cast<MultipleAction*>(completedAction))
     {
         this->buildTree();
     }
     
-    this->finalizeProgressControls();
-
-    this->repairAction->deleteLater();
+    this->finalizeProgressControls(completedAction);
+    disconnect(completedAction, nullptr, this, nullptr);
     this->repairAction = nullptr;
 }
 
@@ -463,20 +477,20 @@ void RepairSRDialog::updateProgressControls()
     this->ui->statusLabel->setText(description);
 }
 
-void RepairSRDialog::finalizeProgressControls()
+void RepairSRDialog::finalizeProgressControls(AsyncOperation* action)
 {
-    if (!this->repairAction)
+    if (!action)
         return;
     
-    bool success = !this->repairAction->HasError();
-    QString description = this->repairAction->GetDescription();
+    bool success = !action->HasError();
+    QString description = action->GetDescription();
     
     this->ui->progressBar->setValue(100);
     this->ui->statusLabel->setText(description);
     
     if (!success)
     {
-        QString error = this->repairAction->GetErrorMessage();
+        QString error = action->GetErrorMessage();
         QMessageBox::warning(this, "Repair Failed",  QString("Failed to repair storage repository: %1").arg(error));
     } else if (this->succeededWithWarning)
     {

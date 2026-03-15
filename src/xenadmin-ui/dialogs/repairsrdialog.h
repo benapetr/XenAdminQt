@@ -30,6 +30,7 @@
 
 #include <QDialog>
 #include <QList>
+#include <QPointer>
 #include <QSharedPointer>
 #include <QTreeWidgetItem>
 
@@ -110,7 +111,7 @@ class RepairSRDialog : public QDialog
         void shrink();
         void grow();
         void updateProgressControls();
-        void finalizeProgressControls();
+        void finalizeProgressControls(AsyncOperation* action);
         bool actionInProgress() const;
 
         struct RepairTreeNode
@@ -125,7 +126,7 @@ class RepairSRDialog : public QDialog
 
         Ui::RepairSRDialog* ui;
         QList<QSharedPointer<SR>> srList;
-        AsyncOperation* repairAction;
+        QPointer<AsyncOperation> repairAction;
         bool runAction;
         bool succeededWithWarning;
         QString succeededWithWarningDescription;

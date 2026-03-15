@@ -32,21 +32,21 @@
 
 StoragePropertiesDialog::StoragePropertiesDialog(QSharedPointer<SR> sr, QWidget* parent) : VerticallyTabbedDialog(sr, parent)
 {
-    setWindowTitle(tr("Storage Properties"));
-    resize(700, 550);
-    build();
+    this->setWindowTitle(tr("Storage Properties"));
+    this->resize(700, 550);
+    this->build();
 }
 
 void StoragePropertiesDialog::build()
 {
     // General tab (name, description, tags, folder)
-    showTab(new GeneralEditPage());
+    this->showTab(new GeneralEditPage());
 
     // Custom Fields tab
-    showTab(new CustomFieldsDisplayPage());
+    this->showTab(new CustomFieldsDisplayPage());
 
     // Performance Alerts tab
-    showTab(new PerfmonAlertEditPage());
+    this->showTab(new PerfmonAlertEditPage());
 
     // TODO: Add SR-specific pages from C# XenAdmin.Dialogs.PropertiesDialog:
     //
