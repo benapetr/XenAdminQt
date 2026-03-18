@@ -737,6 +737,7 @@ void GeneralTabPage::populatePoolProperties()
                            pool->HAEnabled() ? tr("Yes") : tr("No"));
 
     this->populateCertificateSection();
+    this->populateManagementInterfacesSection();
 }
 
 void GeneralTabPage::populateSRProperties()
@@ -1348,7 +1349,8 @@ void GeneralTabPage::populateManagementInterfacesSection()
         if (!pool)
             return;
 
-        QList<QSharedPointer<Host>> hosts = pool->GetHosts();
+        Q_UNUSED(pool);
+        const QList<QSharedPointer<Host>> hosts = getSortedHosts(cache);
         for (const QSharedPointer<Host>& host : hosts)
             addInterfacesForHost(host, true);
     }
