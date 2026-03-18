@@ -48,6 +48,28 @@
 #include <algorithm>
 #include <QDateTime>
 
+namespace
+{
+    QList<QSharedPointer<Host>> getSortedHosts(XenCache* cache)
+    {
+        if (!cache)
+            return {};
+
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& left, const QSharedPointer<Host>& right)
+        {
+            if (!left)
+                return right != nullptr;
+            if (!right)
+                return false;
+
+            return QString::compare(left->GetName(), right->GetName(), Qt::CaseInsensitive) < 0;
+        });
+
+        return hosts;
+    }
+} // namespace
+
 GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::GeneralTabPage)
 {
     this->ui->setupUi(this);
@@ -1530,9 +1552,9 @@ void GeneralTabPage::populateStatusSection()
     bool isShared = sr->IsShared();
     QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
 
-    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
+    QList<QSharedPointer<Host>> sortedHosts = getSortedHosts(this->m_connection->GetCache());
 
-    for (const QSharedPointer<Host>& host : allHosts)
+    for (const QSharedPointer<Host>& host : sortedHosts)
     {
         if (!host || !host->IsValid())
             continue;
@@ -1622,7 +1644,7 @@ void GeneralTabPage::populateMultipathingSection()
         return;
 
     const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
-    const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>();
+    const QList<QSharedPointer<Host>> sortedHosts = getSortedHosts(cache);
 
     auto addMultipathLine = [this](const QString& title, int currentPaths, int maxPaths, int iscsiSessions)
     {
@@ -1646,7 +1668,7 @@ void GeneralTabPage::populateMultipathingSection()
     if (sr->LunPerVDI())
     {
         const QHash<QString, QHash<QString, QString>> pathStatus = sr->GetMultiPathStatusLunPerVDI();
-        for (const QSharedPointer<Host>& host : allHosts)
+        for (const QSharedPointer<Host>& host : sortedHosts)
         {
             if (!host || host->IsEvicted())
                 continue;
@@ -1721,7 +1743,7 @@ void GeneralTabPage::populateMultipathingSection()
     {
         const QHash<QString, QString> pathStatus = sr->GetMultiPathStatusLunPerSR();
         const bool gfs2 = sr->GetType().compare("gfs2", Qt::CaseInsensitive) == 0;
-        for (const QSharedPointer<Host>& host : allHosts)
+        for (const QSharedPointer<Host>& host : sortedHosts)
         {
             if (!host || host->IsEvicted())
                 continue;
