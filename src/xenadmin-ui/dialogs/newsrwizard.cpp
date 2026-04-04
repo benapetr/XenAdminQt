@@ -43,6 +43,7 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QXmlStreamReader>
+#include <QSizePolicy>
 
 #include "newsrwizard.h"
 #include "ui_newsrwizard.h"
@@ -56,9 +57,11 @@
 #include "xenlib/xen/actions/sr/srcreateaction.h"
 #include "xenlib/xen/actions/sr/srintroduceaction.h"
 #include "xenlib/xen/actions/sr/srreattachaction.h"
+#include "xenlib/xen/actions/sr/srprobeaction.h"
 #include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/operations/parallelaction.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/network/connectionsmanager.h"
@@ -199,6 +202,12 @@ void NewSRWizard::initializeConfigurationPage()
     this->connect(this->ui->selectAllFibreButton, &QPushButton::clicked, this, &NewSRWizard::onSelectAllFibreDevices);
     this->connect(this->ui->clearAllFibreButton, &QPushButton::clicked, this, &NewSRWizard::onClearAllFibreDevices);
     this->connect(this->ui->fibreDevicesList, &QListWidget::itemSelectionChanged, this, &NewSRWizard::onFibreDeviceSelectionChanged);
+    this->connect(this->ui->nfsVersionComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewSRWizard::onConfigurationChanged);
+    this->ui->connectionStatusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    this->ui->connectionStatusLabel->setWordWrap(true);
+    this->ui->connectionStatusLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    this->ui->connectionStatusLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    this->ui->connectionStatusLabel->setMinimumHeight(this->ui->connectionStatusLabel->fontMetrics().lineSpacing() * 3);
 
     // C# has a dedicated provisioning page for iSCSI/HBA (default SR type vs clustered gfs2).
     // Keep the same behavior in Qt using an inline group on the configuration page.
@@ -425,6 +434,62 @@ void NewSRWizard::collectNameAndDescription()
 {
     this->m_srName = this->ui->nameLineEdit->text().trimmed();
     this->m_srDescription = this->ui->descriptionTextEdit->toPlainText().trimmed();
+
+    // Match C# auto-description behavior: when description is empty, derive it from location/config.
+    if (this->m_srDescription.isEmpty())
+    {
+        const QString server = this->ui->serverLineEdit->text().trimmed();
+        QString serverPath = this->ui->serverPathLineEdit->text().trimmed();
+        const QString localPath = this->ui->localPathLineEdit->text().trimmed();
+
+        switch (this->m_selectedSRType)
+        {
+            case SRType::NFS:
+            case SRType::CIFS:
+                if (!server.isEmpty() && !serverPath.isEmpty())
+                    this->m_srDescription = QString("%1:%2").arg(server, serverPath);
+                break;
+            case SRType::NFS_ISO:
+                if (!server.isEmpty() && !serverPath.isEmpty())
+                {
+                    if (!serverPath.startsWith(":") && !serverPath.startsWith("/"))
+                        serverPath.prepend('/');
+                    this->m_srDescription = QString("%1:%2").arg(server, serverPath);
+                }
+                break;
+            case SRType::CIFS_ISO:
+                if (!server.isEmpty() && !serverPath.isEmpty())
+                {
+                    QString location = serverPath;
+                    if (!location.startsWith("//"))
+                    {
+                        const QString normalizedPath = location.startsWith("/") ? location.mid(1) : location;
+                        location = QString("//%1/%2").arg(server, normalizedPath);
+                    }
+                    this->m_srDescription = location;
+                }
+                break;
+            case SRType::LocalStorage:
+                if (!localPath.isEmpty())
+                    this->m_srDescription = localPath;
+                break;
+            case SRType::iSCSI:
+            {
+                const int iqnIndex = this->ui->iscsiIqnComboBox->currentIndex();
+                if (iqnIndex >= 0 && iqnIndex < this->m_discoveredIqns.size())
+                {
+                    const ISCSIIqnInfo& iqn = this->m_discoveredIqns.at(iqnIndex);
+                    const QString lunText = this->ui->iscsiLunComboBox->currentText().trimmed();
+                    if (!iqn.ipAddress.isEmpty() && !iqn.targetIQN.isEmpty() && !lunText.isEmpty())
+                        this->m_srDescription = QString("%1, %2, %3").arg(iqn.ipAddress, iqn.targetIQN, lunText);
+                }
+                break;
+            }
+            case SRType::HBA:
+            case SRType::FCoE:
+                break;
+        }
+    }
 }
 
 void NewSRWizard::collectConfiguration()
@@ -434,6 +499,7 @@ void NewSRWizard::collectConfiguration()
     this->m_username = this->ui->usernameLineEdit->text().trimmed();
     this->m_password = this->ui->passwordLineEdit->text();
     this->m_port = this->ui->portSpinBox->value();
+    this->m_nfsVersion = this->getSelectedNfsVersion();
     this->m_localPath = this->ui->localPathLineEdit->text().trimmed();
     this->m_localFilesystem = this->ui->filesystemComboBox->currentText();
 
@@ -489,6 +555,34 @@ void NewSRWizard::updateConfigurationSection()
     switch (this->m_selectedSRType)
     {
         case SRType::NFS:
+            this->ui->networkConfigGroup->setVisible(true);
+            this->ui->portSpinBox->setValue(2049);
+            this->ui->usernameLineEdit->setVisible(false);
+            this->ui->passwordLineEdit->setVisible(false);
+            this->ui->networkLayout->labelForField(this->ui->usernameLineEdit)->setVisible(false);
+            this->ui->networkLayout->labelForField(this->ui->passwordLineEdit)->setVisible(false);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                const QString currentVersion = this->getSelectedNfsVersion();
+                QSignalBlocker blocker(this->ui->nfsVersionComboBox);
+                this->ui->nfsVersionComboBox->clear();
+                this->ui->nfsVersionComboBox->addItem(tr("NFSv3"), "3");
+                this->ui->nfsVersionComboBox->addItem(tr("NFSv4"), "4");
+                if (this->m_selectedSRType == SRType::NFS)
+                    this->ui->nfsVersionComboBox->addItem(tr("NFSv4.1"), "4.1");
+                int selectedIndex = this->ui->nfsVersionComboBox->findData(currentVersion);
+                if (selectedIndex < 0)
+                    selectedIndex = 0;
+                this->ui->nfsVersionComboBox->setCurrentIndex(selectedIndex);
+                this->ui->nfsVersionLabel->setVisible(true);
+                this->ui->nfsVersionComboBox->setVisible(true);
+            }
+            this->ui->testConnectionButton->setVisible(true);
+            this->ui->statusLabel->setVisible(true);
+            this->ui->connectionStatusLabel->setVisible(true);
+            this->ui->createNewSRRadio->setVisible(true);
+            this->ui->reattachExistingSRRadio->setVisible(true);
+            break;
         case SRType::NFS_ISO:
             this->ui->networkConfigGroup->setVisible(true);
             this->ui->portSpinBox->setValue(2049);
@@ -496,8 +590,45 @@ void NewSRWizard::updateConfigurationSection()
             this->ui->passwordLineEdit->setVisible(false);
             this->ui->networkLayout->labelForField(this->ui->usernameLineEdit)->setVisible(false);
             this->ui->networkLayout->labelForField(this->ui->passwordLineEdit)->setVisible(false);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                const QString currentVersion = this->getSelectedNfsVersion();
+                QSignalBlocker blocker(this->ui->nfsVersionComboBox);
+                this->ui->nfsVersionComboBox->clear();
+                this->ui->nfsVersionComboBox->addItem(tr("NFSv3"), "3");
+                this->ui->nfsVersionComboBox->addItem(tr("NFSv4"), "4");
+                int selectedIndex = this->ui->nfsVersionComboBox->findData(currentVersion);
+                if (selectedIndex < 0)
+                    selectedIndex = 0;
+                this->ui->nfsVersionComboBox->setCurrentIndex(selectedIndex);
+                this->ui->nfsVersionLabel->setVisible(true);
+                this->ui->nfsVersionComboBox->setVisible(true);
+            }
+            this->ui->testConnectionButton->setVisible(false);
+            this->ui->statusLabel->setVisible(false);
+            this->ui->connectionStatusLabel->setVisible(false);
+            this->ui->createNewSRRadio->setVisible(false);
+            this->ui->reattachExistingSRRadio->setVisible(false);
+            this->ui->createNewSRRadio->setChecked(true);
             break;
         case SRType::CIFS:
+            this->ui->networkConfigGroup->setVisible(true);
+            this->ui->portSpinBox->setValue(445);
+            this->ui->usernameLineEdit->setVisible(true);
+            this->ui->passwordLineEdit->setVisible(true);
+            this->ui->networkLayout->labelForField(this->ui->usernameLineEdit)->setVisible(true);
+            this->ui->networkLayout->labelForField(this->ui->passwordLineEdit)->setVisible(true);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                this->ui->nfsVersionLabel->setVisible(false);
+                this->ui->nfsVersionComboBox->setVisible(false);
+            }
+            this->ui->testConnectionButton->setVisible(true);
+            this->ui->statusLabel->setVisible(true);
+            this->ui->connectionStatusLabel->setVisible(true);
+            this->ui->createNewSRRadio->setVisible(true);
+            this->ui->reattachExistingSRRadio->setVisible(true);
+            break;
         case SRType::CIFS_ISO:
             this->ui->networkConfigGroup->setVisible(true);
             this->ui->portSpinBox->setValue(445);
@@ -505,24 +636,64 @@ void NewSRWizard::updateConfigurationSection()
             this->ui->passwordLineEdit->setVisible(true);
             this->ui->networkLayout->labelForField(this->ui->usernameLineEdit)->setVisible(true);
             this->ui->networkLayout->labelForField(this->ui->passwordLineEdit)->setVisible(true);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                this->ui->nfsVersionLabel->setVisible(false);
+                this->ui->nfsVersionComboBox->setVisible(false);
+            }
+            this->ui->testConnectionButton->setVisible(false);
+            this->ui->statusLabel->setVisible(false);
+            this->ui->connectionStatusLabel->setVisible(false);
+            this->ui->createNewSRRadio->setVisible(false);
+            this->ui->reattachExistingSRRadio->setVisible(false);
+            this->ui->createNewSRRadio->setChecked(true);
             break;
         case SRType::iSCSI:
             this->resetISCSIState();
             this->ui->iscsiConfigGroup->setVisible(true);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                this->ui->nfsVersionLabel->setVisible(false);
+                this->ui->nfsVersionComboBox->setVisible(false);
+            }
+            this->ui->testConnectionButton->setVisible(false);
+            this->ui->statusLabel->setVisible(false);
+            this->ui->connectionStatusLabel->setVisible(false);
+            this->ui->createNewSRRadio->setVisible(false);
+            this->ui->reattachExistingSRRadio->setVisible(false);
             break;
         case SRType::LocalStorage:
             this->ui->localConfigGroup->setVisible(true);
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                this->ui->nfsVersionLabel->setVisible(false);
+                this->ui->nfsVersionComboBox->setVisible(false);
+            }
+            this->ui->testConnectionButton->setVisible(false);
+            this->ui->statusLabel->setVisible(false);
+            this->ui->connectionStatusLabel->setVisible(false);
+            this->ui->createNewSRRadio->setVisible(false);
+            this->ui->reattachExistingSRRadio->setVisible(false);
             break;
         case SRType::HBA:
         case SRType::FCoE:
             this->resetFibreState();
             this->ui->fibreConfigGroup->setVisible(true);
             this->ui->fibreConfigGroup->setTitle(this->m_selectedSRType == SRType::HBA ? tr("HBA Configuration") : tr("FCoE Configuration"));
+            if (this->ui->nfsVersionLabel && this->ui->nfsVersionComboBox)
+            {
+                this->ui->nfsVersionLabel->setVisible(false);
+                this->ui->nfsVersionComboBox->setVisible(false);
+            }
+            this->ui->testConnectionButton->setVisible(false);
+            this->ui->statusLabel->setVisible(false);
+            this->ui->connectionStatusLabel->setVisible(false);
+            this->ui->createNewSRRadio->setVisible(false);
+            this->ui->reattachExistingSRRadio->setVisible(false);
             break;
     }
 
-    if (!(this->m_selectedSRType == SRType::NFS || this->m_selectedSRType == SRType::NFS_ISO ||
-          this->m_selectedSRType == SRType::CIFS || this->m_selectedSRType == SRType::CIFS_ISO))
+    if (!(this->m_selectedSRType == SRType::NFS || this->m_selectedSRType == SRType::CIFS))
     {
         this->updateNetworkReattachUI(false);
     }
@@ -718,14 +889,19 @@ void NewSRWizard::setSrTypeSelection(SRType srType, bool lockTypes)
 
 void NewSRWizard::onTestConnection()
 {
-    this->ui->connectionStatusLabel->setText(tr("Scanning server..."));
-    this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: blue; }");
+    auto setStatus = [this](const QString& text, const QString& color)
+    {
+        this->ui->connectionStatusLabel->setText(text);
+        this->ui->connectionStatusLabel->setToolTip(text);
+        this->ui->connectionStatusLabel->setStyleSheet(QString("QLabel { color: %1; }").arg(color));
+    };
+
+    setStatus(tr("Scanning server..."), "blue");
     this->ui->testConnectionButton->setEnabled(false);
 
     if (!this->m_connection || !this->m_connection->GetCache())
     {
-        this->ui->connectionStatusLabel->setText(tr("Error: Not connected to XenServer"));
-        this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
+        setStatus(tr("Error: Not connected to XenServer"), "red");
         this->ui->testConnectionButton->setEnabled(true);
         return;
     }
@@ -733,8 +909,7 @@ void NewSRWizard::onTestConnection()
     QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
-        this->ui->connectionStatusLabel->setText(tr("Error: Failed to get pool information"));
-        this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
+        setStatus(tr("Error: Failed to get pool information"), "red");
         this->ui->testConnectionButton->setEnabled(true);
         return;
     }
@@ -746,8 +921,7 @@ void NewSRWizard::onTestConnection()
     QString serverPath = this->ui->serverPathLineEdit->text().trimmed();
     if (server.isEmpty() || serverPath.isEmpty())
     {
-        this->ui->connectionStatusLabel->setText(tr("Error: Server and path are required"));
-        this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
+        setStatus(tr("Error: Server and path are required"), "red");
         this->ui->testConnectionButton->setEnabled(true);
         return;
     }
@@ -796,25 +970,58 @@ void NewSRWizard::onTestConnection()
 
     QVariantList probeResult;
     QString probeError;
-    if (this->runProbeExtWithProgress(tr("Testing Storage Connection"),
-                                      masterRef,
-                                      deviceConfig,
-                                      srTypeStr,
-                                      probeResult,
-                                      probeError))
+    bool probeOk = false;
+
+    // Use SrProbeAction (Async.SR.probe path) for probeable storage types.
+    if (srTypeStr == "nfs" || srTypeStr == "smb" || srTypeStr == "iso")
+    {
+        QSharedPointer<Host> coordinatorHost = this->m_connection->GetCache()->ResolveObject<Host>(masterRef);
+        if (!coordinatorHost || !coordinatorHost->IsValid())
+        {
+            probeError = tr("Failed to resolve pool coordinator host.");
+            probeOk = false;
+        } else
+        {
+            auto* action = new SrProbeAction(this->m_connection,
+                                             coordinatorHost.data(),
+                                             srTypeStr,
+                                             deviceConfig,
+                                             QVariantMap(),
+                                             this);
+
+            ActionProgressDialog progressDialog(action, this);
+            progressDialog.setWindowTitle(tr("Testing Storage Connection"));
+            progressDialog.exec();
+
+            if (action->HasError())
+                probeError = action->GetErrorMessage();
+            else
+                probeResult = action->discoveredSRs();
+
+            probeOk = !action->HasError();
+        }
+    } else
+    {
+        probeOk = this->runProbeExtWithProgress(tr("Testing Storage Connection"),
+                                                masterRef,
+                                                deviceConfig,
+                                                srTypeStr,
+                                                probeResult,
+                                                probeError);
+    }
+
+    if (probeOk)
     {
         this->m_foundSRs.clear();
         this->ui->existingSRsList->clear();
 
         if (probeResult.isEmpty())
         {
-            this->ui->connectionStatusLabel->setText(tr("Connection successful - No existing SRs found"));
-            this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: green; }");
+            setStatus(tr("Connection successful - No existing SRs found"), "green");
             this->updateNetworkReattachUI(false);
         } else
         {
-            this->ui->connectionStatusLabel->setText(tr("Connection successful - Found %1 existing SR(s)").arg(probeResult.size()));
-            this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: green; }");
+            setStatus(tr("Connection successful - Found %1 existing SR(s)").arg(probeResult.size()), "green");
             this->updateNetworkReattachUI(true);
 
             for (const QVariant& srVar : probeResult)
@@ -836,8 +1043,7 @@ void NewSRWizard::onTestConnection()
         }
     } else
     {
-        this->ui->connectionStatusLabel->setText(tr("Connection failed: %1").arg(probeError));
-        this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
+        setStatus(tr("Connection failed: %1").arg(probeError), "red");
         this->updateNetworkReattachUI(false);
     }
 
@@ -935,6 +1141,44 @@ bool NewSRWizard::runProbeExtWithProgress(const QString& title,
     }
 
     probeResult = *result;
+    return true;
+}
+
+bool NewSRWizard::runSrProbeWithProgress(const QString& title,
+                                         const QString& masterRef,
+                                         const QVariantMap& deviceConfig,
+                                         const QString& srType,
+                                         QVariantList& probeResult,
+                                         QString& errorMessage)
+{
+    probeResult.clear();
+    errorMessage.clear();
+
+    QSharedPointer<Host> coordinatorHost = this->m_connection->GetCache()->ResolveObject<Host>(masterRef);
+    if (!coordinatorHost || !coordinatorHost->IsValid())
+    {
+        errorMessage = tr("Failed to resolve pool coordinator host.");
+        return false;
+    }
+
+    auto* action = new SrProbeAction(this->m_connection,
+                                     coordinatorHost.data(),
+                                     srType,
+                                     deviceConfig,
+                                     QVariantMap(),
+                                     this);
+
+    ActionProgressDialog progressDialog(action, this);
+    progressDialog.setWindowTitle(title);
+    progressDialog.exec();
+
+    if (action->HasError())
+    {
+        errorMessage = action->GetErrorMessage();
+        return false;
+    }
+
+    probeResult = action->discoveredSRs();
     return true;
 }
 
@@ -1522,12 +1766,12 @@ QList<QVariantMap> NewSRWizard::probeForExistingSrs(const QVariantMap& deviceCon
 
     QVariantList probeResult;
     QString probeError;
-    if (!const_cast<NewSRWizard*>(this)->runProbeExtWithProgress(tr("Probing Storage"),
-                                                                  masterRef,
-                                                                  deviceConfig,
-                                                                  usedSrType,
-                                                                  probeResult,
-                                                                  probeError))
+    if (!const_cast<NewSRWizard*>(this)->runSrProbeWithProgress(tr("Probing Storage"),
+                                                                 masterRef,
+                                                                 deviceConfig,
+                                                                 usedSrType,
+                                                                 probeResult,
+                                                                 probeError))
     {
         error = probeError;
         return matches;
@@ -1549,12 +1793,12 @@ QList<QVariantMap> NewSRWizard::probeForExistingSrs(const QVariantMap& deviceCon
 
     QVariantList altProbeResult;
     QString altProbeError;
-    if (!const_cast<NewSRWizard*>(this)->runProbeExtWithProgress(tr("Probing Storage"),
-                                                                  masterRef,
-                                                                  deviceConfig,
-                                                                  altType,
-                                                                  altProbeResult,
-                                                                  altProbeError))
+    if (!const_cast<NewSRWizard*>(this)->runSrProbeWithProgress(tr("Probing Storage"),
+                                                                 masterRef,
+                                                                 deviceConfig,
+                                                                 altType,
+                                                                 altProbeResult,
+                                                                 altProbeError))
     {
         return matches;
     }
@@ -2098,6 +2342,8 @@ void NewSRWizard::updateSummary()
             stream << QString("<b>Server:</b> %1<br>").arg(this->m_server);
             stream << QString("<b>Server Path:</b> %1<br>").arg(this->m_serverPath);
             stream << QString("<b>Port:</b> %1<br>").arg(this->m_port);
+            if (this->m_selectedSRType == SRType::NFS || this->m_selectedSRType == SRType::NFS_ISO)
+                stream << QString("<b>NFS Version:</b> %1<br>").arg(this->m_nfsVersion);
             if (this->m_selectedSRType == SRType::CIFS || this->m_selectedSRType == SRType::CIFS_ISO)
             {
                 stream << QString("<b>Username:</b> %1<br>").arg(this->m_username);
@@ -2140,31 +2386,26 @@ void NewSRWizard::accept()
     this->collectNameAndDescription();
     this->collectConfiguration();
 
-    if (!this->m_connection || !this->m_connection->IsConnected() || !this->m_connection->GetCache())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         QMessageBox::critical(this, tr("Error"), tr("Not connected to XenServer. Please reconnect and try again."));
         return;
     }
 
-    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-    if (pools.isEmpty())
+    QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPool();
+    if (pool.isNull())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to get pool information. Connection may be lost."));
         return;
     }
 
-    QString masterRef = pools.first().value("master").toString();
-
-    QSharedPointer<Host> coordinatorHost(new Host(this->m_connection, masterRef, this));
+    QSharedPointer<Host> coordinatorHost = pool->GetMasterHost();
 
     QString planningError;
     const QList<PlannedAction> plans = this->buildPlannedActions(coordinatorHost, planningError);
     if (!planningError.isEmpty() || plans.isEmpty())
     {
-        QMessageBox::critical(this,
-                              tr("Error"),
-                              planningError.isEmpty() ? tr("No storage operation can be started with current selection.")
-                                                      : planningError);
+        QMessageBox::critical(this, tr("Error"), planningError.isEmpty() ? tr("No storage operation can be started with current selection.") : planningError);
         return;
     }
 
@@ -2239,9 +2480,7 @@ void NewSRWizard::accept()
 
     if (rootAction->HasError())
     {
-        QMessageBox::critical(this,
-                              tr("Error"),
-                              tr("Failed to complete storage operation:\n\n%1").arg(rootAction->GetErrorMessage()));
+        QMessageBox::critical(this, tr("Error"), tr("Failed to complete storage operation:\n\n%1").arg(rootAction->GetErrorMessage()));
     }
 }
 
@@ -2289,6 +2528,8 @@ QVariantMap NewSRWizard::getDeviceConfig() const
         case SRType::NFS_ISO:
             config["server"] = this->m_server;
             config["serverpath"] = this->m_serverPath;
+            if (this->m_nfsVersion != "3")
+                config["nfsversion"] = this->m_nfsVersion;
             break;
         case SRType::CIFS:
         case SRType::CIFS_ISO:
@@ -2376,9 +2617,20 @@ QVariantMap NewSRWizard::getDeviceConfig() const
             location.prepend('/');
         config["location"] = QString("%1:%2").arg(this->m_server, location);
         config["type"] = "nfs_iso";
+        if (this->m_nfsVersion != "3")
+            config["nfsversion"] = this->m_nfsVersion;
     }
 
     return config;
+}
+
+QString NewSRWizard::getSelectedNfsVersion() const
+{
+    if (!this->ui || !this->ui->nfsVersionComboBox)
+        return "3";
+
+    const QString version = this->ui->nfsVersionComboBox->currentData().toString().trimmed();
+    return version.isEmpty() ? "3" : version;
 }
 
 QVariantMap NewSRWizard::getSMConfig() const

@@ -64,8 +64,6 @@
  */
 class XENLIB_EXPORT SrProbeAction : public AsyncOperation
 {
-    Q_OBJECT
-
 public:
     /**
      * @brief Constructor

@@ -165,35 +165,41 @@ QVariantList SrProbeAction::parseSRListXML(const QString& xml)
 
         if (reader.isStartElement())
         {
-            QString elementName = reader.name().toString();
+            const QString elementName = reader.name().toString().toLower();
 
-            if (elementName == "SR")
+            if (elementName == "sr")
             {
                 // Start of new SR record
                 currentSR.clear();
-            } else if (elementName == "UUID")
+            } else if (elementName == "uuid")
             {
                 currentSR["uuid"] = reader.readElementText();
-            } else if (elementName == "NameLabel")
+            } else if (elementName == "namelabel" || elementName == "name_label")
             {
                 currentSR["name_label"] = reader.readElementText();
-            } else if (elementName == "NameDescription")
+            } else if (elementName == "namedescription" || elementName == "name_description")
             {
                 currentSR["name_description"] = reader.readElementText();
-            } else if (elementName == "TotalSpace")
+            } else if (elementName == "totalspace")
             {
                 currentSR["total_space"] = reader.readElementText().toLongLong();
-            } else if (elementName == "FreeSpace")
+            } else if (elementName == "freespace")
             {
                 currentSR["free_space"] = reader.readElementText().toLongLong();
-            } else if (elementName == "Aggregated")
+            } else if (elementName == "size")
+            {
+                currentSR["total_space"] = reader.readElementText().toLongLong();
+            } else if (elementName == "aggregate")
+            {
+                currentSR["aggregated"] = !reader.readElementText().trimmed().isEmpty();
+            } else if (elementName == "aggregated")
             {
                 currentSR["aggregated"] = (reader.readElementText().toLower() == "true");
-            } else if (elementName == "PoolMetadataDetected")
+            } else if (elementName == "poolmetadatadetected" || elementName == "pool_metadata_detected")
             {
                 currentSR["pool_metadata_detected"] = (reader.readElementText().toLower() == "true");
             }
-        } else if (reader.isEndElement() && reader.name().toString() == "SR")
+        } else if (reader.isEndElement() && reader.name().toString().toLower() == "sr")
         {
             // End of SR record - add to list if it has a UUID
             if (!currentSR.isEmpty() && currentSR.contains("uuid"))

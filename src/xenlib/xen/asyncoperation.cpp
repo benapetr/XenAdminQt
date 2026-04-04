@@ -43,6 +43,7 @@
 #include <QtCore/QRunnable>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QMetaObject>
+#include <QtCore/QXmlStreamReader>
 
 // Define static const members
 const int AsyncOperation::TASK_POLL_INTERVAL_MS;
@@ -913,15 +914,30 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
         {
             QString resultStr = resultVariant.toString();
 
-            // Task result may contain XML-wrapped values like "<value>OpaqueRef:...</value>"
-            // Strip XML tags to get the actual reference (matches C# behavior)
+            // Task result may be wrapped in "<value>...</value>".
+            // Parse it as XML so escaped payload (e.g. "&lt;SRlist&gt;") is decoded.
             if (resultStr.contains("<value>") && resultStr.contains("</value>"))
             {
-                int startIdx = resultStr.indexOf("<value>") + 7; // length of "<value>"
-                int endIdx = resultStr.indexOf("</value>");
-                if (startIdx >= 7 && endIdx > startIdx)
+                QXmlStreamReader valueReader(resultStr);
+                while (!valueReader.atEnd())
                 {
-                    resultStr = resultStr.mid(startIdx, endIdx - startIdx);
+                    valueReader.readNext();
+                    if (valueReader.isStartElement() && valueReader.name() == QLatin1String("value"))
+                    {
+                        const QString innerValue = valueReader.readElementText();
+                        if (!innerValue.isEmpty())
+                            resultStr = innerValue;
+                        break;
+                    }
+                }
+
+                // Fallback to manual extraction if parsing failed to locate the value node.
+                if (resultStr.contains("<value>") && resultStr.contains("</value>"))
+                {
+                    int startIdx = resultStr.indexOf("<value>") + 7; // length of "<value>"
+                    int endIdx = resultStr.indexOf("</value>");
+                    if (startIdx >= 7 && endIdx > startIdx)
+                        resultStr = resultStr.mid(startIdx, endIdx - startIdx);
                 }
             }
 

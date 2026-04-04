@@ -244,6 +244,7 @@ class NewSRWizard : public QWizard
         void setSrTypeSelection(SRType srType, bool lockTypes);
         QList<FibreChannelDevice> getSelectedFibreDevices() const;
         bool runProbeExtWithProgress(const QString& title, const QString& masterRef, const QVariantMap& deviceConfig, const QString& srType, QVariantList& probeResult, QString& errorMessage);
+        bool runSrProbeWithProgress(const QString& title, const QString& masterRef, const QVariantMap& deviceConfig, const QString& srType, QVariantList& probeResult, QString& errorMessage);
         QList<PlannedAction> buildPlannedActions(const QSharedPointer<Host>& coordinatorHost, QString& error) const;
         AsyncOperation* createActionFromPlan(const PlannedAction& plan) const;
         QString getExistingSRRefByUuid(const QString& srUuid) const;
@@ -258,6 +259,7 @@ class NewSRWizard : public QWizard
         QList<QVariantMap> probeForExistingSrs(const QVariantMap& deviceConfig, QString& usedSrType, QString& error) const;
         static QVariantMap normalizeProbeConfig(const QVariantMap& config);
         void clearPlannedProbeSelections();
+        QString getSelectedNfsVersion() const;
 
         QString getSRTypeString() const;
         QString getContentType() const;
@@ -280,6 +282,7 @@ class NewSRWizard : public QWizard
         QString m_username;
         QString m_password;
         int m_port = 2049;
+        QString m_nfsVersion = "3";
 
         QString m_localPath;
         QString m_localFilesystem;
