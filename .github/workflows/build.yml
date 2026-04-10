@@ -91,6 +91,7 @@ jobs:
           else
             make -j"$(nproc)"
           fi
+
   build-arm64:
     name: arm64 / Qt 6.7.0
     runs-on: ubuntu-24.04-arm
@@ -118,6 +119,30 @@ jobs:
           mkdir -p build
           cd build
           qmake ../src/xenadminqt.pro
+      - name: Build project
+        run: |
+          cd build
+          make -j"$(nproc)"
+
+  build-riscv64:
+    name: riscv64 / Qt (system)
+    runs-on: ubuntu-24.04-riscv
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config \
+            qt6-base-dev qt6-charts-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+      - name: Show qmake version
+        run: qmake6 -v
+      - name: Configure project
+        run: |
+          mkdir -p build
+          cd build
+          qmake6 ../src/xenadminqt.pro
       - name: Build project
         run: |
           cd build
