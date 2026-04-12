@@ -125,7 +125,7 @@ jobs:
           make -j"$(nproc)"
 
   build-riscv64:
-    name: riscv64 / Qt (system)
+    name: riscv64 / Qt (system) / native runner
     runs-on: ubuntu-24.04-riscv
     steps:
       - name: Checkout sources
@@ -146,4 +146,65 @@ jobs:
       - name: Build project
         run: |
           cd build
-          make -j"$(nproc)"
+          time make -j"$(nproc)"
+
+  build-riscv64-cross:
+    name: riscv64 / cross-compile / CMake on x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Add riscv64 architecture
+        run: |
+          sudo dpkg --add-architecture riscv64
+          # Limit existing amd64 sources to avoid package conflicts with riscv64 arch
+          if [ -f /etc/apt/sources.list ]; then
+            sudo sed -i 's/^deb /deb [arch=amd64,i386] /' /etc/apt/sources.list
+          fi
+          # Handle DEB822 format (Ubuntu 24.04+) by restricting arch on existing stanzas
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -f "$f" ] && sudo sed -i '/^Types:/a Architectures: amd64 i386' "$f" || true
+          done
+          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports noble main universe" | \
+            sudo tee /etc/apt/sources.list.d/riscv64-ports.list
+          sudo apt-get update
+
+      - name: Install cross-compiler and host Qt6 tools
+        run: |
+          sudo apt-get install -y \
+            gcc-riscv64-linux-gnu \
+            g++-riscv64-linux-gnu \
+            cmake \
+            ninja-build \
+            pkg-config \
+            qt6-base-dev
+
+      - name: Install riscv64 Qt6 libraries (target sysroot)
+        run: |
+          sudo apt-get install -y \
+            qt6-base-dev:riscv64 \
+            qt6-charts-dev:riscv64 \
+            libssl-dev:riscv64 \
+            libglu1-mesa-dev:riscv64 \
+            libxkbcommon-dev:riscv64
+
+      - name: Locate host Qt6 tools path
+        run: |
+          QT6_BIN=$(dirname "$(command -v qmake6 || command -v qmake)")
+          QT_HOST_TOOLS=$(dirname "$QT6_BIN")
+          echo "QT_HOST_TOOLS=$QT_HOST_TOOLS" >> "$GITHUB_ENV"
+          echo "Host Qt6 tools found at: $QT_HOST_TOOLS"
+
+      - name: Configure (cross-compilation)
+        run: |
+          cmake -B build-cross \
+            -DCMAKE_TOOLCHAIN_FILE=toolchains/riscv64-linux-gnu.cmake \
+            -DQT_HOST_PATH="$QT_HOST_TOOLS" \
+            -DQt6_DIR=/usr/lib/riscv64-linux-gnu/cmake/Qt6 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -G Ninja
+
+      - name: Build (cross, timed)
+        run: |
+          time ninja -C build-cross -j"$(nproc)"
