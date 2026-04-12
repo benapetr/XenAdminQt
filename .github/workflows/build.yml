@@ -100,7 +100,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          sudo add-apt-repository universe -y
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
       - name: Install Qt
@@ -158,6 +157,7 @@ jobs:
 
       - name: Build riscv64 sysroot via multiarch packages
         run: |
+          set -o pipefail
           # Use dpkg multiarch to install riscv64 packages directly on the host.
           # No Docker or QEMU needed - apt only unpacks .deb files.
           sudo dpkg --add-architecture riscv64
@@ -177,15 +177,16 @@ jobs:
               -e '/^Architectures:/s/.*/Architectures: amd64/' \
               -e '/^Components:/a Architectures: amd64' \
               {} + 2>/dev/null || true
-          sudo apt-get update -q 2>&1 | grep -vE "^Ign|^(W|N):" || true
+          sudo apt-get update -q 2>&1 | grep -vE "^Ign|^(W|N):"
           sudo apt-get install -y --no-install-recommends \
             qt6-base-dev:riscv64 \
             qt6-charts-dev:riscv64 \
             libssl-dev:riscv64 \
             libxkbcommon-dev:riscv64
           # Assemble sysroot from multiarch installation paths.
-          sudo mkdir -p /opt/riscv64-sysroot/usr
-          sudo cp -a /usr/lib/riscv64-linux-gnu /opt/riscv64-sysroot/usr/
+          # lib must sit under usr/lib/ so cmake paths resolve correctly.
+          sudo mkdir -p /opt/riscv64-sysroot/usr/lib
+          sudo cp -a /usr/lib/riscv64-linux-gnu /opt/riscv64-sysroot/usr/lib/
           sudo cp -a /usr/include /opt/riscv64-sysroot/usr/
           echo "Sysroot ready. Qt6 cmake dir:"
           QT6_CMAKE=/opt/riscv64-sysroot/usr/lib/riscv64-linux-gnu/cmake/Qt6
