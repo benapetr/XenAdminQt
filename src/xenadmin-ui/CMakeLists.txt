@@ -257,6 +257,8 @@ set(XENADMIN_SOURCES
     dialogs/optionspages/saveandrestoreoptionspage.ui
     dialogs/optionspages/securityoptionspage.cpp
     dialogs/optionspages/securityoptionspage.ui
+    # Header-only Q_OBJECT interface: listed explicitly so AUTOMOC processes it
+    dialogs/optionspages/ioptionspage.h
     dialogs/poolpropertiesdialog.cpp
     dialogs/reconnectasdialog.cpp
     dialogs/reconnectasdialog.ui

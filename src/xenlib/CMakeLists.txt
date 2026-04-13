@@ -234,6 +234,8 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_VLAN.cpp
     xen/xenapi/xenapi_VM.cpp
     xen/xenobject.cpp
+    # Header-only Q_OBJECT classes: listed explicitly so AUTOMOC processes them
+    collections/observablelist.h
 )
 
 qt_add_library(xenlib STATIC ${XENLIB_SOURCES})
