@@ -252,6 +252,7 @@ target_compile_definitions(xenlib
 target_link_libraries(xenlib
     PUBLIC
         Qt6::Core
+        Qt6::Gui
         Qt6::Network
         Qt6::Xml
 )

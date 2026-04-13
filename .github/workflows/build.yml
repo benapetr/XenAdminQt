@@ -93,7 +93,7 @@ jobs:
           fi
 
   build-arm64:
-    name: arm64 / Qt 6.7.0
+    name: arm64 / Qt (system)
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout sources
@@ -102,24 +102,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config \
+            qt6-base-dev qt6-charts-dev \
             libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: 6.7.0
-          host: linux_arm64
-          target: desktop
-          arch: linux_gcc_arm64
-          modules: qtcharts
-          install-deps: false
-          cache: true
       - name: Show qmake version
-        run: qmake -v
+        run: qmake6 -v
       - name: Configure project
         run: |
           mkdir -p build
           cd build
-          qmake ../src/xenadminqt.pro
+          qmake6 ../src/xenadminqt.pro
       - name: Build project
         run: |
           cd build
