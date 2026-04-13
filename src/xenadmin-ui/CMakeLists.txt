@@ -401,9 +401,12 @@ set(XENADMIN_SOURCES
 
 qt_add_executable(xenadmin-qt ${XENADMIN_SOURCES})
 
-# Include directories are inherited transitively from xenlib's PUBLIC
-# target_include_directories (src/xenlib and src/).
-# OpenSSL is also inherited transitively from xenlib's PUBLIC target_link_libraries.
+# Headers within xenadmin-ui use relative includes such as
+# "controls/memoryspinner.h" from dialogs/ — this directory must be
+# a search root so the compiler can resolve them.
+target_include_directories(xenadmin-qt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# OpenSSL is inherited transitively from xenlib's PUBLIC target_link_libraries.
 
 target_link_libraries(xenadmin-qt
     PRIVATE
