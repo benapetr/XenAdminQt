@@ -37,6 +37,7 @@
 #include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QDebug>
+#include <QSet>
 
 RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
@@ -86,9 +87,21 @@ void RemoveHostCommand::Run()
     if (connections.isEmpty())
         return;
 
-    XenConnection* connection = connections.first();
-    if (!connection)
+    QList<XenConnection*> uniqueConnections;
+    QSet<XenConnection*> seenConnections;
+    for (XenConnection* connection : connections)
+    {
+        if (!connection || seenConnections.contains(connection))
+            continue;
+
+        seenConnections.insert(connection);
+        uniqueConnections.append(connection);
+    }
+
+    if (uniqueConnections.isEmpty())
         return;
+
+    XenConnection* connection = uniqueConnections.first();
 
     QString connection_hostname = connection->GetHostname();
     QString hostName = connection_hostname;
@@ -113,21 +126,41 @@ void RemoveHostCommand::Run()
 
     qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << connection_hostname << ")";
 
-    // Disconnect if still connected
-    if (connection->IsConnected() || connection->InProgress())
-    {
-        qDebug() << "RemoveHostCommand: Disconnecting from" << connection_hostname;
-        connection->EndConnect(true, false);
-    }
+    Xen::ConnectionsManager* connectionManager = Xen::ConnectionsManager::instance();
+    if (!connectionManager)
+        return;
 
-    QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
-    for (const ConnectionProfile& profile : profiles)
-    {
-        if (profile.GetHostname() == connection_hostname && profile.GetPort() == connection->GetPort())
+    auto removeSavedProfile = [](XenConnection* currentConnection) {
+        if (!currentConnection)
+            return;
+
+        const QString currentHostname = currentConnection->GetHostname();
+        const int currentPort = currentConnection->GetPort();
+        const QList<ConnectionProfile> profiles = SettingsManager::instance().LoadConnectionProfiles();
+        for (const ConnectionProfile& profile : profiles)
         {
-            if (!profile.GetName().isEmpty())
+            if (profile.GetHostname() == currentHostname && profile.GetPort() == currentPort && !profile.GetName().isEmpty())
                 SettingsManager::instance().RemoveConnectionProfile(profile.GetName());
         }
+    };
+
+    for (XenConnection* currentConnection : uniqueConnections)
+    {
+        if (!currentConnection)
+            continue;
+
+        qDebug() << "RemoveHostCommand: Removing live connection"
+                 << currentConnection->GetHostname() << "(" << currentConnection->GetPort() << ")";
+
+        if (currentConnection->IsConnected() || currentConnection->InProgress())
+        {
+            qDebug() << "RemoveHostCommand: Disconnecting from" << currentConnection->GetHostname();
+            currentConnection->EndConnect(true, false);
+        }
+
+        removeSavedProfile(currentConnection);
+        connectionManager->RemoveConnection(currentConnection);
+        currentConnection->deleteLater();
     }
 
     SettingsManager::instance().Sync();
