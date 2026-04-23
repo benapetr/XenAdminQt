@@ -314,7 +314,6 @@ void NavigationPane::onNavigationModeChanged()
         // Set the navigation mode so tree builder uses correct layout
         this->m_currentNavigationView->SetNavigationMode(this->m_currentMode);
         this->m_currentNavigationView->ResetSearchBox();
-        // requestRefreshTreeView() is called by setNavigationMode()
         this->m_currentNavigationView->FocusTreeView();
     }
 } 
@@ -423,7 +422,6 @@ void NavigationPane::UpdateSearch()
     filters.showLocalStorage = settings.GetLocalSRsVisible();
     filters.showHiddenObjects = settings.GetShowHiddenObjects();
     this->m_currentNavigationView->SetViewFilters(filters);
-    this->m_currentNavigationView->RequestRefreshTreeView();
 }
 
 void NavigationPane::SetInSearchMode(bool enabled)

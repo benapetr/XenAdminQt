@@ -147,6 +147,7 @@ class NavigationView : public QWidget
         void buildInfrastructureTree();
         void buildObjectsTree();
         void buildOrganizationTree();
+        void showEmptyTreePlaceholder(const QString& rootText);
         void scheduleRefresh(); // Debounced refresh
         void connectCacheSignals(XenConnection* connection);
         void disconnectCacheSignals(XenConnection* connection);

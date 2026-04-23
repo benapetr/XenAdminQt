@@ -1762,9 +1762,6 @@ void MainWindow::onNavigationModeChanged(int mode)
 
     // TODO: SetFiltersLabel() - update filters indicator in title bar
     this->updateViewMenu(navMode);
-
-    // Update tree view for new mode
-    this->RefreshServerTree();
 }
 
 void MainWindow::onViewTemplatesToggled(bool checked)

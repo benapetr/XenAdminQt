@@ -225,8 +225,6 @@ void NavigationView::SetNavigationMode(NavigationPane::NavigationMode mode)
     {
         this->m_navigationMode = mode;
         this->updateDragDropAvailability();
-        // Rebuild tree with new mode
-        this->RequestRefreshTreeView();
     }
 }
 
@@ -368,23 +366,26 @@ void NavigationView::onSearchTextChanged(const QString& text)
     this->RequestRefreshTreeView();
 }
 
+void NavigationView::showEmptyTreePlaceholder(const QString& rootText)
+{
+    this->ui->treeWidget->clear();
+
+    QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
+    root->setText(0, rootText);
+    root->setExpanded(true);
+
+    QTreeWidgetItem* placeholder = new QTreeWidgetItem(root);
+    placeholder->setText(0, QStringLiteral("Connect to a XenServer"));
+    placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
+}
+
 void NavigationView::buildInfrastructureTree()
 {
     QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
 
     if (connections.isEmpty())
     {
-        this->ui->treeWidget->clear();
-        QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
-        root->setText(0, XENADMIN_BRANDING_NAME);
-        root->setExpanded(true);
-
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(root);
-        placeholder->setText(0, connections.isEmpty()
-            ? "Connect to a XenServer"
-            : "(No connection manager available)");
-        if (connections.isEmpty())
-            placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
+        this->showEmptyTreePlaceholder(XENADMIN_BRANDING_NAME);
         return;
     }
 
@@ -411,9 +412,7 @@ void NavigationView::buildObjectsTree()
     const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
     if (connections.isEmpty())
     {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "Connect to a XenServer");
-        placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
+        this->showEmptyTreePlaceholder(QStringLiteral("Objects"));
         return;
     }
 
