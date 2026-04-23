@@ -41,6 +41,20 @@ If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
   - Alma/Rocky/RHEL 9: Qt5 Charts may require CRB/EPEL
   - FreeRDP/WinPR support is optional (`freerdp-devel` + `winpr-devel`)
 
+### AppImage (.AppImage)
+- `linuxdeploy`
+- `linuxdeploy-plugin-qt`
+- `linuxdeploy-plugin-appimage`
+- Build dependencies:
+  ```bash
+  sudo apt-get install build-essential pkg-config \
+    qtbase5-dev qt6-base-dev libqt5charts5-dev qt6-charts-dev \
+    libfreerdp2-dev libfreerdp-dev libwinpr2-dev libwinpr-dev \
+    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libssl-dev
+  ```
+  Download released AppImages from the three linuxdeploy projects, create symlinks
+  with bare command names, and put that directory on `PATH`.
+
 ### macOS (.dmg) (includes `sips` and `iconutil` for icon conversion)
 - macOS 10.15 or later
 - Xcode Command Line Tools
@@ -113,6 +127,36 @@ sudo dnf install packaging/output/xenadmin-qt-0.1.0-1.*.rpm
 # or
 sudo rpm -ivh packaging/output/xenadmin-qt-0.1.0-1.*.rpm
 ```
+
+### Build AppImage
+
+```bash
+cd packaging/
+./package-appimage.sh
+```
+
+With custom Qt path:
+```bash
+./package-appimage.sh --qt ~/Qt/6.5.0/gcc_64/bin
+```
+
+With custom version:
+```bash
+./package-appimage.sh --version 0.2.0
+```
+
+**Output:** `packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage`
+
+**Installation/Run:**
+```bash
+chmod +x packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage
+./packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage
+```
+
+**Notes:**
+- `linuxdeploy`, `linuxdeploy-plugin-qt`, and `linuxdeploy-plugin-appimage` must be available in `PATH`
+- The script reuses the Debian desktop entry and the existing `packaging/xenadmin.png` icon
+- `xenlib` is linked statically, so the AppImage bundles the GUI binary plus Qt/system runtime dependencies
 
 ### Build macOS DMG
 
@@ -234,10 +278,10 @@ All scripts follow this general workflow:
 1. **Validate environment**: Check for required tools (qmake, rpmbuild, etc.)
 2. **Build application**: Run `make -j<ncpus>` in `release/` directory
 3. **Create package structure**: Set up platform-specific directory layout
-4. **Copy binaries and libraries**: Include xenadmin-qt binary and libxenlib
+4. **Copy binaries and libraries**: Include xenadmin-qt binary and any required runtime libraries
 5. **Bundle dependencies**: Platform-specific dependency handling
 6. **Generate metadata**: Create control files, Info.plist, etc.
-7. **Create package**: Build .deb, .rpm, or .dmg
+7. **Create package**: Build .deb, .rpm, .AppImage, or .dmg
 8. **Output to**: `packaging/output/`
 
 ## Temporary Files
@@ -245,6 +289,7 @@ All scripts follow this general workflow:
 All scripts use temporary directories for temporary build artifacts:
 - Debian: `/tmp/xenadmin-deb-XXXXXX`
 - Fedora: `/tmp/xenadmin-rpm-XXXXXX`
+- AppImage: `packaging/.appimage-build` and `packaging/.AppDir`
 - macOS: `/tmp/xenadmin-dmg-XXXXXX`
 - Windows: `$env:TEMP\xenadmin-win-XXXXXX` (handled by .NET temp directory)
 
