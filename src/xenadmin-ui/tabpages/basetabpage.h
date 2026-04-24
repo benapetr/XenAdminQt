@@ -33,8 +33,8 @@
 #include <QSharedPointer>
 #include <QPointer>
 #include "xenlib/xen/xenobjecttype.h"
+#include "xenlib/xen/network/connection.h"
 
-class XenConnection;
 class XenRpcAPI;
 class XenObject;
 
