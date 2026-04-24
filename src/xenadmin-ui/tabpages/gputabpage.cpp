@@ -229,17 +229,18 @@ void GpuTabPage::rebuild()
     this->ui->pageLayout->addStretch();
 }
 
-void GpuTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void GpuTabPage::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
-    if (!this->isVisible() || connection != this->m_connection)
+    if (!object || !this->isVisible() || object->GetConnection() != this->m_connection)
         return;
 
-    if (type == QLatin1String("pgpu"))
+    if (object->GetObjectType() == XenObjectType::PGPU)
     {
+        const QString ref = object->OpaqueRef();
         GpuRow* row = this->m_rowsByPgpuRef.value(ref, nullptr);
         if (row)
         {
-            QSharedPointer<PGPU> pgpu = this->m_connection->GetCache()->ResolveObject<PGPU>(ref);
+            QSharedPointer<PGPU> pgpu = qSharedPointerDynamicCast<PGPU>(object);
             row->RefreshGpu(pgpu);
             return;
         }
@@ -247,20 +248,19 @@ void GpuTabPage::onCacheObjectChanged(XenConnection* connection, const QString& 
         return;
     }
 
-    if (type == QLatin1String("gpu_group")
-        || type == QLatin1String("vgpu")
-        || type == QLatin1String("vgpu_type")
-        || type == QLatin1String("host")
-        || type == QLatin1String("pool"))
+    if (object->GetObjectType() == XenObjectType::GPUGroup
+        || object->GetObjectType() == XenObjectType::VGPU
+        || object->GetObjectType() == XenObjectType::VGPUType
+        || object->GetObjectType() == XenObjectType::Host
+        || object->GetObjectType() == XenObjectType::Pool)
     {
         this->rebuild();
     }
 }
 
-void GpuTabPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+void GpuTabPage::onCacheObjectRemoved(QSharedPointer<XenObject> object)
 {
-    Q_UNUSED(ref);
-    this->onCacheObjectChanged(connection, type, QString());
+    this->onCacheObjectChanged(object);
 }
 
 void GpuTabPage::onCacheBulkUpdateComplete(const QString& type, int count)

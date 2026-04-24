@@ -127,8 +127,8 @@ void SrPicker::Populate(SRPickerType usage, XenConnection* connection, const QSt
 
     // Listen for cache updates
     XenCache* cache = this->m_connection->GetCache();
-    connect(cache, &XenCache::objectChanged, this, &SrPicker::onCacheUpdated, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &SrPicker::onCacheRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &SrPicker::onCacheUpdated, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &SrPicker::onCacheRemoved, Qt::UniqueConnection);
 
     // Populate SR list
     this->populateSRList();

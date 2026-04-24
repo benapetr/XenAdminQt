@@ -61,8 +61,8 @@ void MemoryTabPage::removeObject()
     if (!cache)
         return;
 
-    disconnect(cache, &XenCache::objectChanged, this, &MemoryTabPage::onCacheObjectChanged);
-    disconnect(cache, &XenCache::objectRemoved, this, &MemoryTabPage::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::itemChanged, this, &MemoryTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::itemRemoved, this, &MemoryTabPage::onCacheObjectRemoved);
     disconnect(cache, &XenCache::bulkUpdateComplete, this, &MemoryTabPage::onCacheBulkUpdateComplete);
     disconnect(cache, &XenCache::cacheCleared, this, &MemoryTabPage::onCacheCleared);
 }
@@ -73,8 +73,8 @@ void MemoryTabPage::updateObject()
     if (!cache)
         return;
 
-    connect(cache, &XenCache::objectChanged, this, &MemoryTabPage::onCacheObjectChanged, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &MemoryTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &MemoryTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &MemoryTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
     connect(cache, &XenCache::bulkUpdateComplete, this, &MemoryTabPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
     connect(cache, &XenCache::cacheCleared, this, &MemoryTabPage::onCacheCleared, Qt::UniqueConnection);
 }

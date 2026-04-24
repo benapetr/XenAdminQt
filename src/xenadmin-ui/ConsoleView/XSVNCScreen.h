@@ -48,6 +48,7 @@ class XenConnection;
 class XenCache;
 class VM;
 class Host;
+class XenObject;
 
 namespace XenAPI
 {
@@ -437,7 +438,7 @@ class XSVNCScreen : public QWidget
         /**
          * @brief Handle cache object changes from EventPoller (real-time updates)
          */
-        void onCacheObjectChanged(XenConnection *connection, const QString& objectType, const QString& objectRef);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
 
         /**
          * @brief Handle VM data changes (power state, metrics ref, etc.)

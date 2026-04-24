@@ -673,10 +673,10 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
 
     connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
     connect(connection->GetCache(), &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
-    connect(connection->GetCache(), &XenCache::objectRemoved, this, [this](XenConnection*, const QString& objectType, const QString& objectRef)
+    connect(connection->GetCache(), &XenCache::objectRemoved, this, [this](QSharedPointer<XenObject> object)
     {
-        if (XenCache::TypeFromString(objectType) == XenObjectType::VM && !objectRef.isEmpty())
-            this->closeConsoleViewsForVmRef(objectRef);
+        if (object && object->GetObjectType() == XenObjectType::VM && !object->OpaqueRef().isEmpty())
+            this->closeConsoleViewsForVmRef(object->OpaqueRef());
     });
     connect(connection, &XenConnection::ClearingCache, this, [this, conn]()
     {
@@ -2322,12 +2322,17 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
     SettingsManager::instance().Sync();
 }
 
-void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
+void MainWindow::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
+    if (!object)
+        return;
+
+    XenConnection* connection = object->GetConnection();
     if (!connection)
         return;
 
-    const XenObjectType changedType = XenCache::TypeFromString(objectType);
+    const XenObjectType changedType = object->GetObjectType();
+    const QString objectRef = object->OpaqueRef();
 
     // If the changed object is the currently displayed one, refresh the tabs
     if (!this->m_currentObject.isNull()

@@ -298,12 +298,12 @@ void NavigationView::connectCacheSignals(XenConnection* connection)
 
     if (!this->m_cacheChangedHandlers.contains(connection))
     {
-        this->m_cacheChangedHandlers.insert(connection, connect(cache, &XenCache::objectChanged, this, &NavigationView::onCacheObjectChanged));
+        this->m_cacheChangedHandlers.insert(connection, connect(cache, &XenCache::itemChanged, this, &NavigationView::onCacheObjectChanged));
     }
 
     if (!this->m_cacheRemovedHandlers.contains(connection))
     {
-        this->m_cacheRemovedHandlers.insert(connection, connect(cache, &XenCache::objectRemoved, this, &NavigationView::onCacheObjectChanged));
+        this->m_cacheRemovedHandlers.insert(connection, connect(cache, &XenCache::itemRemoved, this, &NavigationView::onCacheObjectChanged));
     }
 }
 

@@ -81,7 +81,7 @@ class VMStorageTabPage : public BaseTabPage
         void onEjectButtonClicked();
         void onNewCDDriveLinkClicked(const QString& link);
         void onObjectDataReceived(QString type, QString ref, QVariantMap data);
-        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
 
         // Storage table actions
         void onAddButtonClicked();

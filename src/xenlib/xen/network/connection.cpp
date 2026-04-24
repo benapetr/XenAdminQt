@@ -147,8 +147,8 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
         this->d->waitForCacheCondition.wakeAll();
     };
 
-    connect(this->d->cache, &XenCache::objectChanged, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
-    connect(this->d->cache, &XenCache::objectRemoved, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
+    connect(this->d->cache, &XenCache::itemChanged, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
+    connect(this->d->cache, &XenCache::itemRemoved, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
     connect(this->d->cache, &XenCache::bulkUpdateComplete, this, [wakeCacheWaiters](const QString&, int) { wakeCacheWaiters(); });
     connect(this->d->cache, &XenCache::cacheCleared, this, [wakeCacheWaiters]() { wakeCacheWaiters(); });
 }

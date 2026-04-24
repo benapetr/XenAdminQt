@@ -133,7 +133,7 @@ void VMHAEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariant
             this->m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
         }
 
-        connect(this->connection()->GetCache(), &XenCache::objectChanged, this, &VMHAEditPage::onCacheObjectChanged, Qt::UniqueConnection);
+        connect(this->connection()->GetCache(), &XenCache::itemChanged, this, &VMHAEditPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 
     this->ui->scanningWidget->setVisible(true);
@@ -210,7 +210,7 @@ void VMHAEditPage::Cleanup()
     if (this->connection() && this->connection()->GetCache())
     {
         disconnect(this->connection()->GetCache(),
-                   &XenCache::objectChanged,
+                   &XenCache::itemChanged,
                    this,
                    &VMHAEditPage::onCacheObjectChanged);
     }

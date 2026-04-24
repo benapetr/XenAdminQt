@@ -52,6 +52,7 @@ class XenConnection;
 class QMainWindow;
 class QPushButton;
 class VM;
+class XenObject;
 
 /**
  * @class VNCView
@@ -190,7 +191,7 @@ class VNCView : public QWidget
          */
         void onVMPropertyChanged(const QString& propertyName);
         void onVmDataChanged();
-        void onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
 
         /**
          * @brief "Find Console" button clicked - bring undocked window to front

@@ -883,7 +883,7 @@ void ValuePropertyQueryType::populateCollectedValues()
             continue;
         
         // Monitor cache changes for this connection
-        connect(conn->GetCache(), &XenCache::objectChanged, this, &ValuePropertyQueryType::onCacheChanged,
+        connect(conn->GetCache(), &XenCache::itemChanged, this, &ValuePropertyQueryType::onCacheChanged,
                 Qt::UniqueConnection);  // Prevent duplicate connections
         
         // Get all VMs from this connection
@@ -1110,7 +1110,7 @@ void RecursiveQueryTypeBase::onConnectionsChanged()
         if (conn && conn->GetCache())
         {
             // Monitor cache object changes (C# Cache.RegisterBatchCollectionChanged<O>)
-            QObject::connect(conn->GetCache(), &XenCache::objectChanged, 
+            QObject::connect(conn->GetCache(), &XenCache::itemChanged, 
                     this, &RecursiveQueryTypeBase::onCacheChanged, Qt::UniqueConnection);
         }
     }
@@ -1255,7 +1255,7 @@ void XenModelObjectPropertyQueryType::onConnectionsChanged()
     {
         if (conn && conn->GetCache())
         {
-            QObject::connect(conn->GetCache(), &XenCache::objectChanged,
+            QObject::connect(conn->GetCache(), &XenCache::itemChanged,
                     this, &XenModelObjectPropertyQueryType::onCacheChanged, Qt::UniqueConnection);
         }
     }
@@ -1358,7 +1358,7 @@ void XenModelObjectListContainsQueryType::onConnectionsChanged()
     {
         if (conn && conn->GetCache())
         {
-            QObject::connect(conn->GetCache(), &XenCache::objectChanged,
+            QObject::connect(conn->GetCache(), &XenCache::itemChanged,
                     this, &XenModelObjectListContainsQueryType::onCacheChanged, Qt::UniqueConnection);
         }
     }

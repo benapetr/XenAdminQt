@@ -111,8 +111,8 @@ void HATabPage::removeObject()
     if (this->m_connection && this->m_connection->GetCache())
     {
         XenCache* cache = this->m_connection->GetCache();
-        disconnect(cache, &XenCache::objectChanged, this, &HATabPage::onCacheObjectChanged);
-        disconnect(cache, &XenCache::objectRemoved, this, &HATabPage::onCacheObjectRemoved);
+        disconnect(cache, &XenCache::itemChanged, this, &HATabPage::onCacheObjectChanged);
+        disconnect(cache, &XenCache::itemRemoved, this, &HATabPage::onCacheObjectRemoved);
         disconnect(cache, &XenCache::bulkUpdateComplete, this, &HATabPage::onCacheBulkUpdateComplete);
         disconnect(cache, &XenCache::cacheCleared, this, &HATabPage::onCacheCleared);
     }
@@ -129,8 +129,8 @@ void HATabPage::updateObject()
         return;
 
     XenCache* cache = this->m_connection->GetCache();
-    connect(cache, &XenCache::objectChanged, this, &HATabPage::onCacheObjectChanged, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &HATabPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &HATabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &HATabPage::onCacheObjectRemoved, Qt::UniqueConnection);
     connect(cache, &XenCache::bulkUpdateComplete, this, &HATabPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
     connect(cache, &XenCache::cacheCleared, this, &HATabPage::onCacheCleared, Qt::UniqueConnection);
 

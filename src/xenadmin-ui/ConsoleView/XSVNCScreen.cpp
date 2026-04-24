@@ -690,15 +690,20 @@ void XSVNCScreen::onVMDataChanged(const QVariantMap& vmData)
  * @brief Handle cache object changes from EventPoller
  * This is the primary handler for real-time VM power state changes
  */
-void XSVNCScreen::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
+void XSVNCScreen::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
+    if (!object)
+        return;
+
+    XenConnection* connection = object->GetConnection();
     Q_ASSERT(this->_connection == connection);
-    XenCache* cache = connection->GetCache();
-    const XenObjectType type = XenCache::TypeFromString(objectType);
+
+    const XenObjectType type = object->GetObjectType();
+    const QString objectRef = object->OpaqueRef();
 
     if (type == XenObjectType::VM && objectRef == this->_sourceRef)
     {
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, objectRef);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(object);
         if (!vm || !vm->IsValid())
             return;
 
@@ -708,7 +713,7 @@ void XSVNCScreen::onCacheObjectChanged(XenConnection* connection, const QString&
 
     if (type == XenObjectType::VMGuestMetrics && objectRef == this->_guestMetricsRef)
     {
-        QVariantMap metricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, objectRef);
+        QVariantMap metricsData = object->GetData();
         if (!metricsData.isEmpty())
         {
             this->onGuestMetricsChanged(metricsData);

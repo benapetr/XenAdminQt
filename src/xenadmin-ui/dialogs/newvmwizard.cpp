@@ -209,7 +209,7 @@ void NewVMWizard::loadTemplates()
 
         if (restrictVtpm)
         {
-            const QString vtpmFlag = vm->Platform().value("vtpm").toString().toLower();
+            const QString vtpmFlag = vm->GetPlatform().value("vtpm").toString().toLower();
             if (vtpmFlag == "true")
                 continue;
         }

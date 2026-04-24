@@ -937,7 +937,7 @@ void GeneralTabPage::populateVcpusSection()
         this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.MaxVCPUs", QString::number(vcpusMax));
 
     qint64 coresPerSocket = 1;
-    QVariantMap platform = vm->Platform();
+    QVariantMap platform = vm->GetPlatform();
     if (platform.contains("cores-per-socket"))
     {
         bool ok = false;

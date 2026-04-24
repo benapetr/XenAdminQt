@@ -94,8 +94,8 @@ void GpuPlacementPolicyPanel::RegisterHandlers()
         return;
 
     XenCache* cache = this->m_object->GetConnection()->GetCache();
-    connect(cache, &XenCache::objectChanged, this, &GpuPlacementPolicyPanel::onCacheObjectChanged, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &GpuPlacementPolicyPanel::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &GpuPlacementPolicyPanel::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &GpuPlacementPolicyPanel::onCacheObjectRemoved, Qt::UniqueConnection);
     connect(cache, &XenCache::cacheCleared, this, &GpuPlacementPolicyPanel::onCacheCleared, Qt::UniqueConnection);
 }
 
@@ -105,8 +105,8 @@ void GpuPlacementPolicyPanel::UnregisterHandlers()
         return;
 
     XenCache* cache = this->m_object->GetConnection()->GetCache();
-    disconnect(cache, &XenCache::objectChanged, this, &GpuPlacementPolicyPanel::onCacheObjectChanged);
-    disconnect(cache, &XenCache::objectRemoved, this, &GpuPlacementPolicyPanel::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::itemChanged, this, &GpuPlacementPolicyPanel::onCacheObjectChanged);
+    disconnect(cache, &XenCache::itemRemoved, this, &GpuPlacementPolicyPanel::onCacheObjectRemoved);
     disconnect(cache, &XenCache::cacheCleared, this, &GpuPlacementPolicyPanel::onCacheCleared);
 }
 

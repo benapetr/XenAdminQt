@@ -405,13 +405,13 @@ class VNCTabView : public QWidget
          * @brief Disable console controls when VM is powered off
          * Reference: VNCTabView.cs lines 1290-1302
          */
-        void vmPowerOff();
+        void vmDisableControls();
 
         /**
          * @brief Enable console controls when VM is powered on
          * Reference: VNCTabView.cs lines 1304-1308
          */
-        void vmPowerOn();
+        void vmEnableControls();
 
         /**
          * @brief Check if RDP can be enabled
@@ -507,25 +507,19 @@ class VNCTabView : public QWidget
         void toggleConsoleFocus();
 
     private:
-        QVariantMap getCachedVmData() const;
-        QString getCachedVmPowerState() const;
-        XenCache* cache() const;
-        QVariantMap getCachedObjectData(const QString& type, const QString& ref) const;
-        bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr) const;
+        bool isSRDriverDomain(const QSharedPointer<VM> &vm, QString* outSRRef = nullptr) const;
         bool hasRDP(QSharedPointer<VM> vm) const;
         bool rdpControlEnabledForVm(QSharedPointer<VM> vm) const;
         bool canEnableRDPForVm() const;
-        bool isVMWindows(const QString& vmRef) const;
-        QString getVMIPAddressForSSH(const QString& vmRef) const;
+        bool isCurrentVMWindows() const;
+        QString getVMIPAddressForSSH() const;
 
         Ui::VNCTabView* ui; ///< Qt Designer UI
 
         XSVNCScreen* m_vncScreen = nullptr; ///< Console controller
         VNCView* m_parentVNCView = nullptr; ///< Parent docking manager
-        XenConnection *m_connection = nullptr;
 
         QSharedPointer<VM> m_vm;
-        QString _vmRef;           ///< VM OpaqueRef
         QString _guestMetricsRef; ///< Guest metrics OpaqueRef
         QString _targetHostRef;   ///< Target host OpaqueRef (for non-control-domain VMs)
 

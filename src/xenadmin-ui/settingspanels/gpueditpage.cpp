@@ -373,8 +373,8 @@ void GpuEditPage::connectCacheSignals()
     if (!cache)
         return;
 
-    connect(cache, &XenCache::objectChanged, this, &GpuEditPage::onCacheObjectChanged, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &GpuEditPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &GpuEditPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &GpuEditPage::onCacheObjectRemoved, Qt::UniqueConnection);
     connect(cache, &XenCache::bulkUpdateComplete, this, &GpuEditPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
     connect(cache, &XenCache::cacheCleared, this, &GpuEditPage::onCacheCleared, Qt::UniqueConnection);
     qDebug() << "[GpuEditPage] cache signals connected for vmRef=" << (this->m_vm ? this->m_vm->OpaqueRef() : QString());
@@ -386,8 +386,8 @@ void GpuEditPage::disconnectCacheSignals()
     if (!cache)
         return;
 
-    disconnect(cache, &XenCache::objectChanged, this, &GpuEditPage::onCacheObjectChanged);
-    disconnect(cache, &XenCache::objectRemoved, this, &GpuEditPage::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::itemChanged, this, &GpuEditPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::itemRemoved, this, &GpuEditPage::onCacheObjectRemoved);
     disconnect(cache, &XenCache::bulkUpdateComplete, this, &GpuEditPage::onCacheBulkUpdateComplete);
     disconnect(cache, &XenCache::cacheCleared, this, &GpuEditPage::onCacheCleared);
     qDebug() << "[GpuEditPage] cache signals disconnected";

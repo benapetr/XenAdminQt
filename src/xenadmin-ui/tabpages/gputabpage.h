@@ -81,8 +81,8 @@ class GpuTabPage : public BaseTabPage
         void updateObject() override;
 
     private slots:
-        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
+        void onCacheObjectRemoved(QSharedPointer<XenObject> object);
         void onCacheBulkUpdateComplete(const QString& type, int count);
         void onCacheCleared();
 

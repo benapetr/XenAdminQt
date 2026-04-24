@@ -254,7 +254,7 @@ class XENLIB_EXPORT VM : public XenObject
         QDomElement ProvisionXml() const;
 
         //! Get platform configuration map
-        QVariantMap Platform() const;
+        QVariantMap GetPlatform() const;
 
         //! Get allowed operations list
         QStringList GetAllowedOperations() const;

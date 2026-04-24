@@ -354,17 +354,12 @@ void VNCView::onVmDataChanged()
         this->m_undockedForm->setWindowTitle(undockedWindowTitle());
 }
 
-void VNCView::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
+void VNCView::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
-    Q_UNUSED(objectRef);
-
-    if (!this->m_undockedForm || !this->m_vm)
+    if (!object || !this->m_undockedForm)
         return;
 
-    if (!this->m_vm->GetConnection() || this->m_vm->GetConnection() != connection)
-        return;
-
-    const XenObjectType type = XenCache::TypeFromString(objectType);
+    const XenObjectType type = object->GetObjectType();
     if (type == XenObjectType::VM
         || type == XenObjectType::Host
         || type == XenObjectType::SR
@@ -397,7 +392,7 @@ void VNCView::onReattachConsoleButtonClicked()
 
     // C#: Lines 222-225
     // Re-dock the console
-    DockUnDock();
+    this->DockUnDock();
 }
 
 void VNCView::onUndockedWindowStateChanged(Qt::WindowStates oldState, Qt::WindowStates newState)

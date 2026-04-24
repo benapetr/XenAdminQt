@@ -300,19 +300,31 @@ class XenCache : public QObject
     signals:
         /**
          * @brief Emitted when an object is added or updated
-         * @param type Object type
-         * @param ref Object reference
+         * @param object Cached object shell (contains type + opaque ref)
          */
-        //void objectChanged(XenConnection *connection, XenObjectType type, const QString& ref);
-        void objectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void objectChanged(QSharedPointer<XenObject> object);
 
         /**
-         * @brief Emitted when an object is removed
+         * @brief Emitted when an object is removed from cache
+         * @param object Cached object shell (contains type + opaque ref)
+         */
+        void objectRemoved(QSharedPointer<XenObject> object);
+
+        /**
+         * @brief Emitted when an object item is added or updated
          * @param type Object type
          * @param ref Object reference
          */
-        //void objectRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
-        void objectRemoved(XenConnection* connection, const QString& type, const QString& ref);
+        //void itemChanged(XenConnection *connection, XenObjectType type, const QString& ref);
+        void itemChanged(XenConnection *connection, const QString& type, const QString& ref);
+
+        /**
+         * @brief Emitted when an object item is removed
+         * @param type Object type
+         * @param ref Object reference
+         */
+        //void itemRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
+        void itemRemoved(XenConnection* connection, const QString& type, const QString& ref);
 
         /**
          * @brief Emitted when cache is cleared

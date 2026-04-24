@@ -143,7 +143,7 @@ class VerticallyTabbedDialog : public QDialog
     private slots:
         void onVerticalTabsCurrentChanged(int index);
         void onApplyClicked();
-        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
 
     private:
         void loadObjectData();

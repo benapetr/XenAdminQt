@@ -86,7 +86,7 @@ void OtherConfigAndTagsWatcher::onConnectionAdded(XenConnection* connection)
         return;
 
     ConnectionHandlers handlers;
-    handlers.cacheObjectChanged = connect(cache, &XenCache::objectChanged, this, &OtherConfigAndTagsWatcher::onCacheObjectChanged);
+    handlers.cacheObjectChanged = connect(cache, &XenCache::itemChanged, this, &OtherConfigAndTagsWatcher::onCacheObjectChanged);
     handlers.xenObjectsUpdated = connect(connection, &XenConnection::XenObjectsUpdated, this, &OtherConfigAndTagsWatcher::onConnectionXenObjectsUpdated);
     handlers.stateChanged = connect(connection, &XenConnection::ConnectionStateChanged, this, &OtherConfigAndTagsWatcher::onConnectionStateChanged);
     this->handlers_.insert(connection, handlers);

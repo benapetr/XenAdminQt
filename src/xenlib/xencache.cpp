@@ -475,7 +475,9 @@ void XenCache::Update(XenObjectType type, const QString &ref, const QVariantMap 
     if (refresh)
         this->refreshObject(type, ref);
 
-    emit objectChanged(this->m_connection, this->typeToCacheString(type), ref);
+    QSharedPointer<XenObject> object = this->ResolveObject(type, ref);
+    emit this->objectChanged(object);
+    emit itemChanged(this->m_connection, this->typeToCacheString(type), ref);
 }
 
 void XenCache::UpdateBulk(XenObjectType type, const QVariantMap &allRecords)
@@ -525,6 +527,8 @@ void XenCache::Remove(XenObjectType type, const QString &ref)
     if (type == XenObjectType::Null)
         return;
 
+    QSharedPointer<XenObject> object = this->ResolveObject(type, ref);
+
     {
         QMutexLocker locker(&this->m_mutex);
 
@@ -535,7 +539,8 @@ void XenCache::Remove(XenObjectType type, const QString &ref)
     }
 
     this->evictObject(type, ref);
-    emit objectRemoved(this->m_connection, this->typeToCacheString(type), ref);
+    emit this->objectRemoved(object);
+    emit itemRemoved(this->m_connection, this->typeToCacheString(type), ref);
 }
 
 void XenCache::ClearType(XenObjectType type)

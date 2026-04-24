@@ -157,7 +157,7 @@ void SnapshotsTabPage::removeObject()
         return;
 
     XenCache* cache = this->m_connection->GetCache();
-    disconnect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::itemChanged, this, &SnapshotsTabPage::onCacheObjectChanged);
 }
 
 void SnapshotsTabPage::updateObject()
@@ -166,7 +166,7 @@ void SnapshotsTabPage::updateObject()
     if (!this->m_vm)
         return;
     XenCache* cache = this->m_vm->GetCache();
-    connect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     this->setViewMode(this->s_viewByVmRef.value(this->m_vm->OpaqueRef(), SnapshotsView::TreeView));
 }
 

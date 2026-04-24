@@ -643,7 +643,7 @@ bool VM::IsWindows() const
 
     if (this->IsHVM())
     {
-        QVariantMap platformMap = this->Platform();
+        QVariantMap platformMap = this->GetPlatform();
         QString viridian = platformMap.value("viridian").toString();
         if (viridian == "true" || viridian == "1")
             return true;
@@ -857,7 +857,7 @@ int VM::GetVCPUWeight() const
 
 long VM::GetCoresPerSocket() const
 {
-    QVariantMap platformMap = this->Platform();
+    QVariantMap platformMap = this->GetPlatform();
     if (platformMap.contains("cores-per-socket"))
     {
         bool ok = false;
@@ -942,7 +942,7 @@ QDomElement VM::ProvisionXml() const
     return doc.documentElement();
 }
 
-QVariantMap VM::Platform() const
+QVariantMap VM::GetPlatform() const
 {
     return property("platform").toMap();
 }

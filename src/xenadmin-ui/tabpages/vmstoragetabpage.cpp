@@ -188,14 +188,18 @@ void VMStorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantM
     }
 }
 
-void VMStorageTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void VMStorageTabPage::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
-    Q_ASSERT(this->m_connection == connection);
+    if (!object || !this->m_connection)
+        return;
 
+    XenConnection* connection = object->GetConnection();
     if (this->m_connection != connection)
         return;
 
-    QVariantMap data = connection->GetCache()->ResolveObjectData(type, ref);
+    QString type = object->GetObjectTypeName();
+    QString ref = object->OpaqueRef();
+    QVariantMap data = object->GetData();
     this->onObjectDataReceived(type, ref, data);
 }
 

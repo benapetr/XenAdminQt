@@ -31,6 +31,9 @@
 #include "../widgets/isodropdownbox.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xen/vmguestmetrics.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
@@ -70,10 +73,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     this->ui = new Ui::VNCTabView;
 
     this->m_vm = vm;
-    this->m_connection = vm->GetConnection();
-    this->_vmRef = vm->OpaqueRef();
-
-    qDebug() << "VNCTabView: Constructor for VM:" << this->_vmRef;
+    qDebug() << "VNCTabView: Constructor for VM:" << this->m_vm->OpaqueRef();
 
     this->ui->setupUi(this);
 
@@ -112,26 +112,24 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
 
         if (!host.isNull())
         {
-            QString hostName = host->GetName();
             // C#: HostLabel.Text = string.Format(Messages.CONSOLE_HOST, host.Name());
-            this->ui->hostLabel->setText(tr("Host: %1").arg(hostName));
+            this->ui->hostLabel->setText(tr("Host: %1").arg(host->GetName()));
             this->ui->hostLabel->setVisible(true);
 
             // TODO: Register Server_PropertyChanged event listener on host
             // TODO: Register Server_PropertyChanged event listener on host.metrics
         }
-    } else if (isSRDriverDomain(vm->OpaqueRef(), &srRef))
+    } else if (isSRDriverDomain(vm, &srRef))
     {
         // This is an SR driver domain
         qDebug() << "VNCTabView: VM is SR driver domain for SR:" << srRef;
 
         // Get SR data to show name
-        QVariantMap srData = getCachedObjectData("sr", srRef);
-        if (!srData.isEmpty())
+        QSharedPointer<SR> sr = this->m_vm->GetCache()->ResolveObject<SR>(srRef);
+        if (sr)
         {
-            QString srName = srData.value("name_label").toString();
             // C#: HostLabel.Text = string.Format(Messages.CONSOLE_SR_DRIVER_DOMAIN, sr.Name());
-            this->ui->hostLabel->setText(tr("SR driver domain: %1").arg(srName));
+            this->ui->hostLabel->setText(tr("SR driver domain: %1").arg(sr->GetName()));
             this->ui->hostLabel->setVisible(true);
 
             // TODO: Register Server_PropertyChanged event listener on SR
@@ -214,8 +212,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     layout->addWidget(this->m_vncScreen); // Fill space (XSVNCScreen has Expanding size policy)
 
     // Set toggle console button label
-    QString rdpLabel = guessNativeConsoleLabel();
-    this->ui->toggleConsoleButton->setText(rdpLabel);
+    this->ui->toggleConsoleButton->setText(guessNativeConsoleLabel());
 
     // Update UI elements
     this->UpdateFullScreenButton();
@@ -240,8 +237,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     // C#: if (Properties.Settings.Default.AutoSwitchToRDP && RDPEnabled)
     //         vncScreen.AutoSwitchRDPLater = true;
     SettingsManager& settings = SettingsManager::instance();
-    bool autoSwitchToRDP = settings.GetConsoleAutoSwitchToRDP();
-    if (autoSwitchToRDP && this->hasRDP(vm))
+    if (settings.GetConsoleAutoSwitchToRDP() && this->hasRDP(vm))
     {
         this->m_vncScreen->SetAutoSwitchRDPLater(true);
         qDebug() << "VNCTabView: Auto-switch to RDP enabled";
@@ -300,7 +296,7 @@ bool VNCTabView::IsRDPControlEnabled() const
     // C#: private bool RDPControlEnabled => source != null && source.RDPControlEnabled();
     // C#: public bool IsRDPControlEnabled() { return RDPControlEnabled; }
 
-    if (!this->m_connection || this->m_vm)
+    if (!this->m_vm || !this->m_vm->GetConnection())
         return false;
 
     return rdpControlEnabledForVm(this->m_vm);
@@ -315,7 +311,7 @@ void VNCTabView::Pause()
 
 void VNCTabView::Unpause()
 {
-    qDebug() << "VNCTabView: unpause() - VM:" << this->_vmRef;
+    qDebug() << "VNCTabView: unpause() - VM:" << this->m_vm->OpaqueRef();
 
     // Update power state which may trigger connection
     this->updatePowerState();
@@ -369,14 +365,13 @@ void VNCTabView::UpdateFullScreenButton()
     // Reference: C# checks if VM is running
     // C#: bool running = source != null && source.power_state == vm_power_state.Running;
 
-    bool running = false;
-    if (this->m_connection && !this->_vmRef.isEmpty())
+    if (this->m_vm && this->m_vm->GetConnection() && !this->m_vm->OpaqueRef().isEmpty())
     {
-        QString powerState = getCachedVmPowerState();
-        running = (powerState == "Running");
+        this->ui->fullscreenButton->setEnabled(this->m_vm->GetPowerState() == "Running");
+        return;
     }
 
-    this->ui->fullscreenButton->setEnabled(running);
+    this->ui->fullscreenButton->setEnabled(false);
 }
 
 void VNCTabView::SetupCD()
@@ -384,7 +379,7 @@ void VNCTabView::SetupCD()
     // Reference: XenAdmin/Controls/MultipleDvdIsoList.cs
     qDebug() << "VNCTabView: setupCD()";
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
         return;
 
     if (this->m_vm)
@@ -401,10 +396,8 @@ void VNCTabView::UpdateParentMinimumSize()
     {
         // Calculate minimum width based on bottom toolbar
         // Get the toolbar layout and calculate required width
-        int bottomPanelWidth = this->ui->bottomToolbar->sizeHint().width();
-
         // Set parent minimum size (toolbar width + margin, minimum height)
-        QSize minSize(bottomPanelWidth + 100, 400);
+        QSize minSize(this->ui->bottomToolbar->sizeHint().width() + 100, 400);
         parent->setMinimumSize(minSize);
 
         qDebug() << "VNCTabView: Set parent minimum size to" << minSize;
@@ -420,13 +413,11 @@ void VNCTabView::MaybeScale()
         return;
 
     QSize desktopSize = this->m_vncScreen->GetDesktopSize();
-    int contentWidth = this->ui->contentPanel->width();
-
     SettingsManager& settings = SettingsManager::instance();
     bool preserveScale = settings.GetConsolePreserveScaleWhenSwitchBackToVNC();
 
     // C#: if (vncScreen.DesktopSize.Width > 10 && contentPanel.Width < vncScreen.DesktopSize.Width)
-    if (desktopSize.width() > 10 && contentWidth < desktopSize.width())
+    if (desktopSize.width() > 10 && this->ui->contentPanel->width() < desktopSize.width())
     {
         if (!preserveScale)
         {
@@ -509,32 +500,29 @@ void VNCTabView::onVMPropertyChanged(const QString& propertyName)
     // C#: Handle VIFs/PIFs (network changes affect SSH IP)
     else if (propertyName == "VIFs" || propertyName == "PIFs")
     {
-       this-> updateOpenSSHConsoleButtonState();
+        this->updateOpenSSHConsoleButtonState();
     }
     // C#: Handle name_label (update window title for control domains)
     else if (propertyName == "name_label")
     {
-        QString labelText;
-
-        if (this->m_connection && this->m_vm->IsControlDomain())
+        if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->IsControlDomain())
         {
-            QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
-            QString hostRef = vmData.value("resident_on").toString();
-
-            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+            QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
+            if (!host)
             {
-                QVariantMap hostData = getCachedObjectData("host", hostRef);
-                QString hostName = hostData.value("name_label").toString();
-                labelText = tr("Console - %1").arg(hostName);
-                this->ui->hostLabel->setText(labelText);
+                QString hostRef = this->m_vm->GetResidentOnRef();
+                if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+                    host = this->m_vm->GetCache()->ResolveObject<Host>(hostRef);
             }
-        } else if (this->m_connection && isSRDriverDomain(this->_vmRef))
+
+            if (host)
+            {
+                this->ui->hostLabel->setText(tr("Console - %1").arg(host->GetName()));
+            }
+        } else if (this->m_vm && this->m_vm->GetConnection() && isSRDriverDomain(this->m_vm))
         {
-            // Get SR name for driver domain
-            QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
             // SR driver domain naming would require additional XenLib method
-            labelText = tr("Console - Storage Driver Domain");
-            this->ui->hostLabel->setText(labelText);
+            this->ui->hostLabel->setText(tr("Console - Storage Driver Domain"));
         }
     }
 }
@@ -547,16 +535,14 @@ void VNCTabView::onGuestMetricsPropertyChanged(const QString& propertyName)
     // C#: Handle "other" property (RDP status changes)
     if (propertyName == "other")
     {
-        if (this->m_connection && this->hasRDP(this->m_vm))
+        if (this->m_vm && this->m_vm->GetConnection() && this->hasRDP(this->m_vm))
         {
             // RDP is enabled - maybe auto-switch
             // C#: if (vncScreen.UseVNC && (tryToConnectRDP || (!vncScreen.UserWantsToSwitchProtocol && AutoSwitchToRDP)))
             if (this->m_vncScreen && this->m_vncScreen->GetUseVNC())
             {
                 SettingsManager& settings = SettingsManager::instance();
-                bool autoSwitch = settings.GetConsoleAutoSwitchToRDP();
-
-                if (this->m_tryToConnectRDP || (!this->m_vncScreen->GetUserWantsToSwitchProtocol() && autoSwitch))
+                if (this->m_tryToConnectRDP || (!this->m_vncScreen->GetUserWantsToSwitchProtocol() && settings.GetConsoleAutoSwitchToRDP()))
                 {
                     this->m_tryToConnectRDP = false;
 
@@ -787,15 +773,13 @@ void VNCTabView::onSSHButtonClicked()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1469-1505
     qDebug() << "VNCTabView: onSSHButtonClicked()";
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
         return;
 
     // Check if SSH is supported and can start
-    bool isSSHSupported = !isVMWindows(this->_vmRef);
-    QString powerState = getCachedVmPowerState();
-    QString ipAddress = getVMIPAddressForSSH(this->_vmRef);
+    QString ipAddress = getVMIPAddressForSSH();
 
-    if (!isSSHSupported || powerState != "Running" || ipAddress.isEmpty())
+    if (this->isCurrentVMWindows() || this->m_vm->GetPowerState() != "Running" || ipAddress.isEmpty())
     {
         qDebug() << "VNCTabView: Cannot start SSH - unsupported or not ready";
         return;
@@ -899,22 +883,17 @@ void VNCTabView::onPowerStateLabelClicked()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 738-770
     qDebug() << "VNCTabView: onPowerStateLabelClicked()";
 
-    if (!this->ui->powerStateLabel->isEnabled() || !this->m_connection || this->_vmRef.isEmpty())
+    if (!this->ui->powerStateLabel->isEnabled() || !this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
         return;
 
-    XenConnection* conn = this->m_connection;
+    XenConnection* conn = this->m_vm ? this->m_vm->GetConnection() : nullptr;
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "VNCTabView: Not connected to XenServer";
         return;
     }
 
-    QString powerState = getCachedVmPowerState();
-    if (powerState.isEmpty())
-    {
-        qWarning() << "VNCTabView: Power state unavailable in cache for" << this->_vmRef;
-        return;
-    }
+    QString powerState = this->m_vm->GetPowerState();
 
     // C#: Execute VM action based on current power state
     if (powerState == "Halted")
@@ -923,18 +902,8 @@ void VNCTabView::onPowerStateLabelClicked()
         //         new StartVMCommand(Program.MainWindow, source).Run();
 
         // Check if start operation is allowed
-        QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
-        QVariantList allowedOps = vmData.value("allowed_operations").toList();
-
-        bool canStart = false;
-        for (const QVariant& op : allowedOps)
-        {
-            if (op.toString() == "start")
-            {
-                canStart = true;
-                break;
-            }
-        }
+        QStringList allowedOps = this->m_vm->GetAllowedOperations();
+        bool canStart = allowedOps.contains("start");
 
         if (canStart)
         {
@@ -955,16 +924,7 @@ void VNCTabView::onPowerStateLabelClicked()
         //         new ResumeVMCommand(Program.MainWindow, source).Run();
 
         QStringList allowedOps = this->m_vm->GetAllowedOperations();
-
-        bool canResume = false;
-        foreach (QString op, allowedOps)
-        {
-            if (op == "resume")
-            {
-                canResume = true;
-                break;
-            }
-        }
+        bool canResume = allowedOps.contains("resume");
 
         if (canResume)
         {
@@ -997,7 +957,8 @@ void VNCTabView::onDetectRDP()
     qDebug() << "VNCTabView: onDetectRDP()";
 
     // Invoke on main thread
-    QMetaObject::invokeMethod(this, [this]() {
+    QMetaObject::invokeMethod(this, [this]()
+    {
         qDebug() << "VNCTabView: onDetectRDP_()";
         
         // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1089-1113
@@ -1013,7 +974,7 @@ void VNCTabView::onDetectRDP()
             SettingsManager& settings = SettingsManager::instance();
             bool autoSwitchToRDP = settings.GetConsoleAutoSwitchToRDP();
             
-            if (autoSwitchToRDP && this->m_connection && this->hasRDP(this->m_vm))
+            if (autoSwitchToRDP && this->m_vm && this->m_vm->GetConnection() && this->hasRDP(this->m_vm))
             {
                 qDebug() << "VNCTabView: Auto-switching to RDP (setting enabled)";
                 // Switch to RDP automatically
@@ -1033,14 +994,16 @@ void VNCTabView::onDetectVNC()
     qDebug() << "VNCTabView: onDetectVNC()";
 
     // Invoke on main thread
-    QMetaObject::invokeMethod(this, [this]() {
+    QMetaObject::invokeMethod(this, [this]()
+    {
         qDebug() << "VNCTabView: onDetectVNC_()";
         
         // C#: Lines 1120-1141
         // VNC is available
         
         this->ui->toggleConsoleButton->setEnabled(true);
-        updateTooltipOfToggleButton(); }, Qt::QueuedConnection);
+        updateTooltipOfToggleButton();
+    }, Qt::QueuedConnection);
 }
 
 void VNCTabView::onUserCancelledAuth()
@@ -1050,9 +1013,7 @@ void VNCTabView::onUserCancelledAuth()
     // C#: Lines 1252-1273
     // User cancelled VNC password prompt
 
-    QMessageBox::information(this,
-                             tr("Console Authentication"),
-                             tr("Console connection cancelled by user."));
+    QMessageBox::information(this, tr("Console Authentication"), tr("Console connection cancelled by user."));
 }
 
 void VNCTabView::onVncConnectionAttemptCancelled()
@@ -1115,7 +1076,7 @@ void VNCTabView::registerShortcutKeys()
         });
     }
 
-    UpdateFullScreenButton();
+    this->UpdateFullScreenButton();
 
     // Dock/Undock shortcut
     // C#: CA-10943 - Properties.Settings.Default.DockShortcutKey
@@ -1140,7 +1101,7 @@ void VNCTabView::registerShortcutKeys()
         m_keyHandler.removeKeyHandler(ConsoleShortcutKey::F11);
     }
 
-    UpdateDockButton();
+    this->UpdateDockButton();
 
     // Uncapture keyboard and mouse key
     // C#: Properties.Settings.Default.UncaptureShortcutKey
@@ -1227,35 +1188,24 @@ void VNCTabView::registerEventListeners()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 117-159
     qDebug() << "VNCTabView: registerEventListeners()";
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
     {
         qWarning() << "VNCTabView: Cannot register event listeners - connection or vmRef is null";
         return;
     }
 
-    XenCache* cache = this->cache();
-    if (!cache)
-    {
-        qWarning() << "VNCTabView: Cannot register event listeners - cache is null";
-        return;
-    }
+    XenCache* cache = this->m_vm->GetCache();
 
     // C#: source.PropertyChanged += Server_PropertyChanged;
     // Qt: Connect to cache objectChanged signal for this VM
-    connect(cache, &XenCache::objectChanged, this, [this](XenConnection* connection, const QString& type, const QString& ref)
+    connect(cache, &XenCache::objectChanged, this, [this](QSharedPointer<XenObject> object)
     {
-        Q_UNUSED(connection);
-        if (type == "vm" && ref == this->_vmRef)
+        if (object == this->m_vm)
         {
-            // Get updated VM data from cache
-            QVariantMap vmData = getCachedObjectData("vm", ref);
-            if (!vmData.isEmpty())
-            {
-                // Check what changed and update UI accordingly
-                // C#: Server_PropertyChanged checks specific properties
-                updatePowerState();
-                // TODO: Check other properties like allowed_operations, is_control_domain, etc.
-            }
+            // Check what changed and update UI accordingly
+            // C#: Server_PropertyChanged checks specific properties
+            this->updatePowerState();
+            // TODO: Check other properties like allowed_operations, is_control_domain, etc.
         }
     });
 
@@ -1264,18 +1214,18 @@ void VNCTabView::registerEventListeners()
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
-        connect(cache, &XenCache::objectChanged, this, [this, guestMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
+        connect(cache, &XenCache::objectChanged, this, [this, guestMetricsRef](QSharedPointer<XenObject> object)
         {
-            Q_UNUSED(connection);
-            if (type == "vm_guest_metrics" && ref == guestMetricsRef)
+            if (object && object->GetObjectType() == XenObjectType::VMGuestMetrics && object->OpaqueRef() == guestMetricsRef)
             {
                 // Guest metrics changed - update RDP/SSH availability
                 // C#: guestMetrics_PropertyChanged updates RDP button state
-                qDebug() << "VNCTabView: Guest metrics changed for" << this->_vmRef;
+                qDebug() << "VNCTabView: Guest metrics changed for" << this->m_vm->OpaqueRef();
 
                 // Defer update to next event loop iteration to avoid calling cache queries
                 // inside cache update callback (which causes infinite loops)
-                QTimer::singleShot(0, this, [this]() {
+                QTimer::singleShot(0, this, [this]()
+                {
                     // Update RDP availability based on new guest metrics
                     // Reference: C# VNCTabView.cs lines 565-580
                     // Check if RDP became available and auto-switch if enabled
@@ -1293,29 +1243,27 @@ void VNCTabView::registerEventListeners()
     if (isControlDomain && !hostRef.isEmpty())
     {
         qDebug() << "VNCTabView: Registering host property listener for control domain on" << hostRef;
-        connect(cache, &XenCache::objectChanged, this, [this, hostRef](XenConnection* connection, const QString& type, const QString& ref)
+        connect(cache, &XenCache::objectChanged, this, [this, hostRef](QSharedPointer<XenObject> object)
         {
-            Q_UNUSED(connection);
-            if (type == "host" && ref == hostRef)
+            if (object && object->GetObjectType() == XenObjectType::Host && object->OpaqueRef() == hostRef)
             {
                 // Host changed - update power state
-                updatePowerState();
+                this->updatePowerState();
             }
         });
 
         // C#: Also register host_metrics property changes
-        QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
-        QString hostMetricsRef = hostData.value("metrics").toString();
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(hostRef);
+        QString hostMetricsRef = host ? host->GetMetricsRef() : QString();
         if (!hostMetricsRef.isEmpty() && hostMetricsRef != XENOBJECT_NULL)
         {
             qDebug() << "VNCTabView: Registering host_metrics listener for" << hostMetricsRef;
-            connect(cache, &XenCache::objectChanged, this, [this, hostMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
+            connect(cache, &XenCache::objectChanged, this, [this, hostMetricsRef](QSharedPointer<XenObject> object)
             {
-                Q_UNUSED(connection);
-                if (type == "host_metrics" && ref == hostMetricsRef)
+                if (object && object->GetObjectType() == XenObjectType::HostMetrics && object->OpaqueRef() == hostMetricsRef)
                 {
                     // Host metrics changed - update power state (check 'live' field)
-                    updatePowerState();
+                    this->updatePowerState();
                 }
             });
         }
@@ -1324,18 +1272,17 @@ void VNCTabView::registerEventListeners()
     // C#: For SR driver domain, register SR property changes
     // Use deferred update to avoid infinite loop (isSRDriverDomain() triggers cache queries)
     QString srRef;
-    bool isSRDriver = isSRDriverDomain(this->_vmRef, &srRef);
+    bool isSRDriver = isSRDriverDomain(this->m_vm, &srRef);
     if (isSRDriver && !srRef.isEmpty())
     {
         qDebug() << "VNCTabView: Registering SR property listener for SR driver domain on" << srRef;
-        connect(cache, &XenCache::objectChanged, this, [this, srRef](XenConnection* connection, const QString& type, const QString& ref)
+        connect(cache, &XenCache::objectChanged, this, [this, srRef](QSharedPointer<XenObject> object)
         {
-            Q_UNUSED(connection);
-            if (type == "sr" && ref == srRef)
+            if (object && object->GetObjectType() == XenObjectType::SR && object->OpaqueRef() == srRef)
             {
                 // SR changed - may need to update labels
                 // Defer update to avoid calling cache queries inside cache callback
-                QTimer::singleShot(0, this, [this]() { updatePowerState(); });
+                QTimer::singleShot(0, this, [this]() { this->updatePowerState(); });
             }
         });
     }
@@ -1344,7 +1291,7 @@ void VNCTabView::registerEventListeners()
     // This is more complex and involves tracking all hosts for migration capability
     // We'll implement this when migration UI is ported
 
-    qDebug() << "VNCTabView: Event listeners registered for" << this->_vmRef;
+    qDebug() << "VNCTabView: Event listeners registered for" << this->m_vm->OpaqueRef();
 }
 
 void VNCTabView::unregisterEventListeners()
@@ -1352,18 +1299,13 @@ void VNCTabView::unregisterEventListeners()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 290-338
     qDebug() << "VNCTabView: unregisterEventListeners()";
 
-    if (!this->m_connection)
+    if (!this->m_vm || !this->m_vm->GetConnection())
     {
         qDebug() << "VNCTabView: connection is null, nothing to unregister";
         return;
     }
 
-    XenCache* cache = this->cache();
-    if (!cache)
-    {
-        qDebug() << "VNCTabView: cache is null, nothing to unregister";
-        return;
-    }
+    XenCache* cache = this->m_vm->GetCache();
 
     // C#: source.PropertyChanged -= Server_PropertyChanged;
     // C#: guestMetrics.PropertyChanged -= guestMetrics_PropertyChanged;
@@ -1377,13 +1319,13 @@ void VNCTabView::unregisterEventListeners()
     // This disconnects ALL connections from cache to this VNCTabView instance
     disconnect(cache, 0, this, 0);
 
-    qDebug() << "VNCTabView: Event listeners unregistered for" << this->_vmRef;
+    qDebug() << "VNCTabView: Event listeners unregistered for" << this->m_vm->OpaqueRef();
 }
 
 void VNCTabView::updatePowerState()
 {
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 623-660
-    qDebug() << "VNCTabView: updatePowerState() - VM:" << this->_vmRef;
+    qDebug() << "VNCTabView: updatePowerState() - VM:" << this->m_vm->OpaqueRef();
 
     QString hostRef = this->m_vm->GetResidentOnRef();
     if (this->m_vm->IsControlDomain())
@@ -1391,19 +1333,20 @@ void VNCTabView::updatePowerState()
         qDebug() << "VNCTabView: VM is control domain for host:" << hostRef;
 
         // For control domain zero, check host metrics
-        QVariantMap hostData = getCachedObjectData("host", hostRef);
-        if (hostData.isEmpty())
+        QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
+        if (!host && !hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+            host = this->m_vm->GetCache()->ResolveObject<Host>(hostRef);
+
+        if (!host)
         {
-            qDebug() << "VNCTabView: Host data is empty";
+            qDebug() << "VNCTabView: Host object is empty";
             return;
         }
 
-        QString metricsRef = hostData.value("metrics").toString();
-        if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
+        QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+        if (metrics)
         {
-            // Resolve host_metrics and check 'live' field
-            QVariantMap metricsData = getCachedObjectData("host_metrics", metricsRef);
-            bool isLive = metricsData.value("live", false).toBool();
+            bool isLive = metrics->IsLive();
 
             qDebug() << "VNCTabView: Host metrics live:" << isLive;
 
@@ -1422,11 +1365,10 @@ void VNCTabView::updatePowerState()
     } else
     {
         // Regular VM - check power_state
-        QVariantMap vmData = getCachedVmData();
-        QString powerState = vmData.value("power_state").toString();
+        QString powerState = this->m_vm->GetPowerState();
         if (powerState.isEmpty())
         {
-            qDebug() << "VNCTabView: VM data missing from cache for" << this->_vmRef << "- skipping power state update";
+            qDebug() << "VNCTabView: VM data missing from cache for" << this->m_vm->OpaqueRef() << "- skipping power state update";
             return;
         }
         qDebug() << "VNCTabView: VM power_state:" << powerState;
@@ -1499,30 +1441,27 @@ void VNCTabView::hideTopBarContents()
     qDebug() << "VNCTabView: hideTopBarContents()";
 
     // VMPowerOff() - disable console controls
-    vmPowerOff();
+    this->vmDisableControls();
 
     if (this->m_vm->IsControlDomain())
     {
         // Control domain zero: show "Host is unavailable"
         // C#: DisablePowerStateLabel(Messages.CONSOLE_HOST_DEAD);
         qDebug() << "VNCTabView: Hide top bar contents, server is unavailable";
-        disablePowerStateLabel(tr("This server is unavailable."));
+        this->disablePowerStateLabel(tr("This server is unavailable."));
     } else
     {
         // Regular VM: show power state
-        QString powerState = getCachedVmPowerState();
+        QString powerState = this->m_vm->GetPowerState();
         qDebug() << "VNCTabView: Hide top bar contents, powerstate=" << powerState;
         if (powerState.isEmpty())
         {
-            disablePowerStateLabel(tr("Power state unknown."));
+            this->disablePowerStateLabel(tr("Power state unknown."));
             this->ui->powerStateLabel->show();
             return;
         }
 
-        // Get VM data to check allowed_operations and is_control_domain
-        QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
-        QVariantList allowedOps = vmData.value("allowed_operations").toList();
-        bool isControlDomain = vmData.value("is_control_domain", false).toBool();
+        QStringList allowedOps = this->m_vm->GetAllowedOperations();
 
         // C#: Also check Helpers.EnabledTargetExists(targetHost, source.Connection)
         // For now, assume target exists if not control domain
@@ -1530,55 +1469,35 @@ void VNCTabView::hideTopBarContents()
         if (powerState == "Halted")
         {
             // Check if VM can be started
-            bool canStart = false;
-            for (const QVariant& op : allowedOps)
-            {
-                if (op.toString() == "start")
-                {
-                    canStart = true;
-                    break;
-                }
-            }
-
-            if (canStart && !isControlDomain)
+            if (allowedOps.contains("start"))
             {
                 // C#: EnablePowerStateLabel(Messages.CONSOLE_POWER_STATE_HALTED_START);
-                enablePowerStateLabel(tr("This VM is currently shut down.  Click here to start it."));
+                this->enablePowerStateLabel(tr("This VM is currently shut down.  Click here to start it."));
             } else
             {
                 // C#: DisablePowerStateLabel(Messages.CONSOLE_POWER_STATE_HALTED);
-                disablePowerStateLabel(tr("This VM is currently shut down."));
+                this->disablePowerStateLabel(tr("This VM is currently shut down."));
             }
         } else if (powerState == "Paused")
         {
             // CA-12637: Pause/UnPause is not supported in the GUI
             // C#: DisablePowerStateLabel(Messages.CONSOLE_POWER_STATE_PAUSED);
-            disablePowerStateLabel(tr("This VM is currently paused."));
+            this->disablePowerStateLabel(tr("This VM is currently paused."));
         } else if (powerState == "Suspended")
         {
             // Check if VM can be resumed
-            bool canResume = false;
-            for (const QVariant& op : allowedOps)
-            {
-                if (op.toString() == "resume")
-                {
-                    canResume = true;
-                    break;
-                }
-            }
-
-            if (canResume && !isControlDomain)
+            if (allowedOps.contains("resume"))
             {
                 // C#: EnablePowerStateLabel(Messages.CONSOLE_POWER_STATE_SUSPENDED_RESUME);
-                enablePowerStateLabel(tr("This VM is currently suspended.  Click here to resume it."));
+                this->enablePowerStateLabel(tr("This VM is currently suspended.  Click here to resume it."));
             } else
             {
                 // C#: DisablePowerStateLabel(Messages.CONSOLE_POWER_STATE_SUSPENDED);
-                disablePowerStateLabel(tr("This VM is currently suspended."));
+                this->disablePowerStateLabel(tr("This VM is currently suspended."));
             }
         } else
         {
-            disablePowerStateLabel(powerState);
+            this->disablePowerStateLabel(powerState);
         }
     }
 
@@ -1592,7 +1511,7 @@ void VNCTabView::showTopBarContents()
     qDebug() << "VNCTabView: Show top bar contents, VM is running";
 
     // C#: VMPowerOn();
-    vmPowerOn();
+    this->vmEnableControls();
 
     // C#: powerStateLabel.Hide();
     this->ui->powerStateLabel->hide();
@@ -1611,10 +1530,10 @@ void VNCTabView::showTopBarContents()
     }
 }
 
-void VNCTabView::vmPowerOff()
+void VNCTabView::vmDisableControls()
 {
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1290-1302
-    qDebug() << "VNCTabView: vmPowerOff()";
+    qDebug() << "VNCTabView: vmDisableControls()";
 
     // C#: toggleConsoleButton.Enabled = false;
     this->ui->toggleConsoleButton->setEnabled(false);
@@ -1625,7 +1544,7 @@ void VNCTabView::vmPowerOff()
     //         (cdDrive.allowed_operations.Contains(vbd_operations.eject) ||
     //          cdDrive.allowed_operations.Contains(vbd_operations.insert));
     // For now, allow CD operations if VM is halted
-    QString powerState = getCachedVmPowerState();
+    QString powerState = this->m_vm->GetPowerState();
     bool enableCd = (powerState == "Halted");
     this->ui->multipleDvdIsoList->setEnabled(enableCd);
 
@@ -1634,10 +1553,10 @@ void VNCTabView::vmPowerOff()
     this->ui->specialKeysButton->setEnabled(false);
 }
 
-void VNCTabView::vmPowerOn()
+void VNCTabView::vmEnableControls()
 {
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1304-1308
-    qDebug() << "VNCTabView: vmPowerOn()";
+    qDebug() << "VNCTabView: vmEnableControls()";
 
     // C#: No need to reenable toggleConsoleButton, polling will do it.
     // C#: multipleDvdIsoList1.Enabled = true;
@@ -1653,7 +1572,7 @@ bool VNCTabView::canEnableRDP() const
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 784-788
     // C#: return RDPControlEnabled && !RDPEnabled;
 
-    if (!this->m_connection || this->m_vm)
+    if (!this->m_vm || !this->m_vm->GetConnection())
         return false;
 
     return rdpControlEnabledForVm(this->m_vm) && !this->hasRDP(this->m_vm);
@@ -1775,7 +1694,7 @@ QString VNCTabView::guessNativeConsoleLabel() const
 
     QString label = tr("Looking for guest console...");
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
         return label;
 
     // C#: XenRef<VM_guest_metrics> gm = source.guest_metrics;
@@ -1783,13 +1702,12 @@ QString VNCTabView::guessNativeConsoleLabel() const
     if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return label;
 
-    // C#: VM_guest_metrics gmo = Connection.Resolve<VM_guest_metrics>(gm);
-    QVariantMap guestMetrics = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-    if (guestMetrics.isEmpty())
+    QSharedPointer<VMGuestMetrics> guestMetrics = this->m_vm->GetCache()->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+    if (!guestMetrics)
         return label;
 
     // C#: if (gmo != null && gmo.os_version != null)
-    QVariantMap osVersion = guestMetrics.value("os_version").toMap();
+    QVariantMap osVersion = guestMetrics->GetOSVersion();
     if (!osVersion.isEmpty())
     {
         // C#: if (gmo.os_version.ContainsKey("name"))
@@ -1825,19 +1743,19 @@ void VNCTabView::vncResizeHandler()
     // C#: if (!ignoringResizes && DesktopSizeHasChanged() && !scaleCheckBox.Checked)
     //         MaybeScale();
 
-    if (m_ignoringResizes)
+    if (this->m_ignoringResizes)
         return;
 
-    if (!desktopSizeHasChanged())
+    if (!this->desktopSizeHasChanged())
         return;
 
-    if (!ui->scaleCheckBox->isChecked())
+    if (!this->ui->scaleCheckBox->isChecked())
     {
         qDebug() << "VNCTabView: Desktop size changed, auto-scaling...";
-        MaybeScale();
+        this->MaybeScale();
     }
 
-    UpdateParentMinimumSize();
+    this->UpdateParentMinimumSize();
     emit consoleResized();
 }
 
@@ -1850,7 +1768,7 @@ bool VNCTabView::desktopSizeHasChanged()
 
     QSize currentSize = this->m_vncScreen->GetDesktopSize();
 
-    if (currentSize != m_lastDesktopSize)
+    if (currentSize != this->m_lastDesktopSize)
     {
         this->m_lastDesktopSize = currentSize;
         return true;
@@ -1891,9 +1809,9 @@ void VNCTabView::updateTooltipOfToggleButton()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1221-1225
     qDebug() << "VNCTabView: updateTooltipOfToggleButton()";
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (this->m_vm.isNull())
     {
-        ui->toggleConsoleButton->setToolTip("");
+        this->ui->toggleConsoleButton->setToolTip("");
         return;
     }
 
@@ -1903,7 +1821,7 @@ void VNCTabView::updateTooltipOfToggleButton()
     if (this->hasRDP(this->m_vm) || rdpControlEnabledForVm(this->m_vm))
     {
         // Clear tooltip when RDP is available
-        ui->toggleConsoleButton->setToolTip("");
+        this->ui->toggleConsoleButton->setToolTip("");
     } else
     {
         // Show informative tooltip when RDP is not available
@@ -1912,15 +1830,14 @@ void VNCTabView::updateTooltipOfToggleButton()
         if (this->m_vm->IsHVM())
         {
             // HVM VM without RDP - explain why
-            tooltip = tr("Remote Desktop is not available.\n"
-                         "Install XenServer Tools in the VM to enable Remote Desktop support.");
+            tooltip = tr("Remote Desktop is not available.\nInstall XenServer Tools in the VM to enable Remote Desktop support.");
         } else
         {
             // PV VM - RDP not supported
             tooltip = tr("Remote Desktop is only available for Windows VMs with XenServer Tools installed.");
         }
 
-        ui->toggleConsoleButton->setToolTip(tooltip);
+        this->ui->toggleConsoleButton->setToolTip(tooltip);
     }
 }
 
@@ -1929,57 +1846,44 @@ void VNCTabView::updateOpenSSHConsoleButtonState()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1560-1591
     qDebug() << "VNCTabView: updateOpenSSHConsoleButtonState()";
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (this->m_vm.isNull())
     {
-        ui->sshButton->setVisible(false);
+        this->ui->sshButton->setVisible(false);
         return;
     }
 
     // Check if SSH console is supported
     // C#: IsSSHConsoleSupported - return false for Windows, true for Linux
-    bool isSSHSupported = !isVMWindows(this->_vmRef);
+    bool isSSHSupported = !this->isCurrentVMWindows();
 
     // For control domain, check if host metrics are live
     if (this->m_vm->IsControlDomain())
     {
-        QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
-        QString hostRef = vmData.value("resident_on").toString();
-
-        if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+        QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
+        if (!host)
         {
-            QVariantMap hostData = getCachedObjectData("host", hostRef);
-            QString metricsRef = hostData.value("metrics").toString();
-
-            if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
-            {
-                QVariantMap metricsData = getCachedObjectData("host_metrics", metricsRef);
-                bool live = metricsData.value("live").toBool();
-
-                if (!live)
-                {
-                    isSSHSupported = false;
-                }
-            } else
-            {
-                isSSHSupported = false;
-            }
+            QString hostRef = this->m_vm->GetResidentOnRef();
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+                host = this->m_vm->GetCache()->ResolveObject<Host>(hostRef);
         }
+
+        QSharedPointer<HostMetrics> metrics = host ? host->GetMetrics() : QSharedPointer<HostMetrics>();
+        if (!metrics || !metrics->IsLive())
+            isSSHSupported = false;
     }
 
     // C#: buttonSSH.Visible = isSshConsoleSupported && source.power_state != vm_power_state.Halted;
-    QString powerState = getCachedVmPowerState();
+    QString powerState = this->m_vm->GetPowerState();
     if (powerState.isEmpty())
     {
         ui->sshButton->setVisible(false);
         return;
     }
-    bool visible = isSSHSupported && (powerState != "Halted");
-    ui->sshButton->setVisible(visible);
+    ui->sshButton->setVisible(isSSHSupported && (powerState != "Halted"));
 
     // C#: buttonSSH.Enabled = isSshConsoleSupported && CanStartSSHConsole;
     // CanStartSSHConsole = power_state == Running && !string.IsNullOrEmpty(IPAddressForSSH())
-    bool canStart = (powerState == "Running") && !getVMIPAddressForSSH(this->_vmRef).isEmpty();
-    ui->sshButton->setEnabled(canStart && isSSHSupported);
+    ui->sshButton->setEnabled(isSSHSupported && (powerState == "Running") && !getVMIPAddressForSSH().isEmpty());
 }
 
 void VNCTabView::showOrHideRdpVersionWarning()
@@ -2088,47 +1992,18 @@ void VNCTabView::toggleConsoleFocus()
     this->m_inToggleConsoleFocus = false;
 }
 
-QVariantMap VNCTabView::getCachedVmData() const
+bool VNCTabView::isSRDriverDomain(const QSharedPointer<VM> &vm, QString* outSRRef) const
 {
-    if (!this->m_connection || this->_vmRef.isEmpty())
-        return QVariantMap();
-
-    return getCachedObjectData("vm", this->_vmRef);
-}
-
-QString VNCTabView::getCachedVmPowerState() const
-{
-    return getCachedVmData().value("power_state").toString();
-}
-
-XenCache* VNCTabView::cache() const
-{
-    return this->m_connection ? this->m_connection->GetCache() : nullptr;
-}
-
-QVariantMap VNCTabView::getCachedObjectData(const QString& type, const QString& ref) const
-{
-    XenCache* cache = this->cache();
-    if (!cache || ref.isEmpty())
-        return QVariantMap();
-
-    return cache->ResolveObjectData(type, ref);
-}
-
-bool VNCTabView::isSRDriverDomain(const QString& vmRef, QString* outSRRef) const
-{
-    if (this->m_vm->IsControlDomain())
+    if (vm->IsControlDomain())
         return false;
 
-    XenCache* cache = this->m_vm->GetCache();
-
-    QList<QVariantMap> allPBDs = cache->GetAllData("pbd");
+    QList<QVariantMap> allPBDs = vm->GetCache()->GetAllData("pbd");
     for (const QVariantMap& pbd : allPBDs)
     {
         QVariantMap otherConfig = pbd.value("other_config").toMap();
 
         QString driverDomainRef = otherConfig.value("storage_driver_domain").toString();
-        if (driverDomainRef == vmRef)
+        if (driverDomainRef == vm->OpaqueRef())
         {
             QString srRef = pbd.value("SR").toString();
             if (!srRef.isEmpty() && srRef != XENOBJECT_NULL)
@@ -2164,14 +2039,11 @@ bool VNCTabView::rdpControlEnabledForVm(QSharedPointer<VM> vm) const
     if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 
-    QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-    if (metricsData.isEmpty())
+    QSharedPointer<VMGuestMetrics> metrics = vm->GetCache()->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+    if (!metrics)
         return false;
 
-    QVariantMap otherConfig = metricsData.value("other").toMap();
-    int featureTs2 = otherConfig.value("feature-ts2", "0").toInt();
-
-    return featureTs2 != 0;
+    return metrics->GetOther().value("feature-ts2", "0").toInt() != 0;
 }
 
 bool VNCTabView::canEnableRDPForVm() const
@@ -2191,22 +2063,18 @@ bool VNCTabView::canEnableRDPForVm() const
     return true;
 }
 
-bool VNCTabView::isVMWindows(const QString& vmRef) const
+bool VNCTabView::isCurrentVMWindows() const
 {
-    if (vmRef.isEmpty())
-        return false;
-
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
+    if (!this->m_vm)
         return false;
 
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
-        QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-        if (!metricsData.isEmpty())
+        QSharedPointer<VMGuestMetrics> metrics = this->m_vm->GetCache()->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+        if (metrics)
         {
-            QVariantMap osVersion = metricsData.value("os_version").toMap();
+            QVariantMap osVersion = metrics->GetOSVersion();
 
             QString distro = osVersion.value("distro").toString().toLower();
             if (!distro.isEmpty() && (distro.contains("ubuntu") || distro.contains("debian") ||
@@ -2232,8 +2100,7 @@ bool VNCTabView::isVMWindows(const QString& vmRef) const
 
     if (this->m_vm->IsHVM())
     {
-        QVariantMap platform = vmData.value("platform").toMap();
-        QString viridian = platform.value("viridian").toString();
+        QString viridian = this->m_vm->GetPlatform().value("viridian").toString();
         if (viridian == "true" || viridian == "1")
         {
             return true;
@@ -2243,36 +2110,32 @@ bool VNCTabView::isVMWindows(const QString& vmRef) const
     return false;
 }
 
-QString VNCTabView::getVMIPAddressForSSH(const QString& vmRef) const
+QString VNCTabView::getVMIPAddressForSSH() const
 {
-    if (vmRef.isEmpty())
-        return QString();
-
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
+    if (this->m_vm.isNull())
         return QString();
 
     QStringList ipAddresses;
 
-    bool isControlDomain = this->m_vm->IsControlDomain();
-
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
-        QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-        QVariantMap networks = metricsData.value("networks").toMap();
-
-        for (auto it = networks.begin(); it != networks.end(); ++it)
+        QSharedPointer<VMGuestMetrics> metrics = this->m_vm->GetCache()->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+        if (metrics)
         {
-            QString value = it.value().toString();
-            if (!value.isEmpty() && value != "0.0.0.0")
+            QVariantMap networks = metrics->GetNetworks();
+            for (auto it = networks.begin(); it != networks.end(); ++it)
             {
-                ipAddresses.append(value);
+                QString value = it.value().toString();
+                if (!value.isEmpty() && value != "0.0.0.0")
+                {
+                    ipAddresses.append(value);
+                }
             }
         }
     }
 
-    if (isControlDomain && ipAddresses.isEmpty())
+    if (this->m_vm->IsControlDomain() && ipAddresses.isEmpty())
         return QString();
 
     QRegularExpression ipv4Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");

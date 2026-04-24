@@ -94,10 +94,10 @@ RepairSRDialog::RepairSRDialog(QList<QSharedPointer<SR>> srs, bool runAction, QW
             if (conn && conn->GetCache())
             {
                 XenCache* cache = conn->GetCache();
-                connect(cache, &XenCache::objectChanged, this, &RepairSRDialog::onHostCollectionChanged, Qt::UniqueConnection);
-                connect(cache, &XenCache::objectRemoved, this, &RepairSRDialog::onHostCollectionChanged, Qt::UniqueConnection);
-                connect(cache, &XenCache::objectChanged, this, &RepairSRDialog::onPbdCollectionChanged, Qt::UniqueConnection);
-                connect(cache, &XenCache::objectRemoved, this, &RepairSRDialog::onPbdCollectionChanged, Qt::UniqueConnection);
+                connect(cache, &XenCache::itemChanged, this, &RepairSRDialog::onHostCollectionChanged, Qt::UniqueConnection);
+                connect(cache, &XenCache::itemRemoved, this, &RepairSRDialog::onHostCollectionChanged, Qt::UniqueConnection);
+                connect(cache, &XenCache::itemChanged, this, &RepairSRDialog::onPbdCollectionChanged, Qt::UniqueConnection);
+                connect(cache, &XenCache::itemRemoved, this, &RepairSRDialog::onPbdCollectionChanged, Qt::UniqueConnection);
             }
         }
     }

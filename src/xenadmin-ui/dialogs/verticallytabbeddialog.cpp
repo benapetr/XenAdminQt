@@ -302,16 +302,18 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     return saveSucceeded;
 }
 
-void VerticallyTabbedDialog::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void VerticallyTabbedDialog::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
-    if (!this->m_waitingForCacheSync || !this->m_object)
+    if (!object || !this->m_waitingForCacheSync || !this->m_object)
         return;
 
     XenConnection* expectedConnection = this->m_object->GetConnection();
+    XenConnection* connection = object->GetConnection();
     if (!expectedConnection || connection != expectedConnection)
         return;
 
-    const XenObjectType changedType = XenCache::TypeFromString(type);
+    const XenObjectType changedType = object->GetObjectType();
+    const QString ref = object->OpaqueRef();
     if (changedType != this->m_objectType || ref != this->m_objectRef)
         return;
 

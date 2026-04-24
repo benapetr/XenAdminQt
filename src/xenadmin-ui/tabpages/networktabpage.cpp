@@ -164,16 +164,16 @@ void NetworkTabPage::removeObject()
         return;
 
     XenCache* cache = this->m_connection->GetCache();
-    disconnect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged);
-    disconnect(cache, &XenCache::objectRemoved, this, &NetworkTabPage::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::itemChanged, this, &NetworkTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::itemRemoved, this, &NetworkTabPage::onCacheObjectRemoved);
     disconnect(cache, &XenCache::bulkUpdateComplete, this, &NetworkTabPage::onCacheBulkUpdateComplete);
 }
 
 void NetworkTabPage::updateObject()
 {
     XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    connect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged, Qt::UniqueConnection);
-    connect(cache, &XenCache::objectRemoved, this, &NetworkTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemChanged, this, &NetworkTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::itemRemoved, this, &NetworkTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
     connect(cache, &XenCache::bulkUpdateComplete, this, &NetworkTabPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
 }
 
