@@ -140,24 +140,17 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
     this->d->cache = new XenCache(this);
     this->d->metricUpdater = new MetricUpdater(this);
 
-    auto wakeCacheWaiters = [this]() {
+    auto wakeCacheWaiters = [this]()
+    {
         emit XenObjectsUpdated();
         QMutexLocker locker(&this->d->waitForCacheMutex);
         this->d->waitForCacheCondition.wakeAll();
     };
 
-    connect(this->d->cache, &XenCache::objectChanged, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) {
-        wakeCacheWaiters();
-    });
-    connect(this->d->cache, &XenCache::objectRemoved, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) {
-        wakeCacheWaiters();
-    });
-    connect(this->d->cache, &XenCache::bulkUpdateComplete, this, [wakeCacheWaiters](const QString&, int) {
-        wakeCacheWaiters();
-    });
-    connect(this->d->cache, &XenCache::cacheCleared, this, [wakeCacheWaiters]() {
-        wakeCacheWaiters();
-    });
+    connect(this->d->cache, &XenCache::objectChanged, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
+    connect(this->d->cache, &XenCache::objectRemoved, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) { wakeCacheWaiters(); });
+    connect(this->d->cache, &XenCache::bulkUpdateComplete, this, [wakeCacheWaiters](const QString&, int) { wakeCacheWaiters(); });
+    connect(this->d->cache, &XenCache::cacheCleared, this, [wakeCacheWaiters]() { wakeCacheWaiters(); });
 }
 
 XenConnection::~XenConnection()

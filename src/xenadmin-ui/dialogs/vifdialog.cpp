@@ -81,8 +81,8 @@ VIFDialog::VIFDialog(QSharedPointer<VIF> vif, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::VIFDialog),
       m_connection(vif ? vif->GetConnection() : nullptr),
-      m_vif(vif),
       m_vm(vif ? vif->GetVM() : QSharedPointer<VM>()),
+      m_vif(vif),
       m_deviceId(0),
       m_isEditMode(true)
 {

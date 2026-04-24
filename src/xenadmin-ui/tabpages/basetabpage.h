@@ -31,6 +31,7 @@
 #include <QWidget>
 #include <QVariantMap>
 #include <QSharedPointer>
+#include <QPointer>
 #include "xenlib/xen/xenobjecttype.h"
 
 class XenConnection;
@@ -77,6 +78,8 @@ class BaseTabPage : public QWidget
         virtual void SetObject(QSharedPointer<XenObject> object);
         void MarkDirty();
         bool IsDirty() const;
+        bool HasObjectFromConnection(XenConnection* connection) const;
+        void ClearObjectIfFromConnection(XenConnection* connection);
 
         /**
          * Called when the tab page becomes visible.
@@ -116,7 +119,7 @@ class BaseTabPage : public QWidget
     protected:
         QSharedPointer<XenObject> m_object;
         QVariantMap m_objectData;
-        XenConnection* m_connection = nullptr;
+        QPointer<XenConnection> m_connection = nullptr;
         bool m_isDirty = false;
 
         /**

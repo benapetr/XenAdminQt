@@ -121,6 +121,7 @@ class MainWindow : public QMainWindow
         void onConnectionStateChanged(XenConnection *conn, bool connected);
         void onCachePopulated();
         void onConnectionAdded(XenConnection* connection);
+        void clearConnectionUIState(XenConnection* connection);
         void onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData);
         void onConnectionTaskModified(const QString& taskRef, const QVariantMap& taskData);
         void onConnectionTaskDeleted(const QString& taskRef);

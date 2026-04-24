@@ -268,6 +268,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &MainWindow::onConnectionAdded);
+    connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &MainWindow::clearConnectionUIState);
 
     // Get NavigationPane from UI (matches C# MainWindow.navigationPane)
     this->m_navigationPane = this->ui->navigationPane;
@@ -672,8 +673,7 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
 
     connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
     connect(connection->GetCache(), &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
-    connect(connection->GetCache(), &XenCache::objectRemoved, this,
-            [this](XenConnection*, const QString& objectType, const QString& objectRef)
+    connect(connection->GetCache(), &XenCache::objectRemoved, this, [this](XenConnection*, const QString& objectType, const QString& objectRef)
     {
         if (XenCache::TypeFromString(objectType) == XenObjectType::VM && !objectRef.isEmpty())
             this->closeConsoleViewsForVmRef(objectRef);
@@ -687,6 +687,40 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
     connect(connection, &XenConnection::TaskDeleted, this, &MainWindow::onConnectionTaskDeleted);
     connect(connection, &XenConnection::MessageReceived, this, &MainWindow::onMessageReceived);
     connect(connection, &XenConnection::MessageRemoved, this, &MainWindow::onMessageRemoved);
+}
+
+void MainWindow::clearConnectionUIState(XenConnection* connection)
+{
+    if (!connection)
+        return;
+
+    const bool currentObjectUsesConnection = this->m_currentObject && this->m_currentObject->GetConnection() == connection;
+    bool visibleTabObjectCleared = false;
+
+    for (BaseTabPage* tabPage : this->m_tabPages)
+    {
+        if (!tabPage || !tabPage->HasObjectFromConnection(connection))
+            continue;
+
+        if (this->ui->mainTabWidget->indexOf(tabPage) >= 0)
+            visibleTabObjectCleared = true;
+
+        tabPage->ClearObjectIfFromConnection(connection);
+    }
+
+    if (!currentObjectUsesConnection && !visibleTabObjectCleared)
+        return;
+
+    if (currentObjectUsesConnection)
+    {
+        this->m_currentObject.clear();
+        this->m_lastSelectedRef.clear();
+        this->m_titleBar->Clear();
+    }
+
+    this->clearTabs();
+    this->updatePlaceholderVisibility();
+    this->updateToolbarsAndMenus();
 }
 
 void MainWindow::closeConsoleViewsForVmRef(const QString& vmRef)

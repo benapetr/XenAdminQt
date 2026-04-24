@@ -93,6 +93,17 @@ bool BaseTabPage::IsDirty() const
     return this->m_isDirty;
 }
 
+bool BaseTabPage::HasObjectFromConnection(XenConnection* connection) const
+{
+    return connection && !this->m_object.isNull() && this->m_object->GetConnection() == connection;
+}
+
+void BaseTabPage::ClearObjectIfFromConnection(XenConnection* connection)
+{
+    if (this->HasObjectFromConnection(connection))
+        this->SetObject(QSharedPointer<XenObject>());
+}
+
 void BaseTabPage::OnPageShown()
 {
     // Default implementation does nothing
