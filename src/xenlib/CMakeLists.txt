@@ -1,0 +1,274 @@
+set(XENLIB_SOURCES
+    alerts/alarmmessagealert.cpp
+    alerts/alert.cpp
+    alerts/alertmanager.cpp
+    alerts/certificatealert.cpp
+    alerts/messagealert.cpp
+    alerts/policyalert.cpp
+    customfields/customfielddefinition.cpp
+    customfields/customfieldsmanager.cpp
+    folders/foldersmanager.cpp
+    metricupdater.cpp
+    network/comparableaddress.cpp
+    operations/multipleaction.cpp
+    operations/multipleactionlauncher.cpp
+    operations/operationmanager.cpp
+    operations/parallelaction.cpp
+    operations/producerconsumerqueue.cpp
+    otherconfig/otherconfigandtagswatcher.cpp
+    utils/encryption.cpp
+    utils/misc.cpp
+    vmhelpers.cpp
+    xen/actions/delegatedasyncoperation.cpp
+    xen/actions/general/enabledatasourceaction.cpp
+    xen/actions/general/generaleditpageaction.cpp
+    xen/actions/general/getdatasourcesaction.cpp
+    xen/actions/general/perfmondefinitionaction.cpp
+    xen/actions/general/savechangesaction.cpp
+    xen/actions/general/savedatasourcestateaction.cpp
+    xen/actions/gpu/vgpuconfigurationaction.cpp
+    xen/actions/host/changecontroldomainmemoryaction.cpp
+    xen/actions/host/changehostautostartaction.cpp
+    xen/actions/host/changehostpasswordaction.cpp
+    xen/actions/host/destroyhostaction.cpp
+    xen/actions/host/disablehostaction.cpp
+    xen/actions/host/editmultipathaction.cpp
+    xen/actions/host/enablehostaction.cpp
+    xen/actions/host/evacuatehostaction.cpp
+    xen/actions/host/hostpoweronaction.cpp
+    xen/actions/host/reboothostaction.cpp
+    xen/actions/host/restarttoolstackaction.cpp
+    xen/actions/host/savepoweronsettingsaction.cpp
+    xen/actions/host/shutdownhostaction.cpp
+    xen/actions/host/updateintegratedgpupassthroughaction.cpp
+    xen/actions/meddlingaction.cpp
+    xen/actions/meddlingactionmanager.cpp
+    xen/actions/network/changenetworkingaction.cpp
+    xen/actions/network/createbondaction.cpp
+    xen/actions/network/createchinaction.cpp
+    xen/actions/network/createsriovaction.cpp
+    xen/actions/network/destroybondaction.cpp
+    xen/actions/network/networkaction.cpp
+    xen/actions/network/networkingactionhelpers.cpp
+    xen/actions/network/rescanpifsaction.cpp
+    xen/actions/network/setsecondarymanagementpurposeaction.cpp
+    xen/actions/pool/addhosttopoolaction.cpp
+    xen/actions/pool/createpoolaction.cpp
+    xen/actions/pool/designatenewmasteraction.cpp
+    xen/actions/pool/destroypoolaction.cpp
+    xen/actions/pool/disablehaaction.cpp
+    xen/actions/pool/ejecthostfrompoolaction.cpp
+    xen/actions/pool/emergencytransitiontomasteraction.cpp
+    xen/actions/pool/enablehaaction.cpp
+    xen/actions/pool/getheartbeatsrsaction.cpp
+    xen/actions/pool/rotatepoolsecretaction.cpp
+    xen/actions/pool/setgpuplacementpolicyaction.cpp
+    xen/actions/pool/sethaprioritiesaction.cpp
+    xen/actions/pool/setpoolnameanddescriptionaction.cpp
+    xen/actions/pool/setpoolpropertyaction.cpp
+    xen/actions/pool/setsrasdefaultaction.cpp
+    xen/actions/pool/setssllegacyaction.cpp
+    xen/actions/pool/syncdatabaseaction.cpp
+    xen/actions/sr/destroysraction.cpp
+    xen/actions/sr/detachsraction.cpp
+    xen/actions/sr/forgetsraction.cpp
+    xen/actions/sr/srcreateaction.cpp
+    xen/actions/sr/srintroduceaction.cpp
+    xen/actions/sr/srprobeaction.cpp
+    xen/actions/sr/srreattachaction.cpp
+    xen/actions/sr/srrefreshaction.cpp
+    xen/actions/sr/srrepairaction.cpp
+    xen/actions/sr/srscanaction.cpp
+    xen/actions/sr/srtrimaction.cpp
+    xen/actions/vbd/vbdcreateandplugaction.cpp
+    xen/actions/vbd/vbdeditaction.cpp
+    xen/actions/vdi/creatediskaction.cpp
+    xen/actions/vdi/destroydiskaction.cpp
+    xen/actions/vdi/detachvirtualdiskaction.cpp
+    xen/actions/vdi/migratevirtualdiskaction.cpp
+    xen/actions/vdi/movevirtualdiskaction.cpp
+    xen/actions/vdi/vdidisablecbtaction.cpp
+    xen/actions/vif/createvifaction.cpp
+    xen/actions/vif/deletevifaction.cpp
+    xen/actions/vif/plugvifaction.cpp
+    xen/actions/vif/unplugvifaction.cpp
+    xen/actions/vif/updatevifaction.cpp
+    xen/actions/vm/changememorysettingsaction.cpp
+    xen/actions/vm/changevcpusettingsaction.cpp
+    xen/actions/vm/changevmisoaction.cpp
+    xen/actions/vm/createcddriveaction.cpp
+    xen/actions/vm/createvmaction.cpp
+    xen/actions/vm/createvmfastaction.cpp
+    xen/actions/vm/exportvmaction.cpp
+    xen/actions/vm/gpuassignaction.cpp
+    xen/actions/vm/hvmbootaction.cpp
+    xen/actions/vm/importvmaction.cpp
+    xen/actions/vm/resumeandstartvmsaction.cpp
+    xen/actions/vm/setvmotherconfigaction.cpp
+    xen/actions/vm/setvmstartupoptionsaction.cpp
+    xen/actions/vm/shutdownapplianceaction.cpp
+    xen/actions/vm/startapplianceaction.cpp
+    xen/actions/vm/vmcloneaction.cpp
+    xen/actions/vm/vmcopyaction.cpp
+    xen/actions/vm/vmcrosspoolmigrateaction.cpp
+    xen/actions/vm/vmdestroyaction.cpp
+    xen/actions/vm/vmenlightenmentaction.cpp
+    xen/actions/vm/vmmigrateaction.cpp
+    xen/actions/vm/vmmoveaction.cpp
+    xen/actions/vm/vmpauseaction.cpp
+    xen/actions/vm/vmrebootaction.cpp
+    xen/actions/vm/vmresumeaction.cpp
+    xen/actions/vm/vmresumeonaction.cpp
+    xen/actions/vm/vmshutdownaction.cpp
+    xen/actions/vm/vmsnapshotcreateaction.cpp
+    xen/actions/vm/vmsnapshotdeleteaction.cpp
+    xen/actions/vm/vmsnapshotrevertaction.cpp
+    xen/actions/vm/vmstartabstractaction.cpp
+    xen/actions/vm/vmstartaction.cpp
+    xen/actions/vm/vmstartonaction.cpp
+    xen/actions/vm/vmtotemplateaction.cpp
+    xen/actions/wlb/wlbrecommendation.cpp
+    xen/actions/wlb/wlbrecommendations.cpp
+    xen/actions/wlb/wlbretrievevmrecommendationsaction.cpp
+    xen/api.cpp
+    xen/apiversion.cpp
+    xen/asyncoperation.cpp
+    xen/blob.cpp
+    xen/bond.cpp
+    xencache.cpp
+    xen/certificate.cpp
+    xen/cluster.cpp
+    xen/clusterhost.cpp
+    xen/console.cpp
+    xen/dockercontainer.cpp
+    xen/event.cpp
+    xen/eventpoller.cpp
+    xen/failure.cpp
+    xen/feature.cpp
+    xen/folder.cpp
+    xen/friendlyerrornames.cpp
+    xen/gpugroup.cpp
+    xen/host.cpp
+    xen/hostcpu.cpp
+    xen/hostcrashdump.cpp
+    xen/hostmetrics.cpp
+    xen/hostpatch.cpp
+    xen/jsonrpcclient.cpp
+    xen/message.cpp
+    xen/network/certificatemanager.cpp
+    xen/network/connection.cpp
+    xen/network/connectionsmanager.cpp
+    xen/network/connectionworker.cpp
+    xen/network.cpp
+    xen/network/heartbeat.cpp
+    xen/network/httpclient.cpp
+    xen/network_sriov.cpp
+    xen/pbd.cpp
+    xen/pci.cpp
+    xen/pgpu.cpp
+    xen/pif.cpp
+    xen/pifmetrics.cpp
+    xen/pool.cpp
+    xen/pooljoinrules.cpp
+    xen/poolpatch.cpp
+    xen/poolupdate.cpp
+    xen/pusb.cpp
+    xen/role.cpp
+    xensearch/common.cpp
+    xensearch/group.cpp
+    xensearch/grouping.cpp
+    xensearch/groupingtag.cpp
+    xensearch/propertyaccessorhelper.cpp
+    xensearch/queries.cpp
+    xensearch/query.cpp
+    xensearch/queryfilter.cpp
+    xensearch/queryscope.cpp
+    xensearch/search.cpp
+    xensearch/sort.cpp
+    xen/session.cpp
+    xen/sm.cpp
+    xen/sr.cpp
+    xen/task.cpp
+    xen/tunnel.cpp
+    xen/usbgroup.cpp
+    xen/user.cpp
+    xen/vbd.cpp
+    xen/vbdmetrics.cpp
+    xen/vdi.cpp
+    xen/vgpu.cpp
+    xen/vgputype.cpp
+    xen/vif.cpp
+    xen/vlan.cpp
+    xen/vmappliance.cpp
+    xen/vm.cpp
+    xen/vmguestmetrics.cpp
+    xen/vmmetrics.cpp
+    xen/vmpp.cpp
+    xen/vmss.cpp
+    xen/vtpm.cpp
+    xen/vusb.cpp
+    xen/xenapi/vm_appliance.cpp
+    xen/xenapi/xenapi_Blob.cpp
+    xen/xenapi/xenapi_Bond.cpp
+    xen/xenapi/xenapi_Cluster_host.cpp
+    xen/xenapi/xenapi_GPU_group.cpp
+    xen/xenapi/xenapi_Helper.cpp
+    xen/xenapi/xenapi_Host.cpp
+    xen/xenapi/xenapi_Network.cpp
+    xen/xenapi/xenapi_Network_sriov.cpp
+    xen/xenapi/xenapi_PBD.cpp
+    xen/xenapi/xenapi_PGPU.cpp
+    xen/xenapi/xenapi_PIF.cpp
+    xen/xenapi/xenapi_Pool.cpp
+    xen/xenapi/xenapi_Role.cpp
+    xen/xenapi/xenapi_Secret.cpp
+    xen/xenapi/xenapi_Session.cpp
+    xen/xenapi/xenapi_SR.cpp
+    xen/xenapi/xenapi_Task.cpp
+    xen/xenapi/xenapi_Tunnel.cpp
+    xen/xenapi/xenapi_UserDetails.cpp
+    xen/xenapi/xenapi_VBD.cpp
+    xen/xenapi/xenapi_VDI.cpp
+    xen/xenapi/xenapi_VGPU.cpp
+    xen/xenapi/xenapi_VIF.cpp
+    xen/xenapi/xenapi_VLAN.cpp
+    xen/xenapi/xenapi_VM.cpp
+    xen/xenobject.cpp
+    # Header-only Q_OBJECT classes: listed explicitly so AUTOMOC processes them
+    collections/observablelist.h
+)
+
+qt_add_library(xenlib STATIC ${XENLIB_SOURCES})
+
+target_include_directories(xenlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+# XENLIB_LIBRARY (PRIVATE) enables Q_DECL_EXPORT when building the .a.
+# XENLIB_STATIC  (PUBLIC)  tells consumers the library is static so the
+# XENLIB_EXPORT macro stays empty — without it, MSVC consumers see
+# Q_DECL_IMPORT and fail to link against the static archive.
+target_compile_definitions(xenlib
+    PRIVATE XENLIB_LIBRARY
+    PUBLIC  XENLIB_STATIC
+)
+
+target_link_libraries(xenlib
+    PUBLIC
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Network
+        Qt6::Xml
+)
+
+option(XENADMIN_NO_CRYPTO "Disable crypto/OpenSSL support" OFF)
+if(NOT XENADMIN_NO_CRYPTO)
+    if(UNIX AND NOT APPLE)
+        find_package(OpenSSL REQUIRED)
+        target_link_libraries(xenlib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+    elseif(APPLE)
+        # CommonCrypto is part of the macOS system frameworks - no extra linking needed
+    elseif(WIN32)
+        target_link_libraries(xenlib PUBLIC bcrypt)
+    endif()
+else()
+    target_compile_definitions(xenlib PUBLIC XENADMIN_NO_CRYPTO)
+endif()

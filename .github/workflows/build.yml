@@ -10,6 +10,9 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -91,8 +94,9 @@ jobs:
           else
             make -j"$(nproc)"
           fi
+
   build-arm64:
-    name: arm64 / Qt 6.7.0
+    name: arm64 / Qt (system)
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout sources
@@ -100,25 +104,131 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: 6.7.0
-          host: linux_arm64
-          target: desktop
-          arch: linux_gcc_arm64
-          modules: qtcharts
-          install-deps: false
-          cache: true
+          sudo apt-get install -y build-essential pkg-config \
+            qt6-base-dev qt6-charts-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
       - name: Show qmake version
-        run: qmake -v
+        run: qmake6 -v
       - name: Configure project
         run: |
           mkdir -p build
           cd build
-          qmake ../src/xenadminqt.pro
+          qmake6 ../src/xenadminqt.pro
       - name: Build project
         run: |
           cd build
           make -j"$(nproc)"
+
+  build-riscv64:
+    name: riscv64 / Qt (system) / native runner
+    runs-on: ubuntu-24.04-riscv
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          if [ ! -d /var/lib/dpkg ]; then
+            sudo mkdir -p /var/lib/dpkg/info \
+              /var/lib/dpkg/updates /var/lib/dpkg/parts
+            sudo touch /var/lib/dpkg/status
+          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config \
+            qt6-base-dev qt6-charts-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+      - name: Show qmake version
+        run: qmake6 -v
+      - name: Configure project
+        run: |
+          mkdir -p build
+          cd build
+          qmake6 ../src/xenadminqt.pro
+      - name: Build project
+        run: |
+          cd build
+          time make -j"$(nproc)"
+
+  build-riscv64-cross:
+    name: riscv64 / cross-compile / CMake on x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Build riscv64 sysroot via multiarch packages
+        run: |
+          set -o pipefail
+          # Use dpkg multiarch to install riscv64 packages directly on the host.
+          # No Docker or QEMU needed - apt only unpacks .deb files.
+          sudo dpkg --add-architecture riscv64
+          # Ubuntu Ports carries riscv64 packages absent from the amd64 mirror.
+          PORTS="http://ports.ubuntu.com/ubuntu-ports"
+          printf '%s\n' \
+            "deb [arch=riscv64] $PORTS noble main restricted universe" \
+            "deb [arch=riscv64] $PORTS noble-updates main restricted universe" \
+            | sudo tee /etc/apt/sources.list.d/ubuntu-ports-riscv64.list
+          # Restrict existing sources to amd64 only. Multi-Arch:same packages
+          # (e.g. libssl3t64) require identical versions across architectures;
+          # pinning prevents version-skew failures between runner amd64 packages
+          # and Ubuntu Ports riscv64 packages.
+          sudo find /etc/apt/sources.list.d/ -name '*.sources' \
+            ! -name 'ubuntu-ports-riscv64.list' \
+            -exec sudo sed -i \
+              -e '/^Architectures:/s/.*/Architectures: amd64/' \
+              -e '/^Components:/a Architectures: amd64' \
+              {} + 2>/dev/null || true
+          sudo apt-get update -q 2>&1 | { grep -vE "^Ign|^(W|N):" || true; }
+          sudo apt-get install -y --no-install-recommends \
+            qt6-base-dev:riscv64 \
+            qt6-charts-dev:riscv64 \
+            libssl-dev:riscv64 \
+            libxkbcommon-dev:riscv64
+          # Assemble sysroot from multiarch installation paths.
+          # lib must sit under usr/lib/ so cmake paths resolve correctly.
+          sudo mkdir -p /opt/riscv64-sysroot/usr/lib
+          sudo cp -a /usr/lib/riscv64-linux-gnu /opt/riscv64-sysroot/usr/lib/
+          sudo cp -a /usr/include /opt/riscv64-sysroot/usr/
+          echo "Sysroot ready. Qt6 cmake dir:"
+          QT6_CMAKE=/opt/riscv64-sysroot/usr/lib/riscv64-linux-gnu/cmake/Qt6
+          ls "$QT6_CMAKE" 2>/dev/null && echo "found" || echo "NOT FOUND"
+
+      - name: Install cross-compiler and host Qt6 tools
+        run: |
+          sudo apt-get install -y \
+            gcc-riscv64-linux-gnu \
+            g++-riscv64-linux-gnu \
+            cmake \
+            ninja-build \
+            qt6-base-dev
+          # Qt6 headers are arch-independent; installed by host qt6-base-dev.
+          # Re-sync sysroot includes so the cross-compiler finds QIcon etc.
+          sudo cp -a /usr/include/. /opt/riscv64-sysroot/usr/include/
+
+      - name: Locate host Qt6 tools path
+        run: |
+          _qmake=$(command -v qmake6 || command -v qmake || true)
+          if [ -z "$_qmake" ]; then
+            echo "Error: neither qmake6 nor qmake found in PATH" >&2
+            exit 1
+          fi
+          QT6_BIN=$(dirname "$_qmake")
+          QT_HOST_TOOLS=$(dirname "$QT6_BIN")
+          echo "QT_HOST_TOOLS=$QT_HOST_TOOLS" >> "$GITHUB_ENV"
+          echo "Host Qt6 tools at: $QT_HOST_TOOLS"
+
+      - name: Configure (cross-compilation)
+        run: |
+          SYSROOT=/opt/riscv64-sysroot
+          PKG_CONFIG_SYSROOT_DIR="$SYSROOT" \
+          PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/riscv64-linux-gnu/pkgconfig" \
+          cmake -B build-cross \
+            -DCMAKE_TOOLCHAIN_FILE=toolchains/riscv64-linux-gnu.cmake \
+            -DCMAKE_SYSROOT="$SYSROOT" \
+            -DQT_HOST_PATH="$QT_HOST_TOOLS" \
+            -DQt6_DIR="$SYSROOT/usr/lib/riscv64-linux-gnu/cmake/Qt6" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -G Ninja
+
+      - name: Build (cross, timed)
+        run: |
+          time ninja -C build-cross -j"$(nproc)"
