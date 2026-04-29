@@ -73,7 +73,18 @@ class ImportWizard : public QWizard
             Page_Network = 3,
             Page_Options = 4,
             Page_Finish = 5,
-            Page_VmConfig = 6   // VHD/VMDK only: VM name, vCPU, memory
+            Page_VmConfig = 6,  // VHD/VMDK only: VM name, vCPU, memory
+            Page_Eula = 7,      // OVF only: EULA acceptance (shown when EULAs are present)
+            Page_Security = 8,  // OVF only: manifest/signature review
+            Page_BootOptions = 9 // VHD/VMDK only: firmware (BIOS/UEFI) and vTPM
+        };
+
+        /// Boot firmware mode — mirrors ImportImageAction::BootMode
+        enum BootMode
+        {
+            BootMode_Bios,       ///< Legacy BIOS (HVM "BIOS order")
+            BootMode_Uefi,       ///< UEFI firmware
+            BootMode_UefiSecure  ///< UEFI Secure Boot
         };
 
         explicit ImportWizard(QWidget* parent = nullptr);
@@ -94,6 +105,15 @@ class ImportWizard : public QWizard
         bool GetStartAutomatically() const { return this->m_startVMsAutomatically; }
         bool GetRunFixups() const { return this->m_runFixups; }
         QString GetFixupIsoSrRef() const { return this->m_fixupIsoSrRef; }
+        BootMode GetBootMode() const { return this->m_bootMode; }
+        bool GetAssignVtpm() const { return this->m_assignVtpm; }
+        bool GetVerifyManifest() const { return this->m_verifyManifest; }
+        QStringList GetOvfVirtualSystemNames() const { return this->m_ovfVirtualSystemNames; }
+        QStringList GetOvfNetworkNames() const { return this->m_ovfNetworkNames; }
+
+        // OVF routing helpers — queried by anonymous-namespace page subclasses in nextId()
+        bool HasOvfEulas() const { return !this->m_ovfEulas.isEmpty(); }
+        bool OvfHasSecurity() const { return this->m_ovfHasManifest || this->m_ovfHasSignature; }
 
     protected:
         void initializePage(int id) override;
@@ -120,6 +140,9 @@ class ImportWizard : public QWizard
         QWizardPage* createNetworkPage();
         QWizardPage* createOptionsPage();
         QWizardPage* createFinishPage();
+        QWizardPage* createEulaPage();
+        QWizardPage* createSecurityPage();
+        QWizardPage* createBootOptionsPage();
 
         void updateOvfMetadataDisplay();
         bool inspectXvaTar(const QString& filePath);
@@ -165,6 +188,10 @@ class ImportWizard : public QWizard
         QString m_vmName;
         int     m_vcpuCount;
         qint64  m_memoryMb;
+
+        // VHD/VMDK boot options (collected from Page_BootOptions)
+        BootMode m_bootMode;
+        bool     m_assignVtpm;
 };
 
 #endif // IMPORTWIZARD_H

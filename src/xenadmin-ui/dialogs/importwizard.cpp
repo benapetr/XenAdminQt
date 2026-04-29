@@ -63,6 +63,8 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_diskImageCapacityBytes(0)
     , m_vcpuCount(1)
     , m_memoryMb(512)
+    , m_bootMode(BootMode_Bios)
+    , m_assignVtpm(false)
 {
     this->setWindowTitle(tr("Import Virtual Machine"));
     this->setWindowIcon(QIcon(":/icons/vm-import-32.png"));
@@ -90,11 +92,14 @@ void ImportWizard::setupWizardPages()
     // Add wizard pages
     this->setPage(Page_Source,   this->createSourcePage());
     this->setPage(Page_VmConfig, this->createVmConfigPage());
+    this->setPage(Page_Eula,     this->createEulaPage());
     this->setPage(Page_Host,     this->createHostPage());
     this->setPage(Page_Storage,  this->createStoragePage());
     this->setPage(Page_Network,  this->createNetworkPage());
-    this->setPage(Page_Options,  this->createOptionsPage());
-    this->setPage(Page_Finish,   this->createFinishPage());
+    this->setPage(Page_Security,     this->createSecurityPage());
+    this->setPage(Page_Options,      this->createOptionsPage());
+    this->setPage(Page_BootOptions,  this->createBootOptionsPage());
+    this->setPage(Page_Finish,       this->createFinishPage());
 
     // Set the starting page
     this->setStartId(Page_Source);
@@ -105,6 +110,8 @@ void ImportWizard::setupWizardPages()
 
 namespace
 {
+    // ── Source page ───────────────────────────────────────────────────────────
+    // Directs to VmConfig for VHD/VMDK, to Eula when OVF has EULAs, else to Host.
     class ImportSourcePage : public QWizardPage
     {
         public:
@@ -114,10 +121,131 @@ namespace
             int nextId() const override
             {
                 auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
-                if (wiz && wiz->GetImportType() == ImportWizard::ImportType_VHD)
+                if (!wiz)
+                    return ImportWizard::Page_Host;
+                if (wiz->GetImportType() == ImportWizard::ImportType_VHD)
                     return ImportWizard::Page_VmConfig;
+                if (wiz->GetImportType() == ImportWizard::ImportType_OVF && wiz->HasOvfEulas())
+                    return ImportWizard::Page_Eula;
                 return ImportWizard::Page_Host;
             }
+    };
+
+    // ── EULA page (OVF only) ──────────────────────────────────────────────────
+    // Always proceeds to host selection after the user accepts all EULAs.
+    class ImportEulaPage : public QWizardPage
+    {
+        public:
+            explicit ImportEulaPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Host; }
+    };
+
+    // ── VmConfig page (VHD/VMDK only) ────────────────────────────────────────
+    // Always proceeds to host selection.
+    class ImportVmConfigPage : public QWizardPage
+    {
+        public:
+            explicit ImportVmConfigPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Host; }
+    };
+
+    // ── Host page ─────────────────────────────────────────────────────────────
+    // Always proceeds to storage selection.
+    class ImportHostPage : public QWizardPage
+    {
+        public:
+            explicit ImportHostPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Storage; }
+    };
+
+    // ── Storage page ──────────────────────────────────────────────────────────
+    // Always proceeds to network selection.
+    class ImportStoragePage : public QWizardPage
+    {
+        public:
+            explicit ImportStoragePage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Network; }
+    };
+
+    // ── Network page ──────────────────────────────────────────────────────────
+    // XVA: skip Options → go straight to Finish.
+    // OVF with manifest/signature: go to Security page before Options.
+    // VHD / plain OVF: go to Options.
+    class ImportNetworkPage : public QWizardPage
+    {
+        public:
+            explicit ImportNetworkPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override
+            {
+                auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
+                if (!wiz)
+                    return ImportWizard::Page_Options;
+                if (wiz->GetImportType() == ImportWizard::ImportType_XVA)
+                    return ImportWizard::Page_Finish;
+                if (wiz->GetImportType() == ImportWizard::ImportType_OVF && wiz->OvfHasSecurity())
+                    return ImportWizard::Page_Security;
+                return ImportWizard::Page_Options;
+            }
+    };
+
+    // ── Security page (OVF only) ──────────────────────────────────────────────
+    // Always proceeds to options.
+    class ImportSecurityPage : public QWizardPage
+    {
+        public:
+            explicit ImportSecurityPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Options; }
+    };
+
+    // ── Options page ──────────────────────────────────────────────────────────
+    // VHD/VMDK: proceeds to Boot Options.  All others: proceeds to Finish.
+    class ImportOptionsPage : public QWizardPage
+    {
+        public:
+            explicit ImportOptionsPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override
+            {
+                auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
+                if (wiz && wiz->GetImportType() == ImportWizard::ImportType_VHD)
+                    return ImportWizard::Page_BootOptions;
+                return ImportWizard::Page_Finish;
+            }
+    };
+
+    // ── Boot options page (VHD/VMDK only) ────────────────────────────────────
+    // Always proceeds to Finish.
+    class ImportBootOptionsPage : public QWizardPage
+    {
+        public:
+            explicit ImportBootOptionsPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return ImportWizard::Page_Finish; }
+    };
+
+    // ── Finish page ───────────────────────────────────────────────────────────
+    // Terminal page — no next page.
+    class ImportFinishPage : public QWizardPage
+    {
+        public:
+            explicit ImportFinishPage(QWidget* parent = nullptr)
+                : QWizardPage(parent) {}
+
+            int nextId() const override { return -1; }
     };
 } // anonymous namespace
 
@@ -220,7 +348,7 @@ QWizardPage* ImportWizard::createSourcePage()
 
 QWizardPage* ImportWizard::createVmConfigPage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportVmConfigPage* page = new ImportVmConfigPage;
     page->setTitle(tr("Virtual Machine Configuration"));
     page->setSubTitle(tr("Specify the name and hardware settings for the imported virtual machine."));
 
@@ -259,7 +387,7 @@ QWizardPage* ImportWizard::createVmConfigPage()
 
 QWizardPage* ImportWizard::createHostPage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportHostPage* page = new ImportHostPage;
     page->setTitle(tr("Select Destination"));
     page->setSubTitle(tr("Choose the host or pool to import the virtual machine into."));
 
@@ -287,7 +415,7 @@ QWizardPage* ImportWizard::createHostPage()
 
 QWizardPage* ImportWizard::createStoragePage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportStoragePage* page = new ImportStoragePage;
     page->setTitle(tr("Storage Configuration"));
     page->setSubTitle(tr("Select the storage repository for the imported virtual disks."));
 
@@ -310,7 +438,7 @@ QWizardPage* ImportWizard::createStoragePage()
 
 QWizardPage* ImportWizard::createNetworkPage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportNetworkPage* page = new ImportNetworkPage;
     page->setTitle(tr("Network Configuration"));
     page->setSubTitle(tr("Select the target network(s) for the imported virtual machine."));
 
@@ -351,28 +479,11 @@ QWizardPage* ImportWizard::createNetworkPage()
 
 QWizardPage* ImportWizard::createOptionsPage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportOptionsPage* page = new ImportOptionsPage;
     page->setTitle(tr("Import Options"));
     page->setSubTitle(tr("Configure additional import options."));
 
-    // Security options (for OVF)
-    QGroupBox* securityGroup = new QGroupBox(tr("Security Options"));
-
-    QCheckBox* verifyManifest = new QCheckBox(tr("Verify digital signature and manifest"));
-    verifyManifest->setObjectName("verifyManifest");
-    verifyManifest->setChecked(true);
-
-    QLineEdit* passwordEdit = new QLineEdit;
-    passwordEdit->setObjectName("passwordEdit");
-    passwordEdit->setPlaceholderText(tr("Password (if required)"));
-    passwordEdit->setEchoMode(QLineEdit::Password);
-
-    QVBoxLayout* securityLayout = new QVBoxLayout;
-    securityLayout->addWidget(verifyManifest);
-    securityLayout->addWidget(passwordEdit);
-    securityGroup->setLayout(securityLayout);
-
-    // Import options
+    // Import options (run fixups, start automatically)
     QGroupBox* importGroup = new QGroupBox(tr("Import Options"));
 
     QCheckBox* runFixups = new QCheckBox(tr("Run operating system fixups"));
@@ -405,7 +516,6 @@ QWizardPage* ImportWizard::createOptionsPage()
     importGroup->setLayout(importLayout);
 
     QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(securityGroup);
     mainLayout->addWidget(importGroup);
     mainLayout->addStretch();
 
@@ -415,7 +525,7 @@ QWizardPage* ImportWizard::createOptionsPage()
 
 QWizardPage* ImportWizard::createFinishPage()
 {
-    QWizardPage* page = new QWizardPage;
+    ImportFinishPage* page = new ImportFinishPage;
     page->setTitle(tr("Ready to Import"));
     page->setSubTitle(tr("Review the import settings and start the import process."));
 
@@ -443,6 +553,115 @@ QWizardPage* ImportWizard::createFinishPage()
     mainLayout->addWidget(summaryLabel);
     mainLayout->addWidget(summaryText);
     mainLayout->addWidget(progressGroup);
+    mainLayout->addStretch();
+
+    page->setLayout(mainLayout);
+    return page;
+}
+
+QWizardPage* ImportWizard::createEulaPage()
+{
+    ImportEulaPage* page = new ImportEulaPage;
+    page->setTitle(tr("End User License Agreement"));
+    page->setSubTitle(tr("You must accept the license agreement(s) before proceeding."));
+
+    QLabel* introLabel = new QLabel(
+        tr("Please read the following license agreement(s). "
+           "You must accept all agreements to continue importing this package."));
+    introLabel->setWordWrap(true);
+
+    // One tab per EULA document; tabs are populated in initializePage()
+    QTabWidget* eulaTab = new QTabWidget;
+    eulaTab->setObjectName("eulaTabWidget");
+
+    QCheckBox* acceptCheck = new QCheckBox(
+        tr("I have read and accept the above End User License Agreement(s)."));
+    acceptCheck->setObjectName("eulaAcceptCheck");
+
+    QVBoxLayout* layout = new QVBoxLayout;
+    layout->addWidget(introLabel);
+    layout->addWidget(eulaTab, 1);  // stretch so text area fills available height
+    layout->addWidget(acceptCheck);
+
+    page->setLayout(layout);
+    return page;
+}
+
+QWizardPage* ImportWizard::createSecurityPage()
+{
+    ImportSecurityPage* page = new ImportSecurityPage;
+    page->setTitle(tr("Security"));
+    page->setSubTitle(tr("Review the security information for this package."));
+
+    // Populated in initializePage() based on whether the package has a signature or manifest
+    QLabel* infoLabel = new QLabel;
+    infoLabel->setObjectName("securityInfoLabel");
+    infoLabel->setWordWrap(true);
+
+    QGroupBox* verifyGroup = new QGroupBox(tr("Verification"));
+
+    QCheckBox* verifyCheck = new QCheckBox;
+    verifyCheck->setObjectName("securityVerifyCheck");
+    verifyCheck->setChecked(true);
+
+    QVBoxLayout* verifyLayout = new QVBoxLayout;
+    verifyLayout->addWidget(verifyCheck);
+    verifyGroup->setLayout(verifyLayout);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(infoLabel);
+    mainLayout->addSpacing(8);
+    mainLayout->addWidget(verifyGroup);
+    mainLayout->addStretch();
+
+    page->setLayout(mainLayout);
+    return page;
+}
+
+QWizardPage* ImportWizard::createBootOptionsPage()
+{
+    ImportBootOptionsPage* page = new ImportBootOptionsPage;
+    page->setTitle(tr("Boot Options"));
+    page->setSubTitle(tr("Select the firmware type and optional security hardware for the imported VM."));
+
+    // ── Firmware group ────────────────────────────────────────────────────────
+    QGroupBox* firmwareGroup = new QGroupBox(tr("Boot Firmware"));
+
+    QRadioButton* biosRadio = new QRadioButton(tr("BIOS (Legacy)"));
+    biosRadio->setObjectName("bootBiosRadio");
+    biosRadio->setChecked(true);
+    biosRadio->setToolTip(tr("Traditional BIOS/HVM boot. Compatible with most guest operating systems."));
+
+    QRadioButton* uefiRadio = new QRadioButton(tr("UEFI"));
+    uefiRadio->setObjectName("bootUefiRadio");
+    uefiRadio->setToolTip(tr("UEFI firmware. Required by some modern operating systems."));
+
+    QRadioButton* uefiSecureRadio = new QRadioButton(tr("UEFI Secure Boot"));
+    uefiSecureRadio->setObjectName("bootUefiSecureRadio");
+    uefiSecureRadio->setToolTip(tr("UEFI with Secure Boot enabled. The guest OS must support Secure Boot."));
+
+    QVBoxLayout* firmwareLayout = new QVBoxLayout;
+    firmwareLayout->addWidget(biosRadio);
+    firmwareLayout->addWidget(uefiRadio);
+    firmwareLayout->addWidget(uefiSecureRadio);
+    firmwareGroup->setLayout(firmwareLayout);
+
+    // ── Security hardware group ───────────────────────────────────────────────
+    QGroupBox* secHwGroup = new QGroupBox(tr("Security Hardware"));
+
+    QCheckBox* vtpmCheck = new QCheckBox(tr("Assign a virtual Trusted Platform Module (vTPM)"));
+    vtpmCheck->setObjectName("vtpmCheck");
+    vtpmCheck->setToolTip(tr("A vTPM allows the guest to store secrets and verify platform integrity.\n"
+                             "Requires XenServer 22.26.0 / XCP-ng 8.3 or later."));
+
+    QVBoxLayout* secHwLayout = new QVBoxLayout;
+    secHwLayout->addWidget(vtpmCheck);
+    secHwGroup->setLayout(secHwLayout);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(firmwareGroup);
+    mainLayout->addSpacing(8);
+    mainLayout->addWidget(secHwGroup);
     mainLayout->addStretch();
 
     page->setLayout(mainLayout);
@@ -489,6 +708,76 @@ void ImportWizard::initializePage(int id)
     }
     else if (id == Page_Options)
         this->populateFixupIsoCombo();
+    else if (id == Page_BootOptions)
+    {
+        // Restore the previously selected boot mode so navigating back/forward
+        // doesn't reset the user's choice.
+        QRadioButton* biosRadio       = this->findChild<QRadioButton*>("bootBiosRadio");
+        QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
+        QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
+        if (biosRadio && uefiRadio && uefiSecureRadio)
+        {
+            biosRadio->setChecked(this->m_bootMode == BootMode_Bios);
+            uefiRadio->setChecked(this->m_bootMode == BootMode_Uefi);
+            uefiSecureRadio->setChecked(this->m_bootMode == BootMode_UefiSecure);
+        }
+        QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+        if (vtpmCheck)
+            vtpmCheck->setChecked(this->m_assignVtpm);
+    }
+    else if (id == Page_Eula)
+    {
+        // Populate tab widget with EULA texts — one tab per EULA document
+        QTabWidget* tabWidget = this->findChild<QTabWidget*>("eulaTabWidget");
+        if (tabWidget)
+        {
+            tabWidget->clear();
+            for (int i = 0; i < this->m_ovfEulas.size(); i++)
+            {
+                QTextEdit* textEdit = new QTextEdit;
+                textEdit->setReadOnly(true);
+                textEdit->setPlainText(this->m_ovfEulas.at(i));
+                const QString tabTitle = (this->m_ovfEulas.size() == 1)
+                    ? tr("License Agreement")
+                    : tr("License %1").arg(i + 1);
+                tabWidget->addTab(textEdit, tabTitle);
+            }
+        }
+        // Reset checkbox so user must explicitly accept on each visit
+        QCheckBox* acceptCheck = this->findChild<QCheckBox*>("eulaAcceptCheck");
+        if (acceptCheck)
+            acceptCheck->setChecked(false);
+    }
+    else if (id == Page_Security)
+    {
+        // Update info label and verify checkbox based on whether this package has
+        // a producer signature or just a manifest.  Matches C# ImportSecurityPage.
+        QLabel* infoLabel = this->findChild<QLabel*>("securityInfoLabel");
+        QCheckBox* verifyCheck = this->findChild<QCheckBox*>("securityVerifyCheck");
+        if (infoLabel)
+        {
+            if (this->m_ovfHasSignature)
+            {
+                infoLabel->setText(
+                    tr("This package contains a digital signature.\n\n"
+                       "Verifying the producer signature confirms the package "
+                       "was not modified after it was published."));
+            } else
+            {
+                infoLabel->setText(
+                    tr("This package contains a manifest file.\n\n"
+                       "Verifying the manifest confirms that the package contents "
+                       "have not been corrupted or tampered with."));
+            }
+        }
+        if (verifyCheck)
+        {
+            verifyCheck->setText(this->m_ovfHasSignature
+                ? tr("Verify producer signature")
+                : tr("Verify manifest content"));
+            verifyCheck->setChecked(this->m_verifyManifest);
+        }
+    }
     else if (id == Page_Finish)
     {
         QTextEdit* summaryText = this->findChild<QTextEdit*>("summaryText");
@@ -516,6 +805,37 @@ void ImportWizard::initializePage(int id)
             summary += tr("Target: %1\n").arg(hostText);
             summary += tr("Storage: %1\n").arg(srText);
             summary += tr("Network: %1\n").arg(netText);
+
+            if (this->m_importType == ImportType_VHD)
+            {
+                // VM config
+                QLineEdit* vmNameEdit = this->findChild<QLineEdit*>("vmNameEdit");
+                QSpinBox*  vcpuSpin  = this->findChild<QSpinBox*>("vcpuSpin");
+                QSpinBox*  memSpin   = this->findChild<QSpinBox*>("memorySpin");
+                if (vmNameEdit && !vmNameEdit->text().trimmed().isEmpty())
+                    summary += tr("VM Name: %1\n").arg(vmNameEdit->text().trimmed());
+                if (vcpuSpin)
+                    summary += tr("vCPUs: %1\n").arg(vcpuSpin->value());
+                if (memSpin)
+                    summary += tr("Memory: %1 MB\n").arg(memSpin->value());
+
+                // Boot mode (read live from the radio buttons so the summary stays in sync
+                // even if the user navigated back and changed the selection)
+                QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
+                QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
+                QString bootModeStr;
+                if (uefiSecureRadio && uefiSecureRadio->isChecked())
+                    bootModeStr = tr("UEFI Secure Boot");
+                else if (uefiRadio && uefiRadio->isChecked())
+                    bootModeStr = tr("UEFI");
+                else
+                    bootModeStr = tr("BIOS (Legacy)");
+                summary += tr("Boot Firmware: %1\n").arg(bootModeStr);
+
+                QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+                if (vtpmCheck && vtpmCheck->isChecked())
+                    summary += tr("vTPM: Yes\n");
+            }
 
             QCheckBox* startAfter = this->findChild<QCheckBox*>("startAfterImport");
             if (startAfter && startAfter->isChecked())
@@ -626,39 +946,74 @@ void ImportWizard::populateNetworkComboBox(QComboBox* combo)
     if (!this->m_connection)
         return;
 
-    // Build host PIF ref set once from the already-resolved m_selectedHost
-    QSet<QString> hostPifRefs;
-    if (this->m_selectedHost && this->m_selectedHost->IsValid())
+    XenCache* cache = this->m_connection->GetCache();
+
+    // When a specific host is selected, record its PIF refs for filtering.
+    // When no host is selected (no affinity), we build a per-host PIF map so that we
+    // can include only networks that are visible on ALL hosts in the pool.
+    QSet<QString> selectedHostPifRefs;
+    QMap<QString, QSet<QString>> pifRefsByHost; // hostRef → set of PIF refs that host carries
+    bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
+
+    if (hasHostAffinity)
     {
         const QStringList refs = this->m_selectedHost->GetPIFRefs();
-        hostPifRefs = QSet<QString>(refs.begin(), refs.end());
+        selectedHostPifRefs = QSet<QString>(refs.begin(), refs.end());
+    }
+    else
+    {
+        // No affinity — collect PIF sets for every host so we can intersect later
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (!host || !host->IsValid())
+                continue;
+            const QStringList refs = host->GetPIFRefs();
+            pifRefsByHost[host->OpaqueRef()] = QSet<QString>(refs.begin(), refs.end());
+        }
     }
 
-    XenCache* cache = this->m_connection->GetCache();
     QList<QSharedPointer<Network>> networks = cache->GetAll<Network>();
     for (const QSharedPointer<Network>& net : networks)
     {
         if (!net || !net->IsValid())
             continue;
-        if (!net->IsManaged())
-            continue;
-        if (net->IsMember())
-            continue;
-        if (net->IsGuestInstallerNetwork())
+
+        // Use Network::Show() — covers guest-installer, member, hidden-from-xencenter checks
+        if (!net->Show(false))
             continue;
 
-        // If a specific host is selected, only include networks that have
-        // a PIF on that host — or internal networks with no PIFs at all.
-        if (!hostPifRefs.isEmpty())
+        const QStringList netPifRefs = net->GetPIFRefs();
+        const bool isInternal = netPifRefs.isEmpty();
+
+        if (hasHostAffinity)
         {
-            const QStringList netPifRefs = net->GetPIFRefs();
-            if (!netPifRefs.isEmpty())
+            // Include only networks with a PIF on the selected host, or internal networks
+            if (!isInternal)
             {
                 const QSet<QString> netPifSet(netPifRefs.begin(), netPifRefs.end());
-                if (hostPifRefs.intersect(netPifSet).isEmpty())
+                if ((selectedHostPifRefs & netPifSet).isEmpty())
                     continue;
             }
-            // Networks with no PIFs (internal) are always included
+        }
+        else if (!pifRefsByHost.isEmpty())
+        {
+            // No affinity: include only networks visible to ALL hosts (or internal)
+            if (!isInternal)
+            {
+                const QSet<QString> netPifSet(netPifRefs.begin(), netPifRefs.end());
+                bool visibleOnAllHosts = true;
+                for (auto it = pifRefsByHost.constBegin(); it != pifRefsByHost.constEnd(); ++it)
+                {
+                    if ((it.value() & netPifSet).isEmpty())
+                    {
+                        visibleOnAllHosts = false;
+                        break;
+                    }
+                }
+                if (!visibleOnAllHosts)
+                    continue;
+            }
         }
 
         combo->addItem(net->GetName(), net->OpaqueRef());
@@ -1135,7 +1490,19 @@ bool ImportWizard::validateCurrentPage()
             }
             else if (this->m_importType == ImportType_VHD)
             {
-                this->inspectDiskImage(filePath);  // Non-fatal if it fails
+                if (!this->inspectDiskImage(filePath))
+                {
+                    // Could not parse disk image header — fall back to file size for capacity.
+                    // Warn the user; they can still continue if the format is otherwise valid.
+                    const qint64 fileBytes = QFileInfo(filePath).size();
+                    this->m_diskImageCapacityBytes = fileBytes;
+                    this->m_diskImageFormatName = tr("Unknown");
+                    QMessageBox::warning(this, tr("Disk Image Format"),
+                        tr("The disk image format could not be determined from the file header. "
+                           "The file size (%1 bytes) will be used as the virtual disk capacity.\n\n"
+                           "If the file is a valid VHD or VMDK, you can continue. "
+                           "Otherwise the import may fail.").arg(fileBytes));
+                }
             }
             this->updateXvaMetadataDisplay();
             this->updateDiskImageDisplay();
@@ -1148,6 +1515,18 @@ bool ImportWizard::validateCurrentPage()
         {
             QMessageBox::warning(this, tr("Invalid Input"),
                                  tr("Please enter a name for the virtual machine."));
+            return false;
+        }
+    }
+    else if (currentId == Page_Eula)
+    {
+        // The user must explicitly accept all EULAs to continue.
+        // Matches C# ImportEulaPage.EnableNext() gated on m_checkBoxAccept.
+        QCheckBox* acceptCheck = this->findChild<QCheckBox*>("eulaAcceptCheck");
+        if (!acceptCheck || !acceptCheck->isChecked())
+        {
+            QMessageBox::warning(this, tr("License Agreement Required"),
+                                 tr("You must accept the End User License Agreement(s) to continue."));
             return false;
         }
     }
@@ -1242,8 +1621,15 @@ void ImportWizard::accept()
             this->m_ovfNetworkMappings[this->m_ovfNetworkNames.at(i)] = combo->currentData().toString();
     }
 
-    QCheckBox* verifyManifest = this->findChild<QCheckBox*>("verifyManifest");
-    this->m_verifyManifest = verifyManifest ? verifyManifest->isChecked() : true;
+    // For OVF with manifest/signature the Security page verify checkbox is
+    // authoritative; for all other paths verification is not applicable.
+    this->m_verifyManifest = true;
+    if (this->m_importType == ImportType_OVF && (this->m_ovfHasManifest || this->m_ovfHasSignature))
+    {
+        QCheckBox* securityVerify = this->findChild<QCheckBox*>("securityVerifyCheck");
+        if (securityVerify)
+            this->m_verifyManifest = securityVerify->isChecked();
+    }
 
     QCheckBox* runFixupsBox = this->findChild<QCheckBox*>("runFixups");
     this->m_runFixups = runFixupsBox ? runFixupsBox->isChecked() : false;
@@ -1253,6 +1639,22 @@ void ImportWizard::accept()
 
     QCheckBox* startAfter = this->findChild<QCheckBox*>("startAfterImport");
     this->m_startVMsAutomatically = startAfter ? startAfter->isChecked() : false;
+
+    // Boot options (VHD/VMDK only — collected from Page_BootOptions)
+    this->m_bootMode  = BootMode_Bios;
+    this->m_assignVtpm = false;
+    if (this->m_importType == ImportType_VHD)
+    {
+        QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
+        QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
+        if (uefiSecureRadio && uefiSecureRadio->isChecked())
+            this->m_bootMode = BootMode_UefiSecure;
+        else if (uefiRadio && uefiRadio->isChecked())
+            this->m_bootMode = BootMode_Uefi;
+
+        QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+        this->m_assignVtpm = vtpmCheck ? vtpmCheck->isChecked() : false;
+    }
 
     qDebug() << "ImportWizard: Accept — file:" << this->m_sourceFilePath
              << "host:" << (this->m_selectedHost ? this->m_selectedHost->OpaqueRef() : "(none)")

@@ -139,6 +139,7 @@ HEADERS += \
     xen/task.h \
     xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
+    xen/xenapi/xenapi_VTPM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
     xen/xenapi/xenapi_Host.h \
@@ -384,6 +385,7 @@ SOURCES += \
     xen/tunnel.cpp \
     xen/task.cpp \
     xen/xenapi/xenapi_VM.cpp \
+    xen/xenapi/xenapi_VTPM.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
     xen/xenapi/xenapi_Host.cpp \

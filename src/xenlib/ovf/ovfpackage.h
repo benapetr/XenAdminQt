@@ -167,6 +167,34 @@ class OvfPackage
         QString DescriptorXml() const { return this->descriptorXml_; }
 
         /**
+         * @brief Verify the integrity of OVF package files against a manifest.
+         *
+         * Reads @c baseName.mf from @p workingDir and computes SHA-1 or SHA-256
+         * hashes of every file listed in the manifest. An error is returned if any
+         * file is missing or its hash does not match the recorded digest.
+         *
+         * Manifest line format (C# / XenServer convention):
+         * @code
+         *   SHA1(filename.ovf)= abcdef01234567890...
+         *   SHA256(another-disk.vhd)= 0123456789abcdef...
+         * @endcode
+         *
+         * @param workingDir   Directory that contains both the manifest file and
+         *                     all referenced package files.
+         * @param baseName     Base name (no extension) used to locate the .mf file,
+         *                     e.g. @c "mypackage" → @c workingDir/mypackage.mf.
+         * @param errorOut     Receives a human-readable error message on failure.
+         * @param cancelCheck  Optional; verification aborts if this returns @c true.
+         * @return @c true when all digests match, @c false on any failure.
+         *
+         * C# equivalent: Package.VerifyManifest()
+         */
+        static bool VerifyManifest(const QString& workingDir,
+                                   const QString& baseName,
+                                   QString& errorOut,
+                                   std::function<bool()> cancelCheck = nullptr);
+
+        /**
          * @brief Extract all files from a TAR (.ova) archive to a directory.
          *
          * Each entry in the archive is written as a flat file under @p destDir.
