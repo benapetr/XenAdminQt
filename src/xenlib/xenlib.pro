@@ -25,6 +25,16 @@ contains(CONFIG, no_crypto) {
 # This allows us to use absolute include path instead of hard-to-read relative paths
 INCLUDEPATH += ..
 
+# zlib — used by DecompressGzAction for .gz decompression
+unix {
+    LIBS += -lz
+}
+win32 {
+    # On Windows the Qt distribution ships zlib; use its include path and lib.
+    INCLUDEPATH += $$[QT_INSTALL_PREFIX]/include/QtZlib
+    LIBS += -lzlib
+}
+
 greaterThan(QT_MAJOR_VERSION, 5) {
     DEFINES += QT_NO_DEPRECATED_WARNINGS
 }
@@ -51,6 +61,7 @@ HEADERS += \
     operations/multipleactionlauncher.h \
     operations/parallelaction.h \
     utils/misc.h \
+    utils/decompressgzaction.h \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
@@ -299,6 +310,7 @@ SOURCES += \
     operations/multipleactionlauncher.cpp \
     operations/parallelaction.cpp \
     utils/misc.cpp \
+    utils/decompressgzaction.cpp \
     vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
     xen/actions/wlb/wlbretrievevmrecommendationsaction.cpp \

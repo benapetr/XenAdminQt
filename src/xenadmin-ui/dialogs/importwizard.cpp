@@ -34,6 +34,8 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/utils/decompressgzaction.h"
+#include "dialogs/actionprogressdialog.h"
 #include <QDebug>
 #include <QtWidgets>
 #include <QDomDocument>
@@ -1025,6 +1027,43 @@ bool ImportWizard::validateCurrentPage()
             QMessageBox::warning(this, tr("File Not Found"),
                                  tr("The selected file does not exist."));
             return false;
+        }
+
+        // ── Decompress .gz files before any further processing ────────────
+        // C# equivalent: ImportSourcePage.Uncompress() / _unzipWorker_DoWork()
+        // We decompress to a sibling file (same dir, without the .gz suffix).
+        // The decompressed file is what the rest of the wizard and the action use.
+        if (filePath.endsWith(".gz", Qt::CaseInsensitive))
+        {
+            // Compute output path: strip .gz suffix
+            const QString decompPath = filePath.left(filePath.length() - 3);
+
+            if (QFile::exists(decompPath))
+            {
+                const auto reply = QMessageBox::question(
+                    this, tr("File Already Exists"),
+                    tr("The decompressed file already exists:\n%1\n\nOverwrite it?").arg(decompPath),
+                    QMessageBox::Yes | QMessageBox::No);
+                if (reply != QMessageBox::Yes)
+                    return false;
+                QFile::remove(decompPath);
+            }
+
+            DecompressGzAction* op = new DecompressGzAction(filePath, decompPath, this);
+            ActionProgressDialog dlg(op, this);
+            dlg.setShowCancel(true);
+            dlg.exec();  // starts the op via showEvent, blocks until done or closed
+
+            if (op->IsCancelled() || op->IsFailed())
+            {
+                QFile::remove(decompPath);  // clean up partial output if any
+                return false;
+            }
+
+            // Update file path and the UI line edit to the decompressed file
+            filePath = decompPath;
+            if (filePathEdit)
+                filePathEdit->setText(filePath);
         }
 
         // Detect and validate import type; caches result in m_importType

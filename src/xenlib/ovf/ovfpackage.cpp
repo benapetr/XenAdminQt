@@ -672,3 +672,95 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
              << "| EULAs:" << this->eulas_.size()
              << "| Encrypted:" << this->hasEncryption_;
 }
+
+// ─── OvfPackage::ExtractAllToDir ─────────────────────────────────────────────
+
+bool OvfPackage::ExtractAllToDir(const QString& ovaPath,
+                                 const QString& destDir,
+                                 QString& errorOut,
+                                 std::function<bool()> cancelCheck)
+{
+    QFile archive(ovaPath);
+    if (!archive.open(QIODevice::ReadOnly))
+    {
+        errorOut = QString("Cannot open OVA archive: %1").arg(archive.errorString());
+        return false;
+    }
+
+    const int BLOCK = 512;
+
+    while (!archive.atEnd())
+    {
+        if (cancelCheck && cancelCheck())
+        {
+            errorOut = "Extraction cancelled";
+            archive.close();
+            return false;
+        }
+
+        QString entryName;
+        qint64 entrySize = 0;
+
+        if (!readTarHeader(archive, entryName, entrySize))
+            break;  // end of archive or error
+
+        // Strip any leading directory components — all files land flat in destDir.
+        // This matches how most OVA archives are structured (single top-level folder).
+        const QString baseName = QFileInfo(entryName).fileName();
+
+        if (entrySize > 0 && !baseName.isEmpty())
+        {
+            const QString outPath = QDir(destDir).filePath(baseName);
+            QFile outFile(outPath);
+            if (!outFile.open(QIODevice::WriteOnly))
+            {
+                errorOut = QString("Cannot create extracted file %1: %2")
+                               .arg(outPath, outFile.errorString());
+                archive.close();
+                return false;
+            }
+
+            qint64 remaining = entrySize;
+            QByteArray buf(64 * 1024, '\0');
+            while (remaining > 0)
+            {
+                if (cancelCheck && cancelCheck())
+                {
+                    outFile.close();
+                    QFile::remove(outPath);
+                    errorOut = "Extraction cancelled";
+                    archive.close();
+                    return false;
+                }
+
+                const qint64 chunk = qMin(remaining, static_cast<qint64>(buf.size()));
+                const qint64 got = archive.read(buf.data(), chunk);
+                if (got <= 0)
+                {
+                    errorOut = "Unexpected end of OVA archive";
+                    outFile.close();
+                    archive.close();
+                    return false;
+                }
+                outFile.write(buf.constData(), got);
+                remaining -= got;
+            }
+            outFile.close();
+
+            // Advance to next 512-byte block boundary
+            const qint64 padding = (BLOCK - (entrySize % BLOCK)) % BLOCK;
+            if (padding > 0)
+                archive.skip(padding);
+        }
+        else if (entrySize > 0)
+        {
+            // Entry has no usable name (e.g. directory entry) — skip data
+            const qint64 blocks = (entrySize + BLOCK - 1) / BLOCK * BLOCK;
+            archive.skip(blocks);
+        }
+    }
+
+    archive.close();
+    return true;
+}
+
