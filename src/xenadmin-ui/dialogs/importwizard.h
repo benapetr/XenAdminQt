@@ -44,6 +44,8 @@
 #include <QProgressBar>
 
 class QWizardPage;
+class XenConnection;
+class OvfPackage;
 
 class ImportWizard : public QWizard
 {
@@ -70,6 +72,17 @@ class ImportWizard : public QWizard
         };
 
         explicit ImportWizard(QWidget* parent = nullptr);
+        explicit ImportWizard(XenConnection* connection, QWidget* parent = nullptr);
+
+        // Result accessors — valid after exec() returns Accepted
+        QString GetSourceFilePath() const { return this->sourceFilePath_; }
+        ImportType GetImportType() const { return this->importType_; }
+        QString GetSelectedHostRef() const { return this->selectedHostRef_; }
+        QString GetSelectedSRRef() const { return this->selectedSRRef_; }
+        QString GetSelectedNetworkRef() const { return this->selectedNetworkRef_; }
+        bool GetStartAutomatically() const { return this->startVMsAutomatically_; }
+        bool GetRunFixups() const { return this->runFixups_; }
+        QString GetFixupIsoSrRef() const { return this->fixupIsoSrRef_; }
 
     protected:
         void initializePage(int id) override;
@@ -78,14 +91,14 @@ class ImportWizard : public QWizard
 
     private slots:
         void onCurrentIdChanged(int id);
-        void onSourceTypeChanged();
         void onBrowseClicked();
-        void onImportStarted();
 
     private:
         void setupWizardPages();
-        void updateWizardForImportType();
-        void performImport();
+        void populateHostCombo();
+        void populateStorageCombo();
+        void populateNetworkCombo();
+        void populateFixupIsoCombo();
         QString detectImportType(const QString& filePath);
 
         // Helper functions for creating pages
@@ -96,14 +109,35 @@ class ImportWizard : public QWizard
         QWizardPage* createOptionsPage();
         QWizardPage* createFinishPage();
 
-        // Store wizard data
-        ImportType m_importType;
-        QString m_sourceFilePath;
-        QString m_selectedHost;
-        QString m_selectedStorage;
-        QString m_selectedNetwork;
-        bool m_verifyManifest;
-        bool m_startVMsAutomatically;
+        void updateOvfMetadataDisplay();
+        bool inspectXvaTar(const QString& filePath);
+        void updateXvaMetadataDisplay();
+
+        // Connection context (may be null when no server is connected)
+        XenConnection* connection_;
+
+        // Collected wizard result data
+        ImportType importType_;
+        QString sourceFilePath_;
+        QString selectedHostRef_;
+        QString selectedSRRef_;
+        QString selectedNetworkRef_;
+        bool verifyManifest_;
+        bool startVMsAutomatically_;
+        bool runFixups_;
+        QString fixupIsoSrRef_;
+
+        // OVF metadata populated after source-page validation
+        QString ovfPackageName_;
+        QStringList ovfVirtualSystemNames_;
+        QStringList ovfNetworkNames_;
+        QStringList ovfEulas_;
+        bool ovfHasManifest_;
+        bool ovfHasSignature_;
+
+        // XVA metadata populated after source-page validation
+        QStringList xvaVmNames_;
+        qint64 xvaTotalDiskSizeBytes_;
 };
 
 #endif // IMPORTWIZARD_H

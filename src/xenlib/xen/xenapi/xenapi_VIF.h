@@ -134,6 +134,31 @@ namespace XenAPI
              * Matches C# VIF.get_all()
              */
             static QVariantList get_all(Session* session);
+
+            /**
+             * @brief Get the network attached to this VIF
+             * @param session The session
+             * @param vif The opaque_ref of the VIF
+             * @return Network opaque_ref
+             *
+             * Matches C# VIF.get_network()
+             */
+            static QString get_network(Session* session, const QString& vif);
+
+            /**
+             * @brief Move the VIF to a different network (async)
+             *
+             * Available from Ely (XenServer 7.2+). Moves the VIF to the specified
+             * network, optionally changing the MAC address.
+             * First published in XenServer 7.2.
+             * @param session The session
+             * @param vif The opaque_ref of the VIF
+             * @param network The target network opaque_ref
+             * @return Task ref for async operation
+             *
+             * Matches C# VIF.async_move()
+             */
+            static QString async_move(Session* session, const QString& vif, const QString& network);
     };
 
 } // namespace XenAPI

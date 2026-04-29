@@ -143,6 +143,7 @@ HEADERS += \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/createcddriveaction.h \
     xen/actions/vm/importvmaction.h \
+    xen/actions/vm/importapplianceaction.h \
     xen/actions/vm/exportvmaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
@@ -281,7 +282,8 @@ HEADERS += \
     xen/user.h \
     xen/vbdmetrics.h \
     otherconfig/otherconfigandtagswatcher.h \
-    folders/foldersmanager.h
+    folders/foldersmanager.h \
+    ovf/ovfpackage.h
 
 # Source files
 SOURCES += \
@@ -381,6 +383,7 @@ SOURCES += \
     xen/actions/vm/changevmisoaction.cpp \
     xen/actions/vm/createcddriveaction.cpp \
     xen/actions/vm/importvmaction.cpp \
+    xen/actions/vm/importapplianceaction.cpp \
     xen/actions/vm/exportvmaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
@@ -519,7 +522,8 @@ SOURCES += \
     xen/vmguestmetrics.cpp \
     xen/vmmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp \
-    folders/foldersmanager.cpp
+    folders/foldersmanager.cpp \
+    ovf/ovfpackage.cpp
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

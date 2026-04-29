@@ -169,6 +169,25 @@ namespace XenAPI
              * @param applianceRef OpaqueRef of VM_appliance
              */
             static void shutdown(Session* session, const QString& applianceRef);
+
+            /**
+             * @brief Create a new VM_appliance (vApp) and return its OpaqueRef.
+             *
+             * First published in XenServer 6.0.
+             * @param session XenSession with valid connection
+             * @param record QVariantMap with name_label and name_description fields
+             * @return OpaqueRef of the newly created VM_appliance
+             */
+            static QString create(Session* session, const QVariantMap& record);
+
+            /**
+             * @brief Destroy the VM_appliance (does not destroy contained VMs).
+             *
+             * First published in XenServer 6.0.
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance to destroy
+             */
+            static void destroy(Session* session, const QString& applianceRef);
     };
 
 } // namespace XenAPI

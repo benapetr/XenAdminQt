@@ -29,6 +29,12 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/importwizard.h"
+#include "../../dialogs/actionprogressdialog.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/actions/vm/importvmaction.h"
+#include "xenlib/xen/actions/vm/importapplianceaction.h"
 #include <QtWidgets>
 
 ImportVMCommand::ImportVMCommand(QObject* parent) : Command(nullptr, parent)
@@ -57,8 +63,11 @@ void ImportVMCommand::Run()
 
 bool ImportVMCommand::CanRun() const
 {
-    // Import is generally always available
-    return true;
+    // Import requires at least one connected server
+    Xen::ConnectionsManager* mgr = Xen::ConnectionsManager::instance();
+    if (!mgr)
+        return false;
+    return !mgr->GetConnectedConnections().isEmpty();
 }
 
 QString ImportVMCommand::MenuText() const
@@ -70,17 +79,156 @@ void ImportVMCommand::showImportWizard()
 {
     qDebug() << "ImportVMCommand: Opening Import Wizard";
 
-    ImportWizard wizard(MainWindow::instance());
+    // Resolve a connection — prefer the selection's connection, fall back to first connected
+    XenConnection* connection = nullptr;
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (selectedObject)
+        connection = selectedObject->GetConnection();
 
-    if (wizard.exec() == QDialog::Accepted)
+    if (!connection)
     {
-        qDebug() << "ImportVMCommand: Import Wizard completed successfully";
-        
-        // TODO: Launch ImportVmAction with wizard parameters
-        // For now, show a message that action will be implemented
-        MainWindow::instance()->ShowStatusMessage(tr("Import action not yet fully integrated - pending HTTP infrastructure"), 5000);
-    } else
+        Xen::ConnectionsManager* mgr = Xen::ConnectionsManager::instance();
+        QList<XenConnection*> connections = mgr->GetConnectedConnections();
+        if (!connections.isEmpty())
+            connection = connections.first();
+    }
+
+    ImportWizard wizard(connection, MainWindow::instance());
+
+    if (wizard.exec() != QDialog::Accepted)
     {
         qDebug() << "ImportVMCommand: Import Wizard cancelled";
+        return;
     }
+
+    qDebug() << "ImportVMCommand: Import Wizard accepted, launching ImportVmAction";
+
+    // XVA imports use ImportVmAction; OVF/OVA use ImportApplianceAction
+    if (wizard.GetImportType() == ImportWizard::ImportType_OVF)
+    {
+        if (!connection)
+        {
+            QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
+                                 tr("No connected server found. Please connect to a server first."));
+            return;
+        }
+
+        // Build a single OvfVmMapping per virtual system in the package.
+        // The wizard currently exposes one SR and one network for all VMs;
+        // per-VM / per-disk granularity can be added when Phase 11 network
+        // picker is extended.
+        const QString srRef      = wizard.GetSelectedSRRef();
+        const QString networkRef = wizard.GetSelectedNetworkRef();
+        const QString hostRef    = wizard.GetSelectedHostRef();
+
+        QList<OvfVmMapping> vmMappings;
+        const QStringList vsNames = wizard.property("ovfVirtualSystemNames").toStringList();
+        const QStringList netNames = wizard.property("ovfNetworkNames").toStringList();
+
+        // Build one mapping per virtual system (or one generic mapping when names aren't exposed)
+        QStringList effectiveVsNames = vsNames;
+        if (effectiveVsNames.isEmpty())
+            effectiveVsNames << QString(); // one anonymous VM
+
+        for (const QString& vsId : effectiveVsNames)
+        {
+            OvfVmMapping mapping;
+            mapping.virtualSystemId = vsId;
+            mapping.targetHostRef   = hostRef;
+            mapping.defaultSrRef    = srRef;
+
+            // Map each OVF network name to the single wizard-selected network
+            for (const QString& netName : netNames)
+            {
+                if (!networkRef.isEmpty())
+                {
+                    OvfNetworkMapping nm;
+                    nm.ovfNetworkName   = netName;
+                    nm.targetNetworkRef = networkRef;
+                    mapping.networkMappings << nm;
+                }
+            }
+            // If no named networks in OVF but a network was selected, add one default VIF
+            if (mapping.networkMappings.isEmpty() && !networkRef.isEmpty())
+            {
+                OvfNetworkMapping nm;
+                nm.ovfNetworkName   = "Network";
+                nm.targetNetworkRef = networkRef;
+                mapping.networkMappings << nm;
+            }
+
+            vmMappings << mapping;
+        }
+
+        ImportApplianceAction* action = new ImportApplianceAction(
+            connection,
+            wizard.GetSourceFilePath(),
+            vmMappings,
+            /*verifyManifest=*/false,
+            /*verifySignature=*/false,
+            wizard.GetRunFixups(),
+            wizard.GetFixupIsoSrRef(),
+            wizard.GetStartAutomatically(),
+            MainWindow::instance());
+
+        ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
+        progressDialog->setShowCancel(true);
+        progressDialog->exec();
+        progressDialog->deleteLater();
+        return;
+    }
+
+    if (wizard.GetImportType() == ImportWizard::ImportType_VHD)
+    {
+        QMessageBox::information(MainWindow::instance(),
+                                 tr("Not Yet Implemented"),
+                                 tr("VHD/VMDK direct import is not yet implemented."));
+        return;
+    }
+
+    if (wizard.GetImportType() != ImportWizard::ImportType_XVA)
+    {
+        QMessageBox::information(MainWindow::instance(),
+                                 tr("Unknown Import Type"),
+                                 tr("Unrecognised import type — cannot start import."));
+        return;
+    }
+
+    if (!connection)
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
+                             tr("No connected server found. Please connect to a server first."));
+        return;
+    }
+
+    QString srRef = wizard.GetSelectedSRRef();
+    if (srRef.isEmpty())
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("No Storage Selected"),
+                             tr("No storage repository was selected. Cannot start import."));
+        return;
+    }
+
+    // Build VIF mapping list from selected network
+    QStringList vifNetworks;
+    QString networkRef = wizard.GetSelectedNetworkRef();
+    if (!networkRef.isEmpty())
+        vifNetworks << networkRef;
+
+    ImportVmAction* action = new ImportVmAction(connection,
+                                                wizard.GetSelectedHostRef(),
+                                                wizard.GetSourceFilePath(),
+                                                srRef,
+                                                MainWindow::instance());
+
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
+    progressDialog->setShowCancel(true);
+
+    // When the progress dialog opens it starts the action; after upload the action waits for
+    // endWizard() to be called before finishing network setup and optional auto-start.
+    // We call endWizard() immediately here since the network mapping step is simplified for now.
+    action->endWizard(wizard.GetStartAutomatically(), vifNetworks);
+
+    progressDialog->exec();
+    progressDialog->deleteLater();
 }

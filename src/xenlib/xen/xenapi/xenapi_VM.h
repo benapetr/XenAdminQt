@@ -53,6 +53,26 @@ namespace XenAPI
             // VM lifecycle operations
 
             /**
+             * @brief Create a new VM and return its reference.
+             *
+             * First published in XenServer 4.0.
+             * @param session The session
+             * @param record A QVariantMap with the VM fields to set on creation
+             * @return OpaqueRef of the new VM
+             */
+            static QString create(Session* session, const QVariantMap& record);
+
+            /**
+             * @brief Create a new VM asynchronously; returns a task ref.
+             *
+             * First published in XenServer 4.0.
+             * @param session The session
+             * @param record A QVariantMap with the VM fields to set on creation
+             * @return Task OpaqueRef
+             */
+            static QString async_create(Session* session, const QVariantMap& record);
+
+            /**
              * @brief Start the specified VM. Only valid when VM is Halted.
              *
              * First published in XenServer 4.0.
@@ -756,6 +776,16 @@ namespace XenAPI
              * Matches C# VM.retrieve_wlb_recommendations()
              */
             static QHash<QString, QStringList> retrieve_wlb_recommendations(Session* session, const QString& vm);
+
+            /**
+             * @brief Get the list of VIF refs attached to this VM
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @return List of VIF opaque_refs
+             *
+             * Matches C# VM.get_VIFs()
+             */
+            static QStringList get_VIFs(Session* session, const QString& vm);
 
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list
