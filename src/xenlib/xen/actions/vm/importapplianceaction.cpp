@@ -194,10 +194,32 @@ void ImportApplianceAction::run()
             this->setState(Failed);
             return;
         }
-        // Full cryptographic verification (manifest hash check / signature validation)
-        // is not yet implemented — log a warning and proceed.
-        if (this->m_verifyManifest || this->m_verifySignature)
-            qWarning() << "ImportApplianceAction: manifest/signature verification not yet implemented";
+        if (this->m_verifyManifest)
+        {
+            this->setDescriptionSafe("Verifying manifest...");
+            this->checkCancelled();
+
+            const QString workingDir = QFileInfo(effectiveOvfPath).absolutePath();
+            const QString baseName   = QFileInfo(effectiveOvfPath).completeBaseName();
+            QString verifyErr;
+            const bool ok = OvfPackage::VerifyManifest(
+                workingDir, baseName, verifyErr,
+                [this]() { return this->IsCancelled(); });
+
+            if (this->IsCancelled())
+                throw CancelledException();
+
+            if (!ok)
+            {
+                this->setError(QString("Manifest verification failed: %1").arg(verifyErr));
+                this->setState(Failed);
+                return;
+            }
+            qDebug() << "ImportApplianceAction: manifest verified OK";
+        }
+        // Signature verification (certificate-based) is not yet implemented.
+        if (this->m_verifySignature)
+            qWarning() << "ImportApplianceAction: certificate signature verification not yet implemented";
 
         this->setPercentCompleteSafe(10);
         this->checkCancelled();

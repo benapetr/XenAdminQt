@@ -55,6 +55,14 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
     Q_OBJECT
 
     public:
+        /// Boot firmware mode for the imported VM
+        enum BootMode
+        {
+            BootMode_Bios,       ///< Legacy BIOS (HVM "BIOS order")
+            BootMode_Uefi,       ///< UEFI firmware
+            BootMode_UefiSecure  ///< UEFI Secure Boot
+        };
+
         /**
          * @brief Construct ImportImageAction
          *
@@ -67,6 +75,8 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
          * @param hostRef             Affinity host OpaqueRef (empty = no affinity)
          * @param filePath            Local path to .vhd or .vmdk file
          * @param diskCapacityBytes   Virtual disk size in bytes (0 = use file size)
+         * @param bootMode            Boot firmware mode for the VM
+         * @param assignVtpm          Attach a virtual TPM module to the VM
          * @param startAutomatically  Start VM after successful import
          * @param parent              Qt parent object
          */
@@ -79,6 +89,8 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
                                    const QString& hostRef,
                                    const QString& filePath,
                                    qint64 diskCapacityBytes,
+                                   BootMode bootMode,
+                                   bool assignVtpm,
                                    bool startAutomatically,
                                    QObject* parent = nullptr);
         ~ImportImageAction() override = default;
@@ -97,6 +109,8 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
         QString m_networkRef;
         QString m_hostRef;
         qint64  m_diskCapacityBytes;
+        BootMode m_bootMode;
+        bool    m_assignVtpm;
         bool    m_startAutomatically;
         QString m_imageVmRef;
 };

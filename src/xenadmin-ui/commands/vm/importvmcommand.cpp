@@ -129,8 +129,8 @@ void ImportVMCommand::showImportWizard()
         const QMap<QString, QString> ovfNetMappings = wizard.GetOvfNetworkMappings();
 
         QList<OvfVmMapping> vmMappings;
-        const QStringList vsNames = wizard.property("ovfVirtualSystemNames").toStringList();
-        const QStringList netNames = wizard.property("ovfNetworkNames").toStringList();
+        const QStringList vsNames = wizard.GetOvfVirtualSystemNames();
+        const QStringList netNames = wizard.GetOvfNetworkNames();
 
         // Build one mapping per virtual system (or one generic mapping when names aren't exposed)
         QStringList effectiveVsNames = vsNames;
@@ -174,7 +174,7 @@ void ImportVMCommand::showImportWizard()
             connection,
             wizard.GetSourceFilePath(),
             vmMappings,
-            /*verifyManifest=*/false,
+            wizard.GetVerifyManifest(),
             /*verifySignature=*/false,
             wizard.GetRunFixups(),
             wizard.GetFixupIsoSrRef(),
@@ -215,6 +215,8 @@ void ImportVMCommand::showImportWizard()
             wizard.GetSelectedHost() ? wizard.GetSelectedHost()->OpaqueRef() : QString(),
             wizard.GetSourceFilePath(),
             wizard.GetDiskImageCapacityBytes(),
+            static_cast<ImportImageAction::BootMode>(wizard.GetBootMode()),
+            wizard.GetAssignVtpm(),
             wizard.GetStartAutomatically(),
             MainWindow::instance());
 

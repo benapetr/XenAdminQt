@@ -27,6 +27,7 @@
 
 #include "importimageaction.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "../../xenapi/xenapi_VTPM.h"
 #include "../../session.h"
 #include "../../network/connection.h"
 #include <QFileInfo>
@@ -43,6 +44,8 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
                                      const QString& hostRef,
                                      const QString& filePath,
                                      qint64 diskCapacityBytes,
+                                     BootMode bootMode,
+                                     bool assignVtpm,
                                      bool startAutomatically,
                                      QObject* parent)
     : ImportApplianceAction(connection,
@@ -61,6 +64,8 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
     , m_networkRef(networkRef)
     , m_hostRef(hostRef)
     , m_diskCapacityBytes(diskCapacityBytes)
+    , m_bootMode(bootMode)
+    , m_assignVtpm(assignVtpm)
     , m_startAutomatically(startAutomatically)
 {
     this->setDescriptionSafe(QString("Importing disk image '%1'...").arg(vmName));
@@ -101,17 +106,34 @@ void ImportImageAction::run()
         vmRecord["actions_after_shutdown"] = QString("destroy");
         vmRecord["actions_after_reboot"]   = QString("restart");
         vmRecord["actions_after_crash"]    = QString("restart");
-        vmRecord["HVM_boot_policy"]        = QString("BIOS order");
+
+        // ── Boot firmware ─────────────────────────────────────────────────
+        // C# equivalent: ImportImageAction sets HVM_boot_policy + HVM_boot_params
+        // based on the BootModesControl selection.
         QVariantMap bootParams;
-        bootParams["order"] = "dc";
-        vmRecord["HVM_boot_params"] = bootParams;
         QVariantMap platform;
         platform["nx"]     = "true";
         platform["acpi"]   = "1";
         platform["apic"]   = "true";
         platform["pae"]    = "true";
         platform["stdvga"] = "false";
-        vmRecord["platform"]   = platform;
+
+        if (this->m_bootMode == BootMode_Bios)
+        {
+            vmRecord["HVM_boot_policy"] = QString("BIOS order");
+            bootParams["order"] = "dc";
+        } else
+        {
+            // UEFI and UEFI Secure Boot both use empty HVM_boot_policy + firmware=uefi
+            vmRecord["HVM_boot_policy"] = QString("");
+            bootParams["firmware"] = "uefi";
+            bootParams["order"]    = "cdn";  // CD, disk, net
+            if (this->m_bootMode == BootMode_UefiSecure)
+                platform["secureboot"] = "true";
+        }
+
+        vmRecord["HVM_boot_params"] = bootParams;
+        vmRecord["platform"]        = platform;
         vmRecord["other_config"] = QVariantMap();
         if (!this->m_hostRef.isEmpty())
             vmRecord["affinity"] = this->m_hostRef;
@@ -130,6 +152,22 @@ void ImportImageAction::run()
 
         this->m_imageVmRef = vmRef;
         qDebug() << "ImportImageAction: created VM" << vmRef;
+
+        // ── Step 1b: Attach vTPM (optional) ──────────────────────────────
+        if (this->m_assignVtpm)
+        {
+            this->checkCancelled();
+            try
+            {
+                const QString vtpmRef = XenAPI::VTPM::create(session, vmRef, /*isUnique=*/false);
+                qDebug() << "ImportImageAction: vTPM created:" << vtpmRef;
+            }
+            catch (const std::exception& e)
+            {
+                qWarning() << "ImportImageAction: vTPM attach failed (may not be supported):" << e.what();
+            }
+        }
+
         this->setPercentCompleteSafe(15);
 
         // ── Step 2: Upload disk ───────────────────────────────────────────
@@ -209,6 +247,8 @@ void ImportImageAction::run()
     catch (const std::exception& e)
     {
         this->setError(QString("Unexpected error: %1").arg(e.what()));
+        if (!this->m_imageVmRef.isEmpty())
+            try { this->cleanupVm(this->m_imageVmRef); } catch (...) {}
         this->setState(Failed);
     }
     catch (...)
@@ -216,6 +256,8 @@ void ImportImageAction::run()
         // CancelledException from checkCancelled() is defined in an anonymous
         // namespace inside importapplianceaction.cpp and cannot be caught by name here.
         // Treat any other thrown object as a cancellation.
+        if (!this->m_imageVmRef.isEmpty())
+            try { this->cleanupVm(this->m_imageVmRef); } catch (...) {}
         this->setDescriptionSafe("Import cancelled.");
         this->setState(Cancelled);
     }

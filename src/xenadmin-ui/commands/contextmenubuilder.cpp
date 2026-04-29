@@ -73,6 +73,7 @@
 #include "vm/convertvmtotemplatecommand.h"
 #include "vm/exportvmcommand.h"
 #include "vm/newvmcommand.h"
+#include "vm/importvmcommand.h"
 #include "template/newvmfromtemplatecommand.h"
 #include "vm/vmpropertiescommand.h"
 #include "vm/takesnapshotcommand.h"
@@ -1016,6 +1017,8 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     // New VM command (available for both pool and standalone hosts)
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+    ImportVMCommand* importCmd = new ImportVMCommand(this->m_mainWindow, this);
+    this->addCommand(menu, importCmd);
     NewSRCommand* newSRCmd = new NewSRCommand(this->m_mainWindow, this);
     this->addCommand(menu, newSRCmd);
 
@@ -1197,6 +1200,8 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+    ImportVMCommand* poolImportCmd = new ImportVMCommand(this->m_mainWindow, this);
+    this->addCommand(menu, poolImportCmd);
 
     // C# parity: "High Availability" submenu with Configure/Disable entries.
     QMenu* haMenu = new QMenu(tr("High Availability"), menu);

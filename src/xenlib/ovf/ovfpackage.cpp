@@ -33,6 +33,7 @@
 #include <QDomNodeList>
 #include <QDomElement>
 #include <QDataStream>
+#include <QCryptographicHash>
 #include <QDebug>
 
 // ─── TAR extraction ──────────────────────────────────────────────────────────
@@ -761,6 +762,132 @@ bool OvfPackage::ExtractAllToDir(const QString& ovaPath,
     }
 
     archive.close();
+    return true;
+}
+
+// ─── OvfPackage::VerifyManifest ───────────────────────────────────────────────
+
+bool OvfPackage::VerifyManifest(const QString& workingDir,
+                                const QString& baseName,
+                                QString& errorOut,
+                                std::function<bool()> cancelCheck)
+{
+    const QString mfPath = QDir(workingDir).filePath(baseName + ".mf");
+    QFile mfFile(mfPath);
+    if (!mfFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        errorOut = QString("Cannot open manifest file '%1': %2").arg(mfPath, mfFile.errorString());
+        return false;
+    }
+
+    // ── Parse manifest lines ─────────────────────────────────────────────────
+    // Line format: ALGORITHM(filename)= hexdigest
+    // e.g.  SHA256(mypackage.ovf)= abcdef0123...
+    //        SHA1(disk-1.vhd)= 01234567...
+    struct Digest
+    {
+        QString algorithm;    // "SHA1", "SHA256", etc.
+        QString fileName;
+        QString hexDigest;
+    };
+
+    QList<Digest> entries;
+    while (!mfFile.atEnd())
+    {
+        const QString rawLine = QString::fromUtf8(mfFile.readLine()).trimmed();
+        if (rawLine.isEmpty())
+            continue;
+
+        // Split on the opening paren to get algorithm name
+        const int parenOpen  = rawLine.indexOf('(');
+        const int parenClose = rawLine.indexOf(')');
+        const int equals     = rawLine.indexOf('=', parenClose);
+        if (parenOpen < 0 || parenClose < 0 || equals < 0)
+        {
+            qWarning() << "OvfPackage::VerifyManifest: skipping unrecognised manifest line:" << rawLine;
+            continue;
+        }
+
+        Digest d;
+        d.algorithm  = rawLine.left(parenOpen).trimmed().toUpper();
+        d.fileName   = rawLine.mid(parenOpen + 1, parenClose - parenOpen - 1).trimmed();
+        d.hexDigest  = rawLine.mid(equals + 1).trimmed();
+        if (d.algorithm.isEmpty() || d.fileName.isEmpty() || d.hexDigest.isEmpty())
+            continue;
+        entries.append(d);
+    }
+    mfFile.close();
+
+    if (entries.isEmpty())
+    {
+        errorOut = QString("Manifest file '%1' contains no entries.").arg(mfPath);
+        return false;
+    }
+
+    // ── Verify each listed file ───────────────────────────────────────────────
+    for (const Digest& d : entries)
+    {
+        if (cancelCheck && cancelCheck())
+        {
+            errorOut = "Manifest verification cancelled.";
+            return false;
+        }
+
+        // Map algorithm name to Qt enum
+        QCryptographicHash::Algorithm algo;
+        const QString algUpper = d.algorithm.toUpper();
+        if (algUpper == "SHA1" || algUpper == "SHA-1")
+            algo = QCryptographicHash::Sha1;
+        else if (algUpper == "SHA256" || algUpper == "SHA-256")
+            algo = QCryptographicHash::Sha256;
+        else if (algUpper == "SHA512" || algUpper == "SHA-512")
+            algo = QCryptographicHash::Sha512;
+        else if (algUpper == "MD5")
+            algo = QCryptographicHash::Md5;
+        else
+        {
+            errorOut = QString("Unsupported digest algorithm '%1' in manifest.").arg(d.algorithm);
+            return false;
+        }
+
+        const QString filePath = QDir(workingDir).filePath(d.fileName);
+        QFile dataFile(filePath);
+        if (!dataFile.open(QIODevice::ReadOnly))
+        {
+            errorOut = QString("Manifest references '%1' but the file could not be opened: %2")
+                           .arg(d.fileName, dataFile.errorString());
+            return false;
+        }
+
+        QCryptographicHash hasher(algo);
+        const int CHUNK = 256 * 1024;
+        QByteArray buf(CHUNK, '\0');
+        while (!dataFile.atEnd())
+        {
+            if (cancelCheck && cancelCheck())
+            {
+                dataFile.close();
+                errorOut = "Manifest verification cancelled.";
+                return false;
+            }
+            const qint64 got = dataFile.read(buf.data(), CHUNK);
+            if (got > 0)
+                hasher.addData(buf.constData(), static_cast<int>(got));
+        }
+        dataFile.close();
+
+        const QString computed = QString::fromLatin1(hasher.result().toHex());
+        if (computed.compare(d.hexDigest, Qt::CaseInsensitive) != 0)
+        {
+            errorOut = QString("Manifest verification failed for '%1': "
+                               "expected %2, computed %3.")
+                           .arg(d.fileName, d.hexDigest, computed);
+            return false;
+        }
+
+        qDebug() << "OvfPackage::VerifyManifest:" << d.fileName << "OK";
+    }
+
     return true;
 }
 
