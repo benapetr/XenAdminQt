@@ -50,6 +50,8 @@ class OvfPackage;
 class Host;
 class SR;
 class Network;
+class VM;
+class ImportVmAction;
 
 class ImportWizard : public QWizard
 {
@@ -119,10 +121,12 @@ class ImportWizard : public QWizard
         void initializePage(int id) override;
         bool validateCurrentPage() override;
         void accept() override;
+        void reject() override;
 
     private slots:
         void onCurrentIdChanged(int id);
         void onBrowseClicked();
+        void onRescanStorageClicked();
 
     private:
         void setupWizardPages();
@@ -172,6 +176,7 @@ class ImportWizard : public QWizard
         QStringList m_ovfEulas;
         bool m_ovfHasManifest;
         bool m_ovfHasSignature;
+        bool m_ovfAllowsNetworkSriov; ///< false when OVF recommendations prohibit SR-IOV
 
         // XVA metadata populated after source-page validation
         QStringList m_xvaVmNames;
@@ -192,6 +197,11 @@ class ImportWizard : public QWizard
         // VHD/VMDK boot options (collected from Page_BootOptions)
         BootMode m_bootMode;
         bool     m_assignVtpm;
+
+        // XVA upload action — created on storage-page leave and owned by the wizard.
+        // Matches C# StoragePickerPage.ImportXvaAction lifecycle.
+        ImportVmAction*        m_xvaAction;
+        QSharedPointer<VM>     m_xvaImportedVm;
 };
 
 #endif // IMPORTWIZARD_H

@@ -76,7 +76,7 @@ void ChangeCDISOCommand::run()
     ChangeVMISOAction* action = new ChangeVMISOAction(vmObj, this->m_isoRef, "" /*vbdRef*/, MainWindow::instance());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     QString isoRef = this->m_isoRef;

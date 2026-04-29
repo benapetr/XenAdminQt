@@ -36,7 +36,6 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/sr.h"
-#include "xenlib/xen/actions/vm/importvmaction.h"
 #include "xenlib/xen/actions/vm/importapplianceaction.h"
 #include "xenlib/xen/actions/vm/importimageaction.h"
 #include <QtWidgets>
@@ -105,9 +104,9 @@ void ImportVMCommand::showImportWizard()
         return;
     }
 
-    qDebug() << "ImportVMCommand: Import Wizard accepted, launching ImportVmAction";
+    qDebug() << "ImportVMCommand: Import Wizard accepted, dispatching action";
 
-    // XVA imports use ImportVmAction; OVF/OVA use ImportApplianceAction
+    // XVA: upload was already started by the wizard; OVF/VHD start new actions below.
     if (wizard.GetImportType() == ImportWizard::ImportType_OVF)
     {
         if (!connection)
@@ -235,43 +234,9 @@ void ImportVMCommand::showImportWizard()
         return;
     }
 
-    if (!connection)
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
-                             tr("No connected server found. Please connect to a server first."));
-        return;
-    }
-
-    const auto selectedSR3 = wizard.GetSelectedSR();
-    QString srRef = selectedSR3 ? selectedSR3->OpaqueRef() : QString();
-    if (srRef.isEmpty())
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("No Storage Selected"),
-                             tr("No storage repository was selected. Cannot start import."));
-        return;
-    }
-
-    // Build VIF mapping list from selected network
-    QStringList vifNetworks;
-    const auto selectedNetwork3 = wizard.GetSelectedNetwork();
-    QString networkRef = selectedNetwork3 ? selectedNetwork3->OpaqueRef() : QString();
-    if (!networkRef.isEmpty())
-        vifNetworks << networkRef;
-
-    ImportVmAction* action = new ImportVmAction(connection,
-                                                wizard.GetSelectedHost() ? wizard.GetSelectedHost()->OpaqueRef() : QString(),
-                                                wizard.GetSourceFilePath(),
-                                                srRef,
-                                                MainWindow::instance());
-
-    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
-    progressDialog->setShowCancel(true);
-
-    // When the progress dialog opens it starts the action; after upload the action waits for
-    // endWizard() to be called before finishing network setup and optional auto-start.
-    // We call endWizard() immediately here since the network mapping step is simplified for now.
-    action->endWizard(wizard.GetStartAutomatically(), vifNetworks);
-
-    progressDialog->exec();
-    progressDialog->deleteLater();
+    // XVA: the upload was started by the wizard on the Storage page and endWizard()
+    // was called in ImportWizard::accept().  The action's VIF-remapping and optional
+    // VM-start phase now runs in the background — no further dialog is needed here.
+    // This mirrors the C# ImportWizard.FinishWizard() pattern where no second
+    // blocking dialog is shown after the wizard closes.
 }

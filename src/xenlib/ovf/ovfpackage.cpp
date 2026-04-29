@@ -479,6 +479,90 @@ OvfVirtualHardware OvfPackage::collectVirtualHardware(const QDomElement& virtual
     return hw;
 }
 
+// ─── OvfPackage::parseRecommendations ────────────────────────────────────────
+// Parses Xen-specific VM restrictions from VirtualSystemOtherConfigurationData
+// where Name == "recommendations".  The value is a CDATA block containing:
+//   <restrictions>
+//     <restriction field="allow-network-sriov" value="1"/>
+//     <restriction field="supports-uefi" value="yes"/>
+//     ...
+//   </restrictions>
+//
+// C# equivalent: OVF.cs + VM.GetRecommendations() / GetRestrictionValue<T>()
+
+OvfRecommendations OvfPackage::parseRecommendations(const QDomElement& virtualSystemElem)
+{
+    OvfRecommendations rec;
+
+    // The Citrix OVF namespace holds VirtualSystemOtherConfigurationData.
+    const QString citrixNs = "http://schemas.citrix.com/ovf/envelope/1";
+    QDomNodeList configData = virtualSystemElem.elementsByTagNameNS(citrixNs, "VirtualSystemOtherConfigurationData");
+    if (configData.isEmpty())
+        configData = virtualSystemElem.elementsByTagName("VirtualSystemOtherConfigurationData");
+
+    for (int i = 0; i < configData.count(); ++i)
+    {
+        QDomElement elem = configData.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        // Look for the entry named "recommendations" (namespace-safe attribute check)
+        const QString name = elem.attributeNS(citrixNs, "Name");
+        const QString nameNoNs = elem.attribute("Name");
+        if (name != "recommendations" && nameNoNs != "recommendations")
+            continue;
+
+        // The value is inside a <Value> child element (possibly CDATA)
+        QDomNodeList valueNodes = elem.elementsByTagName("Value");
+        if (valueNodes.isEmpty())
+            continue;
+        const QString restrictionsXml = valueNodes.at(0).toElement().text().trimmed();
+        if (restrictionsXml.isEmpty())
+            continue;
+
+        // Parse the nested <restrictions> XML
+        QDomDocument rDoc;
+        if (!rDoc.setContent(restrictionsXml))
+            continue;
+        QDomNodeList restrictions = rDoc.elementsByTagName("restriction");
+        for (int r = 0; r < restrictions.count(); ++r)
+        {
+            QDomElement restr = restrictions.at(r).toElement();
+            const QString field = restr.attribute("field");
+            const QString value = restr.attribute("value");
+            const QString maxVal = restr.attribute("max");
+            const QString minVal = restr.attribute("min");
+
+            if (field == "allow-network-sriov")
+                rec.allowNetworkSriov = value.toInt();
+            else if (field == "vcpus-max" && !maxVal.isEmpty())
+                rec.maxVcpus = maxVal.toInt();
+            else if (field == "vcpus-min" && !minVal.isEmpty())
+                rec.minVcpus = minVal.toInt();
+            else if (field == "memory-static-max" && !maxVal.isEmpty())
+                rec.maxMemoryBytes = maxVal.toLongLong();
+            else if (field == "supports-uefi")
+                rec.supportsUefi = (value.toLower() == "yes");
+            else if (field == "supports-secure-boot")
+                rec.supportsSecureBoot = (value.toLower() == "yes");
+        }
+        break; // Only one "recommendations" entry per VirtualSystem
+    }
+
+    return rec;
+}
+
+bool OvfPackage::AllowsNetworkSriov() const
+{
+    for (const OvfRecommendations& rec : this->m_recommendationsBySystem)
+    {
+        // Explicit prohibition: allow-network-sriov == 0
+        if (rec.allowNetworkSriov == 0)
+            return false;
+    }
+    return true; // allowed when unrestricted or no recommendations present
+}
+
 void OvfPackage::parseFromOvfXml(const QString& xml){
     this->descriptorXml_ = xml;
 
@@ -636,6 +720,9 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
 
         const OvfVirtualHardware hw = collectVirtualHardware(vs, diskCapacities);
         this->virtualHardwareBySystem_.insert(vsName, hw);
+
+        const OvfRecommendations rec = parseRecommendations(vs);
+        this->m_recommendationsBySystem.insert(vsName, rec);
     }
 
     // ── EULA sections ─────────────────────────────────────────────────────────
@@ -886,6 +973,154 @@ bool OvfPackage::VerifyManifest(const QString& workingDir,
         }
 
         qDebug() << "OvfPackage::VerifyManifest:" << d.fileName << "OK";
+    }
+
+    return true;
+}
+
+// ─── OvfPackage::Validate ─────────────────────────────────────────────────────
+
+bool OvfPackage::Validate(QStringList& warningsOut) const
+{
+    warningsOut.clear();
+
+    if (!this->valid_)
+    {
+        warningsOut << this->parseError_;
+        return false;
+    }
+
+    QDomDocument doc;
+    if (!doc.setContent(this->descriptorXml_))
+    {
+        warningsOut << QString("Could not re-parse OVF descriptor XML.");
+        return false;
+    }
+
+    const QDomElement root = doc.documentElement();
+
+    // ── Version check ──────────────────────────────────────────────────────────
+    // C# equivalent: ValidationFlags.Version / ValidateVersion()
+    static const QStringList knownVersions = { "0.9", "1.0.0", "1.0", "2.0.0", "2.0" };
+    const QString version = root.attribute("version");
+    if (version.isEmpty())
+    {
+        warningsOut << "OVF version is not set. Assuming version 1.0.0.";
+    }
+    else if (!knownVersions.contains(version))
+    {
+        warningsOut << QString("OVF version '%1' is not officially supported. Import may not work correctly.").arg(version);
+    }
+
+    // ── Collect file references from References/File elements ──────────────────
+    // C# equivalent: ValidationFlags.Files
+    const QString packageDir = QFileInfo(this->sourceFile_).absolutePath();
+    QMap<QString, QString> fileById;   // id → href
+    QSet<QString> linkedHrefs;         // hrefs that are referenced by a RASD
+
+    const auto collectRefs = [&](const QDomElement& refs)
+    {
+        QDomNodeList files = refs.elementsByTagName("File");
+        for (int i = 0; i < files.count(); i++)
+        {
+            QDomElement fe = files.at(i).toElement();
+            const QString id   = fe.attribute("id");
+            const QString href = fe.attribute("href");
+            if (id.isEmpty() || href.isEmpty())
+                continue;
+            fileById[id] = href;
+
+            // Skip manifest/certificate entries
+            const QString ext = QFileInfo(href).suffix().toLower();
+            if (ext == "mf" || ext == "cert")
+                continue;
+
+            // Check the referenced file exists (for .ovf folder packages)
+            // For .ova archives the files have already been extracted by the time
+            // we validate, so a missing file is a real problem.
+            const QString fullPath = QDir(packageDir).filePath(href);
+            if (!QFile::exists(fullPath))
+            {
+                warningsOut << QString("Referenced file '%1' was not found in the package directory.").arg(href);
+            }
+            else
+            {
+                // Warn about unknown extensions
+                static const QStringList knownExts = { "vmdk", "vhd", "iso", "img", "ovf", "mf", "cert", "gz", "xva" };
+                if (!knownExts.contains(ext))
+                    warningsOut << QString("File '%1' has an unrecognised extension. It may not be imported correctly.").arg(href);
+            }
+        }
+    };
+
+    // The References element may be a direct child of Envelope
+    QDomNodeList refNodes = root.elementsByTagName("References");
+    if (refNodes.count() > 0)
+        collectRefs(refNodes.at(0).toElement());
+
+    // ── Disk-to-file linkage check ─────────────────────────────────────────────
+    // Collect DiskSection disk elements: diskId → fileRef
+    QMap<QString, QString> diskFileRefById; // diskId → File id
+    QDomNodeList diskSections = root.elementsByTagName("DiskSection");
+    for (int di = 0; di < diskSections.count(); di++)
+    {
+        QDomNodeList disks = diskSections.at(di).toElement().elementsByTagName("Disk");
+        for (int i = 0; i < disks.count(); i++)
+        {
+            QDomElement disk = disks.at(i).toElement();
+            const QString diskId  = disk.attribute("diskId");
+            const QString fileRef = disk.attribute("fileRef");
+            if (!diskId.isEmpty() && !fileRef.isEmpty())
+                diskFileRefById[diskId] = fileRef;
+        }
+    }
+
+    // Walk VirtualHardwareSection RASD items for disk-type resources
+    // Resource types: 17=CD/DVD, 19=Storage Extent (general), 20=Ethernet, 21=USB
+    // We check types 17 and 19 which reference disk files.
+    auto markLinked = [&](const QDomElement& rasd)
+    {
+        const QDomNodeList types = rasd.elementsByTagName("ResourceType");
+        if (types.isEmpty())
+            return;
+        const int resType = types.at(0).toElement().text().toInt();
+        if (resType != 17 && resType != 19 && resType != 20 && resType != 21)
+            return;
+
+        // HostResource value is typically "ovf:/disk/diskId"
+        const QDomNodeList hrs = rasd.elementsByTagName("HostResource");
+        for (int hi = 0; hi < hrs.count(); hi++)
+        {
+            const QString val = hrs.at(hi).toElement().text();
+            // Extract diskId from "ovf:/disk/diskId"
+            const int slashPos = val.lastIndexOf('/');
+            const QString diskId = (slashPos >= 0) ? val.mid(slashPos + 1) : val;
+            if (diskFileRefById.contains(diskId))
+            {
+                const QString fileRef = diskFileRefById[diskId];
+                if (fileById.contains(fileRef))
+                    linkedHrefs.insert(fileById[fileRef]);
+            }
+        }
+    };
+
+    QDomNodeList vhSections = root.elementsByTagName("VirtualHardwareSection");
+    for (int vi = 0; vi < vhSections.count(); vi++)
+    {
+        QDomNodeList items = vhSections.at(vi).toElement().elementsByTagName("Item");
+        for (int i = 0; i < items.count(); i++)
+            markLinked(items.at(i).toElement());
+    }
+
+    // Warn about files not linked to any RASD
+    for (auto it = fileById.cbegin(); it != fileById.cend(); ++it)
+    {
+        const QString href = it.value();
+        const QString ext  = QFileInfo(href).suffix().toLower();
+        if (ext == "mf" || ext == "cert" || ext == "ovf")
+            continue;
+        if (!linkedHrefs.contains(href))
+            warningsOut << QString("File '%1' is listed in References but not linked to any virtual hardware item. It may be unused.").arg(href);
     }
 
     return true;
