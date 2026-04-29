@@ -519,7 +519,7 @@ The `xenadmin/` folder contains the original C# implementation. When porting fea
 ## Coding style
 Uses old-school Microsoft C++ style with braces on new lines. We are also prefixing local member accesses with this-> to improve code readability.
 
-Public members (functions and variables) use PascalCase, private/protected members use camelCase with a trailing underscore for member variables, this makes the scope obvious without context.
+Public members (functions and variables) use PascalCase, private/protected members use camelCase for member variables and functions, this makes the scope obvious without context.
 
 Example:
 ```cpp

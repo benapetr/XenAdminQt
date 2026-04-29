@@ -62,13 +62,13 @@ ImportApplianceAction::ImportApplianceAction(XenConnection* connection,
                                              bool startAutomatically,
                                              QObject* parent)
     : AsyncOperation(connection, "Import Appliance", "Importing OVF/OVA appliance...", parent)
-    , ovfFilePath_(ovfFilePath)
-    , vmMappings_(vmMappings)
-    , verifyManifest_(verifyManifest)
-    , verifySignature_(verifySignature)
-    , runFixups_(runFixups)
-    , fixupIsoSrRef_(fixupIsoSrRef)
-    , startAutomatically_(startAutomatically)
+    , m_ovfFilePath(ovfFilePath)
+    , m_vmMappings(vmMappings)
+    , m_verifyManifest(verifyManifest)
+    , m_verifySignature(verifySignature)
+    , m_runFixups(runFixups)
+    , m_fixupIsoSrRef(fixupIsoSrRef)
+    , m_startAutomatically(startAutomatically)
 {
     this->SetSafeToExit(false);
     this->SetCanCancel(true);
@@ -114,7 +114,7 @@ void ImportApplianceAction::run()
         this->setPercentCompleteSafe(5);
         this->checkCancelled();
 
-        OvfPackage pkg(this->ovfFilePath_);
+        OvfPackage pkg(this->m_ovfFilePath);
         if (!pkg.IsValid())
         {
             this->setError(QString("Failed to parse OVF package: %1").arg(pkg.ParseError()));
@@ -129,13 +129,13 @@ void ImportApplianceAction::run()
         }
 
         // ── Step 2: Manifest / signature verification ─────────────────────
-        if (this->verifySignature_ && !pkg.HasSignature())
+        if (this->m_verifySignature && !pkg.HasSignature())
         {
             this->setError("Signature verification was requested but no .cert file was found.");
             this->setState(Failed);
             return;
         }
-        if ((this->verifyManifest_ || this->verifySignature_) && !pkg.HasManifest())
+        if ((this->m_verifyManifest || this->m_verifySignature) && !pkg.HasManifest())
         {
             this->setError("Manifest verification was requested but no .mf file was found.");
             this->setState(Failed);
@@ -143,7 +143,7 @@ void ImportApplianceAction::run()
         }
         // Full cryptographic verification (manifest hash check / signature validation)
         // is not yet implemented — log a warning and proceed.
-        if (this->verifyManifest_ || this->verifySignature_)
+        if (this->m_verifyManifest || this->m_verifySignature)
             qWarning() << "ImportApplianceAction: manifest/signature verification not yet implemented";
 
         this->setPercentCompleteSafe(10);
@@ -151,36 +151,36 @@ void ImportApplianceAction::run()
 
         // ── Step 3: Create VM_appliance if multi-VM ───────────────────────
         this->setDescriptionSafe("Preparing import...");
-        const bool isMultiVm = (this->vmMappings_.size() > 1) || !pkg.PackageName().isEmpty();
+        const bool isMultiVm = (this->m_vmMappings.size() > 1) || !pkg.PackageName().isEmpty();
         if (isMultiVm && !pkg.PackageName().isEmpty())
         {
             this->setDescriptionSafe(QString("Creating appliance '%1'...").arg(pkg.PackageName()));
             QVariantMap appRecord;
             appRecord["name_label"]       = pkg.PackageName();
             appRecord["name_description"] = QString("Imported from %1").arg(
-                                                QFileInfo(this->ovfFilePath_).fileName());
+                                                QFileInfo(this->m_ovfFilePath).fileName());
             try
             {
-                this->applianceRef_ = XenAPI::VM_appliance::create(session, appRecord);
-                qDebug() << "ImportApplianceAction: created VM_appliance" << this->applianceRef_;
+                this->m_applianceRef = XenAPI::VM_appliance::create(session, appRecord);
+                qDebug() << "ImportApplianceAction: created VM_appliance" << this->m_applianceRef;
             }
             catch (const Failure& f)
             {
                 qWarning() << "ImportApplianceAction: VM_appliance.create failed:" << f.what()
                            << "— continuing without appliance grouping";
-                this->applianceRef_.clear();
+                this->m_applianceRef.clear();
             }
         }
 
         this->setPercentCompleteSafe(15);
 
         // ── Step 4: Per-VM import loop ────────────────────────────────────
-        const int vmCount = this->vmMappings_.size();
+        const int vmCount = this->m_vmMappings.size();
         for (int vmIdx = 0; vmIdx < vmCount; ++vmIdx)
         {
             this->checkCancelled();
 
-            const OvfVmMapping& mapping = this->vmMappings_.at(vmIdx);
+            const OvfVmMapping& mapping = this->m_vmMappings.at(vmIdx);
             const int vmProgressBase = 15 + (vmIdx * 80 / vmCount);
             const int vmProgressEnd  = 15 + ((vmIdx + 1) * 80 / vmCount);
 
@@ -205,7 +205,7 @@ void ImportApplianceAction::run()
             QVariantMap vmRecord;
             vmRecord["name_label"]             = vmName;
             vmRecord["name_description"]       = QString("Imported from %1").arg(
-                                                       QFileInfo(this->ovfFilePath_).fileName());
+                                                       QFileInfo(this->m_ovfFilePath).fileName());
             vmRecord["memory_static_max"]      = memMax;
             vmRecord["memory_static_min"]      = memMin;
             vmRecord["memory_dynamic_max"]     = memMax;
@@ -231,15 +231,15 @@ void ImportApplianceAction::run()
             // instead we omit HideFromXenCenter and make the VM visible from the start.
             // TODO: use VM.add_to_other_config("HideFromXenCenter","true") once that binding is added.
             vmRecord["other_config"] = QVariantMap();
-            if (!this->applianceRef_.isEmpty())
-                vmRecord["appliance"] = this->applianceRef_;
+            if (!this->m_applianceRef.isEmpty())
+                vmRecord["appliance"] = this->m_applianceRef;
             if (!mapping.targetHostRef.isEmpty())
                 vmRecord["affinity"] = mapping.targetHostRef;
 
             QString vmRef;
             try
             {
-                vmRef = this->createVm(vmRecord, this->applianceRef_);
+                vmRef = this->createVm(vmRecord, this->m_applianceRef);
             }
             catch (const CancelledException&)
             {
@@ -252,9 +252,9 @@ void ImportApplianceAction::run()
                 return;
             }
 
-            this->createdVmRefs_ << vmRef;
-            if (this->importedVmRef_.isEmpty())
-                this->importedVmRef_ = vmRef;
+            this->m_createdVmRefs << vmRef;
+            if (this->m_importedVmRef.isEmpty())
+                this->m_importedVmRef = vmRef;
 
             // ── 4b: Upload disks ──────────────────────────────────────────
             const int diskCount = mapping.diskMappings.size();
@@ -275,7 +275,7 @@ void ImportApplianceAction::run()
                 }
 
                 // Build local disk file path (for .ova, disk files are in the package dir)
-                QFileInfo ovfFi(this->ovfFilePath_);
+                QFileInfo ovfFi(this->m_ovfFilePath);
                 const QString diskPath = ovfFi.absoluteDir().filePath(dm.diskHref);
                 if (!QFile::exists(diskPath))
                 {
@@ -348,18 +348,18 @@ void ImportApplianceAction::run()
         }
 
         // ── Step 5: Auto-start ────────────────────────────────────────────
-        if (this->startAutomatically_)
+        if (this->m_startAutomatically)
         {
             this->setDescriptionSafe("Starting virtual machine(s)...");
             this->setPercentCompleteSafe(95);
             this->checkCancelled();
 
-            if (!this->applianceRef_.isEmpty())
+            if (!this->m_applianceRef.isEmpty())
             {
                 // Start as vApp
                 try
                 {
-                    const QString taskRef = XenAPI::VM_appliance::async_start(session, this->applianceRef_, false);
+                    const QString taskRef = XenAPI::VM_appliance::async_start(session, this->m_applianceRef, false);
                     this->pollToCompletion(taskRef, 95, 100);
                 }
                 catch (const std::exception& e)
@@ -367,12 +367,12 @@ void ImportApplianceAction::run()
                     qWarning() << "ImportApplianceAction: vApp start failed:" << e.what();
                 }
             }
-            else if (!this->importedVmRef_.isEmpty())
+            else if (!this->m_importedVmRef.isEmpty())
             {
                 // Start individual VM
                 try
                 {
-                    const QString taskRef = XenAPI::VM::async_start(session, this->importedVmRef_, false, false);
+                    const QString taskRef = XenAPI::VM::async_start(session, this->m_importedVmRef, false, false);
                     this->pollToCompletion(taskRef, 95, 100);
                 }
                 catch (const std::exception& e)
@@ -436,7 +436,7 @@ QString ImportApplianceAction::uploadDisk(const QString& srRef,
     // Create the target VDI
     QVariantMap vdiRecord;
     vdiRecord["name_label"]       = diskLabel;
-    vdiRecord["name_description"] = QString("Imported from %1").arg(QFileInfo(this->ovfFilePath_).fileName());
+    vdiRecord["name_description"] = QString("Imported from %1").arg(QFileInfo(this->m_ovfFilePath).fileName());
     vdiRecord["SR"]               = srRef;
     vdiRecord["virtual_size"]     = virtualSizeBytes;
     vdiRecord["type"]             = QString("user");
