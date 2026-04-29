@@ -179,4 +179,32 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toList();
     }
 
+    QString VIF::get_network(Session* session, const QString& vif)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VIF.get_network", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    QString VIF::async_move(Session* session, const QString& vif, const QString& network)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vif << network;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.VIF.move", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
 } // namespace XenAPI
