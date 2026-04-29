@@ -29,6 +29,7 @@
 #include "pif.h"
 #include "vif.h"
 #include "xencache.h"
+#include "network_sriov.h"
 
 Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -89,6 +90,31 @@ bool Network::IsGuestInstallerNetwork() const
     QVariantMap otherConfig = this->GetOtherConfig();
     const QString guestInstaller = otherConfig.value("is_guest_installer_network").toString().trimmed().toLower();
     return guestInstaller == "true" || guestInstaller == "1";
+}
+
+bool Network::IsSriov() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return false;
+
+    const QStringList pifRefs = this->GetPIFRefs();
+    if (pifRefs.isEmpty())
+        return false;
+
+    // A network is SR-IOV backed when at least one of its PIFs is the logical
+    // PIF of a NetworkSriov object. Matches C# Network.IsSriov().
+    const QSet<QString> pifSet(pifRefs.begin(), pifRefs.end());
+    const QList<QSharedPointer<NetworkSriov>> sriovObjects = cache->GetAll<NetworkSriov>();
+    for (const QSharedPointer<NetworkSriov>& sriov : sriovObjects)
+    {
+        if (!sriov || !sriov->IsValid())
+            continue;
+        if (pifSet.contains(sriov->GetLogicalPIFRef()))
+            return true;
+    }
+
+    return false;
 }
 
 bool Network::Show(bool showHiddenObjects) const

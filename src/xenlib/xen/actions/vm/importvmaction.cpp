@@ -542,10 +542,17 @@ void ImportVmAction::run()
             XenAPI::VM::set_affinity(this->GetSession(), this->vmRef_, this->hostRef_);
         }
 
+        // Notify the wizard that the VM has been created on the server.
+        // The wizard will close the upload progress dialog and advance to
+        // the network configuration page.  The signal is emitted from the
+        // worker thread; the wizard connects with Qt::QueuedConnection so
+        // the slot runs on the UI thread.
+        emit this->vmDiscovered(this->vmRef_);
+
         // Wait for wizard to finish
         this->SetDescription(isTemplate ? tr("Waiting for template configuration...")
                                         : tr("Waiting for VM configuration..."));
-        
+
         QMutexLocker locker(&this->mutex_);
         while (!this->wizardDone_ && !this->IsCancelled())
         {

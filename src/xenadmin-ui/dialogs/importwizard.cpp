@@ -27,6 +27,7 @@
 
 #include "importwizard.h"
 #include "../settingsmanager.h"
+#include "ovfvalidationdialog.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "xenlib/xencache.h"
@@ -34,7 +35,10 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/utils/decompressgzaction.h"
+#include "xenlib/xen/actions/sr/srrefreshaction.h"
+#include "xenlib/xen/actions/vm/importvmaction.h"
 #include "dialogs/actionprogressdialog.h"
 #include <QDebug>
 #include <QtWidgets>
@@ -59,12 +63,14 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_runFixups(false)
     , m_ovfHasManifest(false)
     , m_ovfHasSignature(false)
+    , m_ovfAllowsNetworkSriov(true)
     , m_xvaTotalDiskSizeBytes(0)
     , m_diskImageCapacityBytes(0)
     , m_vcpuCount(1)
     , m_memoryMb(512)
     , m_bootMode(BootMode_Bios)
     , m_assignVtpm(false)
+    , m_xvaAction(nullptr)
 {
     this->setWindowTitle(tr("Import Virtual Machine"));
     this->setWindowIcon(QIcon(":/icons/vm-import-32.png"));
@@ -424,12 +430,18 @@ QWizardPage* ImportWizard::createStoragePage()
     srCombo->setObjectName("storageCombo");
     // Items are populated in initializePage()
 
+    QPushButton* rescanButton = new QPushButton(tr("Rescan"));
+    rescanButton->setObjectName("storageRescanButton");
+    rescanButton->setToolTip(tr("Run SR.scan on the selected storage repository to refresh VDI and free-space information."));
+    connect(rescanButton, &QPushButton::clicked, this, &ImportWizard::onRescanStorageClicked);
+
+    QHBoxLayout* srRow = new QHBoxLayout;
+    srRow->addWidget(srLabel);
+    srRow->addWidget(srCombo, 1);
+    srRow->addWidget(rescanButton);
+
     QVBoxLayout* mainLayout = new QVBoxLayout;
-
-    QFormLayout* optionsLayout = new QFormLayout;
-    optionsLayout->addRow(srLabel, srCombo);
-
-    mainLayout->addLayout(optionsLayout);
+    mainLayout->addLayout(srRow);
     mainLayout->addStretch();
 
     page->setLayout(mainLayout);
@@ -896,6 +908,7 @@ void ImportWizard::populateStorageCombo()
     XenCache* cache = this->m_connection->GetCache();
 
     QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+    const bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
     for (const QSharedPointer<SR>& sr : srs)
     {
         if (!sr || !sr->IsValid())
@@ -907,9 +920,14 @@ void ImportWizard::populateStorageCombo()
         if (!sr->AllowedOperations().contains("vdi_create"))
             continue;
 
+        // When no host affinity is set, only offer shared SRs — a local SR won't be
+        // accessible from all hosts in the pool. Matches C# StoragePickerPage behaviour.
+        if (!hasHostAffinity && !sr->IsShared())
+            continue;
+
         // If a specific host is selected, only include SRs that have
         // an attached (currently_attached == true) PBD for that host.
-        if (this->m_selectedHost && this->m_selectedHost->IsValid())
+        if (hasHostAffinity)
         {
             const QString hostRef = this->m_selectedHost->OpaqueRef();
             bool attachedToHost = false;
@@ -981,6 +999,11 @@ void ImportWizard::populateNetworkComboBox(QComboBox* combo)
 
         // Use Network::Show() — covers guest-installer, member, hidden-from-xencenter checks
         if (!net->Show(false))
+            continue;
+
+        // When OVF recommendations prohibit SR-IOV (allow-network-sriov == 0), hide SR-IOV
+        // backed networks.  Matches C# ImportSelectNetworkPage.AllowSriovNetwork() logic.
+        if (!this->m_ovfAllowsNetworkSriov && net->IsSriov())
             continue;
 
         const QStringList netPifRefs = net->GetPIFRefs();
@@ -1455,6 +1478,26 @@ bool ImportWizard::validateCurrentPage()
                 return false;
             }
 
+            // Show validation warnings unless the user has opted out
+            // C# equivalent: ImportSourcePage.LoadAppliance() → OvfValidationDialog
+            if (!SettingsManager::instance().GetIgnoreOvfValidationWarnings())
+            {
+                QStringList warnings;
+                if (!pkg.Validate(warnings))
+                {
+                    // Structural failure — cannot continue
+                    QMessageBox::warning(this, tr("Invalid OVF Package"),
+                                         tr("OVF package validation failed:\n%1").arg(warnings.join("\n")));
+                    return false;
+                }
+                if (!warnings.isEmpty())
+                {
+                    OvfValidationDialog dlg(warnings, this);
+                    if (dlg.exec() != QDialog::Accepted)
+                        return false;
+                }
+            }
+
             // Cache metadata for downstream pages and metadata display
             this->m_ovfPackageName          = pkg.PackageName();
             this->m_ovfVirtualSystemNames   = pkg.VirtualSystemNames();
@@ -1462,6 +1505,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfEulas                = pkg.Eulas();
             this->m_ovfHasManifest          = pkg.HasManifest();
             this->m_ovfHasSignature         = pkg.HasSignature();
+            this->m_ovfAllowsNetworkSriov   = pkg.AllowsNetworkSriov();
             this->updateOvfMetadataDisplay();
         }
         else
@@ -1473,6 +1517,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfEulas.clear();
             this->m_ovfHasManifest = false;
             this->m_ovfHasSignature = false;
+            this->m_ovfAllowsNetworkSriov = true;
             this->updateOvfMetadataDisplay();
 
             // Try to read XVA metadata for display
@@ -1571,6 +1616,79 @@ bool ImportWizard::validateCurrentPage()
                 // Non-blocking — fall through to QWizard::validateCurrentPage()
             }
         }
+
+        // ── XVA: start the upload now, exactly as C# StoragePickerPage.PageLeaveCore ──
+        // For OVF and VHD the upload is handled by separate actions started after the wizard.
+        if (this->m_importType == ImportType_XVA)
+        {
+            // If we already have the imported VM (e.g. user navigated back and forward
+            // again), there is nothing to do — the action is already running.
+            if (this->m_xvaImportedVm && this->m_xvaImportedVm->IsValid())
+                return true;
+
+            // Clean up a previous failed/cancelled attempt so the user can retry.
+            if (this->m_xvaAction)
+            {
+                if (!this->m_xvaAction->IsFailed() && !this->m_xvaAction->IsCancelled())
+                {
+                    // Upload is in progress — wizard shouldn't have reached here, but guard.
+                    return false;
+                }
+                this->m_xvaAction->deleteLater();
+                this->m_xvaAction = nullptr;
+                this->m_xvaImportedVm.clear();
+            }
+
+            const QString hostRef = this->m_selectedHost ? this->m_selectedHost->OpaqueRef() : QString();
+            const QString srRef2  = this->m_selectedSR   ? this->m_selectedSR->OpaqueRef()   : QString();
+
+            this->m_xvaAction = new ImportVmAction(
+                this->m_connection, hostRef, this->m_sourceFilePath, srRef2, this);
+
+            // Show upload progress.  The dialog calls RunAsync() in showEvent.
+            // We close it early — when the VM is discovered — rather than waiting
+            // for the full action to finish (wizard-wait phase follows).
+            ActionProgressDialog* uploadDlg = new ActionProgressDialog(this->m_xvaAction, this);
+            uploadDlg->setShowCancel(true);
+
+            // When VM is found in the XAPI cache the action emits vmDiscovered (from the
+            // worker thread).  Qt::QueuedConnection ensures the slot runs on the UI thread.
+            connect(this->m_xvaAction, &ImportVmAction::vmDiscovered, this,
+                [this, uploadDlg](const QString& discoveredRef)
+                {
+                    // Resolve the VM object from cache and keep it for the network page.
+                    if (this->m_connection && this->m_connection->GetCache())
+                    {
+                        this->m_xvaImportedVm = this->m_connection->GetCache()
+                            ->ResolveObject<VM>(XenObjectType::VM, discoveredRef);
+                    }
+                    // Close the upload dialog — exec() will return Accepted.
+                    if (uploadDlg)
+                        uploadDlg->accept();
+                }, Qt::QueuedConnection);
+
+            // If the action fails or is cancelled before the VM is found, the upload
+            // dialog's own onOperationCompleted() will call switchToErrorState() and
+            // the user closes it manually (exec returns Rejected).
+
+            const int dlgResult = uploadDlg->exec();
+            uploadDlg->deleteLater();
+
+            if (dlgResult != QDialog::Accepted || !this->m_xvaImportedVm || !this->m_xvaImportedVm->IsValid())
+            {
+                // Upload failed, was cancelled, or VM not found — clean up and stay on page.
+                if (this->m_xvaAction)
+                {
+                    this->m_xvaAction->deleteLater();
+                    this->m_xvaAction = nullptr;
+                }
+                this->m_xvaImportedVm.clear();
+                return false;
+            }
+
+            // Upload succeeded and VM is in cache — advance to Page_Network.
+            return true;
+        }
     }
 
     return QWizard::validateCurrentPage();
@@ -1662,7 +1780,33 @@ void ImportWizard::accept()
              << "network:" << (this->m_selectedNetwork ? this->m_selectedNetwork->OpaqueRef() : "(none)")
              << "start:" << this->m_startVMsAutomatically;
 
+    // XVA: call endWizard() to unblock the action's wizard-wait phase.
+    // The action will then do VIF remapping and optional VM start in the background.
+    // This mirrors C# ImportWizard.FinishWizard() → action.EndWizard(...).
+    if (this->m_importType == ImportType_XVA && this->m_xvaAction)
+    {
+        QStringList vifTargetNetworks;
+        if (this->m_selectedNetwork)
+            vifTargetNetworks << this->m_selectedNetwork->OpaqueRef();
+        this->m_xvaAction->endWizard(this->m_startVMsAutomatically, vifTargetNetworks);
+    }
+
     QWizard::accept();
+}
+
+void ImportWizard::reject()
+{
+    // XVA: cancel the running upload/wait action, matching C# ImportWizard.OnCancel().
+    // EndWizard(false, {}) wakes the wizard-wait condition; Cancel() stops any further work.
+    if (this->m_importType == ImportType_XVA && this->m_xvaAction)
+    {
+        if (!this->m_xvaAction->IsFailed() && !this->m_xvaAction->IsCancelled())
+        {
+            this->m_xvaAction->endWizard(false, QStringList());
+            this->m_xvaAction->Cancel();
+        }
+    }
+    QWizard::reject();
 }
 
 QString ImportWizard::detectImportType(const QString& filePath)
@@ -1785,6 +1929,32 @@ QString ImportWizard::detectImportType(const QString& filePath)
 void ImportWizard::onCurrentIdChanged(int id)
 {
     Q_UNUSED(id)
+}
+
+void ImportWizard::onRescanStorageClicked()
+{
+    if (!this->m_connection)
+        return;
+
+    QComboBox* srCombo = this->findChild<QComboBox*>("storageCombo");
+    const QString srRef = srCombo ? srCombo->currentData().toString() : QString();
+    if (srRef.isEmpty())
+        return;
+
+    QPushButton* rescanButton = this->findChild<QPushButton*>("storageRescanButton");
+    if (rescanButton)
+        rescanButton->setEnabled(false);
+
+    // C# equivalent: SrRefreshAction(sr).RunAsync() from SrPicker.ScanSRs()
+    SrRefreshAction* action = new SrRefreshAction(this->m_connection, srRef, this);
+    connect(action, &AsyncOperation::completed, this, [this, rescanButton]()
+    {
+        // Re-populate the combo so updated free-space figures are visible
+        this->populateStorageCombo();
+        if (rescanButton)
+            rescanButton->setEnabled(true);
+    });
+    action->RunAsync();
 }
 
 void ImportWizard::onBrowseClicked()

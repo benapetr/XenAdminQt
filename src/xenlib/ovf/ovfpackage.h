@@ -35,6 +35,37 @@
 #include <functional>
 
 /**
+ * @brief Xen-specific VM recommendations parsed from OVF VirtualSystemOtherConfigurationData.
+ *
+ * Corresponds to the @c <restrictions> XML blob stored in VM.recommendations on XenServer.
+ * In an OVF package this blob is serialised as the value of the configuration data entry
+ * named @c "recommendations".
+ *
+ * C# equivalent: VM.GetRecommendations() / GetRestrictionValue<T>()
+ */
+struct OvfRecommendations
+{
+    /// Whether SR-IOV networks may be assigned to this VM (restriction field "allow-network-sriov").
+    /// -1 = not specified in OVF; 0 = prohibited; 1 = allowed.
+    int allowNetworkSriov = -1;
+
+    /// Maximum number of vCPUs (restriction field "vcpus-max"), or -1 if unspecified.
+    int maxVcpus = -1;
+
+    /// Minimum number of vCPUs (restriction field "vcpus-min"), or -1 if unspecified.
+    int minVcpus = -1;
+
+    /// Maximum memory in bytes (restriction field "memory-static-max"), or -1 if unspecified.
+    qint64 maxMemoryBytes = -1;
+
+    /// Whether the VM supports UEFI boot (restriction field "supports-uefi" == "yes").
+    bool supportsUefi = false;
+
+    /// Whether the VM supports Secure Boot (restriction field "supports-secure-boot" == "yes").
+    bool supportsSecureBoot = false;
+};
+
+/**
  * @brief Virtual hardware configuration parsed from OVF RASD elements.
  *
  * Maps to a single VirtualSystem's VirtualHardwareSection.
@@ -151,6 +182,30 @@ class OvfPackage
         int NetworkCount() const { return this->networkNames_.size(); }
 
         /**
+         * @brief Xen-specific VM recommendations per virtual system, keyed by system name/id.
+         *
+         * Keys match those returned by VirtualSystemNames(). An empty map means the OVF
+         * does not contain Citrix/XenServer recommendation entries.
+         *
+         * C# equivalent: OVF.FindVirtualHardwareSectionByAffinity() + GetRestrictionValue()
+         */
+        QMap<QString, OvfRecommendations> RecommendationsBySystem() const
+        {
+            return this->m_recommendationsBySystem;
+        }
+
+        /**
+         * @brief Whether any virtual system in this package allows SR-IOV network assignment.
+         *
+         * Returns @c true when all virtual systems either allow SR-IOV or do not specify the
+         * restriction.  Returns @c false only when at least one virtual system explicitly
+         * prohibits it (@c allow-network-sriov == 0).
+         *
+         * C# equivalent: ImportSelectNetworkPage.AllowSriovNetwork()
+         */
+        bool AllowsNetworkSriov() const;
+
+        /**
          * @brief Virtual hardware (CPU/memory/disk) per virtual system, keyed by system name/id.
          *
          * Keys match those returned by VirtualSystemNames(). An empty map means RASD parsing
@@ -165,6 +220,27 @@ class OvfPackage
          * @brief Raw XML text of the OVF descriptor, for advanced inspection.
          */
         QString DescriptorXml() const { return this->descriptorXml_; }
+
+        /**
+         * @brief Validate the OVF package and collect non-fatal warnings.
+         *
+         * Performs the same checks as the C# XenOvfApi.OVF.Validate():
+         *   - OVF version present and known
+         *   - Referenced disk/disk-image files exist relative to the package directory
+         *   - Disk files are referenced from at least one RASD (linkage check)
+         *   - Known file extensions for referenced files
+         *
+         * The method always returns true as long as the package envelope could be
+         * loaded (i.e. IsValid() is true). Warnings describe non-fatal issues that
+         * the user can acknowledge and ignore.  Returns false only when the envelope
+         * cannot be loaded at all (same condition as !IsValid()).
+         *
+         * C# equivalent: OVF.Validate(Package, out List<string> warnings)
+         *
+         * @param warningsOut  Receives a list of human-readable warning strings.
+         * @return true if the package is structurally importable, false if not.
+         */
+        bool Validate(QStringList& warningsOut) const;
 
         /**
          * @brief Verify the integrity of OVF package files against a manifest.
@@ -226,6 +302,7 @@ class OvfPackage
         static void collectVirtualSystemNames(const QDomElement& root, QStringList& names);
         static OvfVirtualHardware collectVirtualHardware(const QDomElement& virtualSystemElem,
                                                           const QMap<QString,qint64>& capacitiesByRef);
+        static OvfRecommendations parseRecommendations(const QDomElement& virtualSystemElem);
 
         QString sourceFile_;
         QString packageName_;
@@ -242,6 +319,7 @@ class OvfPackage
         QStringList diskFileRefs_;
         QStringList virtualSystemNames_;
         QMap<QString, OvfVirtualHardware> virtualHardwareBySystem_;
+        QMap<QString, OvfRecommendations> m_recommendationsBySystem;
 };
 
 #endif // OVFPACKAGE_H

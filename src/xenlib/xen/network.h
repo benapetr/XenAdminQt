@@ -69,6 +69,14 @@ class XENLIB_EXPORT Network : public XenObject
         bool IsBond() const;
         bool IsMember() const;
         bool IsGuestInstallerNetwork() const;
+
+        /**
+         * @brief Whether this network is backed by SR-IOV (SR-IOV logical network).
+         *
+         * A network is SR-IOV backed when at least one of its PIFs is the logical PIF
+         * of a NetworkSriov object.  Matches C# Network.IsSriov().
+         */
+        bool IsSriov() const;
         bool Show(bool showHiddenObjects) const;
 
         //! Get MTU (Maximum Transmission Unit) in bytes

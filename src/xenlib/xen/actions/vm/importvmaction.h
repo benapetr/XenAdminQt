@@ -78,8 +78,24 @@ class ImportVmAction : public AsyncOperation
         */
         QString vmRef() const { return this->vmRef_; }
 
+    signals:
+        /**
+        * @brief Emitted when the uploaded VM has been discovered in the cache,
+        *        just before the action enters the wizard-wait phase.
+        *        The wizard connects to this to close the upload progress dialog
+        *        and advance to the network configuration page.
+        * @param vmRef OpaqueRef of the discovered VM
+        */
+        void vmDiscovered(const QString& vmRef);
+
     protected:
         void run() override;
+
+        /// Wake the wizard-wait condition so cancel exits the wait loop immediately.
+        void onCancel() override
+        {
+            this->waitCondition_.wakeAll();
+        }
 
     private:
         QString uploadFile();
