@@ -42,10 +42,14 @@
 #include <QCheckBox>
 #include <QGroupBox>
 #include <QProgressBar>
+#include <QSharedPointer>
 
 class QWizardPage;
 class XenConnection;
 class OvfPackage;
+class Host;
+class SR;
+class Network;
 
 class ImportWizard : public QWizard
 {
@@ -68,21 +72,28 @@ class ImportWizard : public QWizard
             Page_Storage = 2,
             Page_Network = 3,
             Page_Options = 4,
-            Page_Finish = 5
+            Page_Finish = 5,
+            Page_VmConfig = 6   // VHD/VMDK only: VM name, vCPU, memory
         };
 
         explicit ImportWizard(QWidget* parent = nullptr);
         explicit ImportWizard(XenConnection* connection, QWidget* parent = nullptr);
+        explicit ImportWizard(XenConnection* connection, const QString& initialFilePath, QWidget* parent = nullptr);
 
         // Result accessors — valid after exec() returns Accepted
-        QString GetSourceFilePath() const { return this->sourceFilePath_; }
-        ImportType GetImportType() const { return this->importType_; }
-        QString GetSelectedHostRef() const { return this->selectedHostRef_; }
-        QString GetSelectedSRRef() const { return this->selectedSRRef_; }
-        QString GetSelectedNetworkRef() const { return this->selectedNetworkRef_; }
-        bool GetStartAutomatically() const { return this->startVMsAutomatically_; }
-        bool GetRunFixups() const { return this->runFixups_; }
-        QString GetFixupIsoSrRef() const { return this->fixupIsoSrRef_; }
+        QString GetSourceFilePath() const { return this->m_sourceFilePath; }
+        ImportType GetImportType() const { return this->m_importType; }
+        QSharedPointer<Host> GetSelectedHost() const { return this->m_selectedHost; }
+        QSharedPointer<SR> GetSelectedSR() const { return this->m_selectedSR; }
+        QSharedPointer<Network> GetSelectedNetwork() const { return this->m_selectedNetwork; }
+        QMap<QString, QString> GetOvfNetworkMappings() const { return this->m_ovfNetworkMappings; }
+        QString GetVmName() const { return this->m_vmName; }
+        int GetVcpuCount() const { return this->m_vcpuCount; }
+        qint64 GetMemoryMb() const { return this->m_memoryMb; }
+        qint64 GetDiskImageCapacityBytes() const { return this->m_diskImageCapacityBytes; }
+        bool GetStartAutomatically() const { return this->m_startVMsAutomatically; }
+        bool GetRunFixups() const { return this->m_runFixups; }
+        QString GetFixupIsoSrRef() const { return this->m_fixupIsoSrRef; }
 
     protected:
         void initializePage(int id) override;
@@ -103,6 +114,7 @@ class ImportWizard : public QWizard
 
         // Helper functions for creating pages
         QWizardPage* createSourcePage();
+        QWizardPage* createVmConfigPage();
         QWizardPage* createHostPage();
         QWizardPage* createStoragePage();
         QWizardPage* createNetworkPage();
@@ -112,32 +124,47 @@ class ImportWizard : public QWizard
         void updateOvfMetadataDisplay();
         bool inspectXvaTar(const QString& filePath);
         void updateXvaMetadataDisplay();
+        bool inspectDiskImage(const QString& filePath);
+        void updateDiskImageDisplay();
+        void populateNetworkComboBox(QComboBox* combo);
 
         // Connection context (may be null when no server is connected)
-        XenConnection* connection_;
+        XenConnection* m_connection;
 
         // Collected wizard result data
-        ImportType importType_;
-        QString sourceFilePath_;
-        QString selectedHostRef_;
-        QString selectedSRRef_;
-        QString selectedNetworkRef_;
-        bool verifyManifest_;
-        bool startVMsAutomatically_;
-        bool runFixups_;
-        QString fixupIsoSrRef_;
+        ImportType m_importType;
+        QString m_sourceFilePath;
+        QSharedPointer<Host> m_selectedHost;
+        QSharedPointer<SR> m_selectedSR;
+        QSharedPointer<Network> m_selectedNetwork;
+        bool m_verifyManifest;
+        bool m_startVMsAutomatically;
+        bool m_runFixups;
+        QString m_fixupIsoSrRef;
 
         // OVF metadata populated after source-page validation
-        QString ovfPackageName_;
-        QStringList ovfVirtualSystemNames_;
-        QStringList ovfNetworkNames_;
-        QStringList ovfEulas_;
-        bool ovfHasManifest_;
-        bool ovfHasSignature_;
+        QString m_ovfPackageName;
+        QStringList m_ovfVirtualSystemNames;
+        QStringList m_ovfNetworkNames;
+        QStringList m_ovfEulas;
+        bool m_ovfHasManifest;
+        bool m_ovfHasSignature;
 
         // XVA metadata populated after source-page validation
-        QStringList xvaVmNames_;
-        qint64 xvaTotalDiskSizeBytes_;
+        QStringList m_xvaVmNames;
+        qint64 m_xvaTotalDiskSizeBytes;
+
+        // VHD/VMDK metadata populated after source-page validation
+        qint64 m_diskImageCapacityBytes;
+        QString m_diskImageFormatName;
+
+        // OVF per-network mappings: OVF network name → target XenServer network OpaqueRef
+        QMap<QString, QString> m_ovfNetworkMappings;
+
+        // VHD/VMDK VM config (collected from Page_VmConfig)
+        QString m_vmName;
+        int     m_vcpuCount;
+        qint64  m_memoryMb;
 };
 
 #endif // IMPORTWIZARD_H

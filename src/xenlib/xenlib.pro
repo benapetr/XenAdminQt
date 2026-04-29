@@ -144,6 +144,7 @@ HEADERS += \
     xen/actions/vm/createcddriveaction.h \
     xen/actions/vm/importvmaction.h \
     xen/actions/vm/importapplianceaction.h \
+    xen/actions/vm/importimageaction.h \
     xen/actions/vm/exportvmaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
@@ -384,6 +385,7 @@ SOURCES += \
     xen/actions/vm/createcddriveaction.cpp \
     xen/actions/vm/importvmaction.cpp \
     xen/actions/vm/importapplianceaction.cpp \
+    xen/actions/vm/importimageaction.cpp \
     xen/actions/vm/exportvmaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \

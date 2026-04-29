@@ -122,31 +122,21 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
         // ── Result accessors (valid after completed signal) ──────────────────
 
         /// OpaqueRef of the imported VM (single-VM import) or empty
-        QString ImportedVmRef() const { return this->importedVmRef_; }
+        QString ImportedVmRef() const { return this->m_importedVmRef; }
 
         /// OpaqueRef of the created VM_appliance (multi-VM import) or empty
-        QString ApplianceRef() const { return this->applianceRef_; }
+        QString ApplianceRef() const { return this->m_applianceRef; }
 
         /// OpaqueRefs of all created VMs (single or multi)
-        QStringList CreatedVmRefs() const { return this->createdVmRefs_; }
+        QStringList CreatedVmRefs() const { return this->m_createdVmRefs; }
 
     protected:
         void run() override;
 
-    private:
-        // ── OVF parsing helpers ──────────────────────────────────────────────
-
-        /// Parse the OVF XML descriptor and return per-VirtualSystem QDomElement maps
-        QList<QVariantMap> parseVirtualSystems(const QString& xml) const;
-
-        /// Build a VM create record from a VirtualSystem element's RASD items
-        QVariantMap buildVmRecord(const QVariantMap& vsData, const OvfVmMapping& mapping) const;
-
-        // ── XenAPI workflow helpers ──────────────────────────────────────────
+        // ── XenAPI workflow helpers (also available to ImportImageAction) ────
 
         /**
          * @brief Create a VM record via XenAPI.
-         * Hides the VM from XenCenter until fully configured (sets HideFromXenCenter).
          * @param vmRecord QVariantMap suitable for VM.create
          * @param applianceRef OpaqueRef of parent VM_appliance or empty
          * @return OpaqueRef of the created VM
@@ -172,11 +162,6 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
 
         /**
          * @brief Attach a VDI to a VM as a VBD.
-         * @param vmRef     Target VM OpaqueRef
-         * @param vdiRef    VDI OpaqueRef to attach
-         * @param bootable  Whether this disk is the boot disk
-         * @param mode      "RW" or "RO"
-         * @param type      "Disk" or "CD"
          */
         void attachDisk(const QString& vmRef,
                         const QString& vdiRef,
@@ -186,10 +171,6 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
 
         /**
          * @brief Create a VIF connecting the VM to a network.
-         * @param vmRef       Target VM OpaqueRef
-         * @param networkRef  Target Network OpaqueRef
-         * @param deviceIndex VIF device index (0, 1, 2, ...)
-         * @param mac         MAC address or empty for auto-generate
          */
         void createVif(const QString& vmRef,
                        const QString& networkRef,
@@ -198,8 +179,6 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
 
         /**
          * @brief Destroy a partially-created VM and any owned VDIs/VBDs.
-         * Called on failure/cancellation to clean up.
-         * @param vmRef OpaqueRef of the VM to remove
          */
         void cleanupVm(const QString& vmRef);
 
@@ -208,19 +187,30 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
          */
         void checkCancelled() const;
 
+        //! Source file path used for VDI description strings
+        QString m_ovfFilePath;
+
+    private:
+        // ── OVF parsing helpers ──────────────────────────────────────────────
+
+        /// Parse the OVF XML descriptor and return per-VirtualSystem QDomElement maps
+        QList<QVariantMap> parseVirtualSystems(const QString& xml) const;
+
+        /// Build a VM create record from a VirtualSystem element's RASD items
+        QVariantMap buildVmRecord(const QVariantMap& vsData, const OvfVmMapping& mapping) const;
+
         // ── Configuration ────────────────────────────────────────────────────
-        QString ovfFilePath_;
-        QList<OvfVmMapping> vmMappings_;
-        bool verifyManifest_;
-        bool verifySignature_;
-        bool runFixups_;
-        QString fixupIsoSrRef_;
-        bool startAutomatically_;
+        QList<OvfVmMapping> m_vmMappings;
+        bool m_verifyManifest;
+        bool m_verifySignature;
+        bool m_runFixups;
+        QString m_fixupIsoSrRef;
+        bool m_startAutomatically;
 
         // ── Results ──────────────────────────────────────────────────────────
-        QString importedVmRef_;
-        QString applianceRef_;
-        QStringList createdVmRefs_;
+        QString m_importedVmRef;
+        QString m_applianceRef;
+        QStringList m_createdVmRefs;
 };
 
 #endif // IMPORTAPPLIANCEACTION_H

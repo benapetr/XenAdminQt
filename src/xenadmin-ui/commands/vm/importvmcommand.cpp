@@ -33,8 +33,12 @@
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/vm/importvmaction.h"
 #include "xenlib/xen/actions/vm/importapplianceaction.h"
+#include "xenlib/xen/actions/vm/importimageaction.h"
 #include <QtWidgets>
 
 ImportVMCommand::ImportVMCommand(QObject* parent) : Command(nullptr, parent)
@@ -114,12 +118,15 @@ void ImportVMCommand::showImportWizard()
         }
 
         // Build a single OvfVmMapping per virtual system in the package.
-        // The wizard currently exposes one SR and one network for all VMs;
-        // per-VM / per-disk granularity can be added when Phase 11 network
-        // picker is extended.
-        const QString srRef      = wizard.GetSelectedSRRef();
-        const QString networkRef = wizard.GetSelectedNetworkRef();
-        const QString hostRef    = wizard.GetSelectedHostRef();
+        const auto selectedSR      = wizard.GetSelectedSR();
+        const auto selectedNetwork = wizard.GetSelectedNetwork();
+        const QString srRef        = selectedSR      ? selectedSR->OpaqueRef()      : QString();
+        const QString networkRef   = selectedNetwork ? selectedNetwork->OpaqueRef() : QString();
+        const auto selectedHost    = wizard.GetSelectedHost();
+        const QString hostRef      = selectedHost    ? selectedHost->OpaqueRef()    : QString();
+
+        // Per-network mappings from the network page (one combo per OVF network name)
+        const QMap<QString, QString> ovfNetMappings = wizard.GetOvfNetworkMappings();
 
         QList<OvfVmMapping> vmMappings;
         const QStringList vsNames = wizard.property("ovfVirtualSystemNames").toStringList();
@@ -137,14 +144,17 @@ void ImportVMCommand::showImportWizard()
             mapping.targetHostRef   = hostRef;
             mapping.defaultSrRef    = srRef;
 
-            // Map each OVF network name to the single wizard-selected network
+            // Use per-network wizard mappings when available; fall back to single ref
             for (const QString& netName : netNames)
             {
-                if (!networkRef.isEmpty())
+                const QString targetRef = ovfNetMappings.contains(netName)
+                                          ? ovfNetMappings.value(netName)
+                                          : networkRef;
+                if (!targetRef.isEmpty())
                 {
                     OvfNetworkMapping nm;
                     nm.ovfNetworkName   = netName;
-                    nm.targetNetworkRef = networkRef;
+                    nm.targetNetworkRef = targetRef;
                     mapping.networkMappings << nm;
                 }
             }
@@ -180,9 +190,38 @@ void ImportVMCommand::showImportWizard()
 
     if (wizard.GetImportType() == ImportWizard::ImportType_VHD)
     {
-        QMessageBox::information(MainWindow::instance(),
-                                 tr("Not Yet Implemented"),
-                                 tr("VHD/VMDK direct import is not yet implemented."));
+        if (!connection)
+        {
+            QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
+                                 tr("No connected server found. Please connect to a server first."));
+            return;
+        }
+        const auto selectedSR2 = wizard.GetSelectedSR();
+        const QString srRef = selectedSR2 ? selectedSR2->OpaqueRef() : QString();
+        if (srRef.isEmpty())
+        {
+            QMessageBox::warning(MainWindow::instance(), tr("No Storage Selected"),
+                                 tr("No storage repository was selected. Cannot start import."));
+            return;
+        }
+
+        ImportImageAction* action = new ImportImageAction(
+            connection,
+            wizard.GetVmName(),
+            wizard.GetVcpuCount(),
+            wizard.GetMemoryMb(),
+            srRef,
+            wizard.GetSelectedNetwork() ? wizard.GetSelectedNetwork()->OpaqueRef() : QString(),
+            wizard.GetSelectedHost() ? wizard.GetSelectedHost()->OpaqueRef() : QString(),
+            wizard.GetSourceFilePath(),
+            wizard.GetDiskImageCapacityBytes(),
+            wizard.GetStartAutomatically(),
+            MainWindow::instance());
+
+        ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
+        progressDialog->setShowCancel(true);
+        progressDialog->exec();
+        progressDialog->deleteLater();
         return;
     }
 
@@ -201,7 +240,8 @@ void ImportVMCommand::showImportWizard()
         return;
     }
 
-    QString srRef = wizard.GetSelectedSRRef();
+    const auto selectedSR3 = wizard.GetSelectedSR();
+    QString srRef = selectedSR3 ? selectedSR3->OpaqueRef() : QString();
     if (srRef.isEmpty())
     {
         QMessageBox::warning(MainWindow::instance(), tr("No Storage Selected"),
@@ -211,12 +251,13 @@ void ImportVMCommand::showImportWizard()
 
     // Build VIF mapping list from selected network
     QStringList vifNetworks;
-    QString networkRef = wizard.GetSelectedNetworkRef();
+    const auto selectedNetwork3 = wizard.GetSelectedNetwork();
+    QString networkRef = selectedNetwork3 ? selectedNetwork3->OpaqueRef() : QString();
     if (!networkRef.isEmpty())
         vifNetworks << networkRef;
 
     ImportVmAction* action = new ImportVmAction(connection,
-                                                wizard.GetSelectedHostRef(),
+                                                wizard.GetSelectedHost() ? wizard.GetSelectedHost()->OpaqueRef() : QString(),
                                                 wizard.GetSourceFilePath(),
                                                 srRef,
                                                 MainWindow::instance());
