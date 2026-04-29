@@ -41,6 +41,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QTemporaryDir>
 #include <QDebug>
 
 // ─── CancelledException ──────────────────────────────────────────────────────
@@ -109,12 +110,64 @@ void ImportApplianceAction::run()
 
     try
     {
+        // ── Step 0: OVA extraction (if the source is a .ova TAR archive) ────
+        // The action receives the original file path. For .ova files, all disk
+        // files are inside a TAR archive that must be extracted to a temp
+        // directory before we can upload them.  The temp dir is auto-deleted
+        // when it goes out of scope at the end of run().
+        // C# equivalent: ImportApplianceAction.RunCore() → m_package.ExtractToWorkingDir()
+        QTemporaryDir workingDir;
+        QString effectiveOvfPath = this->m_ovfFilePath;
+
+        if (this->m_ovfFilePath.toLower().endsWith(".ova"))
+        {
+            if (!workingDir.isValid())
+            {
+                this->setError("Failed to create temporary directory for OVA extraction.");
+                this->setState(Failed);
+                return;
+            }
+
+            this->setDescriptionSafe("Extracting OVA archive...");
+            this->setPercentCompleteSafe(2);
+            this->checkCancelled();
+
+            QString extractErr;
+            const bool ok = OvfPackage::ExtractAllToDir(
+                this->m_ovfFilePath,
+                workingDir.path(),
+                extractErr,
+                [this]() { return this->IsCancelled(); });
+
+            if (!ok)
+            {
+                if (this->IsCancelled())
+                    throw CancelledException();
+                this->setError(QString("OVA extraction failed: %1").arg(extractErr));
+                this->setState(Failed);
+                return;
+            }
+
+            // Find the .ovf descriptor among the extracted files
+            QDir dir(workingDir.path());
+            const QStringList ovfFiles = dir.entryList(QStringList() << "*.ovf", QDir::Files);
+            if (ovfFiles.isEmpty())
+            {
+                this->setError("No .ovf descriptor found in extracted OVA archive.");
+                this->setState(Failed);
+                return;
+            }
+            effectiveOvfPath = dir.filePath(ovfFiles.first());
+            qDebug() << "ImportApplianceAction: OVA extracted to" << workingDir.path()
+                     << "OVF:" << effectiveOvfPath;
+        }
+
         // ── Step 1: Parse OVF package ─────────────────────────────────────
         this->setDescriptionSafe("Parsing OVF package...");
         this->setPercentCompleteSafe(5);
         this->checkCancelled();
 
-        OvfPackage pkg(this->m_ovfFilePath);
+        OvfPackage pkg(effectiveOvfPath);
         if (!pkg.IsValid())
         {
             this->setError(QString("Failed to parse OVF package: %1").arg(pkg.ParseError()));
@@ -274,8 +327,11 @@ void ImportApplianceAction::run()
                     continue;
                 }
 
-                // Build local disk file path (for .ova, disk files are in the package dir)
-                QFileInfo ovfFi(this->m_ovfFilePath);
+                // Build local disk file path.
+                // For .ovf (folder-based), disks are alongside the .ovf.
+                // For .ova, effectiveOvfPath points to the extracted .ovf in a temp dir
+                // and all disk files were extracted to that same dir.
+                QFileInfo ovfFi(effectiveOvfPath);
                 const QString diskPath = ovfFi.absoluteDir().filePath(dm.diskHref);
                 if (!QFile::exists(diskPath))
                 {

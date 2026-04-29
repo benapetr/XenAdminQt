@@ -755,6 +755,15 @@ win32 {
     }
 }
 
+# zlib — required by xenlib DecompressGzAction
+unix {
+    LIBS += -lz
+}
+win32 {
+    INCLUDEPATH += $$[QT_INSTALL_PREFIX]/include/QtZlib
+    LIBS += -lzlib
+}
+
 # RDP support configuration (platform-specific)
 # - Linux: Optional FreeRDP library
 # - macOS: Optional FreeRDP via Homebrew

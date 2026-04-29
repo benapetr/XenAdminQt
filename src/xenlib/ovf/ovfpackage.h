@@ -32,6 +32,7 @@
 #include <QStringList>
 #include <QDomDocument>
 #include <QMap>
+#include <functional>
 
 /**
  * @brief Virtual hardware configuration parsed from OVF RASD elements.
@@ -164,6 +165,26 @@ class OvfPackage
          * @brief Raw XML text of the OVF descriptor, for advanced inspection.
          */
         QString DescriptorXml() const { return this->descriptorXml_; }
+
+        /**
+         * @brief Extract all files from a TAR (.ova) archive to a directory.
+         *
+         * Each entry in the archive is written as a flat file under @p destDir.
+         * Subdirectory path components in entry names are stripped — all files
+         * land directly in @p destDir.
+         *
+         * @param ovaPath    Absolute path to the .ova / .tar archive.
+         * @param destDir    Existing directory to extract files into.
+         * @param errorOut   Receives an error message on failure.
+         * @param cancelCheck  Optional callable; extraction stops if it returns true.
+         * @return true on success, false on error or cancellation.
+         *
+         * C# equivalent: Package.ExtractToWorkingDir() / ArchiveIterator.ExtractAllContents()
+         */
+        static bool ExtractAllToDir(const QString& ovaPath,
+                                    const QString& destDir,
+                                    QString& errorOut,
+                                    std::function<bool()> cancelCheck = nullptr);
 
     private:
         void parseFromOvfXml(const QString& xml);
