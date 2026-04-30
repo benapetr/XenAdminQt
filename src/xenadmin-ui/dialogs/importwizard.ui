@@ -1,0 +1,711 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImportWizard</class>
+ <widget class="QWizard" name="ImportWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>820</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Import Virtual Machine</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+
+  <!-- ══ Page 0: Source ══════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageSource">
+   <property name="title">
+    <string>Import Source</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the file to import.</string>
+   </property>
+   <layout class="QVBoxLayout" name="sourcePageLayout">
+    <item>
+     <widget class="QGroupBox" name="fileGroup">
+      <property name="title">
+       <string>Source File</string>
+      </property>
+      <layout class="QHBoxLayout" name="fileGroupLayout">
+       <item>
+        <widget class="QLineEdit" name="filePathEdit">
+         <property name="placeholderText">
+          <string>Select a file to import...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="browseButton">
+         <property name="text">
+          <string>Browse...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="typeGroup">
+      <property name="title">
+       <string>Import Type</string>
+      </property>
+      <layout class="QVBoxLayout" name="typeGroupLayout">
+       <item>
+        <widget class="QLabel" name="typeLabel">
+         <property name="text">
+          <string>Type will be detected automatically</string>
+         </property>
+         <property name="styleSheet">
+          <string>QLabel { color: #666; font-style: italic; }</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="ovfMetaGroup">
+      <property name="title">
+       <string>Package Information</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="ovfMetaGroupLayout">
+       <item>
+        <widget class="QLabel" name="ovfMetaLabel">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="xvaMetaGroup">
+      <property name="title">
+       <string>Virtual Appliance Information</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="xvaMetaGroupLayout">
+       <item>
+        <widget class="QLabel" name="xvaMetaLabel">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="diskMetaGroup">
+      <property name="title">
+       <string>Disk Image Information</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="diskMetaGroupLayout">
+       <item>
+        <widget class="QLabel" name="diskMetaLabel">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="formatsGroup">
+      <property name="title">
+       <string>Supported Formats</string>
+      </property>
+      <layout class="QVBoxLayout" name="formatsGroupLayout">
+       <item>
+        <widget class="QLabel" name="formatsLabel">
+         <property name="text">
+          <string>• XVA files (.xva, .xva.gz) - XenServer native format
+• OVF files (.ovf, .ova) - Open Virtualization Format
+• VHD files (.vhd, .vmdk) - Virtual disk images
+
+Note: only local files are supported. HTTP/FTP URI imports are not available in this version.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="sourcePageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 1: Host ════════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageHost">
+   <property name="title">
+    <string>Select Destination</string>
+   </property>
+   <property name="subTitle">
+    <string>Choose the host or pool to import the virtual machine into.</string>
+   </property>
+   <layout class="QVBoxLayout" name="hostPageLayout">
+    <item>
+     <layout class="QFormLayout" name="hostFormLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="hostLabel">
+        <property name="text">
+         <string>Target Server:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="hostCombo"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="hostInfoLabel">
+      <property name="text">
+       <string>The virtual machine will be imported to the selected server. You can configure storage and network settings on the following pages.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+      <property name="styleSheet">
+       <string>QLabel { color: #666; font-style: italic; }</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="hostPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 2: Storage ═════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageStorage">
+   <property name="title">
+    <string>Storage Configuration</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the storage repository for the imported virtual disks.</string>
+   </property>
+   <layout class="QVBoxLayout" name="storagePageLayout">
+    <item>
+     <layout class="QHBoxLayout" name="storageSrRow">
+      <item>
+       <widget class="QLabel" name="srLabel">
+        <property name="text">
+         <string>Storage Repository:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="storageCombo">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="storageRescanButton">
+        <property name="text">
+         <string>Rescan</string>
+        </property>
+        <property name="toolTip">
+         <string>Run SR.scan on the selected storage repository to refresh VDI and free-space information.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="storagePageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 3: Network ═════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageNetwork">
+   <property name="title">
+    <string>Network Configuration</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the target network(s) for the imported virtual machine.</string>
+   </property>
+   <layout class="QVBoxLayout" name="networkPageLayout">
+    <item>
+     <widget class="QGroupBox" name="xvaNetGroup">
+      <property name="title">
+       <string>Target Network</string>
+      </property>
+      <layout class="QFormLayout" name="xvaNetGroupLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="networkComboLabel">
+         <property name="text">
+          <string>Target Network:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="networkCombo"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="ovfMappingGroup">
+      <property name="title">
+       <string>OVF Network Mappings</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="ovfMappingGroupLayout">
+       <item>
+        <widget class="QWidget" name="ovfMappingContainer"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="networkPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 4: Options ═════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageOptions">
+   <property name="title">
+    <string>Import Options</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure additional import options.</string>
+   </property>
+   <layout class="QVBoxLayout" name="optionsPageLayout">
+    <item>
+     <widget class="QGroupBox" name="importOptionsGroup">
+      <property name="title">
+       <string>Import Options</string>
+      </property>
+      <layout class="QVBoxLayout" name="importOptionsGroupLayout">
+       <item>
+        <widget class="QCheckBox" name="runFixups">
+         <property name="text">
+          <string>Run operating system fixups</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="fixupSrFormLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="fixupSrLabel">
+           <property name="text">
+            <string>Fixup ISO SR:</string>
+           </property>
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="fixupSrCombo">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="startAfterImport">
+         <property name="text">
+          <string>Start VMs automatically after import</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="optionsPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 5: Finish ══════════════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Ready to Import</string>
+   </property>
+   <property name="subTitle">
+    <string>Review the import settings and start the import process.</string>
+   </property>
+   <layout class="QVBoxLayout" name="finishPageLayout">
+    <item>
+     <widget class="QLabel" name="summaryLabel">
+      <property name="text">
+       <string>Import Summary:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="summaryText">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="maximumHeight">
+       <number>200</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="finishProgressGroup">
+      <property name="title">
+       <string>Import Progress</string>
+      </property>
+      <layout class="QVBoxLayout" name="finishProgressGroupLayout">
+       <item>
+        <widget class="QLabel" name="statusLabel">
+         <property name="text">
+          <string>Click Finish to start the import process.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="progressBar">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="finishPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 6: VM Config (VHD/VMDK only) ══════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageVmConfig">
+   <property name="title">
+    <string>Virtual Machine Configuration</string>
+   </property>
+   <property name="subTitle">
+    <string>Specify the name and hardware settings for the imported virtual machine.</string>
+   </property>
+   <layout class="QVBoxLayout" name="vmConfigPageLayout">
+    <item>
+     <layout class="QFormLayout" name="vmConfigFormLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="vmNameLabel">
+        <property name="text">
+         <string>VM Name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="vmNameEdit">
+        <property name="placeholderText">
+         <string>Enter a name for the virtual machine</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="vcpuLabel">
+        <property name="text">
+         <string>vCPUs:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="vcpuSpin">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>64</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="memoryLabel">
+        <property name="text">
+         <string>Memory (MB):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSpinBox" name="memorySpin">
+        <property name="minimum">
+         <number>64</number>
+        </property>
+        <property name="maximum">
+         <number>1048576</number>
+        </property>
+        <property name="singleStep">
+         <number>256</number>
+        </property>
+        <property name="value">
+         <number>512</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="vmConfigPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 7: EULA (OVF only) ════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageEula">
+   <property name="title">
+    <string>End User License Agreement</string>
+   </property>
+   <property name="subTitle">
+    <string>You must accept the license agreement(s) before proceeding.</string>
+   </property>
+   <layout class="QVBoxLayout" name="eulaPageLayout">
+    <item>
+     <widget class="QLabel" name="eulaIntroLabel">
+      <property name="text">
+       <string>Please read the following license agreement(s). You must accept all agreements to continue importing this package.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="eulaTabWidget"/>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="eulaAcceptCheck">
+      <property name="text">
+       <string>I have read and accept the above End User License Agreement(s).</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 8: Security (OVF only) ════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageSecurity">
+   <property name="title">
+    <string>Security</string>
+   </property>
+   <property name="subTitle">
+    <string>Review the security information for this package.</string>
+   </property>
+   <layout class="QVBoxLayout" name="securityPageLayout">
+    <item>
+     <widget class="QLabel" name="securityInfoLabel">
+      <property name="text">
+       <string/>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>8</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="securityVerifyGroup">
+      <property name="title">
+       <string>Verification</string>
+      </property>
+      <layout class="QVBoxLayout" name="securityVerifyGroupLayout">
+       <item>
+        <widget class="QCheckBox" name="securityVerifyCheck">
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="securityPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 9: Boot Options (VHD/VMDK only) ═══════════════════════════════ -->
+  <widget class="QWizardPage" name="pageBootOptions">
+   <property name="title">
+    <string>Boot Options</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the firmware type and optional security hardware for the imported VM.</string>
+   </property>
+   <layout class="QVBoxLayout" name="bootOptionsPageLayout">
+    <item>
+     <widget class="QGroupBox" name="firmwareGroup">
+      <property name="title">
+       <string>Boot Firmware</string>
+      </property>
+      <layout class="QVBoxLayout" name="firmwareGroupLayout">
+       <item>
+        <widget class="QRadioButton" name="bootBiosRadio">
+         <property name="text">
+          <string>BIOS (Legacy)</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Traditional BIOS/HVM boot. Compatible with most guest operating systems.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="bootUefiRadio">
+         <property name="text">
+          <string>UEFI</string>
+         </property>
+         <property name="toolTip">
+          <string>UEFI firmware. Required by some modern operating systems.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="bootUefiSecureRadio">
+         <property name="text">
+          <string>UEFI Secure Boot</string>
+         </property>
+         <property name="toolTip">
+          <string>UEFI with Secure Boot enabled. The guest OS must support Secure Boot.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>8</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="secHwGroup">
+      <property name="title">
+       <string>Security Hardware</string>
+      </property>
+      <layout class="QVBoxLayout" name="secHwGroupLayout">
+       <item>
+        <widget class="QCheckBox" name="vtpmCheck">
+         <property name="text">
+          <string>Assign a virtual Trusted Platform Module (vTPM)</string>
+         </property>
+         <property name="toolTip">
+          <string>A vTPM allows the guest to store secrets and verify platform integrity.
+Requires XenServer 22.26.0 / XCP-ng 8.3 or later.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="bootOptionsPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

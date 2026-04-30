@@ -26,6 +26,7 @@
  */
 
 #include "importwizard.h"
+#include "ui_importwizard.h"
 #include "../settingsmanager.h"
 #include "ovfvalidationdialog.h"
 #include "xenlib/xen/network/connection.h"
@@ -71,12 +72,9 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_bootMode(BootMode_Bios)
     , m_assignVtpm(false)
     , m_xvaAction(nullptr)
+    , ui(new Ui::ImportWizard)
 {
-    this->setWindowTitle(tr("Import Virtual Machine"));
-    this->setWindowIcon(QIcon(":/icons/vm-import-32.png"));
-    this->setWizardStyle(QWizard::ModernStyle);
-    this->setOption(QWizard::HaveHelpButton, true);
-    this->setOption(QWizard::HelpButtonOnRight, false);
+    this->ui->setupUi(this);
 
     this->setupWizardPages();
 
@@ -84,601 +82,74 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
 
     // Pre-populate file path if one was provided (e.g. from a file association or CLI)
     if (!initialFilePath.isEmpty())
-    {
-        QLineEdit* filePathEdit = this->findChild<QLineEdit*>("filePathEdit");
-        if (filePathEdit)
-            filePathEdit->setText(initialFilePath);
-    }
+        this->ui->filePathEdit->setText(initialFilePath);
 
     qDebug() << "ImportWizard: Created Import Wizard";
 }
 
 void ImportWizard::setupWizardPages()
 {
-    // Add wizard pages
-    this->setPage(Page_Source,   this->createSourcePage());
-    this->setPage(Page_VmConfig, this->createVmConfigPage());
-    this->setPage(Page_Eula,     this->createEulaPage());
-    this->setPage(Page_Host,     this->createHostPage());
-    this->setPage(Page_Storage,  this->createStoragePage());
-    this->setPage(Page_Network,  this->createNetworkPage());
-    this->setPage(Page_Security,     this->createSecurityPage());
-    this->setPage(Page_Options,      this->createOptionsPage());
-    this->setPage(Page_BootOptions,  this->createBootOptionsPage());
-    this->setPage(Page_Finish,       this->createFinishPage());
+    this->setPage(Page_Source,      this->ui->pageSource);
+    this->setPage(Page_VmConfig,    this->ui->pageVmConfig);
+    this->setPage(Page_Eula,        this->ui->pageEula);
+    this->setPage(Page_Host,        this->ui->pageHost);
+    this->setPage(Page_Storage,     this->ui->pageStorage);
+    this->setPage(Page_Network,     this->ui->pageNetwork);
+    this->setPage(Page_Security,    this->ui->pageSecurity);
+    this->setPage(Page_Options,     this->ui->pageOptions);
+    this->setPage(Page_BootOptions, this->ui->pageBootOptions);
+    this->setPage(Page_Finish,      this->ui->pageFinish);
 
-    // Set the starting page
     this->setStartId(Page_Source);
+
+    // Signal connections that were previously inside the create*Page() factories
+    connect(this->ui->browseButton, &QPushButton::clicked, this, &ImportWizard::onBrowseClicked);
+    connect(this->ui->storageRescanButton, &QPushButton::clicked, this, &ImportWizard::onRescanStorageClicked);
+    connect(this->ui->runFixups, &QCheckBox::toggled, this->ui->fixupSrLabel, &QLabel::setEnabled);
+    connect(this->ui->runFixups, &QCheckBox::toggled, this->ui->fixupSrCombo, &QComboBox::setEnabled);
 }
 
-// ─── Source page with dynamic nextId ─────────────────────────────────────────
-// Local helper subclass so the source page can skip Page_VmConfig for non-VHD files.
-
-namespace
+ImportWizard::~ImportWizard()
 {
-    // ── Source page ───────────────────────────────────────────────────────────
-    // Directs to VmConfig for VHD/VMDK, to Eula when OVF has EULAs, else to Host.
-    class ImportSourcePage : public QWizardPage
+    delete this->ui;
+}
+
+int ImportWizard::nextId() const
+{
+    switch (this->currentId())
     {
-        public:
-            explicit ImportSourcePage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override
-            {
-                auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
-                if (!wiz)
-                    return ImportWizard::Page_Host;
-                if (wiz->GetImportType() == ImportWizard::ImportType_VHD)
-                    return ImportWizard::Page_VmConfig;
-                if (wiz->GetImportType() == ImportWizard::ImportType_OVF && wiz->HasOvfEulas())
-                    return ImportWizard::Page_Eula;
-                return ImportWizard::Page_Host;
-            }
-    };
-
-    // ── EULA page (OVF only) ──────────────────────────────────────────────────
-    // Always proceeds to host selection after the user accepts all EULAs.
-    class ImportEulaPage : public QWizardPage
-    {
-        public:
-            explicit ImportEulaPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Host; }
-    };
-
-    // ── VmConfig page (VHD/VMDK only) ────────────────────────────────────────
-    // Always proceeds to host selection.
-    class ImportVmConfigPage : public QWizardPage
-    {
-        public:
-            explicit ImportVmConfigPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Host; }
-    };
-
-    // ── Host page ─────────────────────────────────────────────────────────────
-    // Always proceeds to storage selection.
-    class ImportHostPage : public QWizardPage
-    {
-        public:
-            explicit ImportHostPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Storage; }
-    };
-
-    // ── Storage page ──────────────────────────────────────────────────────────
-    // Always proceeds to network selection.
-    class ImportStoragePage : public QWizardPage
-    {
-        public:
-            explicit ImportStoragePage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Network; }
-    };
-
-    // ── Network page ──────────────────────────────────────────────────────────
-    // XVA: skip Options → go straight to Finish.
-    // OVF with manifest/signature: go to Security page before Options.
-    // VHD / plain OVF: go to Options.
-    class ImportNetworkPage : public QWizardPage
-    {
-        public:
-            explicit ImportNetworkPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override
-            {
-                auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
-                if (!wiz)
-                    return ImportWizard::Page_Options;
-                if (wiz->GetImportType() == ImportWizard::ImportType_XVA)
-                    return ImportWizard::Page_Finish;
-                if (wiz->GetImportType() == ImportWizard::ImportType_OVF && wiz->OvfHasSecurity())
-                    return ImportWizard::Page_Security;
-                return ImportWizard::Page_Options;
-            }
-    };
-
-    // ── Security page (OVF only) ──────────────────────────────────────────────
-    // Always proceeds to options.
-    class ImportSecurityPage : public QWizardPage
-    {
-        public:
-            explicit ImportSecurityPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Options; }
-    };
-
-    // ── Options page ──────────────────────────────────────────────────────────
-    // VHD/VMDK: proceeds to Boot Options.  All others: proceeds to Finish.
-    class ImportOptionsPage : public QWizardPage
-    {
-        public:
-            explicit ImportOptionsPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override
-            {
-                auto* wiz = qobject_cast<ImportWizard*>(this->wizard());
-                if (wiz && wiz->GetImportType() == ImportWizard::ImportType_VHD)
-                    return ImportWizard::Page_BootOptions;
-                return ImportWizard::Page_Finish;
-            }
-    };
-
-    // ── Boot options page (VHD/VMDK only) ────────────────────────────────────
-    // Always proceeds to Finish.
-    class ImportBootOptionsPage : public QWizardPage
-    {
-        public:
-            explicit ImportBootOptionsPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return ImportWizard::Page_Finish; }
-    };
-
-    // ── Finish page ───────────────────────────────────────────────────────────
-    // Terminal page — no next page.
-    class ImportFinishPage : public QWizardPage
-    {
-        public:
-            explicit ImportFinishPage(QWidget* parent = nullptr)
-                : QWizardPage(parent) {}
-
-            int nextId() const override { return -1; }
-    };
-} // anonymous namespace
-
-QWizardPage* ImportWizard::createSourcePage()
-{
-    ImportSourcePage* page = new ImportSourcePage;
-    page->setTitle(tr("Import Source"));
-    page->setSubTitle(tr("Select the file to import."));
-
-    // File selection group
-    QGroupBox* fileGroup = new QGroupBox(tr("Source File"));
-
-    QLineEdit* filePathEdit = new QLineEdit;
-    filePathEdit->setObjectName("filePathEdit");
-    filePathEdit->setPlaceholderText(tr("Select a file to import..."));
-
-    QPushButton* browseButton = new QPushButton(tr("Browse..."));
-    browseButton->setObjectName("browseButton");
-    connect(browseButton, &QPushButton::clicked, this, &ImportWizard::onBrowseClicked);
-
-    QHBoxLayout* fileLayout = new QHBoxLayout;
-    fileLayout->addWidget(filePathEdit);
-    fileLayout->addWidget(browseButton);
-    fileGroup->setLayout(fileLayout);
-
-    // Import type display
-    QGroupBox* typeGroup = new QGroupBox(tr("Import Type"));
-    QLabel* typeLabel = new QLabel(tr("Type will be detected automatically"));
-    typeLabel->setObjectName("typeLabel");
-    typeLabel->setStyleSheet("QLabel { color: #666; font-style: italic; }");
-
-    QVBoxLayout* typeLayout = new QVBoxLayout;
-    typeLayout->addWidget(typeLabel);
-    typeGroup->setLayout(typeLayout);
-
-    // OVF package metadata — hidden until an OVF/OVA is selected
-    QGroupBox* ovfMetaGroup = new QGroupBox(tr("Package Information"));
-    ovfMetaGroup->setObjectName("ovfMetaGroup");
-    ovfMetaGroup->setVisible(false);
-
-    QLabel* ovfMetaLabel = new QLabel;
-    ovfMetaLabel->setObjectName("ovfMetaLabel");
-    ovfMetaLabel->setWordWrap(true);
-
-    QVBoxLayout* ovfMetaLayout = new QVBoxLayout;
-    ovfMetaLayout->addWidget(ovfMetaLabel);
-    ovfMetaGroup->setLayout(ovfMetaLayout);
-
-    // XVA metadata — hidden until an XVA is selected
-    QGroupBox* xvaMetaGroup = new QGroupBox(tr("Virtual Appliance Information"));
-    xvaMetaGroup->setObjectName("xvaMetaGroup");
-    xvaMetaGroup->setVisible(false);
-
-    QLabel* xvaMetaLabel = new QLabel;
-    xvaMetaLabel->setObjectName("xvaMetaLabel");
-    xvaMetaLabel->setWordWrap(true);
-
-    QVBoxLayout* xvaMetaLayout = new QVBoxLayout;
-    xvaMetaLayout->addWidget(xvaMetaLabel);
-    xvaMetaGroup->setLayout(xvaMetaLayout);
-
-    // Disk image metadata — hidden until a VHD/VMDK is selected
-    QGroupBox* diskMetaGroup = new QGroupBox(tr("Disk Image Information"));
-    diskMetaGroup->setObjectName("diskMetaGroup");
-    diskMetaGroup->setVisible(false);
-
-    QLabel* diskMetaLabel = new QLabel;
-    diskMetaLabel->setObjectName("diskMetaLabel");
-    diskMetaLabel->setWordWrap(true);
-
-    QVBoxLayout* diskMetaLayout = new QVBoxLayout;
-    diskMetaLayout->addWidget(diskMetaLabel);
-    diskMetaGroup->setLayout(diskMetaLayout);
-
-    // File info
-    QGroupBox* infoGroup = new QGroupBox(tr("Supported Formats"));
-    QLabel* infoLabel = new QLabel(tr("• XVA files (.xva, .xva.gz) - XenServer native format\n"
-                                      "• OVF files (.ovf, .ova) - Open Virtualization Format\n"
-                                      "• VHD files (.vhd, .vmdk) - Virtual disk images\n\n"
-                                      "Note: only local files are supported. "
-                                      "HTTP/FTP URI imports are not available in this version."));
-    infoLabel->setWordWrap(true);
-
-    QVBoxLayout* infoLayout = new QVBoxLayout;
-    infoLayout->addWidget(infoLabel);
-    infoGroup->setLayout(infoLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(fileGroup);
-    mainLayout->addWidget(typeGroup);
-    mainLayout->addWidget(ovfMetaGroup);
-    mainLayout->addWidget(xvaMetaGroup);
-    mainLayout->addWidget(diskMetaGroup);
-    mainLayout->addWidget(infoGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
+        case Page_Source:
+            if (this->m_importType == ImportType_VHD)
+                return Page_VmConfig;
+            if (this->m_importType == ImportType_OVF && this->HasOvfEulas())
+                return Page_Eula;
+            return Page_Host;
+        case Page_Eula:
+        case Page_VmConfig:
+            return Page_Host;
+        case Page_Host:
+            return Page_Storage;
+        case Page_Storage:
+            return Page_Network;
+        case Page_Network:
+            if (this->m_importType == ImportType_XVA)
+                return Page_Finish;
+            if (this->m_importType == ImportType_OVF && this->OvfHasSecurity())
+                return Page_Security;
+            return Page_Options;
+        case Page_Security:
+            return Page_Options;
+        case Page_Options:
+            if (this->m_importType == ImportType_VHD)
+                return Page_BootOptions;
+            return Page_Finish;
+        case Page_BootOptions:
+            return Page_Finish;
+        default:
+            return -1;
+    }
 }
 
-QWizardPage* ImportWizard::createVmConfigPage()
-{
-    ImportVmConfigPage* page = new ImportVmConfigPage;
-    page->setTitle(tr("Virtual Machine Configuration"));
-    page->setSubTitle(tr("Specify the name and hardware settings for the imported virtual machine."));
-
-    QLabel* nameLabel = new QLabel(tr("VM Name:"));
-    QLineEdit* nameEdit = new QLineEdit;
-    nameEdit->setObjectName("vmNameEdit");
-    nameEdit->setPlaceholderText(tr("Enter a name for the virtual machine"));
-
-    QLabel* cpuLabel = new QLabel(tr("vCPUs:"));
-    QSpinBox* cpuSpin = new QSpinBox;
-    cpuSpin->setObjectName("vcpuSpin");
-    cpuSpin->setMinimum(1);
-    cpuSpin->setMaximum(64);
-    cpuSpin->setValue(1);
-
-    QLabel* memLabel = new QLabel(tr("Memory (MB):"));
-    QSpinBox* memSpin = new QSpinBox;
-    memSpin->setObjectName("memorySpin");
-    memSpin->setMinimum(64);
-    memSpin->setMaximum(1024 * 1024);
-    memSpin->setValue(512);
-    memSpin->setSingleStep(256);
-
-    QFormLayout* form = new QFormLayout;
-    form->addRow(nameLabel, nameEdit);
-    form->addRow(cpuLabel,  cpuSpin);
-    form->addRow(memLabel,  memSpin);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addLayout(form);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createHostPage()
-{
-    ImportHostPage* page = new ImportHostPage;
-    page->setTitle(tr("Select Destination"));
-    page->setSubTitle(tr("Choose the host or pool to import the virtual machine into."));
-
-    QLabel* hostLabel = new QLabel(tr("Target Server:"));
-    QComboBox* hostCombo = new QComboBox;
-    hostCombo->setObjectName("hostCombo");
-    // Items are populated in initializePage()
-
-    QLabel* infoLabel = new QLabel(tr("The virtual machine will be imported to the selected server. "
-                                      "You can configure storage and network settings on the following pages."));
-    infoLabel->setWordWrap(true);
-    infoLabel->setStyleSheet("QLabel { color: #666; font-style: italic; }");
-
-    QFormLayout* formLayout = new QFormLayout;
-    formLayout->addRow(hostLabel, hostCombo);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addLayout(formLayout);
-    mainLayout->addWidget(infoLabel);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createStoragePage()
-{
-    ImportStoragePage* page = new ImportStoragePage;
-    page->setTitle(tr("Storage Configuration"));
-    page->setSubTitle(tr("Select the storage repository for the imported virtual disks."));
-
-    QLabel* srLabel = new QLabel(tr("Storage Repository:"));
-    QComboBox* srCombo = new QComboBox;
-    srCombo->setObjectName("storageCombo");
-    // Items are populated in initializePage()
-
-    QPushButton* rescanButton = new QPushButton(tr("Rescan"));
-    rescanButton->setObjectName("storageRescanButton");
-    rescanButton->setToolTip(tr("Run SR.scan on the selected storage repository to refresh VDI and free-space information."));
-    connect(rescanButton, &QPushButton::clicked, this, &ImportWizard::onRescanStorageClicked);
-
-    QHBoxLayout* srRow = new QHBoxLayout;
-    srRow->addWidget(srLabel);
-    srRow->addWidget(srCombo, 1);
-    srRow->addWidget(rescanButton);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addLayout(srRow);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createNetworkPage()
-{
-    ImportNetworkPage* page = new ImportNetworkPage;
-    page->setTitle(tr("Network Configuration"));
-    page->setSubTitle(tr("Select the target network(s) for the imported virtual machine."));
-
-    // --- XVA / VHD single-network group ---
-    QGroupBox* xvaNetGroup = new QGroupBox(tr("Target Network"));
-    xvaNetGroup->setObjectName("xvaNetGroup");
-
-    QComboBox* networkCombo = new QComboBox;
-    networkCombo->setObjectName("networkCombo");
-    // Items are populated in initializePage() / populateNetworkCombo()
-
-    QFormLayout* xvaNetLayout = new QFormLayout;
-    xvaNetLayout->addRow(tr("Target Network:"), networkCombo);
-    xvaNetGroup->setLayout(xvaNetLayout);
-
-    // --- OVF per-network mapping group ---
-    // Rows are added dynamically in populateNetworkCombo() when OVF is detected
-    QGroupBox* ovfMappingGroup = new QGroupBox(tr("OVF Network Mappings"));
-    ovfMappingGroup->setObjectName("ovfMappingGroup");
-    ovfMappingGroup->setVisible(false);
-
-    QWidget* ovfMappingContainer = new QWidget;
-    ovfMappingContainer->setObjectName("ovfMappingContainer");
-    // Layout is created dynamically in populateNetworkCombo()
-
-    QVBoxLayout* ovfGroupLayout = new QVBoxLayout;
-    ovfGroupLayout->addWidget(ovfMappingContainer);
-    ovfMappingGroup->setLayout(ovfGroupLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(xvaNetGroup);
-    mainLayout->addWidget(ovfMappingGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createOptionsPage()
-{
-    ImportOptionsPage* page = new ImportOptionsPage;
-    page->setTitle(tr("Import Options"));
-    page->setSubTitle(tr("Configure additional import options."));
-
-    // Import options (run fixups, start automatically)
-    QGroupBox* importGroup = new QGroupBox(tr("Import Options"));
-
-    QCheckBox* runFixups = new QCheckBox(tr("Run operating system fixups"));
-    runFixups->setObjectName("runFixups");
-    runFixups->setChecked(false);
-
-    QLabel* fixupSrLabel = new QLabel(tr("Fixup ISO SR:"));
-    fixupSrLabel->setObjectName("fixupSrLabel");
-    fixupSrLabel->setEnabled(false);
-
-    QComboBox* fixupSrCombo = new QComboBox;
-    fixupSrCombo->setObjectName("fixupSrCombo");
-    fixupSrCombo->setEnabled(false);
-    fixupSrCombo->addItem(tr("(none)"), QString());
-
-    // Enable/disable fixup SR combo based on checkbox
-    QObject::connect(runFixups, &QCheckBox::toggled, fixupSrLabel, &QLabel::setEnabled);
-    QObject::connect(runFixups, &QCheckBox::toggled, fixupSrCombo, &QComboBox::setEnabled);
-
-    QCheckBox* startAfterImport = new QCheckBox(tr("Start VMs automatically after import"));
-    startAfterImport->setObjectName("startAfterImport");
-
-    QFormLayout* fixupLayout = new QFormLayout;
-    fixupLayout->addRow(runFixups);
-    fixupLayout->addRow(fixupSrLabel, fixupSrCombo);
-
-    QVBoxLayout* importLayout = new QVBoxLayout;
-    importLayout->addLayout(fixupLayout);
-    importLayout->addWidget(startAfterImport);
-    importGroup->setLayout(importLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(importGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createFinishPage()
-{
-    ImportFinishPage* page = new ImportFinishPage;
-    page->setTitle(tr("Ready to Import"));
-    page->setSubTitle(tr("Review the import settings and start the import process."));
-
-    QLabel* summaryLabel = new QLabel(tr("Import Summary:"));
-    QTextEdit* summaryText = new QTextEdit;
-    summaryText->setObjectName("summaryText");
-    summaryText->setReadOnly(true);
-    summaryText->setMaximumHeight(200);
-
-    // Progress section
-    QGroupBox* progressGroup = new QGroupBox(tr("Import Progress"));
-    QProgressBar* progressBar = new QProgressBar;
-    progressBar->setObjectName("progressBar");
-    progressBar->setVisible(false);
-
-    QLabel* statusLabel = new QLabel(tr("Click Finish to start the import process."));
-    statusLabel->setObjectName("statusLabel");
-
-    QVBoxLayout* progressLayout = new QVBoxLayout;
-    progressLayout->addWidget(statusLabel);
-    progressLayout->addWidget(progressBar);
-    progressGroup->setLayout(progressLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(summaryLabel);
-    mainLayout->addWidget(summaryText);
-    mainLayout->addWidget(progressGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createEulaPage()
-{
-    ImportEulaPage* page = new ImportEulaPage;
-    page->setTitle(tr("End User License Agreement"));
-    page->setSubTitle(tr("You must accept the license agreement(s) before proceeding."));
-
-    QLabel* introLabel = new QLabel(
-        tr("Please read the following license agreement(s). "
-           "You must accept all agreements to continue importing this package."));
-    introLabel->setWordWrap(true);
-
-    // One tab per EULA document; tabs are populated in initializePage()
-    QTabWidget* eulaTab = new QTabWidget;
-    eulaTab->setObjectName("eulaTabWidget");
-
-    QCheckBox* acceptCheck = new QCheckBox(
-        tr("I have read and accept the above End User License Agreement(s)."));
-    acceptCheck->setObjectName("eulaAcceptCheck");
-
-    QVBoxLayout* layout = new QVBoxLayout;
-    layout->addWidget(introLabel);
-    layout->addWidget(eulaTab, 1);  // stretch so text area fills available height
-    layout->addWidget(acceptCheck);
-
-    page->setLayout(layout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createSecurityPage()
-{
-    ImportSecurityPage* page = new ImportSecurityPage;
-    page->setTitle(tr("Security"));
-    page->setSubTitle(tr("Review the security information for this package."));
-
-    // Populated in initializePage() based on whether the package has a signature or manifest
-    QLabel* infoLabel = new QLabel;
-    infoLabel->setObjectName("securityInfoLabel");
-    infoLabel->setWordWrap(true);
-
-    QGroupBox* verifyGroup = new QGroupBox(tr("Verification"));
-
-    QCheckBox* verifyCheck = new QCheckBox;
-    verifyCheck->setObjectName("securityVerifyCheck");
-    verifyCheck->setChecked(true);
-
-    QVBoxLayout* verifyLayout = new QVBoxLayout;
-    verifyLayout->addWidget(verifyCheck);
-    verifyGroup->setLayout(verifyLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(infoLabel);
-    mainLayout->addSpacing(8);
-    mainLayout->addWidget(verifyGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createBootOptionsPage()
-{
-    ImportBootOptionsPage* page = new ImportBootOptionsPage;
-    page->setTitle(tr("Boot Options"));
-    page->setSubTitle(tr("Select the firmware type and optional security hardware for the imported VM."));
-
-    // ── Firmware group ────────────────────────────────────────────────────────
-    QGroupBox* firmwareGroup = new QGroupBox(tr("Boot Firmware"));
-
-    QRadioButton* biosRadio = new QRadioButton(tr("BIOS (Legacy)"));
-    biosRadio->setObjectName("bootBiosRadio");
-    biosRadio->setChecked(true);
-    biosRadio->setToolTip(tr("Traditional BIOS/HVM boot. Compatible with most guest operating systems."));
-
-    QRadioButton* uefiRadio = new QRadioButton(tr("UEFI"));
-    uefiRadio->setObjectName("bootUefiRadio");
-    uefiRadio->setToolTip(tr("UEFI firmware. Required by some modern operating systems."));
-
-    QRadioButton* uefiSecureRadio = new QRadioButton(tr("UEFI Secure Boot"));
-    uefiSecureRadio->setObjectName("bootUefiSecureRadio");
-    uefiSecureRadio->setToolTip(tr("UEFI with Secure Boot enabled. The guest OS must support Secure Boot."));
-
-    QVBoxLayout* firmwareLayout = new QVBoxLayout;
-    firmwareLayout->addWidget(biosRadio);
-    firmwareLayout->addWidget(uefiRadio);
-    firmwareLayout->addWidget(uefiSecureRadio);
-    firmwareGroup->setLayout(firmwareLayout);
-
-    // ── Security hardware group ───────────────────────────────────────────────
-    QGroupBox* secHwGroup = new QGroupBox(tr("Security Hardware"));
-
-    QCheckBox* vtpmCheck = new QCheckBox(tr("Assign a virtual Trusted Platform Module (vTPM)"));
-    vtpmCheck->setObjectName("vtpmCheck");
-    vtpmCheck->setToolTip(tr("A vTPM allows the guest to store secrets and verify platform integrity.\n"
-                             "Requires XenServer 22.26.0 / XCP-ng 8.3 or later."));
-
-    QVBoxLayout* secHwLayout = new QVBoxLayout;
-    secHwLayout->addWidget(vtpmCheck);
-    secHwGroup->setLayout(secHwLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(firmwareGroup);
-    mainLayout->addSpacing(8);
-    mainLayout->addWidget(secHwGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
 
 void ImportWizard::initializePage(int id)
 {
@@ -687,7 +158,7 @@ void ImportWizard::initializePage(int id)
     else if (id == Page_VmConfig)
     {
         // Pre-fill VM name from the source file's base name
-        QLineEdit* nameEdit = this->findChild<QLineEdit*>("vmNameEdit");
+        QLineEdit* nameEdit = this->ui->vmNameEdit;
         if (nameEdit && nameEdit->text().isEmpty())
         {
             const QString baseName = QFileInfo(this->m_sourceFilePath).completeBaseName();
@@ -697,7 +168,7 @@ void ImportWizard::initializePage(int id)
     else if (id == Page_Storage)
     {
         // Capture the host selection so populateStorageCombo can filter by PBD
-        QComboBox* hostCombo = this->findChild<QComboBox*>("hostCombo");
+        QComboBox* hostCombo = this->ui->hostCombo;
         if (hostCombo)
         {
             this->m_selectedHost = this->m_connection
@@ -709,7 +180,7 @@ void ImportWizard::initializePage(int id)
     else if (id == Page_Network)
     {
         // Snapshot selected host so populateNetworkComboBox can filter by PIF
-        QComboBox* hostCombo = this->findChild<QComboBox*>("hostCombo");
+        QComboBox* hostCombo = this->ui->hostCombo;
         if (hostCombo)
         {
             this->m_selectedHost = this->m_connection
@@ -724,23 +195,23 @@ void ImportWizard::initializePage(int id)
     {
         // Restore the previously selected boot mode so navigating back/forward
         // doesn't reset the user's choice.
-        QRadioButton* biosRadio       = this->findChild<QRadioButton*>("bootBiosRadio");
-        QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
-        QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
+        QRadioButton* biosRadio       = this->ui->bootBiosRadio;
+        QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
+        QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
         if (biosRadio && uefiRadio && uefiSecureRadio)
         {
             biosRadio->setChecked(this->m_bootMode == BootMode_Bios);
             uefiRadio->setChecked(this->m_bootMode == BootMode_Uefi);
             uefiSecureRadio->setChecked(this->m_bootMode == BootMode_UefiSecure);
         }
-        QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+        QCheckBox* vtpmCheck = this->ui->vtpmCheck;
         if (vtpmCheck)
             vtpmCheck->setChecked(this->m_assignVtpm);
     }
     else if (id == Page_Eula)
     {
         // Populate tab widget with EULA texts — one tab per EULA document
-        QTabWidget* tabWidget = this->findChild<QTabWidget*>("eulaTabWidget");
+        QTabWidget* tabWidget = this->ui->eulaTabWidget;
         if (tabWidget)
         {
             tabWidget->clear();
@@ -756,7 +227,7 @@ void ImportWizard::initializePage(int id)
             }
         }
         // Reset checkbox so user must explicitly accept on each visit
-        QCheckBox* acceptCheck = this->findChild<QCheckBox*>("eulaAcceptCheck");
+        QCheckBox* acceptCheck = this->ui->eulaAcceptCheck;
         if (acceptCheck)
             acceptCheck->setChecked(false);
     }
@@ -764,8 +235,8 @@ void ImportWizard::initializePage(int id)
     {
         // Update info label and verify checkbox based on whether this package has
         // a producer signature or just a manifest.  Matches C# ImportSecurityPage.
-        QLabel* infoLabel = this->findChild<QLabel*>("securityInfoLabel");
-        QCheckBox* verifyCheck = this->findChild<QCheckBox*>("securityVerifyCheck");
+        QLabel* infoLabel = this->ui->securityInfoLabel;
+        QCheckBox* verifyCheck = this->ui->securityVerifyCheck;
         if (infoLabel)
         {
             if (this->m_ovfHasSignature)
@@ -792,12 +263,12 @@ void ImportWizard::initializePage(int id)
     }
     else if (id == Page_Finish)
     {
-        QTextEdit* summaryText = this->findChild<QTextEdit*>("summaryText");
+        QTextEdit* summaryText = this->ui->summaryText;
         if (summaryText)
         {
-            QComboBox* hostCombo = this->findChild<QComboBox*>("hostCombo");
-            QComboBox* srCombo = this->findChild<QComboBox*>("storageCombo");
-            QComboBox* netCombo = this->findChild<QComboBox*>("networkCombo");
+            QComboBox* hostCombo = this->ui->hostCombo;
+            QComboBox* srCombo = this->ui->storageCombo;
+            QComboBox* netCombo = this->ui->networkCombo;
 
             QString hostText = hostCombo ? hostCombo->currentText() : tr("(none)");
             QString srText = srCombo ? srCombo->currentText() : tr("(none)");
@@ -821,9 +292,9 @@ void ImportWizard::initializePage(int id)
             if (this->m_importType == ImportType_VHD)
             {
                 // VM config
-                QLineEdit* vmNameEdit = this->findChild<QLineEdit*>("vmNameEdit");
-                QSpinBox*  vcpuSpin  = this->findChild<QSpinBox*>("vcpuSpin");
-                QSpinBox*  memSpin   = this->findChild<QSpinBox*>("memorySpin");
+                QLineEdit* vmNameEdit = this->ui->vmNameEdit;
+                QSpinBox*  vcpuSpin  = this->ui->vcpuSpin;
+                QSpinBox*  memSpin   = this->ui->memorySpin;
                 if (vmNameEdit && !vmNameEdit->text().trimmed().isEmpty())
                     summary += tr("VM Name: %1\n").arg(vmNameEdit->text().trimmed());
                 if (vcpuSpin)
@@ -833,8 +304,8 @@ void ImportWizard::initializePage(int id)
 
                 // Boot mode (read live from the radio buttons so the summary stays in sync
                 // even if the user navigated back and changed the selection)
-                QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
-                QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
+                QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
+                QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
                 QString bootModeStr;
                 if (uefiSecureRadio && uefiSecureRadio->isChecked())
                     bootModeStr = tr("UEFI Secure Boot");
@@ -844,12 +315,12 @@ void ImportWizard::initializePage(int id)
                     bootModeStr = tr("BIOS (Legacy)");
                 summary += tr("Boot Firmware: %1\n").arg(bootModeStr);
 
-                QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+                QCheckBox* vtpmCheck = this->ui->vtpmCheck;
                 if (vtpmCheck && vtpmCheck->isChecked())
                     summary += tr("vTPM: Yes\n");
             }
 
-            QCheckBox* startAfter = this->findChild<QCheckBox*>("startAfterImport");
+            QCheckBox* startAfter = this->ui->startAfterImport;
             if (startAfter && startAfter->isChecked())
                 summary += tr("Start automatically: Yes\n");
             else
@@ -864,7 +335,7 @@ void ImportWizard::initializePage(int id)
 
 void ImportWizard::populateHostCombo()
 {
-    QComboBox* hostCombo = this->findChild<QComboBox*>("hostCombo");
+    QComboBox* hostCombo = this->ui->hostCombo;
     if (!hostCombo)
         return;
 
@@ -893,7 +364,7 @@ void ImportWizard::populateHostCombo()
 
 void ImportWizard::populateStorageCombo()
 {
-    QComboBox* srCombo = this->findChild<QComboBox*>("storageCombo");
+    QComboBox* srCombo = this->ui->storageCombo;
     if (!srCombo)
         return;
 
@@ -1045,9 +516,9 @@ void ImportWizard::populateNetworkComboBox(QComboBox* combo)
 
 void ImportWizard::populateNetworkCombo()
 {
-    QGroupBox* xvaNetGroup = this->findChild<QGroupBox*>("xvaNetGroup");
-    QGroupBox* ovfMappingGroup = this->findChild<QGroupBox*>("ovfMappingGroup");
-    QWidget* ovfMappingContainer = this->findChild<QWidget*>("ovfMappingContainer");
+    QGroupBox* xvaNetGroup = this->ui->xvaNetGroup;
+    QGroupBox* ovfMappingGroup = this->ui->ovfMappingGroup;
+    QWidget* ovfMappingContainer = this->ui->ovfMappingContainer;
 
     if (this->m_importType == ImportType_OVF && !this->m_ovfNetworkNames.isEmpty())
     {
@@ -1092,7 +563,7 @@ void ImportWizard::populateNetworkCombo()
         if (ovfMappingGroup)
             ovfMappingGroup->setVisible(false);
 
-        QComboBox* networkCombo = this->findChild<QComboBox*>("networkCombo");
+        QComboBox* networkCombo = this->ui->networkCombo;
         this->populateNetworkComboBox(networkCombo);
 
         if (xvaNetGroup)
@@ -1102,7 +573,7 @@ void ImportWizard::populateNetworkCombo()
 
 void ImportWizard::populateFixupIsoCombo()
 {
-    QComboBox* fixupSrCombo = this->findChild<QComboBox*>("fixupSrCombo");
+    QComboBox* fixupSrCombo = this->ui->fixupSrCombo;
     if (!fixupSrCombo)
         return;
 
@@ -1132,8 +603,8 @@ void ImportWizard::populateFixupIsoCombo()
 
 void ImportWizard::updateOvfMetadataDisplay()
 {
-    QGroupBox* group = this->findChild<QGroupBox*>("ovfMetaGroup");
-    QLabel* label = this->findChild<QLabel*>("ovfMetaLabel");
+    QGroupBox* group = this->ui->ovfMetaGroup;
+    QLabel* label = this->ui->ovfMetaLabel;
     if (!group || !label)
         return;
 
@@ -1173,8 +644,8 @@ void ImportWizard::updateOvfMetadataDisplay()
 
 void ImportWizard::updateXvaMetadataDisplay()
 {
-    QGroupBox* group = this->findChild<QGroupBox*>("xvaMetaGroup");
-    QLabel* label = this->findChild<QLabel*>("xvaMetaLabel");
+    QGroupBox* group = this->ui->xvaMetaGroup;
+    QLabel* label = this->ui->xvaMetaLabel;
     if (!group || !label)
         return;
 
@@ -1365,8 +836,8 @@ bool ImportWizard::inspectDiskImage(const QString& filePath)
 
 void ImportWizard::updateDiskImageDisplay()
 {
-    QGroupBox* group = this->findChild<QGroupBox*>("diskMetaGroup");
-    QLabel* label = this->findChild<QLabel*>("diskMetaLabel");
+    QGroupBox* group = this->ui->diskMetaGroup;
+    QLabel* label = this->ui->diskMetaLabel;
     if (!group || !label)
         return;
 
@@ -1391,7 +862,7 @@ bool ImportWizard::validateCurrentPage()
 
     if (currentId == Page_Source)
     {
-        QLineEdit* filePathEdit = this->findChild<QLineEdit*>("filePathEdit");
+        QLineEdit* filePathEdit = this->ui->filePathEdit;
         QString filePath = filePathEdit ? filePathEdit->text().trimmed() : QString();
         if (filePath.isEmpty())
         {
@@ -1456,7 +927,7 @@ bool ImportWizard::validateCurrentPage()
         this->m_sourceFilePath = filePath;
         SettingsManager::instance().SetDefaultImportPath(QFileInfo(filePath).absolutePath());
 
-        QLabel* typeLabel = this->findChild<QLabel*>("typeLabel");
+        QLabel* typeLabel = this->ui->typeLabel;
         if (typeLabel)
             typeLabel->setText(tr("Detected: %1").arg(detectedType));
 
@@ -1555,7 +1026,7 @@ bool ImportWizard::validateCurrentPage()
     }
     else if (currentId == Page_VmConfig)
     {
-        QLineEdit* nameEdit = this->findChild<QLineEdit*>("vmNameEdit");
+        QLineEdit* nameEdit = this->ui->vmNameEdit;
         if (!nameEdit || nameEdit->text().trimmed().isEmpty())
         {
             QMessageBox::warning(this, tr("Invalid Input"),
@@ -1567,7 +1038,7 @@ bool ImportWizard::validateCurrentPage()
     {
         // The user must explicitly accept all EULAs to continue.
         // Matches C# ImportEulaPage.EnableNext() gated on m_checkBoxAccept.
-        QCheckBox* acceptCheck = this->findChild<QCheckBox*>("eulaAcceptCheck");
+        QCheckBox* acceptCheck = this->ui->eulaAcceptCheck;
         if (!acceptCheck || !acceptCheck->isChecked())
         {
             QMessageBox::warning(this, tr("License Agreement Required"),
@@ -1577,7 +1048,7 @@ bool ImportWizard::validateCurrentPage()
     }
     else if (currentId == Page_Storage)
     {
-        QComboBox* srCombo = this->findChild<QComboBox*>("storageCombo");
+        QComboBox* srCombo = this->ui->storageCombo;
         const QString srRef = srCombo ? srCombo->currentData().toString() : QString();
         if (srRef.isEmpty())
         {
@@ -1697,11 +1168,11 @@ bool ImportWizard::validateCurrentPage()
 void ImportWizard::accept()
 {
     // Collect all configuration choices into result members before closing
-    QLineEdit* filePathEdit = this->findChild<QLineEdit*>("filePathEdit");
+    QLineEdit* filePathEdit = this->ui->filePathEdit;
     if (filePathEdit)
         this->m_sourceFilePath = filePathEdit->text();
 
-    QComboBox* hostCombo = this->findChild<QComboBox*>("hostCombo");
+    QComboBox* hostCombo = this->ui->hostCombo;
     if (hostCombo && !this->m_selectedHost)
     {
         // Fallback: wizard was accepted without going through Page_Storage/Network
@@ -1712,17 +1183,17 @@ void ImportWizard::accept()
     }
 
     // VHD/VMDK VM config
-    QLineEdit* vmNameEdit = this->findChild<QLineEdit*>("vmNameEdit");
+    QLineEdit* vmNameEdit = this->ui->vmNameEdit;
     if (vmNameEdit)
         this->m_vmName = vmNameEdit->text().trimmed();
-    QSpinBox* vcpuSpin = this->findChild<QSpinBox*>("vcpuSpin");
+    QSpinBox* vcpuSpin = this->ui->vcpuSpin;
     if (vcpuSpin)
         this->m_vcpuCount = vcpuSpin->value();
-    QSpinBox* memorySpin = this->findChild<QSpinBox*>("memorySpin");
+    QSpinBox* memorySpin = this->ui->memorySpin;
     if (memorySpin)
         this->m_memoryMb = memorySpin->value();
 
-    QComboBox* networkCombo = this->findChild<QComboBox*>("networkCombo");
+    QComboBox* networkCombo = this->ui->networkCombo;
     if (networkCombo)
     {
         this->m_selectedNetwork = this->m_connection
@@ -1734,7 +1205,7 @@ void ImportWizard::accept()
     this->m_ovfNetworkMappings.clear();
     for (int i = 0; i < this->m_ovfNetworkNames.size(); i++)
     {
-        QComboBox* combo = this->findChild<QComboBox*>("ovfNetCombo_" + QString::number(i));
+        QComboBox* combo = this->ui->ovfMappingContainer->findChild<QComboBox*>("ovfNetCombo_" + QString::number(i));
         if (combo)
             this->m_ovfNetworkMappings[this->m_ovfNetworkNames.at(i)] = combo->currentData().toString();
     }
@@ -1744,18 +1215,18 @@ void ImportWizard::accept()
     this->m_verifyManifest = true;
     if (this->m_importType == ImportType_OVF && (this->m_ovfHasManifest || this->m_ovfHasSignature))
     {
-        QCheckBox* securityVerify = this->findChild<QCheckBox*>("securityVerifyCheck");
+        QCheckBox* securityVerify = this->ui->securityVerifyCheck;
         if (securityVerify)
             this->m_verifyManifest = securityVerify->isChecked();
     }
 
-    QCheckBox* runFixupsBox = this->findChild<QCheckBox*>("runFixups");
+    QCheckBox* runFixupsBox = this->ui->runFixups;
     this->m_runFixups = runFixupsBox ? runFixupsBox->isChecked() : false;
 
-    QComboBox* fixupSrCombo = this->findChild<QComboBox*>("fixupSrCombo");
+    QComboBox* fixupSrCombo = this->ui->fixupSrCombo;
     this->m_fixupIsoSrRef = (fixupSrCombo && this->m_runFixups) ? fixupSrCombo->currentData().toString() : QString();
 
-    QCheckBox* startAfter = this->findChild<QCheckBox*>("startAfterImport");
+    QCheckBox* startAfter = this->ui->startAfterImport;
     this->m_startVMsAutomatically = startAfter ? startAfter->isChecked() : false;
 
     // Boot options (VHD/VMDK only — collected from Page_BootOptions)
@@ -1763,14 +1234,14 @@ void ImportWizard::accept()
     this->m_assignVtpm = false;
     if (this->m_importType == ImportType_VHD)
     {
-        QRadioButton* uefiSecureRadio = this->findChild<QRadioButton*>("bootUefiSecureRadio");
-        QRadioButton* uefiRadio       = this->findChild<QRadioButton*>("bootUefiRadio");
+        QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
+        QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
         if (uefiSecureRadio && uefiSecureRadio->isChecked())
             this->m_bootMode = BootMode_UefiSecure;
         else if (uefiRadio && uefiRadio->isChecked())
             this->m_bootMode = BootMode_Uefi;
 
-        QCheckBox* vtpmCheck = this->findChild<QCheckBox*>("vtpmCheck");
+        QCheckBox* vtpmCheck = this->ui->vtpmCheck;
         this->m_assignVtpm = vtpmCheck ? vtpmCheck->isChecked() : false;
     }
 
@@ -1936,12 +1407,12 @@ void ImportWizard::onRescanStorageClicked()
     if (!this->m_connection)
         return;
 
-    QComboBox* srCombo = this->findChild<QComboBox*>("storageCombo");
+    QComboBox* srCombo = this->ui->storageCombo;
     const QString srRef = srCombo ? srCombo->currentData().toString() : QString();
     if (srRef.isEmpty())
         return;
 
-    QPushButton* rescanButton = this->findChild<QPushButton*>("storageRescanButton");
+    QPushButton* rescanButton = this->ui->storageRescanButton;
     if (rescanButton)
         rescanButton->setEnabled(false);
 
@@ -1974,7 +1445,7 @@ void ImportWizard::onBrowseClicked()
 
     if (!filePath.isEmpty())
     {
-        QLineEdit* filePathEdit = this->findChild<QLineEdit*>("filePathEdit");
+        QLineEdit* filePathEdit = this->ui->filePathEdit;
         if (filePathEdit)
             filePathEdit->setText(filePath);
 

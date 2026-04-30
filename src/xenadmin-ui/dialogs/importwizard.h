@@ -29,20 +29,10 @@
 #define IMPORTWIZARD_H
 
 #include <QWizard>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QRadioButton>
-#include <QLineEdit>
-#include <QFileDialog>
 #include <QComboBox>
-#include <QTextEdit>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QGroupBox>
-#include <QProgressBar>
 #include <QSharedPointer>
+
+namespace Ui { class ImportWizard; }
 
 class QWizardPage;
 class XenConnection;
@@ -92,6 +82,7 @@ class ImportWizard : public QWizard
         explicit ImportWizard(QWidget* parent = nullptr);
         explicit ImportWizard(XenConnection* connection, QWidget* parent = nullptr);
         explicit ImportWizard(XenConnection* connection, const QString& initialFilePath, QWidget* parent = nullptr);
+        ~ImportWizard();
 
         // Result accessors — valid after exec() returns Accepted
         QString GetSourceFilePath() const { return this->m_sourceFilePath; }
@@ -120,6 +111,7 @@ class ImportWizard : public QWizard
     protected:
         void initializePage(int id) override;
         bool validateCurrentPage() override;
+        int nextId() const override;
         void accept() override;
         void reject() override;
 
@@ -135,18 +127,6 @@ class ImportWizard : public QWizard
         void populateNetworkCombo();
         void populateFixupIsoCombo();
         QString detectImportType(const QString& filePath);
-
-        // Helper functions for creating pages
-        QWizardPage* createSourcePage();
-        QWizardPage* createVmConfigPage();
-        QWizardPage* createHostPage();
-        QWizardPage* createStoragePage();
-        QWizardPage* createNetworkPage();
-        QWizardPage* createOptionsPage();
-        QWizardPage* createFinishPage();
-        QWizardPage* createEulaPage();
-        QWizardPage* createSecurityPage();
-        QWizardPage* createBootOptionsPage();
 
         void updateOvfMetadataDisplay();
         bool inspectXvaTar(const QString& filePath);
@@ -202,6 +182,8 @@ class ImportWizard : public QWizard
         // Matches C# StoragePickerPage.ImportXvaAction lifecycle.
         ImportVmAction*        m_xvaAction;
         QSharedPointer<VM>     m_xvaImportedVm;
+
+        Ui::ImportWizard* ui;
 };
 
 #endif // IMPORTWIZARD_H
