@@ -37,13 +37,17 @@
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vif.h"
 #include "xenlib/utils/decompressgzaction.h"
 #include "xenlib/xen/actions/sr/srrefreshaction.h"
 #include "xenlib/xen/actions/vm/importvmaction.h"
+#include "xenlib/xen/failure.h"
 #include "dialogs/actionprogressdialog.h"
 #include <QDebug>
 #include <QtWidgets>
 #include <QDomDocument>
+#include <QRandomGenerator>
+#include <QRegularExpression>
 
 ImportWizard::ImportWizard(QWidget* parent)
     : ImportWizard(nullptr, parent)
@@ -514,42 +518,95 @@ void ImportWizard::populateNetworkComboBox(QComboBox* combo)
     }
 }
 
+// ─── MAC helpers ─────────────────────────────────────────────────────────────
+
+bool ImportWizard::isValidMac(const QString& mac)
+{
+    if (mac.isEmpty())
+        return true;    // empty = auto-generate, always valid
+    static const QRegularExpression re("^([0-9A-Fa-f]{2}[:\\-]){5}[0-9A-Fa-f]{2}$");
+    return re.match(mac).hasMatch();
+}
+
+QString ImportWizard::generateMac()
+{
+    // Locally-administered, unicast prefix: 02:xx:xx:xx:xx:xx
+    QRandomGenerator* rng = QRandomGenerator::global();
+    return QString("02:%1:%2:%3:%4:%5")
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'));
+}
+
 void ImportWizard::populateNetworkCombo()
 {
     QGroupBox* xvaNetGroup = this->ui->xvaNetGroup;
     QGroupBox* ovfMappingGroup = this->ui->ovfMappingGroup;
     QWidget* ovfMappingContainer = this->ui->ovfMappingContainer;
 
+    // ── Helper: rebuild the ovfMappingContainer layout ────────────────────────
+    auto clearMappingContainer = [](QWidget* container)
+    {
+        QLayout* old = container->layout();
+        if (old)
+        {
+            QLayoutItem* item = nullptr;
+            while ((item = old->takeAt(0)) != nullptr)
+            {
+                if (item->widget())
+                    item->widget()->deleteLater();
+                delete item;
+            }
+            delete old;
+        }
+    };
+
     if (this->m_importType == ImportType_OVF && !this->m_ovfNetworkNames.isEmpty())
     {
-        // OVF path: show per-network mapping rows, hide the single combo group
+        // OVF path: show per-network mapping rows with network combo + MAC field + Generate button
         if (xvaNetGroup)
             xvaNetGroup->setVisible(false);
 
         if (ovfMappingContainer)
         {
-            // Delete any old layout + child widgets
-            QLayout* oldLayout = ovfMappingContainer->layout();
-            if (oldLayout)
-            {
-                QLayoutItem* item = nullptr;
-                while ((item = oldLayout->takeAt(0)) != nullptr)
-                {
-                    if (item->widget())
-                        item->widget()->deleteLater();
-                    delete item;
-                }
-                delete oldLayout;
-            }
+            clearMappingContainer(ovfMappingContainer);
 
-            // Build a new form layout with one row per OVF network name
             QFormLayout* form = new QFormLayout;
             for (int i = 0; i < this->m_ovfNetworkNames.size(); i++)
             {
+                // Network combo
                 QComboBox* combo = new QComboBox;
                 combo->setObjectName("ovfNetCombo_" + QString::number(i));
                 this->populateNetworkComboBox(combo);
-                form->addRow(this->m_ovfNetworkNames.at(i), combo);
+
+                // MAC address field
+                QLineEdit* macEdit = new QLineEdit;
+                macEdit->setObjectName("ovfMacEdit_" + QString::number(i));
+                macEdit->setPlaceholderText(tr("Leave empty to auto-generate"));
+                macEdit->setMaximumWidth(145);
+                macEdit->setInputMask("HH:HH:HH:HH:HH:HH;_");
+
+                // Generate button
+                QPushButton* genBtn = new QPushButton(tr("Generate"));
+                genBtn->setObjectName("ovfMacGenBtn_" + QString::number(i));
+                genBtn->setFixedWidth(80);
+                connect(genBtn, &QPushButton::clicked, macEdit, [macEdit]()
+                {
+                    macEdit->setText(ImportWizard::generateMac());
+                });
+
+                // Row widget: [combo] [MAC edit] [Generate]
+                QHBoxLayout* rowLayout = new QHBoxLayout;
+                rowLayout->setContentsMargins(0, 0, 0, 0);
+                rowLayout->addWidget(combo, 1);
+                rowLayout->addWidget(macEdit);
+                rowLayout->addWidget(genBtn);
+                QWidget* rowWidget = new QWidget;
+                rowWidget->setLayout(rowLayout);
+
+                form->addRow(this->m_ovfNetworkNames.at(i), rowWidget);
             }
             ovfMappingContainer->setLayout(form);
         }
@@ -557,9 +614,88 @@ void ImportWizard::populateNetworkCombo()
         if (ovfMappingGroup)
             ovfMappingGroup->setVisible(true);
     }
+    else if (this->m_importType == ImportType_XVA && this->m_xvaImportedVm && this->m_connection)
+    {
+        // XVA path with discovered VM: build one row per VIF using cached VIF objects
+        XenCache* cache = this->m_connection->GetCache();
+        const QString vmRef = this->m_xvaImportedVm->OpaqueRef();
+
+        // Collect VIFs belonging to this VM, sort by device number
+        QList<QSharedPointer<VIF>> vifs;
+        if (cache)
+        {
+            const auto allVifs = cache->GetAll<VIF>();
+            for (const auto& vif : allVifs)
+            {
+                if (vif && vif->IsValid() && vif->GetVMRef() == vmRef)
+                    vifs << vif;
+            }
+            std::sort(vifs.begin(), vifs.end(), [](const QSharedPointer<VIF>& a, const QSharedPointer<VIF>& b)
+            {
+                return a->GetDevice().toInt() < b->GetDevice().toInt();
+            });
+        }
+
+        this->m_xvaVifCount = vifs.size();
+
+        if (!vifs.isEmpty())
+        {
+            // Show per-VIF rows in ovfMappingGroup (repurposed for XVA VIF rows)
+            if (xvaNetGroup)
+                xvaNetGroup->setVisible(false);
+
+            if (ovfMappingContainer)
+            {
+                clearMappingContainer(ovfMappingContainer);
+
+                QFormLayout* form = new QFormLayout;
+                for (int i = 0; i < vifs.size(); i++)
+                {
+                    const auto& vif = vifs.at(i);
+                    const int deviceNum = vif->GetDevice().toInt();
+
+                    QComboBox* combo = new QComboBox;
+                    combo->setObjectName("xvaVifCombo_" + QString::number(deviceNum));
+                    this->populateNetworkComboBox(combo);
+
+                    // Pre-select the VIF's current network if still available
+                    const QString currentNetRef = vif->GetNetworkRef();
+                    if (!currentNetRef.isEmpty())
+                    {
+                        const int idx = combo->findData(currentNetRef);
+                        if (idx >= 0)
+                            combo->setCurrentIndex(idx);
+                    }
+
+                    form->addRow(tr("eth%1 (VIF %1)").arg(deviceNum), combo);
+                }
+                ovfMappingContainer->setLayout(form);
+            }
+
+            if (ovfMappingGroup)
+            {
+                ovfMappingGroup->setTitle(tr("Network Interfaces"));
+                ovfMappingGroup->setVisible(true);
+            }
+        }
+        else
+        {
+            // No VIFs in cache yet — fall back to single combo
+            this->m_xvaVifCount = 0;
+            if (ovfMappingGroup)
+                ovfMappingGroup->setVisible(false);
+
+            QComboBox* networkCombo = this->ui->networkCombo;
+            this->populateNetworkComboBox(networkCombo);
+
+            if (xvaNetGroup)
+                xvaNetGroup->setVisible(true);
+        }
+    }
     else
     {
-        // XVA / VHD / VMDK: use the single networkCombo
+        // XVA (pre-discovery) / VHD / VMDK: use the single networkCombo
+        this->m_xvaVifCount = 0;
         if (ovfMappingGroup)
             ovfMappingGroup->setVisible(false);
 
@@ -1138,6 +1274,46 @@ bool ImportWizard::validateCurrentPage()
                         uploadDlg->accept();
                 }, Qt::QueuedConnection);
 
+            // Surface auto-start failures with a diagnostic dialog.
+            // This signal is emitted after the import completes (non-fatal), so the
+            // wizard is long gone — use nullptr as parent (top-level warning dialog).
+            // Mirrors C# VMOperationCommand::StartDiagnosisForm delegate pattern.
+            connect(this->m_xvaAction, &ImportVmAction::vmStartFailed,
+                this, [](const QString& /*vmRef*/, const QString& errorCode,
+                          const QMap<QString, QString>& hostReasons)
+                {
+                    const QString title = tr("Could Not Start Imported VM");
+                    if (errorCode == QLatin1String(Failure::NO_HOSTS_AVAILABLE) && !hostReasons.isEmpty())
+                    {
+                        // Build per-host reason list (mirrors C# CommandErrorDialog)
+                        QString details;
+                        for (auto it = hostReasons.cbegin(); it != hostReasons.cend(); ++it)
+                        {
+                            const QString reason = it.value().isEmpty()
+                                                   ? tr("Can boot here")
+                                                   : it.value();
+                            details += QString("\n  %1: %2").arg(it.key(), reason);
+                        }
+                        QMessageBox::warning(nullptr, title,
+                            tr("The imported VM could not be started — no host is able to run it.%1")
+                            .arg(details));
+                    }
+                    else if (errorCode == QLatin1String(Failure::HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN))
+                    {
+                        QMessageBox::warning(nullptr, title,
+                            tr("The imported VM could not be started because doing so would "
+                               "violate the configured HA failover plan.\n\n"
+                               "You may be able to start it by reducing the HA failover "
+                               "tolerance in the pool settings."));
+                    }
+                    else
+                    {
+                        QMessageBox::warning(nullptr, title,
+                            tr("The imported VM could not be started automatically. "
+                               "Please start it manually from the VM list."));
+                    }
+                }, Qt::QueuedConnection);
+
             // If the action fails or is cancelled before the VM is found, the upload
             // dialog's own onOperationCompleted() will call switchToErrorState() and
             // the user closes it manually (exec returns Rejected).
@@ -1201,13 +1377,18 @@ void ImportWizard::accept()
             : nullptr;
     }
 
-    // Collect OVF per-network mappings (index-based combos created by populateNetworkCombo)
+    // Collect OVF per-network mappings and MAC addresses (index-based combos created by populateNetworkCombo)
     this->m_ovfNetworkMappings.clear();
+    this->m_ovfMacMappings.clear();
     for (int i = 0; i < this->m_ovfNetworkNames.size(); i++)
     {
         QComboBox* combo = this->ui->ovfMappingContainer->findChild<QComboBox*>("ovfNetCombo_" + QString::number(i));
         if (combo)
             this->m_ovfNetworkMappings[this->m_ovfNetworkNames.at(i)] = combo->currentData().toString();
+
+        QLineEdit* macEdit = this->ui->ovfMappingContainer->findChild<QLineEdit*>("ovfMacEdit_" + QString::number(i));
+        if (macEdit && !macEdit->text().isEmpty())
+            this->m_ovfMacMappings[this->m_ovfNetworkNames.at(i)] = macEdit->text();
     }
 
     // For OVF with manifest/signature the Security page verify checkbox is
@@ -1257,8 +1438,22 @@ void ImportWizard::accept()
     if (this->m_importType == ImportType_XVA && this->m_xvaAction)
     {
         QStringList vifTargetNetworks;
-        if (this->m_selectedNetwork)
+        
+        // If we have per-VIF rows (m_xvaVifCount > 0), collect from each row
+        if (this->m_xvaVifCount > 0)
+        {
+            for (int i = 0; i < this->m_xvaVifCount; i++)
+            {
+                QComboBox* combo = this->ui->ovfMappingContainer->findChild<QComboBox*>("xvaVifCombo_" + QString::number(i));
+                vifTargetNetworks << (combo ? combo->currentData().toString() : QString());
+            }
+        }
+        else if (this->m_selectedNetwork)
+        {
+            // Fallback: single-network mode
             vifTargetNetworks << this->m_selectedNetwork->OpaqueRef();
+        }
+        
         this->m_xvaAction->endWizard(this->m_startVMsAutomatically, vifTargetNetworks);
     }
 

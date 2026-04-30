@@ -45,6 +45,7 @@ struct OvfNetworkMapping
 {
     QString ovfNetworkName;   ///< Network name as declared in the OVF NetworkSection
     QString targetNetworkRef; ///< OpaqueRef of the target XenServer Network
+    QString mac;              ///< Ethernet MAC address to assign (empty = auto-generate)
 };
 
 /**
@@ -132,6 +133,7 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
 
     protected:
         void run() override;
+        void onCancel() override;
 
         // ── XenAPI workflow helpers (also available to ImportImageAction) ────
 
@@ -181,6 +183,18 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
          * @brief Destroy a partially-created VM and any owned VDIs/VBDs.
          */
         void cleanupVm(const QString& vmRef);
+
+        /**
+         * @brief Attach the OS fixup ISO as a CDROM and adjust boot order to boot from it first.
+         *
+         * Searches the fixup ISO SR for a VDI whose name contains "linuxfixup" or "xenserver-linuxfixup".
+         * If found, creates a read-only CD VBD and prepends "d" to the VM's HVM_boot_params["order"].
+         * Logs a warning and returns false (non-fatal) when the ISO cannot be found.
+         *
+         * @param vmRef OpaqueRef of the VM to configure
+         * @return true if the fixup CDROM was attached successfully
+         */
+        bool applyFixups(const QString& vmRef);
 
         /**
          * @brief Throw a CancelledException if cancellation has been requested.

@@ -91,6 +91,7 @@ class ImportWizard : public QWizard
         QSharedPointer<SR> GetSelectedSR() const { return this->m_selectedSR; }
         QSharedPointer<Network> GetSelectedNetwork() const { return this->m_selectedNetwork; }
         QMap<QString, QString> GetOvfNetworkMappings() const { return this->m_ovfNetworkMappings; }
+        QMap<QString, QString> GetOvfMacMappings() const { return this->m_ovfMacMappings; }
         QString GetVmName() const { return this->m_vmName; }
         int GetVcpuCount() const { return this->m_vcpuCount; }
         qint64 GetMemoryMb() const { return this->m_memoryMb; }
@@ -127,6 +128,10 @@ class ImportWizard : public QWizard
         void populateNetworkCombo();
         void populateFixupIsoCombo();
         QString detectImportType(const QString& filePath);
+
+        // MAC address helpers
+        static bool isValidMac(const QString& mac);
+        static QString generateMac();
 
         void updateOvfMetadataDisplay();
         bool inspectXvaTar(const QString& filePath);
@@ -168,6 +173,12 @@ class ImportWizard : public QWizard
 
         // OVF per-network mappings: OVF network name → target XenServer network OpaqueRef
         QMap<QString, QString> m_ovfNetworkMappings;
+
+        // OVF per-network MAC addresses: OVF network name → MAC (empty = auto-generate)
+        QMap<QString, QString> m_ovfMacMappings;
+
+        // Number of XVA VIF rows shown on the network page (0 = single-combo fallback)
+        int m_xvaVifCount;
 
         // VHD/VMDK VM config (collected from Page_VmConfig)
         QString m_vmName;
