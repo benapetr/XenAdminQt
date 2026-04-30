@@ -32,6 +32,7 @@
 #include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_Task.h"
+#include "../../xenapi/xenapi_SR.h"
 #include "../../xenapi/vm_appliance.h"
 #include "../../session.h"
 #include "../../network/connection.h"
@@ -94,6 +95,12 @@ void ImportApplianceAction::checkCancelled() const
 {
     if (this->IsCancelled())
         throw CancelledException();
+}
+
+void ImportApplianceAction::onCancel()
+{
+    // Cancel any in-flight XenAPI task (upload task registered via SetRelatedTaskRef)
+    this->cancelRelatedTask();
 }
 
 // ─── Run ─────────────────────────────────────────────────────────────────────
@@ -412,7 +419,7 @@ void ImportApplianceAction::run()
 
                 try
                 {
-                    this->createVif(vmRef, nm.targetNetworkRef, vifIdx, QString());
+                    this->createVif(vmRef, nm.targetNetworkRef, vifIdx, nm.mac);
                 }
                 catch (const std::exception& e)
                 {
@@ -420,7 +427,17 @@ void ImportApplianceAction::run()
                 }
             }
 
-            // ── 4d: VM is already visible (HideFromXenCenter not set above) ────
+            // ── 4d: OS fixups (optional) ──────────────────────────────────
+            // C# equivalent: OVF.SetRunOnceBootCDROMOSFixup / SetTargetISOSRInRASD
+            // Attach fixup ISO from the selected SR as a CDROM and boot from it first.
+            if (this->m_runFixups)
+            {
+                this->checkCancelled();
+                if (!this->applyFixups(vmRef))
+                    qWarning() << "ImportApplianceAction: fixups requested but could not be applied for VM" << vmRef;
+            }
+
+            // ── 4e: VM is already visible (HideFromXenCenter not set above) ────
 
             this->setPercentCompleteSafe(vmProgressEnd);
         }
@@ -536,6 +553,7 @@ QString ImportApplianceAction::uploadDisk(const QString& srRef,
     const QString taskRef = XenAPI::Task::Create(session,
                                                   "import_raw_vdi_task",
                                                   hostAddr);
+    this->SetRelatedTaskRef(taskRef);
 
     // Build HTTP PUT query parameters matching /import_raw_vdi endpoint
     QMap<QString, QString> queryParams;
@@ -566,6 +584,7 @@ QString ImportApplianceAction::uploadDisk(const QString& srRef,
     );
 
     this->pollToCompletion(taskRef, progressStart, progressEnd, false);
+    this->SetRelatedTaskRef(QString()); // clear after upload completes
 
     if (!uploadOk)
     {
@@ -632,6 +651,119 @@ void ImportApplianceAction::createVif(const QString& vmRef,
 
     const QString vifRef = XenAPI::VIF::create(session, vifRecord);
     qDebug() << "ImportApplianceAction: created VIF" << vifRef;
+}
+
+// ─── applyFixups ─────────────────────────────────────────────────────────────
+
+bool ImportApplianceAction::applyFixups(const QString& vmRef)
+{
+    if (this->m_fixupIsoSrRef.isEmpty())
+    {
+        qWarning() << "ImportApplianceAction::applyFixups: no fixup ISO SR specified";
+        return false;
+    }
+
+    XenAPI::Session* session = this->GetSession();
+
+    // ── Step 1: Find the fixup ISO VDI on the selected SR ─────────────────
+    // The SR record contains a list of VDI OpaqueRefs. We scan those to find
+    // one whose name_label contains the canonical fixup ISO name fragment.
+    QVariantList vdiRefs;
+    try
+    {
+        QVariantMap srRecord = XenAPI::SR::get_record(session, this->m_fixupIsoSrRef);
+        QVariant vdiField = srRecord.value("VDIs");
+        if (vdiField.canConvert<QVariantList>())
+            vdiRefs = vdiField.toList();
+    }
+    catch (const std::exception& e)
+    {
+        qWarning() << "ImportApplianceAction::applyFixups: failed to read SR record:" << e.what();
+        return false;
+    }
+
+    QString fixupVdiRef;
+    for (const QVariant& v : vdiRefs)
+    {
+        const QString ref = v.toString();
+        if (ref.isEmpty())
+            continue;
+        try
+        {
+            const QString name = XenAPI::VDI::get_name_label(session, ref);
+            // Match C# constant FIXUP_ISO = "External Tools\\xenserver-linuxfixup-disk.iso"
+            if (name.contains("linuxfixup", Qt::CaseInsensitive) ||
+                name.contains("xenserver-linuxfixup", Qt::CaseInsensitive))
+            {
+                fixupVdiRef = ref;
+                break;
+            }
+        }
+        catch (const std::exception&)
+        {
+            // VDI may have been deleted between list and get — skip it
+        }
+    }
+
+    if (fixupVdiRef.isEmpty())
+    {
+        qWarning() << "ImportApplianceAction::applyFixups: fixup ISO not found on SR"
+                   << this->m_fixupIsoSrRef
+                   << "— ensure 'xenserver-linuxfixup-disk.iso' is uploaded to that SR";
+        return false;
+    }
+
+    // ── Step 2: Attach it as a read-only CDROM ────────────────────────────
+    // Get the next free device slot from the VM
+    QVariant allowedDevices = XenAPI::VM::get_allowed_VBD_devices(session, vmRef);
+    QString cdDevice = "3";   // Safe fallback if API call fails
+    if (allowedDevices.canConvert<QVariantList>())
+    {
+        const QVariantList devices = allowedDevices.toList();
+        if (!devices.isEmpty())
+            cdDevice = devices.first().toString();
+    }
+
+    try
+    {
+        QVariantMap vbdRecord;
+        vbdRecord["VM"]           = vmRef;
+        vbdRecord["VDI"]          = fixupVdiRef;
+        vbdRecord["userdevice"]   = cdDevice;
+        vbdRecord["bootable"]     = false;
+        vbdRecord["mode"]         = QString("RO");
+        vbdRecord["type"]         = QString("CD");
+        vbdRecord["empty"]        = false;
+        vbdRecord["other_config"] = QVariantMap();
+
+        XenAPI::VBD::create(session, vbdRecord);
+        qDebug() << "ImportApplianceAction::applyFixups: attached fixup ISO VDI" << fixupVdiRef;
+    }
+    catch (const std::exception& e)
+    {
+        qWarning() << "ImportApplianceAction::applyFixups: VBD create failed:" << e.what();
+        return false;
+    }
+
+    // ── Step 3: Prepend "d" (DVD/CD) to the HVM boot order ───────────────
+    // C# equivalent: OVF.SetRunOnceBootCDROM sets HVM_boot_params["order"] = "d" + old_order
+    try
+    {
+        QVariantMap bootParams = XenAPI::VM::get_HVM_boot_params(session, vmRef);
+        const QString oldOrder = bootParams.value("order", "dc").toString();
+        // Only prepend if "d" is not already first
+        const QString newOrder = oldOrder.startsWith('d') ? oldOrder : ("d" + oldOrder);
+        bootParams["order"] = newOrder;
+        XenAPI::VM::set_HVM_boot_params(session, vmRef, bootParams);
+        qDebug() << "ImportApplianceAction::applyFixups: boot order set to" << newOrder;
+    }
+    catch (const std::exception& e)
+    {
+        qWarning() << "ImportApplianceAction::applyFixups: failed to update boot order:" << e.what();
+        // Non-fatal — the CDROM is attached; the user can fix boot order manually
+    }
+
+    return true;
 }
 
 // ─── cleanupVm ───────────────────────────────────────────────────────────────

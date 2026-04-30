@@ -126,6 +126,7 @@ void ImportVMCommand::showImportWizard()
 
         // Per-network mappings from the network page (one combo per OVF network name)
         const QMap<QString, QString> ovfNetMappings = wizard.GetOvfNetworkMappings();
+        const QMap<QString, QString> ovfMacMappings = wizard.GetOvfMacMappings();
 
         QList<OvfVmMapping> vmMappings;
         const QStringList vsNames = wizard.GetOvfVirtualSystemNames();
@@ -154,6 +155,7 @@ void ImportVMCommand::showImportWizard()
                     OvfNetworkMapping nm;
                     nm.ovfNetworkName   = netName;
                     nm.targetNetworkRef = targetRef;
+                    nm.mac              = ovfMacMappings.value(netName);  // empty = auto-generate
                     mapping.networkMappings << nm;
                 }
             }
@@ -163,6 +165,7 @@ void ImportVMCommand::showImportWizard()
                 OvfNetworkMapping nm;
                 nm.ovfNetworkName   = "Network";
                 nm.targetNetworkRef = networkRef;
+                nm.mac              = QString();  // auto-generate for default VIF
                 mapping.networkMappings << nm;
             }
 
@@ -217,6 +220,8 @@ void ImportVMCommand::showImportWizard()
             static_cast<ImportImageAction::BootMode>(wizard.GetBootMode()),
             wizard.GetAssignVtpm(),
             wizard.GetStartAutomatically(),
+            wizard.GetRunFixups(),
+            wizard.GetFixupIsoSrRef(),
             MainWindow::instance());
 
         ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());

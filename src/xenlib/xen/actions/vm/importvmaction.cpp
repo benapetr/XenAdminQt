@@ -34,6 +34,7 @@
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Task.h"
 #include "../../../xencache.h"
+#include "../../failure.h"
 #include "../../sr.h"
 #include "../../host.h"
 #include "../../pool.h"
@@ -595,9 +596,45 @@ void ImportVmAction::run()
                 this->pollToCompletion(startTaskRef);
                 this->SetDescription(tr("VM started"));
             }
+            catch (const Failure& f)
+            {
+                // Collect per-host boot reasons for NO_HOSTS_AVAILABLE
+                // (mirrors C# VMOperationCommand::StartDiagnosisForm)
+                QMap<QString, QString> hostReasons;
+                if (f.errorCode() == QLatin1String(Failure::NO_HOSTS_AVAILABLE))
+                {
+                    auto* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+                    if (cache)
+                    {
+                        for (const auto& obj : cache->GetAll(XenObjectType::Host))
+                        {
+                            if (auto host = qSharedPointerDynamicCast<Host>(obj))
+                            {
+                                try
+                                {
+                                    XenAPI::VM::assert_can_boot_here(this->GetSession(),
+                                                                     this->vmRef_,
+                                                                     host->OpaqueRef());
+                                }
+                                catch (const Failure& hf)
+                                {
+                                    hostReasons[host->GetName()] = hf.message();
+                                }
+                                catch (const std::exception& he)
+                                {
+                                    hostReasons[host->GetName()] = QString::fromUtf8(he.what());
+                                }
+                            }
+                        }
+                    }
+                }
+                emit this->vmStartFailed(this->vmRef_, f.errorCode(), hostReasons);
+                qWarning() << "ImportVmAction: Failed to auto-start VM:" << f.message();
+            }
             catch (const std::exception& e)
             {
                 // Non-fatal: report but don't fail the whole import
+                emit this->vmStartFailed(this->vmRef_, QString(), {});
                 qWarning() << "ImportVmAction: Failed to auto-start VM:" << e.what();
             }
         }

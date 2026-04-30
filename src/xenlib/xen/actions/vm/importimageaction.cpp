@@ -47,14 +47,16 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
                                      BootMode bootMode,
                                      bool assignVtpm,
                                      bool startAutomatically,
+                                     bool runFixups,
+                                     const QString& fixupIsoSrRef,
                                      QObject* parent)
     : ImportApplianceAction(connection,
                             filePath,       // m_ovfFilePath (used for VDI description strings)
                             {},             // vmMappings (unused — run() does its own logic)
                             false,          // verifyManifest
                             false,          // verifySignature
-                            false,          // runFixups
-                            {},             // fixupIsoSrRef
+                            runFixups,      // passed through so applyFixups() can use m_runFixups
+                            fixupIsoSrRef,  // passed through so applyFixups() can use m_fixupIsoSrRef
                             false,          // startAutomatically (handled locally)
                             parent)
     , m_vmName(vmName)
@@ -67,6 +69,7 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
     , m_bootMode(bootMode)
     , m_assignVtpm(assignVtpm)
     , m_startAutomatically(startAutomatically)
+    , m_runFixups(runFixups)
 {
     this->setDescriptionSafe(QString("Importing disk image '%1'...").arg(vmName));
 }
@@ -222,9 +225,20 @@ void ImportImageAction::run()
             }
         }
 
+        // ── Step 5: OS fixups (optional) ─────────────────────────────────
+        // C# equivalent: ImportImageAction.RunCore() calls
+        //   OVF.SetRunOnceBootCDROMOSFixup / SetTargetISOSRInRASD before Process()
+        if (this->m_runFixups)
+        {
+            this->checkCancelled();
+            this->setDescriptionSafe("Applying OS fixups...");
+            if (!this->applyFixups(vmRef))
+                qWarning() << "ImportImageAction: fixups requested but could not be applied";
+        }
+
         this->setPercentCompleteSafe(90);
 
-        // ── Step 5: Auto-start ────────────────────────────────────────────
+        // ── Step 6: Auto-start ────────────────────────────────────────────
         if (this->m_startAutomatically)
         {
             this->setDescriptionSafe(QString("Starting VM '%1'...").arg(this->m_vmName));

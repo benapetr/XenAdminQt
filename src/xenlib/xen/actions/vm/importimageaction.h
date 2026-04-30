@@ -92,6 +92,8 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
                                    BootMode bootMode,
                                    bool assignVtpm,
                                    bool startAutomatically,
+                                   bool runFixups,
+                                   const QString& fixupIsoSrRef,
                                    QObject* parent = nullptr);
         ~ImportImageAction() override = default;
 
@@ -113,6 +115,7 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
         bool    m_assignVtpm;
         bool    m_startAutomatically;
         QString m_imageVmRef;
+        bool    m_runFixups;
 };
 
 #endif // IMPORTIMAGEACTION_H
