@@ -14,14 +14,22 @@ permissions:
   contents: write
 
 jobs:
-  package-riscv64-deb:
-    name: riscv64 / Debian package
-    runs-on: ubuntu-24.04-riscv
+  package-deb:
+    name: ${{ matrix.arch }} / Debian package
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: riscv64
+            runner: ubuntu-24.04-riscv
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
 
       - name: Fix dpkg database (RISE runner workaround)
+        if: matrix.arch == 'riscv64'
         run: |
           if [ ! -d /var/lib/dpkg ]; then
             sudo mkdir -p /var/lib/dpkg/info \
