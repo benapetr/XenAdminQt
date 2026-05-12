@@ -222,8 +222,10 @@ mkdir -p "$OUTPUT_DIR"
 DEB_FILES=()
 collect_debs() {
     local base_dir="$1"
+    local native_arch
+    native_arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
     local arch
-    for arch in amd64 all; do
+    for arch in "$native_arch" all; do
         [ -f "$base_dir/${APP_NAME}_${DEB_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}_${DEB_VERSION}_${arch}.deb")
         [ -f "$base_dir/${APP_NAME}-dbgsym_${DEB_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}-dbgsym_${DEB_VERSION}_${arch}.deb")
     done
