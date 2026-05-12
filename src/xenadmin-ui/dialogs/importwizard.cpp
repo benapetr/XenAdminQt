@@ -46,6 +46,7 @@
 #include <QDebug>
 #include <QtWidgets>
 #include <QDomDocument>
+#include <QHeaderView>
 #include <QRandomGenerator>
 #include <QRegularExpression>
 
@@ -66,11 +67,13 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_verifyManifest(true)
     , m_startVMsAutomatically(false)
     , m_runFixups(false)
+    , m_ovfOnlyMode(false)
     , m_ovfHasManifest(false)
     , m_ovfHasSignature(false)
     , m_ovfAllowsNetworkSriov(true)
     , m_xvaTotalDiskSizeBytes(0)
     , m_diskImageCapacityBytes(0)
+    , m_xvaVifCount(0)
     , m_vcpuCount(1)
     , m_memoryMb(512)
     , m_bootMode(BootMode_Bios)
@@ -157,7 +160,17 @@ int ImportWizard::nextId() const
 
 void ImportWizard::initializePage(int id)
 {
-    if (id == Page_Host)
+    if (id == Page_Source)
+    {
+        if (this->m_ovfOnlyMode)
+            this->ui->pageSource->setSubTitle(tr(
+                "Select an OVF or OVA appliance file to import. "
+                "Only OVF/OVA packages are supported in this mode."));
+        else
+            this->ui->pageSource->setSubTitle(tr(
+                "Select the virtual machine or appliance file you want to import."));
+    }
+    else if (id == Page_Host)
         this->populateHostCombo();
     else if (id == Page_VmConfig)
     {
@@ -167,6 +180,33 @@ void ImportWizard::initializePage(int id)
         {
             const QString baseName = QFileInfo(this->m_sourceFilePath).completeBaseName();
             nameEdit->setText(baseName);
+        }
+
+        QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+        if (additionalDiskSpaceSpin)
+        {
+            // Keep value when navigating back/forward; only initialize once.
+            if (!additionalDiskSpaceSpin->property("initialized").toBool())
+            {
+                additionalDiskSpaceSpin->setValue(0);
+                additionalDiskSpaceSpin->setProperty("initialized", true);
+            }
+
+            // Show the currently detected base disk capacity as a hint.
+            if (this->m_diskImageCapacityBytes > 0)
+            {
+                constexpr qint64 GiB = 1024LL * 1024LL * 1024LL;
+                const qint64 baseGb = (this->m_diskImageCapacityBytes + GiB - 1) / GiB;
+                additionalDiskSpaceSpin->setToolTip(
+                    tr("Detected disk image capacity is approximately %1 GB. "
+                       "Additional space is added on top of this value.")
+                        .arg(baseGb));
+            }
+            else
+            {
+                additionalDiskSpaceSpin->setToolTip(
+                    tr("Additional space is added on top of the detected disk image capacity."));
+            }
         }
     }
     else if (id == Page_Storage)
@@ -180,6 +220,7 @@ void ImportWizard::initializePage(int id)
                 : nullptr;
         }
         this->populateStorageCombo();
+        this->populateDiskSrTable();
     }
     else if (id == Page_Network)
     {
@@ -428,6 +469,107 @@ void ImportWizard::populateStorageCombo()
         srCombo->addItem(tr("(no suitable storage repositories found)"), QString());
 }
 
+void ImportWizard::fillSrCombo(QComboBox* combo)
+{
+    if (!combo)
+        return;
+
+    combo->clear();
+
+    if (!this->m_connection)
+    {
+        combo->addItem(tr("(no connection)"), QString());
+        return;
+    }
+
+    // Mirror populateStorageCombo() filtering logic
+    XenCache* cache = this->m_connection->GetCache();
+    const bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
+    const QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (!sr || !sr->IsValid())
+            continue;
+        if (sr->IsToolsSR() || sr->IsISOLibrary())
+            continue;
+        if (!sr->AllowedOperations().contains("vdi_create"))
+            continue;
+        if (!hasHostAffinity && !sr->IsShared())
+            continue;
+        if (hasHostAffinity)
+        {
+            const QString hostRef = this->m_selectedHost->OpaqueRef();
+            bool attachedToHost = false;
+            const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+            for (const QSharedPointer<PBD>& pbd : pbds)
+            {
+                if (pbd && pbd->IsValid() && pbd->GetHostRef() == hostRef && pbd->IsCurrentlyAttached())
+                {
+                    attachedToHost = true;
+                    break;
+                }
+            }
+            if (!attachedToHost)
+                continue;
+        }
+        combo->addItem(sr->GetName(), sr->OpaqueRef());
+    }
+
+    if (combo->count() == 0)
+        combo->addItem(tr("(no suitable storage repositories found)"), QString());
+}
+
+void ImportWizard::populateDiskSrTable()
+{
+    QTableWidget* table  = this->ui->diskSrTable;
+    QLabel*       label  = this->ui->diskSrLabel;
+    if (!table || !label)
+        return;
+
+    // Only show for OVF imports with known disk hrefs
+    if (this->m_importType != ImportType_OVF || this->m_ovfDiskHrefs.isEmpty())
+    {
+        table->setVisible(false);
+        label->setVisible(false);
+        return;
+    }
+
+    label->setVisible(true);
+    table->setVisible(true);
+    table->setRowCount(0);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+
+    // Snapshot the default SR so each per-disk combo can default to it
+    const QString defaultSrRef = this->ui->storageCombo
+        ? this->ui->storageCombo->currentData().toString()
+        : QString();
+
+    for (const QString& href : this->m_ovfDiskHrefs)
+    {
+        const int row = table->rowCount();
+        table->insertRow(row);
+
+        // Column 0: disk file name (display only)
+        QTableWidgetItem* nameItem = new QTableWidgetItem(QFileInfo(href).fileName());
+        nameItem->setFlags(Qt::ItemIsEnabled);
+        nameItem->setData(Qt::UserRole, href);   // store full href for lookup
+        table->setItem(row, 0, nameItem);
+
+        // Column 1: SR combo with same entries as storageCombo
+        QComboBox* srCombo = new QComboBox(table);
+        this->fillSrCombo(srCombo);
+
+        // Select the default SR when present
+        const int defaultIdx = srCombo->findData(defaultSrRef);
+        if (defaultIdx >= 0)
+            srCombo->setCurrentIndex(defaultIdx);
+
+        table->setCellWidget(row, 1, srCombo);
+    }
+}
+
 void ImportWizard::populateNetworkComboBox(QComboBox* combo)
 {
     if (!combo)
@@ -648,28 +790,95 @@ void ImportWizard::populateNetworkCombo()
             {
                 clearMappingContainer(ovfMappingContainer);
 
+                QVBoxLayout* containerLayout = new QVBoxLayout;
+                containerLayout->setContentsMargins(0, 0, 0, 0);
+
+                QHBoxLayout* controlsLayout = new QHBoxLayout;
+                controlsLayout->addStretch();
+                QPushButton* addVifButton = new QPushButton(tr("+ Add VIF"));
+                addVifButton->setObjectName("xvaAddVifButton");
+                controlsLayout->addWidget(addVifButton);
+                containerLayout->addLayout(controlsLayout);
+
                 QFormLayout* form = new QFormLayout;
-                for (int i = 0; i < vifs.size(); i++)
+                containerLayout->addLayout(form);
+
+                auto refreshXvaRows = [this, form]()
                 {
-                    const auto& vif = vifs.at(i);
-                    const int deviceNum = vif->GetDevice().toInt();
+                    const int rowCount = form->rowCount();
+                    this->m_xvaVifCount = rowCount;
+
+                    for (int row = 0; row < rowCount; ++row)
+                    {
+                        QLayoutItem* labelItem = form->itemAt(row, QFormLayout::LabelRole);
+                        QLabel* rowLabel = qobject_cast<QLabel*>(labelItem ? labelItem->widget() : nullptr);
+                        if (rowLabel)
+                            rowLabel->setText(tr("eth%1 (VIF %1)").arg(row));
+
+                        QLayoutItem* fieldItem = form->itemAt(row, QFormLayout::FieldRole);
+                        QWidget* rowWidget = fieldItem ? fieldItem->widget() : nullptr;
+                        if (!rowWidget)
+                            continue;
+
+                        QComboBox* combo = rowWidget->findChild<QComboBox*>();
+                        if (combo)
+                        {
+                            combo->setObjectName("xvaVifCombo_" + QString::number(row));
+                            combo->setProperty("xvaVifIndex", row);
+                        }
+                    }
+                };
+
+                auto addXvaRow = [this, form, refreshXvaRows](const QString& preselectNetRef)
+                {
+                    QWidget* rowWidget = new QWidget;
+                    QHBoxLayout* rowLayout = new QHBoxLayout;
+                    rowLayout->setContentsMargins(0, 0, 0, 0);
 
                     QComboBox* combo = new QComboBox;
-                    combo->setObjectName("xvaVifCombo_" + QString::number(deviceNum));
                     this->populateNetworkComboBox(combo);
-
-                    // Pre-select the VIF's current network if still available
-                    const QString currentNetRef = vif->GetNetworkRef();
-                    if (!currentNetRef.isEmpty())
+                    if (!preselectNetRef.isEmpty())
                     {
-                        const int idx = combo->findData(currentNetRef);
+                        const int idx = combo->findData(preselectNetRef);
                         if (idx >= 0)
                             combo->setCurrentIndex(idx);
                     }
 
-                    form->addRow(tr("eth%1 (VIF %1)").arg(deviceNum), combo);
-                }
-                ovfMappingContainer->setLayout(form);
+                    QPushButton* removeButton = new QPushButton(tr("-") );
+                    removeButton->setObjectName("xvaRemoveVifButton");
+                    removeButton->setToolTip(tr("Remove this VIF mapping"));
+                    removeButton->setFixedWidth(28);
+
+                    rowLayout->addWidget(combo, 1);
+                    rowLayout->addWidget(removeButton);
+                    rowWidget->setLayout(rowLayout);
+
+                    form->addRow(QString(), rowWidget);
+
+                    connect(removeButton, &QPushButton::clicked, rowWidget,
+                        [form, rowWidget, refreshXvaRows]()
+                        {
+                            if (form->rowCount() <= 1)
+                                return;
+
+                            form->removeRow(rowWidget);
+                            rowWidget->deleteLater();
+                            refreshXvaRows();
+                        });
+
+                    refreshXvaRows();
+                };
+
+                for (const auto& vif : vifs)
+                    addXvaRow(vif->GetNetworkRef());
+
+                connect(addVifButton, &QPushButton::clicked, ovfMappingContainer,
+                    [addXvaRow]()
+                    {
+                        addXvaRow(QString());
+                    });
+
+                ovfMappingContainer->setLayout(containerLayout);
             }
 
             if (ovfMappingGroup)
@@ -1060,6 +1269,12 @@ bool ImportWizard::validateCurrentPage()
             return false;
         }
 
+        if (this->m_ovfOnlyMode && this->m_importType != ImportType_OVF)
+        {
+            QMessageBox::warning(this, tr("Unsupported File"), tr("This import mode supports OVF/OVA files only."));
+            return false;
+        }
+
         this->m_sourceFilePath = filePath;
         SettingsManager::instance().SetDefaultImportPath(QFileInfo(filePath).absolutePath());
 
@@ -1109,6 +1324,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfPackageName          = pkg.PackageName();
             this->m_ovfVirtualSystemNames   = pkg.VirtualSystemNames();
             this->m_ovfNetworkNames         = pkg.NetworkNames();
+            this->m_ovfDiskHrefs            = pkg.DiskFileRefs();
             this->m_ovfEulas                = pkg.Eulas();
             this->m_ovfHasManifest          = pkg.HasManifest();
             this->m_ovfHasSignature         = pkg.HasSignature();
@@ -1121,6 +1337,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfPackageName.clear();
             this->m_ovfVirtualSystemNames.clear();
             this->m_ovfNetworkNames.clear();
+            this->m_ovfDiskHrefs.clear();
             this->m_ovfEulas.clear();
             this->m_ovfHasManifest = false;
             this->m_ovfHasSignature = false;
@@ -1207,7 +1424,15 @@ bool ImportWizard::validateCurrentPage()
             if (this->m_importType == ImportType_XVA)
                 requiredBytes = this->m_xvaTotalDiskSizeBytes;
             else if (this->m_importType == ImportType_VHD)
+            {
                 requiredBytes = this->m_diskImageCapacityBytes;
+
+                QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+                const qint64 additionalDiskSpaceGb = additionalDiskSpaceSpin
+                    ? static_cast<qint64>(additionalDiskSpaceSpin->value())
+                    : 0;
+                requiredBytes += additionalDiskSpaceGb * 1024LL * 1024LL * 1024LL;
+            }
 
             if (freeBytes > 0 && requiredBytes > 0 && freeBytes < requiredBytes)
             {
@@ -1369,6 +1594,18 @@ void ImportWizard::accept()
     if (memorySpin)
         this->m_memoryMb = memorySpin->value();
 
+    // VHD/VMDK additional capacity override (requested total = detected + additional)
+    if (this->m_importType == ImportType_VHD)
+    {
+        QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+        const qint64 additionalDiskSpaceGb = additionalDiskSpaceSpin
+            ? static_cast<qint64>(additionalDiskSpaceSpin->value())
+            : 0;
+
+        if (additionalDiskSpaceGb > 0)
+            this->m_diskImageCapacityBytes += additionalDiskSpaceGb * 1024LL * 1024LL * 1024LL;
+    }
+
     QComboBox* networkCombo = this->ui->networkCombo;
     if (networkCombo)
     {
@@ -1389,6 +1626,28 @@ void ImportWizard::accept()
         QLineEdit* macEdit = this->ui->ovfMappingContainer->findChild<QLineEdit*>("ovfMacEdit_" + QString::number(i));
         if (macEdit && !macEdit->text().isEmpty())
             this->m_ovfMacMappings[this->m_ovfNetworkNames.at(i)] = macEdit->text();
+    }
+
+    // Collect per-disk SR overrides from diskSrTable (OVF only)
+    this->m_ovfDiskSrMappings.clear();
+    if (this->m_importType == ImportType_OVF)
+    {
+        QTableWidget* diskTable = this->ui->diskSrTable;
+        if (diskTable && diskTable->isVisible())
+        {
+            for (int row = 0; row < diskTable->rowCount(); ++row)
+            {
+                QTableWidgetItem* nameItem = diskTable->item(row, 0);
+                QComboBox* srCombo = qobject_cast<QComboBox*>(diskTable->cellWidget(row, 1));
+                if (nameItem && srCombo)
+                {
+                    const QString href  = nameItem->data(Qt::UserRole).toString();
+                    const QString srRef = srCombo->currentData().toString();
+                    if (!href.isEmpty() && !srRef.isEmpty())
+                        this->m_ovfDiskSrMappings[href] = srRef;
+                }
+            }
+        }
     }
 
     // For OVF with manifest/signature the Security page verify checkbox is
@@ -1438,22 +1697,28 @@ void ImportWizard::accept()
     if (this->m_importType == ImportType_XVA && this->m_xvaAction)
     {
         QStringList vifTargetNetworks;
-        
-        // If we have per-VIF rows (m_xvaVifCount > 0), collect from each row
-        if (this->m_xvaVifCount > 0)
+
+        // If we have per-VIF rows, collect them in index order.
+        QList<QComboBox*> xvaCombos = this->ui->ovfMappingContainer
+            ? this->ui->ovfMappingContainer->findChildren<QComboBox*>(QRegularExpression("^xvaVifCombo_"))
+            : QList<QComboBox*>();
+
+        std::sort(xvaCombos.begin(), xvaCombos.end(), [](QComboBox* a, QComboBox* b)
         {
-            for (int i = 0; i < this->m_xvaVifCount; i++)
-            {
-                QComboBox* combo = this->ui->ovfMappingContainer->findChild<QComboBox*>("xvaVifCombo_" + QString::number(i));
-                vifTargetNetworks << (combo ? combo->currentData().toString() : QString());
-            }
-        }
-        else if (this->m_selectedNetwork)
+            return a->property("xvaVifIndex").toInt() < b->property("xvaVifIndex").toInt();
+        });
+
+        for (QComboBox* combo : xvaCombos)
+            vifTargetNetworks << (combo ? combo->currentData().toString() : QString());
+
+        this->m_xvaVifCount = vifTargetNetworks.size();
+
+        if (vifTargetNetworks.isEmpty() && this->m_selectedNetwork)
         {
             // Fallback: single-network mode
             vifTargetNetworks << this->m_selectedNetwork->OpaqueRef();
         }
-        
+
         this->m_xvaAction->endWizard(this->m_startVMsAutomatically, vifTargetNetworks);
     }
 
@@ -1625,11 +1890,20 @@ void ImportWizard::onRescanStorageClicked()
 
 void ImportWizard::onBrowseClicked()
 {
-    QString filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.ova.gz *.vhd *.vmdk);;"
-                        "XVA Files (*.xva *.xva.gz);;"
-                        "OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
-                        "VHD/VMDK Files (*.vhd *.vmdk);;"
-                        "All Files (*)");
+    QString filter;
+    if (this->m_ovfOnlyMode)
+    {
+        filter = tr("OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
+                    "All Files (*)");
+    }
+    else
+    {
+        filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.ova.gz *.vhd *.vmdk);;"
+                    "XVA Files (*.xva *.xva.gz);;"
+                    "OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
+                    "VHD/VMDK Files (*.vhd *.vmdk);;"
+                    "All Files (*)");
+    }
 
     QString startDir = SettingsManager::instance().GetDefaultImportPath();
 

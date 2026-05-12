@@ -160,6 +160,7 @@ void ImportImageAction::run()
         if (this->m_assignVtpm)
         {
             this->checkCancelled();
+            this->setDescriptionSafe(QString("Attaching vTPM to '%1'...").arg(this->m_vmName));
             try
             {
                 const QString vtpmRef = XenAPI::VTPM::create(session, vmRef, /*isUnique=*/false);
@@ -201,6 +202,7 @@ void ImportImageAction::run()
 
         // ── Step 3: Attach disk as boot VBD ──────────────────────────────
         this->checkCancelled();
+        this->setDescriptionSafe(QString("Attaching boot disk to '%1'...").arg(this->m_vmName));
         try
         {
             this->attachDisk(vmRef, vdiRef, /*bootable=*/true, "RW", "Disk");
@@ -215,6 +217,7 @@ void ImportImageAction::run()
         if (!this->m_networkRef.isEmpty())
         {
             this->checkCancelled();
+            this->setDescriptionSafe(QString("Creating network interface for '%1'...").arg(this->m_vmName));
             try
             {
                 this->createVif(vmRef, this->m_networkRef, 0, {});

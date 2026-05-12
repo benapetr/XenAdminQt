@@ -99,11 +99,15 @@ class ImportWizard : public QWizard
         bool GetStartAutomatically() const { return this->m_startVMsAutomatically; }
         bool GetRunFixups() const { return this->m_runFixups; }
         QString GetFixupIsoSrRef() const { return this->m_fixupIsoSrRef; }
+        void SetOvfOnlyMode(bool ovfOnly) { this->m_ovfOnlyMode = ovfOnly; }
+        bool IsOvfOnlyMode() const { return this->m_ovfOnlyMode; }
         BootMode GetBootMode() const { return this->m_bootMode; }
         bool GetAssignVtpm() const { return this->m_assignVtpm; }
         bool GetVerifyManifest() const { return this->m_verifyManifest; }
         QStringList GetOvfVirtualSystemNames() const { return this->m_ovfVirtualSystemNames; }
         QStringList GetOvfNetworkNames() const { return this->m_ovfNetworkNames; }
+        QStringList GetOvfDiskHrefs() const { return this->m_ovfDiskHrefs; }
+        QMap<QString, QString> GetOvfDiskSrMappings() const { return this->m_ovfDiskSrMappings; }
 
         // OVF routing helpers — queried by anonymous-namespace page subclasses in nextId()
         bool HasOvfEulas() const { return !this->m_ovfEulas.isEmpty(); }
@@ -139,6 +143,8 @@ class ImportWizard : public QWizard
         bool inspectDiskImage(const QString& filePath);
         void updateDiskImageDisplay();
         void populateNetworkComboBox(QComboBox* combo);
+        void populateDiskSrTable();
+        void fillSrCombo(QComboBox* combo);
 
         // Connection context (may be null when no server is connected)
         XenConnection* m_connection;
@@ -153,6 +159,7 @@ class ImportWizard : public QWizard
         bool m_startVMsAutomatically;
         bool m_runFixups;
         QString m_fixupIsoSrRef;
+        bool m_ovfOnlyMode;
 
         // OVF metadata populated after source-page validation
         QString m_ovfPackageName;
@@ -176,6 +183,13 @@ class ImportWizard : public QWizard
 
         // OVF per-network MAC addresses: OVF network name → MAC (empty = auto-generate)
         QMap<QString, QString> m_ovfMacMappings;
+
+        // OVF disk file hrefs from References/File (populated after source-page validation)
+        QStringList m_ovfDiskHrefs;
+
+        // OVF per-disk SR overrides: disk href → target SR OpaqueRef
+        // Empty means "use defaultSrRef for all disks".
+        QMap<QString, QString> m_ovfDiskSrMappings;
 
         // Number of XVA VIF rows shown on the network page (0 = single-combo fallback)
         int m_xvaVifCount;

@@ -42,12 +42,19 @@
 
 ImportVMCommand::ImportVMCommand(QObject* parent) : Command(nullptr, parent)
 {
+    this->m_ovfOnlyMode = false;
     // qDebug() << "ImportVMCommand: Created default constructor";
 }
 
 ImportVMCommand::ImportVMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
+    this->m_ovfOnlyMode = false;
     // qDebug() << "ImportVMCommand: Created with MainWindow";
+}
+
+void ImportVMCommand::SetOvfOnlyMode(bool ovfOnly)
+{
+    this->m_ovfOnlyMode = ovfOnly;
 }
 
 void ImportVMCommand::Run()
@@ -75,6 +82,9 @@ bool ImportVMCommand::CanRun() const
 
 QString ImportVMCommand::MenuText() const
 {
+    if (this->m_ovfOnlyMode)
+        return tr("Import vApp...");
+
     return tr("Import VM...");
 }
 
@@ -97,6 +107,7 @@ void ImportVMCommand::showImportWizard()
     }
 
     ImportWizard wizard(connection, MainWindow::instance());
+    wizard.SetOvfOnlyMode(this->m_ovfOnlyMode);
 
     if (wizard.exec() != QDialog::Accepted)
     {
@@ -127,6 +138,8 @@ void ImportVMCommand::showImportWizard()
         // Per-network mappings from the network page (one combo per OVF network name)
         const QMap<QString, QString> ovfNetMappings = wizard.GetOvfNetworkMappings();
         const QMap<QString, QString> ovfMacMappings = wizard.GetOvfMacMappings();
+        const QMap<QString, QString> ovfDiskSrMappings = wizard.GetOvfDiskSrMappings();
+        const QStringList ovfDiskHrefs = wizard.GetOvfDiskHrefs();
 
         QList<OvfVmMapping> vmMappings;
         const QStringList vsNames = wizard.GetOvfVirtualSystemNames();
@@ -143,6 +156,17 @@ void ImportVMCommand::showImportWizard()
             mapping.virtualSystemId = vsId;
             mapping.targetHostRef   = hostRef;
             mapping.defaultSrRef    = srRef;
+
+            // Build per-disk SR overrides: wizard supplies one SR combo per disk href.
+            // When no per-disk override was set by the user, diskMappings is left empty
+            // and the action falls back to defaultSrRef for every disk.
+            for (const QString& href : ovfDiskHrefs)
+            {
+                OvfDiskMapping dm;
+                dm.diskHref    = href;
+                dm.targetSrRef = ovfDiskSrMappings.value(href, srRef);
+                mapping.diskMappings << dm;
+            }
 
             // Use per-network wizard mappings when available; fall back to single ref
             for (const QString& netName : netNames)

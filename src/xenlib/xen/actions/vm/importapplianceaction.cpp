@@ -321,6 +321,7 @@ void ImportApplianceAction::run()
             QString vmRef;
             try
             {
+                this->setDescriptionSafe(QString("Creating VM record for '%1'...").arg(vmName));
                 vmRef = this->createVm(vmRecord, this->m_applianceRef);
             }
             catch (const CancelledException&)
@@ -399,6 +400,8 @@ void ImportApplianceAction::run()
                 // Attach as VBD (first disk is bootable)
                 try
                 {
+                    this->setDescriptionSafe(QString("Attaching disk '%1' (%2/%3)...")
+                                             .arg(dm.diskHref).arg(diskIdx + 1).arg(diskCount));
                     this->attachDisk(vmRef, vdiRef, (diskIdx == 0), "RW", "Disk");
                 }
                 catch (const std::exception& e)
@@ -419,6 +422,10 @@ void ImportApplianceAction::run()
 
                 try
                 {
+                    this->setDescriptionSafe(QString("Creating network interface %1/%2 for '%3'...")
+                                             .arg(vifIdx + 1)
+                                             .arg(mapping.networkMappings.size())
+                                             .arg(vmName));
                     this->createVif(vmRef, nm.targetNetworkRef, vifIdx, nm.mac);
                 }
                 catch (const std::exception& e)
@@ -433,6 +440,7 @@ void ImportApplianceAction::run()
             if (this->m_runFixups)
             {
                 this->checkCancelled();
+                this->setDescriptionSafe(QString("Applying OS fixups for '%1'...").arg(vmName));
                 if (!this->applyFixups(vmRef))
                     qWarning() << "ImportApplianceAction: fixups requested but could not be applied for VM" << vmRef;
             }
@@ -441,6 +449,8 @@ void ImportApplianceAction::run()
 
             this->setPercentCompleteSafe(vmProgressEnd);
         }
+
+        this->setDescriptionSafe("Finalizing import...");
 
         // ── Step 5: Auto-start ────────────────────────────────────────────
         if (this->m_startAutomatically)
