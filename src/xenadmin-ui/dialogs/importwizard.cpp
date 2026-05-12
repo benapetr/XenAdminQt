@@ -38,7 +38,9 @@
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vif.h"
+#include "xenlib/xen/session.h"
 #include "xenlib/utils/decompressgzaction.h"
+#include "xenlib/utils/downloadfileaction.h"
 #include "xenlib/xen/actions/sr/srrefreshaction.h"
 #include "xenlib/xen/actions/vm/importvmaction.h"
 #include "xenlib/xen/failure.h"
@@ -49,6 +51,9 @@
 #include <QHeaderView>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QSet>
+#include <QStandardPaths>
+#include <QUrl>
 
 ImportWizard::ImportWizard(QWidget* parent)
     : ImportWizard(nullptr, parent)
@@ -65,6 +70,8 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_connection(connection)
     , m_importType(ImportType_XVA)
     , m_verifyManifest(true)
+    , m_verifySignature(false)
+    , m_ignoreAffinitySet(false)
     , m_startVMsAutomatically(false)
     , m_runFixups(false)
     , m_ovfOnlyMode(false)
@@ -96,10 +103,22 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
 
 void ImportWizard::setupWizardPages()
 {
+    QWizardPage* rbacPage = new QWizardPage(this);
+    rbacPage->setTitle(tr("Security Permissions"));
+    rbacPage->setSubTitle(tr("Review permissions required for this import."));
+    QVBoxLayout* rbacLayout = new QVBoxLayout;
+    QLabel* rbacLabel = new QLabel(rbacPage);
+    rbacLabel->setObjectName("rbacWarningLabel");
+    rbacLabel->setWordWrap(true);
+    rbacLayout->addWidget(rbacLabel);
+    rbacLayout->addStretch();
+    rbacPage->setLayout(rbacLayout);
+
     this->setPage(Page_Source,      this->ui->pageSource);
     this->setPage(Page_VmConfig,    this->ui->pageVmConfig);
     this->setPage(Page_Eula,        this->ui->pageEula);
     this->setPage(Page_Host,        this->ui->pageHost);
+    this->setPage(Page_Rbac,        rbacPage);
     this->setPage(Page_Storage,     this->ui->pageStorage);
     this->setPage(Page_Network,     this->ui->pageNetwork);
     this->setPage(Page_Security,    this->ui->pageSecurity);
@@ -135,6 +154,10 @@ int ImportWizard::nextId() const
         case Page_VmConfig:
             return Page_Host;
         case Page_Host:
+            if (!this->m_blockingRbacMissing.isEmpty() || !this->m_affinityRbacMissing.isEmpty())
+                return Page_Rbac;
+            return Page_Storage;
+        case Page_Rbac:
             return Page_Storage;
         case Page_Storage:
             return Page_Network;
@@ -171,7 +194,17 @@ void ImportWizard::initializePage(int id)
                 "Select the virtual machine or appliance file you want to import."));
     }
     else if (id == Page_Host)
+    {
         this->populateHostCombo();
+        if (this->targetHasDesktopFeatures())
+        {
+            QMessageBox::information(this, tr("Import VM"),
+                                     tr("This pool or server has XenApp/XenDesktop features enabled. "
+                                        "Imported VMs may require additional configuration before use with those features."));
+        }
+    }
+    else if (id == Page_Rbac)
+        this->updateRbacPage();
     else if (id == Page_VmConfig)
     {
         // Pre-fill VM name from the source file's base name
@@ -288,8 +321,9 @@ void ImportWizard::initializePage(int id)
             {
                 infoLabel->setText(
                     tr("This package contains a digital signature.\n\n"
-                       "Verifying the producer signature confirms the package "
-                       "was not modified after it was published."));
+                       "Producer signature verification is not supported yet in this version. "
+                       "The manifest can still be verified to confirm that package contents "
+                       "have not been corrupted or tampered with."));
             } else
             {
                 infoLabel->setText(
@@ -300,10 +334,9 @@ void ImportWizard::initializePage(int id)
         }
         if (verifyCheck)
         {
-            verifyCheck->setText(this->m_ovfHasSignature
-                ? tr("Verify producer signature")
-                : tr("Verify manifest content"));
-            verifyCheck->setChecked(this->m_verifyManifest);
+            verifyCheck->setText(tr("Verify manifest content"));
+            verifyCheck->setChecked(this->m_ovfHasManifest && this->m_verifyManifest);
+            verifyCheck->setEnabled(this->m_ovfHasManifest);
         }
     }
     else if (id == Page_Finish)
@@ -324,7 +357,7 @@ void ImportWizard::initializePage(int id)
             {
                 case ImportType_XVA: typeStr = tr("XVA"); break;
                 case ImportType_OVF: typeStr = tr("OVF/OVA"); break;
-                case ImportType_VHD: typeStr = tr("VHD/VMDK"); break;
+                case ImportType_VHD: typeStr = tr("VHD"); break;
             }
 
             QString summary;
@@ -680,6 +713,199 @@ QString ImportWizard::generateMac()
         .arg(rng->bounded(256), 2, 16, QChar('0'))
         .arg(rng->bounded(256), 2, 16, QChar('0'))
         .arg(rng->bounded(256), 2, 16, QChar('0'));
+}
+
+bool ImportWizard::isSourceUri(const QString& text) const
+{
+    const QUrl url(text);
+    if (!url.isValid() || url.scheme().isEmpty())
+        return false;
+    const QString scheme = url.scheme().toLower();
+    return scheme == "http" || scheme == "https";
+}
+
+bool ImportWizard::downloadUrlToFile(const QUrl& url, const QString& destPath, bool optional)
+{
+    if (QFile::exists(destPath))
+        QFile::remove(destPath);
+
+    DownloadFileAction* op = new DownloadFileAction(url, destPath, this);
+    ActionProgressDialog dlg(op, this);
+    dlg.setShowCancel(true);
+    dlg.exec();
+
+    const bool ok = !op->IsCancelled() && !op->IsFailed() && QFile::exists(destPath);
+    if (!ok)
+    {
+        QFile::remove(destPath);
+        if (!optional && op->IsFailed())
+        {
+            QMessageBox::warning(this, tr("Download Failed"),
+                                 tr("Could not download %1:\n%2")
+                                 .arg(url.toString(), op->GetErrorMessage()));
+        }
+    }
+
+    return ok;
+}
+
+bool ImportWizard::downloadSourceUri(QString& filePath)
+{
+    const QUrl sourceUrl(filePath);
+    if (!sourceUrl.isValid() || sourceUrl.fileName().isEmpty())
+    {
+        QMessageBox::warning(this, tr("Invalid URI"),
+                             tr("The import URI is invalid or does not include a file name."));
+        return false;
+    }
+
+    QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (downloadDir.isEmpty())
+        downloadDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QDir().mkpath(downloadDir);
+
+    const QString localPath = QDir(downloadDir).filePath(sourceUrl.fileName());
+    if (QFile::exists(localPath))
+    {
+        const QMessageBox::StandardButton reply = QMessageBox::question(
+            this, tr("Overwrite Download"),
+            tr("The downloaded file already exists:\n%1\n\nOverwrite it?").arg(localPath),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes)
+            return false;
+    }
+
+    if (!this->downloadUrlToFile(sourceUrl, localPath))
+        return false;
+
+    filePath = localPath;
+
+    if (localPath.endsWith(".ovf", Qt::CaseInsensitive) && !this->downloadRelatedOvfFiles(localPath, sourceUrl))
+        return false;
+
+    return true;
+}
+
+bool ImportWizard::downloadRelatedOvfFiles(const QString& ovfPath, const QUrl& sourceUrl)
+{
+    OvfPackage pkg(ovfPath);
+    if (!pkg.IsValid())
+        return true;
+
+    QFileInfo ovfInfo(ovfPath);
+    QUrl baseUrl = sourceUrl;
+    baseUrl.setPath(sourceUrl.path().left(sourceUrl.path().lastIndexOf('/') + 1));
+    QDir localDir = ovfInfo.absoluteDir();
+    const QString localBasePath = localDir.absolutePath();
+
+    const QStringList diskRefs = pkg.DiskFileRefs();
+    for (const QString& href : diskRefs)
+    {
+        if (href.isEmpty())
+            continue;
+
+        const QString localPath = QDir::cleanPath(localDir.filePath(href));
+        if (!localPath.startsWith(localBasePath + QDir::separator()) && localPath != localBasePath)
+        {
+            QMessageBox::warning(this, tr("Invalid OVF Reference"),
+                                 tr("The OVF package references a file outside the download directory:\n%1").arg(href));
+            return false;
+        }
+
+        if (QFile::exists(localPath))
+            continue;
+
+        QDir().mkpath(QFileInfo(localPath).absolutePath());
+        const QUrl relUrl = baseUrl.resolved(QUrl(href));
+        if (!this->downloadUrlToFile(relUrl, localPath))
+            return false;
+    }
+
+    const QString baseName = ovfInfo.completeBaseName();
+    const QStringList optionalRefs = QStringList() << (baseName + ".mf") << (baseName + ".cert");
+    for (const QString& href : optionalRefs)
+    {
+        const QString localPath = localDir.filePath(QFileInfo(href).fileName());
+        if (QFile::exists(localPath))
+            continue;
+        const QUrl relUrl = baseUrl.resolved(QUrl(href));
+        this->downloadUrlToFile(relUrl, localPath, true);
+    }
+
+    return true;
+}
+
+bool ImportWizard::hasApiPermissions(const QStringList& methods, QStringList* missing) const
+{
+    if (missing)
+        missing->clear();
+    if (!this->m_connection || !this->m_connection->GetSession())
+        return true;
+
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (session->IsLocalSuperuser())
+        return true;
+
+    const QStringList permissions = session->GetPermissions();
+    if (permissions.isEmpty())
+        return true;
+
+    QSet<QString> permissionSet;
+    for (const QString& permission : permissions)
+        permissionSet.insert(permission.toLower());
+
+    QStringList missingMethods;
+    for (const QString& method : methods)
+    {
+        if (!permissionSet.contains(method.toLower()))
+            missingMethods << method;
+    }
+
+    if (missing)
+        *missing = missingMethods;
+    return missingMethods.isEmpty();
+}
+
+bool ImportWizard::targetHasDesktopFeatures() const
+{
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return false;
+
+    const QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host || !host->IsValid())
+            continue;
+        const QString edition = host->Edition().toLower();
+        if (edition == "desktop" || edition == "desktopplus" || edition == "desktop_cloud" || edition == "desktopcloud")
+            return true;
+    }
+
+    return false;
+}
+
+void ImportWizard::updateRbacPage()
+{
+    QLabel* label = this->page(Page_Rbac)->findChild<QLabel*>("rbacWarningLabel");
+    if (!label)
+        return;
+
+    QStringList lines;
+    if (!this->m_blockingRbacMissing.isEmpty())
+    {
+        lines << tr("Your current role is missing permissions required to import this package:");
+        for (const QString& method : this->m_blockingRbacMissing)
+            lines << tr("- %1").arg(method);
+        lines << QString();
+        lines << tr("The import cannot continue with the current role.");
+    }
+    else if (!this->m_affinityRbacMissing.isEmpty())
+    {
+        lines << tr("Your current role cannot set VM home-server affinity.");
+        lines << tr("The VM will be imported without host affinity.");
+    }
+
+    label->setText(lines.join("\n"));
 }
 
 void ImportWizard::populateNetworkCombo()
@@ -1216,6 +1442,14 @@ bool ImportWizard::validateCurrentPage()
             return false;
         }
 
+        if (this->isSourceUri(filePath))
+        {
+            if (!this->downloadSourceUri(filePath))
+                return false;
+            if (filePathEdit)
+                filePathEdit->setText(filePath);
+        }
+
         if (!QFile::exists(filePath))
         {
             QMessageBox::warning(this, tr("File Not Found"),
@@ -1275,6 +1509,14 @@ bool ImportWizard::validateCurrentPage()
             return false;
         }
 
+        if (this->m_importType == ImportType_VHD && filePath.endsWith(".vmdk", Qt::CaseInsensitive))
+        {
+            QMessageBox::warning(this, tr("Unsupported Disk Image"),
+                                 tr("VMDK disk-image import is not supported yet. "
+                                    "Convert the disk to VHD and import the VHD file."));
+            return false;
+        }
+
         this->m_sourceFilePath = filePath;
         SettingsManager::instance().SetDefaultImportPath(QFileInfo(filePath).absolutePath());
 
@@ -1325,6 +1567,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfVirtualSystemNames   = pkg.VirtualSystemNames();
             this->m_ovfNetworkNames         = pkg.NetworkNames();
             this->m_ovfDiskHrefs            = pkg.DiskFileRefs();
+            this->m_ovfDiskHrefsBySystem    = pkg.DiskFileRefsBySystem();
             this->m_ovfEulas                = pkg.Eulas();
             this->m_ovfHasManifest          = pkg.HasManifest();
             this->m_ovfHasSignature         = pkg.HasSignature();
@@ -1338,6 +1581,7 @@ bool ImportWizard::validateCurrentPage()
             this->m_ovfVirtualSystemNames.clear();
             this->m_ovfNetworkNames.clear();
             this->m_ovfDiskHrefs.clear();
+            this->m_ovfDiskHrefsBySystem.clear();
             this->m_ovfEulas.clear();
             this->m_ovfHasManifest = false;
             this->m_ovfHasSignature = false;
@@ -1369,7 +1613,7 @@ bool ImportWizard::validateCurrentPage()
                     QMessageBox::warning(this, tr("Disk Image Format"),
                         tr("The disk image format could not be determined from the file header. "
                            "The file size (%1 bytes) will be used as the virtual disk capacity.\n\n"
-                           "If the file is a valid VHD or VMDK, you can continue. "
+                           "If the file is a valid VHD, you can continue. "
                            "Otherwise the import may fail.").arg(fileBytes));
                 }
             }
@@ -1398,6 +1642,62 @@ bool ImportWizard::validateCurrentPage()
                                  tr("You must accept the End User License Agreement(s) to continue."));
             return false;
         }
+    }
+    else if (currentId == Page_Host)
+    {
+        QComboBox* hostCombo = this->ui->hostCombo;
+        this->m_selectedHost = (hostCombo && this->m_connection)
+            ? this->m_connection->GetCache()->ResolveObject<Host>(hostCombo->currentData().toString())
+            : nullptr;
+
+        this->m_blockingRbacMissing.clear();
+        this->m_affinityRbacMissing.clear();
+        this->m_ignoreAffinitySet = false;
+
+        QStringList required;
+        if (this->m_importType == ImportType_XVA)
+        {
+            required << "vm.set_name_label"
+                     << "network.destroy"
+                     << "vif.create"
+                     << "vif.destroy"
+                     << "http/put_import"
+                     << "sr.scan";
+            this->hasApiPermissions(required, &this->m_blockingRbacMissing);
+
+            if (this->m_selectedHost && this->m_selectedHost->IsValid())
+            {
+                this->hasApiPermissions(QStringList() << "vm.set_affinity", &this->m_affinityRbacMissing);
+                if (!this->m_affinityRbacMissing.isEmpty())
+                {
+                    this->m_ignoreAffinitySet = true;
+                    this->m_selectedHost.clear();
+                    if (hostCombo)
+                        hostCombo->setCurrentIndex(0);
+                }
+            }
+        }
+        else
+        {
+            required << "VM.create"
+                     << "VM.destroy"
+                     << "VM.start"
+                     << "VM.set_affinity"
+                     << "VM.set_HVM_boot_params"
+                     << "VM_appliance.create"
+                     << "VM_appliance.start"
+                     << "VDI.create"
+                     << "VDI.destroy"
+                     << "VBD.create"
+                     << "VIF.create"
+                     << "http/import_raw_vdi";
+            this->hasApiPermissions(required, &this->m_blockingRbacMissing);
+        }
+    }
+    else if (currentId == Page_Rbac)
+    {
+        if (!this->m_blockingRbacMissing.isEmpty())
+            return false;
     }
     else if (currentId == Page_Storage)
     {
@@ -1653,11 +1953,15 @@ void ImportWizard::accept()
     // For OVF with manifest/signature the Security page verify checkbox is
     // authoritative; for all other paths verification is not applicable.
     this->m_verifyManifest = true;
+    this->m_verifySignature = false;
     if (this->m_importType == ImportType_OVF && (this->m_ovfHasManifest || this->m_ovfHasSignature))
     {
         QCheckBox* securityVerify = this->ui->securityVerifyCheck;
         if (securityVerify)
-            this->m_verifyManifest = securityVerify->isChecked();
+        {
+            this->m_verifyManifest = this->m_ovfHasManifest && securityVerify->isChecked();
+            this->m_verifySignature = false;
+        }
     }
 
     QCheckBox* runFixupsBox = this->ui->runFixups;
@@ -1898,10 +2202,10 @@ void ImportWizard::onBrowseClicked()
     }
     else
     {
-        filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.ova.gz *.vhd *.vmdk);;"
+        filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.ova.gz *.vhd);;"
                     "XVA Files (*.xva *.xva.gz);;"
                     "OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
-                    "VHD/VMDK Files (*.vhd *.vmdk);;"
+                    "VHD Files (*.vhd);;"
                     "All Files (*)");
     }
 

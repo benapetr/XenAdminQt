@@ -145,9 +145,9 @@
          <property name="text">
           <string>• XVA files (.xva, .xva.gz) - XenServer native format
 • OVF files (.ovf, .ova) - Open Virtualization Format
-• VHD files (.vhd, .vmdk) - Virtual disk images
+• VHD files (.vhd) - Virtual disk images
 
-Note: only local files are supported. HTTP/FTP URI imports are not available in this version.</string>
+HTTP/HTTPS URI imports are downloaded before import.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>

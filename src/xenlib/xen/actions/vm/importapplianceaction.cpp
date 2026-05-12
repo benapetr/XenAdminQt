@@ -80,13 +80,17 @@ ImportApplianceAction::ImportApplianceAction(XenConnection* connection,
     this->AddApiMethodToRoleCheck("VM.destroy");
     this->AddApiMethodToRoleCheck("VM.hard_shutdown");
     this->AddApiMethodToRoleCheck("VM.start");
+    this->AddApiMethodToRoleCheck("VM.set_affinity");
     this->AddApiMethodToRoleCheck("VM.add_to_other_config");
     this->AddApiMethodToRoleCheck("VM.remove_from_other_config");
     this->AddApiMethodToRoleCheck("VM.set_HVM_boot_params");
+    this->AddApiMethodToRoleCheck("VM_appliance.create");
+    this->AddApiMethodToRoleCheck("VM_appliance.start");
     this->AddApiMethodToRoleCheck("VDI.create");
     this->AddApiMethodToRoleCheck("VDI.destroy");
     this->AddApiMethodToRoleCheck("VBD.create");
     this->AddApiMethodToRoleCheck("VIF.create");
+    this->AddApiMethodToRoleCheck("http/import_raw_vdi");
 }
 
 // ─── Cancellation ────────────────────────────────────────────────────────────
@@ -554,6 +558,14 @@ QString ImportApplianceAction::uploadDisk(const QString& srRef,
         throw std::runtime_error("VDI.create returned an empty reference");
     qDebug() << "ImportApplianceAction: created VDI" << vdiRef;
 
+    const QVariantMap createdVdiRecord = XenAPI::VDI::get_record(session, vdiRef);
+    const QString vdiUuid = createdVdiRecord.value("uuid").toString();
+    if (vdiUuid.isEmpty())
+    {
+        try { XenAPI::VDI::destroy(session, vdiRef); } catch (...) {}
+        throw std::runtime_error("Created VDI has no UUID");
+    }
+
     // Determine target host address
     QString hostAddr;
     if (this->GetConnection())
@@ -569,7 +581,7 @@ QString ImportApplianceAction::uploadDisk(const QString& srRef,
     QMap<QString, QString> queryParams;
     queryParams["session_id"] = session->GetSessionID();
     queryParams["task_id"]    = taskRef;
-    queryParams["vdi"]        = vdiRef;  // opaque ref accepted by the server
+    queryParams["vdi"]        = vdiUuid;
     queryParams["format"]     = "vhd";
 
     // Upload via HTTP PUT

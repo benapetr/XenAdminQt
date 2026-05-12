@@ -30,7 +30,10 @@
 
 #include <QWizard>
 #include <QComboBox>
+#include <QMap>
 #include <QSharedPointer>
+#include <QStringList>
+#include <QUrl>
 
 namespace Ui { class ImportWizard; }
 
@@ -53,7 +56,7 @@ class ImportWizard : public QWizard
         {
             ImportType_XVA, // XenServer native format (.xva)
             ImportType_OVF, // Open Virtualization Format (.ovf, .ova)
-            ImportType_VHD  // Virtual Hard Disk (.vhd, .vmdk)
+            ImportType_VHD  // Virtual Hard Disk (.vhd)
         };
 
         // Wizard page IDs
@@ -65,10 +68,11 @@ class ImportWizard : public QWizard
             Page_Network = 3,
             Page_Options = 4,
             Page_Finish = 5,
-            Page_VmConfig = 6,  // VHD/VMDK only: VM name, vCPU, memory
+            Page_VmConfig = 6,  // VHD only: VM name, vCPU, memory
             Page_Eula = 7,      // OVF only: EULA acceptance (shown when EULAs are present)
             Page_Security = 8,  // OVF only: manifest/signature review
-            Page_BootOptions = 9 // VHD/VMDK only: firmware (BIOS/UEFI) and vTPM
+            Page_BootOptions = 9, // VHD only: firmware (BIOS/UEFI) and vTPM
+            Page_Rbac = 10
         };
 
         /// Boot firmware mode — mirrors ImportImageAction::BootMode
@@ -104,9 +108,12 @@ class ImportWizard : public QWizard
         BootMode GetBootMode() const { return this->m_bootMode; }
         bool GetAssignVtpm() const { return this->m_assignVtpm; }
         bool GetVerifyManifest() const { return this->m_verifyManifest; }
+        bool GetVerifySignature() const { return this->m_verifySignature; }
+        XenConnection* GetSelectedConnection() const { return this->m_connection; }
         QStringList GetOvfVirtualSystemNames() const { return this->m_ovfVirtualSystemNames; }
         QStringList GetOvfNetworkNames() const { return this->m_ovfNetworkNames; }
         QStringList GetOvfDiskHrefs() const { return this->m_ovfDiskHrefs; }
+        QMap<QString, QStringList> GetOvfDiskHrefsBySystem() const { return this->m_ovfDiskHrefsBySystem; }
         QMap<QString, QString> GetOvfDiskSrMappings() const { return this->m_ovfDiskSrMappings; }
 
         // OVF routing helpers — queried by anonymous-namespace page subclasses in nextId()
@@ -132,6 +139,13 @@ class ImportWizard : public QWizard
         void populateNetworkCombo();
         void populateFixupIsoCombo();
         QString detectImportType(const QString& filePath);
+        bool isSourceUri(const QString& text) const;
+        bool downloadSourceUri(QString& filePath);
+        bool downloadUrlToFile(const QUrl& url, const QString& destPath, bool optional = false);
+        bool downloadRelatedOvfFiles(const QString& ovfPath, const QUrl& sourceUrl);
+        void updateRbacPage();
+        bool hasApiPermissions(const QStringList& methods, QStringList* missing = nullptr) const;
+        bool targetHasDesktopFeatures() const;
 
         // MAC address helpers
         static bool isValidMac(const QString& mac);
@@ -156,6 +170,10 @@ class ImportWizard : public QWizard
         QSharedPointer<SR> m_selectedSR;
         QSharedPointer<Network> m_selectedNetwork;
         bool m_verifyManifest;
+        bool m_verifySignature;
+        bool m_ignoreAffinitySet;
+        QStringList m_blockingRbacMissing;
+        QStringList m_affinityRbacMissing;
         bool m_startVMsAutomatically;
         bool m_runFixups;
         QString m_fixupIsoSrRef;
@@ -174,7 +192,7 @@ class ImportWizard : public QWizard
         QStringList m_xvaVmNames;
         qint64 m_xvaTotalDiskSizeBytes;
 
-        // VHD/VMDK metadata populated after source-page validation
+        // VHD metadata populated after source-page validation
         qint64 m_diskImageCapacityBytes;
         QString m_diskImageFormatName;
 
@@ -186,6 +204,7 @@ class ImportWizard : public QWizard
 
         // OVF disk file hrefs from References/File (populated after source-page validation)
         QStringList m_ovfDiskHrefs;
+        QMap<QString, QStringList> m_ovfDiskHrefsBySystem;
 
         // OVF per-disk SR overrides: disk href → target SR OpaqueRef
         // Empty means "use defaultSrRef for all disks".
@@ -194,12 +213,12 @@ class ImportWizard : public QWizard
         // Number of XVA VIF rows shown on the network page (0 = single-combo fallback)
         int m_xvaVifCount;
 
-        // VHD/VMDK VM config (collected from Page_VmConfig)
+        // VHD VM config (collected from Page_VmConfig)
         QString m_vmName;
         int     m_vcpuCount;
         qint64  m_memoryMb;
 
-        // VHD/VMDK boot options (collected from Page_BootOptions)
+        // VHD boot options (collected from Page_BootOptions)
         BootMode m_bootMode;
         bool     m_assignVtpm;
 

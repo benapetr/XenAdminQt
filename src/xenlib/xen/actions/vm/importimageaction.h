@@ -35,7 +35,7 @@
 class XenConnection;
 
 /**
- * @brief Import a raw disk image (VHD or VMDK) as a new VM.
+ * @brief Import a raw VHD disk image as a new VM.
  *
  * Ports the C# XenAdmin.Actions.OvfActions.ImportImageAction to Qt.
  * Inherits from ImportApplianceAction to reuse uploadDisk / attachDisk / createVif helpers.
@@ -73,7 +73,7 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
          * @param srRef               Target SR OpaqueRef
          * @param networkRef          Target Network OpaqueRef (empty = no VIF)
          * @param hostRef             Affinity host OpaqueRef (empty = no affinity)
-         * @param filePath            Local path to .vhd or .vmdk file
+         * @param filePath            Local path to .vhd file
          * @param diskCapacityBytes   Virtual disk size in bytes (0 = use file size)
          * @param bootMode            Boot firmware mode for the VM
          * @param assignVtpm          Attach a virtual TPM module to the VM

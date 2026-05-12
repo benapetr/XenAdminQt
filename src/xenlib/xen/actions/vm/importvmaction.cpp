@@ -76,6 +76,7 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
     this->AddApiMethodToRoleCheck("vif.create");
     this->AddApiMethodToRoleCheck("vif.destroy");
     this->AddApiMethodToRoleCheck("http/put_import");
+    this->AddApiMethodToRoleCheck("sr.scan");
     if (!this->hostRef_.isEmpty())
         this->AddApiMethodToRoleCheck("vm.set_affinity");
 }

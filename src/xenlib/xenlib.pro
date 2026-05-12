@@ -62,6 +62,7 @@ HEADERS += \
     operations/parallelaction.h \
     utils/misc.h \
     utils/decompressgzaction.h \
+    utils/downloadfileaction.h \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
@@ -312,6 +313,7 @@ SOURCES += \
     operations/parallelaction.cpp \
     utils/misc.cpp \
     utils/decompressgzaction.cpp \
+    utils/downloadfileaction.cpp \
     vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
     xen/actions/wlb/wlbretrievevmrecommendationsaction.cpp \

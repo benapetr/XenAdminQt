@@ -167,6 +167,17 @@ class OvfPackage
         QStringList DiskFileRefs() const { return this->diskFileRefs_; }
 
         /**
+         * @brief Disk file hrefs used by each VirtualSystem.
+         *
+         * Keys match VirtualSystemNames(). Values are the hrefs from References/File
+         * that are linked from that VM's disk RASD HostResource entries.
+         */
+        QMap<QString, QStringList> DiskFileRefsBySystem() const
+        {
+            return this->diskFileRefsBySystem_;
+        }
+
+        /**
          * @brief Names of virtual systems in the package (one per VirtualSystem element).
          */
         QStringList VirtualSystemNames() const { return this->virtualSystemNames_; }
@@ -302,6 +313,8 @@ class OvfPackage
         static void collectVirtualSystemNames(const QDomElement& root, QStringList& names);
         static OvfVirtualHardware collectVirtualHardware(const QDomElement& virtualSystemElem,
                                                           const QMap<QString,qint64>& capacitiesByRef);
+        static QStringList collectDiskFileRefsForSystem(const QDomElement& virtualSystemElem,
+                                                        const QMap<QString, QString>& diskHrefById);
         static OvfRecommendations parseRecommendations(const QDomElement& virtualSystemElem);
 
         QString sourceFile_;
@@ -317,6 +330,7 @@ class OvfPackage
         QStringList eulas_;
         QStringList networkNames_;
         QStringList diskFileRefs_;
+        QMap<QString, QStringList> diskFileRefsBySystem_;
         QStringList virtualSystemNames_;
         QMap<QString, OvfVirtualHardware> virtualHardwareBySystem_;
         QMap<QString, OvfRecommendations> m_recommendationsBySystem;
