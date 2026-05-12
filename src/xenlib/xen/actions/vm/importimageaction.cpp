@@ -88,6 +88,13 @@ void ImportImageAction::run()
 
     try
     {
+        if (this->m_ovfFilePath.endsWith(".vmdk", Qt::CaseInsensitive))
+        {
+            this->setError("VMDK disk-image import is not supported yet. Convert the disk to VHD and import the VHD file.");
+            this->setState(Failed);
+            return;
+        }
+
         // ── Step 1: Create VM record ──────────────────────────────────────
         this->setDescriptionSafe(QString("Creating VM '%1'...").arg(this->m_vmName));
         this->setPercentCompleteSafe(5);

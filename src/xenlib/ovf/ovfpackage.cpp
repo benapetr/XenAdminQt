@@ -464,7 +464,9 @@ OvfVirtualHardware OvfPackage::collectVirtualHardware(const QDomElement& virtual
             {
                 hw.ethernetCount++;
             }
-            else if (resourceType == RasdType::VirtualDisk || resourceType == RasdType::DiskDrive)
+            else if (resourceType == RasdType::VirtualDisk ||
+                     resourceType == RasdType::DiskDrive ||
+                     resourceType == RasdType::StorageExtent)
             {
                 // HostResource attribute links to a disk ref like "ovf:/disk/disk1"
                 const QString hostRes = rasdChildText(item, "HostResource");
@@ -477,6 +479,58 @@ OvfVirtualHardware OvfPackage::collectVirtualHardware(const QDomElement& virtual
     }
 
     return hw;
+}
+
+QStringList OvfPackage::collectDiskFileRefsForSystem(const QDomElement& virtualSystemElem,
+                                                     const QMap<QString, QString>& diskHrefById)
+{
+    QStringList hrefs;
+
+    QDomNodeList hwSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        hwSections = virtualSystemElem.elementsByTagNameNS(ns, "VirtualHardwareSection");
+        if (!hwSections.isEmpty()) break;
+    }
+    if (hwSections.isEmpty())
+        hwSections = virtualSystemElem.elementsByTagName("VirtualHardwareSection");
+
+    for (int si = 0; si < hwSections.count(); ++si)
+    {
+        QDomElement hwSection = hwSections.at(si).toElement();
+        QDomNodeList items;
+        for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                   QString("http://schemas.citrix.com/ovf/envelope/1"),
+                                   QString("http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData")})
+        {
+            items = hwSection.elementsByTagNameNS(ns, "Item");
+            if (!items.isEmpty()) break;
+        }
+        if (items.isEmpty())
+            items = hwSection.elementsByTagName("Item");
+
+        for (int ii = 0; ii < items.count(); ++ii)
+        {
+            QDomElement item = items.at(ii).toElement();
+            if (item.isNull())
+                continue;
+
+            bool ok = false;
+            const int resourceType = rasdChildText(item, "ResourceType").toInt(&ok);
+            if (!ok || (resourceType != RasdType::VirtualDisk &&
+                        resourceType != RasdType::DiskDrive &&
+                        resourceType != RasdType::StorageExtent))
+                continue;
+
+            const QString diskId = rasdChildText(item, "HostResource").section('/', -1);
+            const QString href = diskHrefById.value(diskId);
+            if (!href.isEmpty() && !hrefs.contains(href))
+                hrefs << href;
+        }
+    }
+
+    return hrefs;
 }
 
 // ─── OvfPackage::parseRecommendations ────────────────────────────────────────
@@ -621,6 +675,7 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
     if (refSections.isEmpty())
         refSections = doc.elementsByTagName("References");
 
+    QMap<QString, QString> fileHrefById; // File id -> href
     for (int i = 0; i < refSections.count(); ++i)
     {
         QDomElement section = refSections.at(i).toElement();
@@ -631,6 +686,9 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
             if (fileElem.isNull() || fileElem.localName() != "File") continue;
 
             const QString href = firstAttributeByLocalName(fileElem, "href");
+            const QString id = firstAttributeByLocalName(fileElem, "id");
+            if (!id.isEmpty() && !href.isEmpty())
+                fileHrefById.insert(id, href);
             if (!href.isEmpty() && !this->diskFileRefs_.contains(href))
                 this->diskFileRefs_ << href;
         }
@@ -643,6 +701,7 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
     // DiskSection/Disk elements carry ovf:capacity attribute (in MB by default,
     // or in units specified by ovf:capacityAllocationUnits).
     QMap<QString, qint64> diskCapacities; // diskId → bytes
+    QMap<QString, QString> diskHrefById;  // diskId → file href
     QDomNodeList diskSections;
     for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
                                QString("http://schemas.citrix.com/ovf/envelope/1")})
@@ -663,8 +722,12 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
             if (disk.isNull() || disk.localName() != "Disk") continue;
 
             const QString diskId   = firstAttributeByLocalName(disk, "diskId");
+            const QString fileRef  = firstAttributeByLocalName(disk, "fileRef");
             const QString capStr   = firstAttributeByLocalName(disk, "capacity");
             const QString capUnits = firstAttributeByLocalName(disk, "capacityAllocationUnits").toLower();
+
+            if (!diskId.isEmpty() && !fileRef.isEmpty() && fileHrefById.contains(fileRef))
+                diskHrefById.insert(diskId, fileHrefById.value(fileRef));
 
             bool ok = false;
             const qint64 cap = capStr.toLongLong(&ok);
@@ -720,6 +783,7 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
 
         const OvfVirtualHardware hw = collectVirtualHardware(vs, diskCapacities);
         this->virtualHardwareBySystem_.insert(vsName, hw);
+        this->diskFileRefsBySystem_.insert(vsName, collectDiskFileRefsForSystem(vs, diskHrefById));
 
         const OvfRecommendations rec = parseRecommendations(vs);
         this->m_recommendationsBySystem.insert(vsName, rec);
@@ -1125,4 +1189,3 @@ bool OvfPackage::Validate(QStringList& warningsOut) const
 
     return true;
 }
-

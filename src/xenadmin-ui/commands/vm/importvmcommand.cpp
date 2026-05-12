@@ -116,11 +116,12 @@ void ImportVMCommand::showImportWizard()
     }
 
     qDebug() << "ImportVMCommand: Import Wizard accepted, dispatching action";
+    XenConnection* targetConnection = wizard.GetSelectedConnection() ? wizard.GetSelectedConnection() : connection;
 
     // XVA: upload was already started by the wizard; OVF/VHD start new actions below.
     if (wizard.GetImportType() == ImportWizard::ImportType_OVF)
     {
-        if (!connection)
+        if (!targetConnection)
         {
             QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
                                  tr("No connected server found. Please connect to a server first."));
@@ -140,6 +141,7 @@ void ImportVMCommand::showImportWizard()
         const QMap<QString, QString> ovfMacMappings = wizard.GetOvfMacMappings();
         const QMap<QString, QString> ovfDiskSrMappings = wizard.GetOvfDiskSrMappings();
         const QStringList ovfDiskHrefs = wizard.GetOvfDiskHrefs();
+        const QMap<QString, QStringList> ovfDiskHrefsBySystem = wizard.GetOvfDiskHrefsBySystem();
 
         QList<OvfVmMapping> vmMappings;
         const QStringList vsNames = wizard.GetOvfVirtualSystemNames();
@@ -160,7 +162,11 @@ void ImportVMCommand::showImportWizard()
             // Build per-disk SR overrides: wizard supplies one SR combo per disk href.
             // When no per-disk override was set by the user, diskMappings is left empty
             // and the action falls back to defaultSrRef for every disk.
-            for (const QString& href : ovfDiskHrefs)
+            QStringList diskHrefsForVm = ovfDiskHrefsBySystem.value(vsId);
+            if (diskHrefsForVm.isEmpty())
+                diskHrefsForVm = ovfDiskHrefs;
+
+            for (const QString& href : diskHrefsForVm)
             {
                 OvfDiskMapping dm;
                 dm.diskHref    = href;
@@ -197,11 +203,11 @@ void ImportVMCommand::showImportWizard()
         }
 
         ImportApplianceAction* action = new ImportApplianceAction(
-            connection,
+            targetConnection,
             wizard.GetSourceFilePath(),
             vmMappings,
             wizard.GetVerifyManifest(),
-            /*verifySignature=*/false,
+            wizard.GetVerifySignature(),
             wizard.GetRunFixups(),
             wizard.GetFixupIsoSrRef(),
             wizard.GetStartAutomatically(),
@@ -216,12 +222,21 @@ void ImportVMCommand::showImportWizard()
 
     if (wizard.GetImportType() == ImportWizard::ImportType_VHD)
     {
-        if (!connection)
+        if (!targetConnection)
         {
             QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
                                  tr("No connected server found. Please connect to a server first."));
             return;
         }
+
+        if (wizard.GetSourceFilePath().endsWith(".vmdk", Qt::CaseInsensitive))
+        {
+            QMessageBox::warning(MainWindow::instance(), tr("Unsupported Disk Image"),
+                                 tr("VMDK disk-image import is not supported yet. "
+                                    "Convert the disk to VHD and import the VHD file."));
+            return;
+        }
+
         const auto selectedSR2 = wizard.GetSelectedSR();
         const QString srRef = selectedSR2 ? selectedSR2->OpaqueRef() : QString();
         if (srRef.isEmpty())
@@ -232,7 +247,7 @@ void ImportVMCommand::showImportWizard()
         }
 
         ImportImageAction* action = new ImportImageAction(
-            connection,
+            targetConnection,
             wizard.GetVmName(),
             wizard.GetVcpuCount(),
             wizard.GetMemoryMb(),
