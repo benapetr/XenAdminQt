@@ -254,6 +254,48 @@ Note: only local files are supported. HTTP/FTP URI imports are not available in 
      </layout>
     </item>
     <item>
+     <widget class="QLabel" name="diskSrLabel">
+      <property name="text">
+       <string>Per-disk storage repositories:</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="diskSrTable">
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::NoSelection</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="columnCount">
+       <number>2</number>
+      </property>
+      <attribute name="horizontalHeaderItem">
+       <column>0</column>
+       <item>
+        <property name="text">
+         <string>Disk File</string>
+        </property>
+       </item>
+      </attribute>
+      <attribute name="horizontalHeaderItem">
+       <column>1</column>
+       <item>
+        <property name="text">
+         <string>Storage Repository</string>
+        </property>
+       </item>
+      </attribute>
+     </widget>
+    </item>
+    <item>
      <spacer name="storagePageSpacer">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -509,6 +551,29 @@ Note: only local files are supported. HTTP/FTP URI imports are not available in 
         </property>
        </widget>
       </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="additionalDiskSpaceLabel">
+                <property name="text">
+                 <string>Additional disk space (GB):</string>
+                </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QSpinBox" name="additionalDiskSpaceSpin">
+                <property name="minimum">
+                 <number>0</number>
+                </property>
+                <property name="maximum">
+                 <number>1048576</number>
+                </property>
+                <property name="singleStep">
+                 <number>1</number>
+                </property>
+                <property name="suffix">
+                 <string> GB</string>
+                </property>
+             </widget>
+            </item>
      </layout>
     </item>
     <item>

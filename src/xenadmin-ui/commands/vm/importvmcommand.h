@@ -41,9 +41,11 @@ class ImportVMCommand : public Command
         void Run() override;
         bool CanRun() const override;
         QString MenuText() const override;
+        void SetOvfOnlyMode(bool ovfOnly);
 
     private:
         void showImportWizard();
+        bool m_ovfOnlyMode = false;
 };
 
 #endif // IMPORTVMCOMMAND_H

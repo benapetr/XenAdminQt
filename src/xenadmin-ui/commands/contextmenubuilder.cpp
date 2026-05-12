@@ -1210,6 +1210,9 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
     this->addCommand(menu, newVMCmd);
     ImportVMCommand* poolImportCmd = new ImportVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, poolImportCmd);
+    ImportVMCommand* poolImportVappCmd = new ImportVMCommand(this->m_mainWindow, this);
+    poolImportVappCmd->SetOvfOnlyMode(true);
+    this->addCommand(menu, poolImportVappCmd);
 
     // C# parity: "High Availability" submenu with Configure/Disable entries.
     QMenu* haMenu = new QMenu(tr("High Availability"), menu);

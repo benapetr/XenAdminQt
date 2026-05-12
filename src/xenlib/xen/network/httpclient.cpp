@@ -34,6 +34,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QDebug>
+#include <QNetworkProxy>
 
 HttpClient::HttpClient(QObject* parent) : QObject(parent)
 {
@@ -67,6 +68,11 @@ QUrl HttpClient::buildUri(const QString& hostname,
 bool HttpClient::connectToHost(const QUrl& url, QSslSocket*& socket)
 {
     socket = new QSslSocket(this);
+
+    // Respect app-wide proxy settings (SettingsManager::ApplyProxySettings).
+    const QNetworkProxy appProxy = QNetworkProxy::applicationProxy();
+    if (appProxy.type() != QNetworkProxy::NoProxy)
+        socket->setProxy(appProxy);
     
     // Configure SSL to accept all certificates (matching C# behavior)
     QSslConfiguration sslConfig = socket->sslConfiguration();
