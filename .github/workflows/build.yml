@@ -119,34 +119,34 @@ jobs:
           cd build
           make -j"$(nproc)"
 
-#  build-riscv64:
-#    name: riscv64 / Qt (system) / native runner
-#    runs-on: ubuntu-24.04-riscv
-#    steps:
-#      - name: Checkout sources
-#        uses: actions/checkout@v4
-#      - name: Install dependencies
-#        run: |
-#          if [ ! -d /var/lib/dpkg ]; then
-#            sudo mkdir -p /var/lib/dpkg/info \
-#              /var/lib/dpkg/updates /var/lib/dpkg/parts
-#            sudo touch /var/lib/dpkg/status
-#          fi
-#          sudo apt-get update
-#          sudo apt-get install -y build-essential pkg-config \
-#            qt6-base-dev qt6-charts-dev \
-#            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
-#      - name: Show qmake version
-#        run: qmake6 -v
-#      - name: Configure project
-#        run: |
-#          mkdir -p build
-#          cd build
-#          qmake6 ../src/xenadminqt.pro
-#      - name: Build project
-#        run: |
-#          cd build
-#          time make -j"$(nproc)"
+  build-riscv64:
+    name: riscv64 / Qt (system) / native runner
+    runs-on: ubuntu-24.04-riscv
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          if [ ! -d /var/lib/dpkg ]; then
+            sudo mkdir -p /var/lib/dpkg/info \
+              /var/lib/dpkg/updates /var/lib/dpkg/parts
+            sudo touch /var/lib/dpkg/status
+          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config \
+            qt6-base-dev qt6-charts-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+      - name: Show qmake version
+        run: qmake6 -v
+      - name: Configure project
+        run: |
+          mkdir -p build
+          cd build
+          qmake6 ../src/xenadminqt.pro
+      - name: Build project
+        run: |
+          cd build
+          time make -j"$(nproc)"
 
   build-riscv64-cross:
     name: riscv64 / cross-compile / CMake on x86_64
