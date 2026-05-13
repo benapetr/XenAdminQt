@@ -53,6 +53,7 @@
 #include "xenlib/xen/actions/vif/createvifaction.h"
 #include "xenlib/xen/actions/vif/updatevifaction.h"
 #include "xenlib/xen/actions/network/networkaction.h"
+#include "xenlib/utils/misc.h"
 #include "commands/network/destroybondcommand.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
@@ -891,7 +892,7 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
         QStringList ipAddresses;
         QSharedPointer<VIF> vif = this->getSelectedVif();
         if (vif && vif->IsValid())
-            ipAddresses = this->collectVifIPAddresses(vif);
+            ipAddresses = Misc::Deduplicate(this->collectVifIPAddresses(vif));
 
         QMenu* copyMenu = contextMenu.addMenu(tr("Copy"));
 

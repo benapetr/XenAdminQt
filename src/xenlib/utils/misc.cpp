@@ -166,6 +166,20 @@ QString Misc::FormatUptime(qint64 seconds)
     return parts.join(", ");
 }
 
+QStringList Misc::Deduplicate(const QStringList& values, Qt::CaseSensitivity caseSensitivity)
+{
+    QStringList result;
+    result.reserve(values.size());
+
+    for (const QString& value : values)
+    {
+        if (!result.contains(value, caseSensitivity))
+            result.append(value);
+    }
+
+    return result;
+}
+
 QDateTime Misc::ParseXenDateTime(const QString& dateStr)
 {
     const QString text = dateStr.trimmed();

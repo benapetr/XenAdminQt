@@ -30,6 +30,7 @@
 
 #include <QVariant>
 #include <QString>
+#include <QStringList>
 #include <QDateTime>
 
 class Misc
@@ -53,6 +54,17 @@ class Misc
         static QString FormatSize(qint64 bytes);
 
         static QString FormatUptime(qint64 seconds);
+
+        /**
+         * @brief Return a copy of the list with duplicate entries removed.
+         *
+         * Keeps the first occurrence of each value and preserves the original order.
+         *
+         * @param values Input list
+         * @param caseSensitivity Whether string matching is case-sensitive
+         * @return Deduplicated list
+         */
+        static QStringList Deduplicate(const QStringList& values, Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive);
 
         /**
          * @brief Parse XenAPI/C# compatible date-time strings into UTC
