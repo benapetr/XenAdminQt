@@ -175,6 +175,7 @@
 #include "commands/template/copytemplatecommand.h"
 #include "commands/template/deletetemplatecommand.h"
 #include "commands/template/exporttemplatecommand.h"
+#include "commands/template/templatepropertiescommand.h"
 
 // Storage commands
 #include "commands/storage/newsrcommand.h"
@@ -2736,7 +2737,7 @@ void MainWindow::updateToolbarsAndMenus()
         this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteVMsAndTemplates"]->CanRun());
     else
         this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
-    this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
+    this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["TemplateProperties"]->CanRun());
 
     // Storage menu
     this->ui->addVirtualDiskToolStripMenuItem->setEnabled(this->m_commands["AddVirtualDisk"]->CanRun());
@@ -3336,8 +3337,8 @@ void MainWindow::onDeleteTemplate()
 
 void MainWindow::onTemplateProperties()
 {
-    if (this->m_commands.contains("VMProperties"))
-        this->m_commands["VMProperties"]->Run(); // Use VMProperties for templates too
+    if (this->m_commands.contains("TemplateProperties"))
+        this->m_commands["TemplateProperties"]->Run();
 }
 
 // Storage menu slots
@@ -3505,6 +3506,7 @@ void MainWindow::initializeCommands()
     this->m_commands["CopyTemplate"] = new CopyTemplateCommand(this, this);
     this->m_commands["DeleteTemplate"] = new DeleteTemplateCommand(this, this);
     this->m_commands["ExportTemplate"] = new ExportTemplateCommand(this, this);
+    this->m_commands["TemplateProperties"] = new TemplatePropertiesCommand(this, this);
 
     // Storage commands
     this->m_commands["RepairSR"] = new RepairSRCommand(this, this);

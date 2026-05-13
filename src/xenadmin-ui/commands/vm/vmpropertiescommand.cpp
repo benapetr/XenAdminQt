@@ -32,20 +32,18 @@
 #include <QtWidgets>
 #include "xenlib/xen/vm.h"
 
-VMPropertiesCommand::VMPropertiesCommand(QObject* parent) : VMCommand(nullptr, parent)
+VMPropertiesCommand::VMPropertiesCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
-    // qDebug() << "VMPropertiesCommand: Created default constructor";
 }
 
-VMPropertiesCommand::VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent), m_vmUuid(vmUuid)
+VMPropertiesCommand::VMPropertiesCommand(QSharedPointer<VM> vm, MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
-    // qDebug() << "VMPropertiesCommand: Created with VM UUID:" << vmUuid;
+    if (vm)
+        this->SetSelectionOverride({vm});
 }
 
 void VMPropertiesCommand::Run()
 {
-    // qDebug() << "VMPropertiesCommand: Executing VM Properties command for VM:" << this->m_vmUuid;
-
     if (!this->CanRun())
     {
         qWarning() << "VMPropertiesCommand: Cannot execute - no VM selected or invalid state";
@@ -58,17 +56,17 @@ void VMPropertiesCommand::Run()
 
 bool VMPropertiesCommand::CanRun() const
 {
-    // Match C# logic:
-    // VMPropertiesCommand: selection is VM AND not template AND not snapshot AND not locked
-    // TemplatePropertiesCommand: selection is VM AND is_a_template AND not snapshot AND not locked
-    //
-    // Since Qt uses the same VMPropertiesDialog for both, we accept both vm and template types
+    if (this->getSelectedObjects().size() != 1)
+        return false;
+
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return false;
 
-    // TODO: Check locked state and snapshot state when implemented
-    return (vm->GetConnection() && vm->GetConnection()->IsConnected());
+    if (!vm->GetConnection() || !vm->GetConnection()->IsConnected())
+        return false;
+
+    return !vm->IsTemplate() && !vm->IsLocked();
 }
 
 QString VMPropertiesCommand::MenuText() const
@@ -89,16 +87,6 @@ QIcon VMPropertiesCommand::icon() const
 
 void VMPropertiesCommand::showPropertiesDialog()
 {
-    qDebug() << "VMPropertiesCommand: Opening VM Properties Dialog for VM:" << this->m_vmUuid;
-
-    // Get selected VM ref from command base class
-    QString vmRef = this->getSelectedObjectRef();
-    if (vmRef.isEmpty())
-    {
-        qWarning() << "VMPropertiesCommand: No VM selected";
-        return;
-    }
-
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return;

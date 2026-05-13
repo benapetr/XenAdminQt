@@ -43,10 +43,6 @@ QSharedPointer<SR> SRCommand::getSR() const
 
 QString SRCommand::getSelectedSRRef() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
     if (this->getSelectedObjectType() != XenObjectType::SR)
         return QString();
 
@@ -55,10 +51,6 @@ QString SRCommand::getSelectedSRRef() const
 
 QString SRCommand::getSelectedSRName() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
     if (this->getSelectedObjectType() != XenObjectType::SR)
         return QString();
 

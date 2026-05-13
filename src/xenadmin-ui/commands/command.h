@@ -62,6 +62,11 @@ class Command : public QObject
          */
         Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent = nullptr);
 
+        /**
+         * @brief Construct a command with an explicit XenObject selection context
+         */
+        Command(MainWindow* mainWindow, const QList<QSharedPointer<XenObject>>& selection, QObject* parent = nullptr);
+
         virtual ~Command() = default;
 
         /**
@@ -92,6 +97,11 @@ class Command : public QObject
          * @brief Override selection for this command (used for explicit selections)
          */
         void SetSelectionOverride(const QList<QSharedPointer<XenObject>>& objects);
+
+        bool HasSelectionOverride() const
+        {
+            return !this->m_selectionOverride.isEmpty();
+        }
 
         /**
          * @brief Set the selection context

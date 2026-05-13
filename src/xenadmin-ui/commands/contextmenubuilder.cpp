@@ -98,6 +98,7 @@
 #include "template/deletetemplatecommand.h"
 #include "template/exporttemplatecommand.h"
 #include "template/copytemplatecommand.h"
+#include "template/templatepropertiescommand.h"
 #include "network/networkpropertiescommand.h"
 #include "folder/newfoldercommand.h"
 #include "folder/deletefoldercommand.h"
@@ -491,7 +492,17 @@ void ContextMenuBuilder::onCollapseChildNodesRequested()
 
 void ContextMenuBuilder::addCommandAt(QMenu* menu, Command* command, QAction* insertBefore)
 {
-    if (!command || !menu || !command->CanRun())
+    if (!command || !menu)
+        return;
+
+    if (!command->HasSelectionOverride() && this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QList<QSharedPointer<XenObject>> selection = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        if (!selection.isEmpty())
+            command->SetSelectionOverride(selection);
+    }
+
+    if (!command->CanRun())
         return;
 
     QAction* action = new QAction(command->MenuText(), menu);
@@ -804,7 +815,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // Properties
-    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vm->OpaqueRef(), this->m_mainWindow, this);
+    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
@@ -812,8 +823,6 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
 {
     if (!snapshot)
         return;
-
-    QString vmRef = snapshot->OpaqueRef();
 
     // C# SingleSnapshot builder pattern:
     // - NewVMFromSnapshotCommand (not implemented yet)
@@ -848,7 +857,7 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
     this->addSeparator(menu);
 
     // Properties
-    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vmRef, this->m_mainWindow, this);
+    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(snapshot, this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
@@ -869,7 +878,6 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
     if (!templateVM)
         return;
 
-    QString templateRef = templateVM->OpaqueRef();
     bool mixedVmTemplateSelection = false;
     if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
     {
@@ -923,8 +931,8 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
     this->addSeparator(menu);
 
-    QAction* propertiesAction = menu->addAction("Properties");
-    propertiesAction->setIcon(QIcon(":/icons/empty_icon.png"));
+    TemplatePropertiesCommand* propertiesCmd = new TemplatePropertiesCommand(this->m_mainWindow, this);
+    this->addCommand(menu, propertiesCmd);
 }
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)
@@ -1395,6 +1403,13 @@ void ContextMenuBuilder::addCommandAlways(QMenu* menu, Command* command)
 {
     if (!command)
         return;
+
+    if (!command->HasSelectionOverride() && this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QList<QSharedPointer<XenObject>> selection = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        if (!selection.isEmpty())
+            command->SetSelectionOverride(selection);
+    }
 
     QAction* action = menu->addAction(command->MenuText());
     action->setEnabled(command->CanRun());

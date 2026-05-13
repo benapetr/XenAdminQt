@@ -35,8 +35,8 @@ class VMPropertiesCommand : public VMCommand
     Q_OBJECT
 
     public:
-        explicit VMPropertiesCommand(QObject* parent = nullptr);
-        explicit VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit VMPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit VMPropertiesCommand(QSharedPointer<VM> vm, MainWindow* mainWindow, QObject* parent = nullptr);
 
         void Run() override;
         bool CanRun() const override;
@@ -45,7 +45,6 @@ class VMPropertiesCommand : public VMCommand
         QIcon icon() const;
 
     private:
-        QString m_vmUuid;
         void showPropertiesDialog();
 };
 

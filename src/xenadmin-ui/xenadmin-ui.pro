@@ -532,6 +532,7 @@ HEADERS += \
     commands/template/newvmfromtemplatecommand.h \
     commands/template/instantvmfromtemplatecommand.h \
     commands/template/copytemplatecommand.h \
+    commands/template/templatepropertiescommand.h \
     commands/storage/repairsrcommand.h \
     commands/storage/detachsrcommand.h \
     commands/storage/setdefaultsrcommand.h \

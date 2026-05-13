@@ -43,6 +43,10 @@ Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* 
 {
 }
 
+Command::Command(MainWindow* mainWindow, const QList<QSharedPointer<XenObject>>& selection, QObject* parent) : QObject(parent), m_mainWindow(mainWindow), m_selectionOverride(selection)
+{
+}
+
 QIcon Command::GetIcon() const
 {
     return QIcon(":/icons/empty_icon.png");

@@ -68,16 +68,9 @@ QString NetworkPropertiesCommand::MenuText() const
 
 QString NetworkPropertiesCommand::getSelectedNetworkUuid() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    // Check if this is a Network item
-    QVariant data = item->data(0, Qt::UserRole);
-    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    QSharedPointer<XenObject> obj = this->GetObject();
     if (!obj || obj->GetObjectType() != XenObjectType::Network)
         return QString();
 
     return obj->GetUUID();
-    return QString();
 }
