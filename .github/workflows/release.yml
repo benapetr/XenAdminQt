@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload assets to (e.g. v0.0.6-alpha)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package-deb:
+    name: ${{ matrix.arch }} / Debian package
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: riscv64
+            runner: ubuntu-24.04-riscv
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Fix dpkg database (RISE runner workaround)
+        if: matrix.arch == 'riscv64'
+        run: |
+          if [ ! -d /var/lib/dpkg ]; then
+            sudo mkdir -p /var/lib/dpkg/info \
+              /var/lib/dpkg/updates /var/lib/dpkg/parts
+            sudo touch /var/lib/dpkg/status
+          fi
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential debhelper dpkg-dev pkg-config \
+            qt6-base-dev qt6-charts-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+
+      - name: Determine version and tag
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION=$(echo "$TAG" | sed 's/^v//; s/[-+].*//')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Debian package
+        run: |
+          bash packaging/package-deb.sh \
+            --version "${{ steps.meta.outputs.version }}"
+
+      - name: Upload .deb assets to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          find packaging/output -name "*.deb" | while read -r deb; do
+            gh release upload "$RELEASE_TAG" "$deb" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          done
+
