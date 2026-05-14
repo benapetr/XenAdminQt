@@ -27,14 +27,10 @@
 
 #include "vappexportcommand.h"
 #include "../../dialogs/exportwizard.h"
-#include "../../dialogs/actionprogressdialog.h"
 #include "../../mainwindow.h"
-#include "../../settingsmanager.h"
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
-#include "xenlib/xen/actions/vm/exportvmaction.h"
-#include <QFileInfo>
 #include <QMessageBox>
 
 VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_exportWizard(nullptr)
@@ -86,6 +82,7 @@ void VappExportCommand::Run()
 
     this->m_exportWizard = new ExportWizard(conn, MainWindow::instance());
     this->m_exportWizard->SetPreselectedVMs(memberVms);
+    this->m_exportWizard->SetOvfModeOnly();
     connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
             this, &VappExportCommand::onWizardFinished);
 
@@ -98,42 +95,10 @@ void VappExportCommand::onWizardFinished(int result)
 {
     if (result == QDialog::Accepted && this->m_exportWizard)
     {
-        if (!this->m_exportWizard->exportAsXVA())
-        {
-            QMessageBox::warning(MainWindow::instance(), tr("Export vApp"),
-                                 tr("OVF/OVA export is not implemented yet. Select XVA Package to export this vApp."));
-        }
-        else
-        {
-            QString fullPath;
-            if (this->m_exportWizard->ValidateXvaDestination(MainWindow::instance(), &fullPath))
-            {
-                const QList<QSharedPointer<VM>> selectedVMs = this->m_exportWizard->GetSelectedVMs();
-                if (selectedVMs.isEmpty())
-                {
-                    QMessageBox::warning(MainWindow::instance(), tr("Export vApp"),
-                                         tr("No virtual machines selected for export."));
-                }
-                else
-                {
-                    QSharedPointer<VM> vm = selectedVMs.first();
-                    QSharedPointer<Host> host = vm->GetHome();
-                    ExportVmAction* action = new ExportVmAction(vm, host, fullPath,
-                                                                this->m_exportWizard->verifyExport(),
-                                                                MainWindow::instance());
-                    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
-                    progressDialog->setShowCancel(true);
-                    progressDialog->exec();
-                    progressDialog->deleteLater();
-
-                    if (action->IsCompleted())
-                    {
-                        SettingsManager::instance().SetDefaultExportPath(QFileInfo(fullPath).absolutePath());
-                        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
-                    }
-                }
-            }
-        }
+        // vApp export is always OVF/OVA (XVA option is hidden by SetOvfModeOnly()).
+        // OVF export is not yet implemented; inform the user.
+        QMessageBox::information(MainWindow::instance(), tr("Export vApp"),
+                                 tr("OVF/OVA export is not yet implemented."));
     }
 
     if (this->m_exportWizard)

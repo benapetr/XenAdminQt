@@ -35,6 +35,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QNetworkProxy>
+#include <cerrno>
 
 HttpClient::HttpClient(QObject* parent) : QObject(parent)
 {
@@ -174,7 +175,20 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
         qint64 bytesWritten = dest->write(buffer.constData(), bytesRead);
         if (bytesWritten != bytesRead)
         {
-            this->lastError_ = "Failed to write data";
+            // Detect disk-full on POSIX systems (mirrors C# ERROR_DISK_FULL check)
+#ifdef Q_OS_UNIX
+            if (errno == ENOSPC)
+            {
+                this->isDiskFull_ = true;
+                this->lastError_ = "The target disk is full.";
+                return -1;
+            }
+#endif
+            // Generic write error — include the file's error string where available
+            QFile* destFile = qobject_cast<QFile*>(dest);
+            this->lastError_ = destFile
+                ? QString("Failed to write data: %1").arg(destFile->errorString())
+                : QString("Failed to write data");
             return -1;
         }
 
@@ -298,6 +312,7 @@ bool HttpClient::getFile(const QString& hostname,
                          DataCopiedCallback dataCopiedCallback,
                          CancelCallback cancelCallback)
 {
+    this->isDiskFull_ = false;   // Reset per-call flag before each download
     QUrl url = buildUri(hostname, remotePath, queryParams);
 
     qDebug() << "HTTP GET:" << url.toString();

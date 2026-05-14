@@ -37,6 +37,7 @@
 #include <QFileInfo>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QStorageInfo>
 
 ExportWizard::ExportWizard(QWidget* parent)
     : QWizard(parent)
@@ -119,6 +120,20 @@ void ExportWizard::setupWizardPages()
 void ExportWizard::SetConnection(XenConnection* connection)
 {
     this->m_connection = connection;
+}
+
+void ExportWizard::SetOvfModeOnly()
+{
+    // Matches C# ExportAppliancePage.OvfModeOnly:
+    // Show only the OVF/OVA option — XVA is not valid for vApp export.
+    // Remove the XVA item (index 0) from the combo and select the OVF item.
+    const int xvaIndex = this->ui->formatComboBox->findData(true); // data=true means XVA
+    if (xvaIndex >= 0)
+        this->ui->formatComboBox->removeItem(xvaIndex);
+    this->ui->formatComboBox->setEnabled(false);
+    this->m_exportAsXVA = false;
+    this->setWindowTitle(tr("Export Virtual Appliance"));
+    this->ui->ovfGroup->setVisible(true);
 }
 
 void ExportWizard::SetPreselectedVMs(const QList<QSharedPointer<VM>>& vms)
@@ -221,6 +236,27 @@ bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) co
         dir = QDir(directory);
     }
 
+    // Check available disk space (warn if low — we can't know exact VM size upfront,
+    // but an obviously-full disk should be flagged before a long download starts)
+    const QStorageInfo storageInfo(dir.absolutePath());
+    if (storageInfo.isValid() && storageInfo.isReady())
+    {
+        const qint64 available = storageInfo.bytesAvailable();
+        // Warn if less than 100 MiB free (a full XVA is typically several GiB)
+        static const qint64 MIN_FREE_BYTES = Q_INT64_C(100) * 1024 * 1024;
+        if (available < MIN_FREE_BYTES)
+        {
+            const QMessageBox::StandardButton reply = QMessageBox::warning(
+                parent, tr("Disk Space Warning"),
+                tr("The destination volume has very little free space (%1 MB available).\n\n"
+                   "Export files are typically several gigabytes. Continue anyway?")
+                    .arg(available / (1024 * 1024)),
+                QMessageBox::Yes | QMessageBox::No);
+            if (reply != QMessageBox::Yes)
+                return false;
+        }
+    }
+
     QString path = dir.filePath(fileName);
     if (!path.toLower().endsWith(".xva"))
         path += ".xva";
@@ -273,6 +309,14 @@ void ExportWizard::populateVmList()
                 continue;
             if (!vm->GetAllowedOperations().contains("export"))
                 continue;
+            // OVF export requires the VM to be halted or suspended (matches C# IsVmExportable).
+            // XVA export can target any power state selected via command context.
+            if (!this->m_exportAsXVA)
+            {
+                const QString ps = vm->GetPowerState();
+                if (ps != "Halted" && ps != "Suspended")
+                    continue;
+            }
 
             QListWidgetItem* item = new QListWidgetItem(vm->GetName());
             item->setData(Qt::UserRole, vm->OpaqueRef());
@@ -329,6 +373,29 @@ void ExportWizard::onDirectoryBrowse()
         this->ui->directoryLineEdit->setText(dir);
         // m_exportDirectory is kept in sync via the textChanged signal
     }
+}
+
+bool ExportWizard::validateCurrentPage()
+{
+    // VM selection page (OVF only): require at least one VM checked.
+    // Matches C#: m_buttonNextEnabled = ExportAsXva ? count == 1 : count > 0
+    if (this->currentId() == Page_VMs)
+    {
+        int checkedCount = 0;
+        for (int i = 0; i < this->ui->vmListWidget->count(); ++i)
+        {
+            const QListWidgetItem* item = this->ui->vmListWidget->item(i);
+            if (item && (item->flags() & Qt::ItemIsEnabled) && item->checkState() == Qt::Checked)
+                ++checkedCount;
+        }
+        if (checkedCount == 0)
+        {
+            QMessageBox::warning(this, tr("Export Virtual Appliance"),
+                                 tr("Please select at least one virtual machine to export."));
+            return false;
+        }
+    }
+    return QWizard::validateCurrentPage();
 }
 
 int ExportWizard::nextId() const

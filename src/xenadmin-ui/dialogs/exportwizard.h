@@ -67,6 +67,14 @@ class ExportWizard : public QWizard
         void SetConnection(XenConnection* connection);
         void SetPreselectedVMs(const QList<QSharedPointer<VM>>& vms);
 
+        /**
+         * @brief Lock the wizard to OVF/OVA mode only (XVA option hidden).
+         *
+         * Matches C# ExportAppliancePage.OvfModeOnly.
+         * Call before exec() when exporting a vApp (which is always OVF/OVA).
+         */
+        void SetOvfModeOnly();
+
         // Returns checked VMs (OVF) or preselected VMs (XVA)
         QList<QSharedPointer<VM>> GetSelectedVMs() const;
 
@@ -81,6 +89,7 @@ class ExportWizard : public QWizard
     protected:
         int nextId() const override;
         void initializePage(int id) override;
+        bool validateCurrentPage() override;
 
     private:
         void setupWizardPages();
