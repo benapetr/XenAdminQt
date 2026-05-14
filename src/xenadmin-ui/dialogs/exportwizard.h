@@ -76,12 +76,29 @@ class ExportWizard : public QWizard
         }
         QString exportFileName() const
         {
-            return m_exportFileName;
+            return this->m_exportFileName;
+        }
+        bool verifyExport() const
+        {
+            return this->m_verifyExportCheckBox && this->m_verifyExportCheckBox->isChecked();
+        }
+        void setSelectedObjectName(const QString& name)
+        {
+            this->m_selectedObjectName = name;
+        }
+        void setExportFileName(const QString& fileName)
+        {
+            this->m_exportFileName = fileName;
+            if (this->m_fileNameLineEdit)
+                this->m_fileNameLineEdit->setText(fileName);
         }
 
     private slots:
         void onFormatChanged();
         void onDirectoryBrowse();
+
+    protected:
+        int nextId() const override;
 
     private:
         QWizardPage* createFormatPage();
@@ -94,6 +111,7 @@ class ExportWizard : public QWizard
         bool m_exportAsXVA;
         QString m_exportDirectory;
         QString m_exportFileName;
+        QString m_selectedObjectName;
 
         // Format page widgets
         QComboBox* m_formatComboBox;
