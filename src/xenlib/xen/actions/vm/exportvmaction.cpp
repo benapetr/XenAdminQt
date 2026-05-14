@@ -36,6 +36,7 @@
 #include "../../pool.h"
 #include "../../host.h"
 #include "../../../xencache.h"
+#include "../../../xva/xvaverifier.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
@@ -207,23 +208,58 @@ void ExportVmAction::run()
         return;
     }
 
-    // Verify file if requested
+    // Verify file if requested (ports Export.verify() from C# CommandLib/export.cs)
     if (this->verify_)
     {
         this->SetDescription(tr("Verifying export..."));
         this->SetPercentComplete(50);
-        
-        // TODO: Implement TAR verification (requires archive library)
-        // For now, just check file exists and has size > 0
-        QFileInfo fileInfo(tmpFile);
-        if (!fileInfo.exists() || fileInfo.size() == 0)
+
+        const QFileInfo tmpInfo(tmpFile);
+        if (!tmpInfo.exists() || tmpInfo.size() == 0)
         {
             QFile::remove(tmpFile);
-            this->setError("Export verification failed: file is empty or missing");
+            this->setError(tr("Export verification failed: file is empty or missing"));
             this->setState(OperationState::Failed);
             return;
         }
-        
+
+        const XvaVerifyResult result = XvaVerifier::Verify(
+            tmpFile,
+            [this]() -> bool { return this->IsCancelled(); },
+            [this, &tmpInfo](qint64 bytesVerified) {
+                // Estimate progress from 50% to 95% proportional to bytes
+                const qint64 total = tmpInfo.size();
+                if (total > 0)
+                {
+                    const int pct = 50 + static_cast<int>(45.0 * bytesVerified / total);
+                    this->SetPercentComplete(qMin(pct, 95));
+                }
+            });
+
+        if (result.errorType == XvaVerifyResult::ErrorType::Cancelled)
+        {
+            QFile::remove(tmpFile);
+            this->setState(OperationState::Cancelled);
+            return;
+        }
+
+        if (!result.success)
+        {
+            QFile::remove(tmpFile);
+
+            // Match C# failure descriptions from ExportVmAction.cs
+            if (result.errorType == XvaVerifyResult::ErrorType::HeaderChecksum)
+                this->SetDescription(tr("Export verification failed: header checksum error"));
+            else if (result.errorType == XvaVerifyResult::ErrorType::BlockChecksum)
+                this->SetDescription(tr("Export verification failed: block checksum error"));
+            else
+                this->SetDescription(tr("Export verification failed"));
+
+            this->setError(result.errorMessage);
+            this->setState(OperationState::Failed);
+            return;
+        }
+
         this->SetPercentComplete(95);
     }
 

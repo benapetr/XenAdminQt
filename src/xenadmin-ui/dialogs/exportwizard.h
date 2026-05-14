@@ -29,26 +29,11 @@
 #define EXPORTWIZARD_H
 
 #include <QWizard>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFormLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QFileDialog>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QListWidget>
-#include <QProgressBar>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QGroupBox>
-#include <QRadioButton>
-#include <QSpinBox>
 #include <QSharedPointer>
 #include <QList>
 
-class QMainWindow;
+namespace Ui { class ExportWizard; }
+
 class VM;
 class XenConnection;
 
@@ -59,6 +44,7 @@ class ExportWizard : public QWizard
     public:
         explicit ExportWizard(QWidget* parent = nullptr);
         explicit ExportWizard(XenConnection* connection, QWidget* parent = nullptr);
+        ~ExportWizard();
 
         // Page IDs
         enum
@@ -69,33 +55,13 @@ class ExportWizard : public QWizard
             Page_Finish = 3
         };
 
-        // Export format
-        bool exportAsXVA() const
-        {
-            return this->m_exportAsXVA;
-        }
-        QString exportDirectory() const
-        {
-            return this->m_exportDirectory;
-        }
-        QString exportFileName() const
-        {
-            return this->m_exportFileName;
-        }
-        bool verifyExport() const
-        {
-            return this->m_verifyExportCheckBox && this->m_verifyExportCheckBox->isChecked();
-        }
-        void setSelectedObjectName(const QString& name)
-        {
-            this->m_selectedObjectName = name;
-        }
-        void setExportFileName(const QString& fileName)
-        {
-            this->m_exportFileName = fileName;
-            if (this->m_fileNameLineEdit)
-                this->m_fileNameLineEdit->setText(fileName);
-        }
+        // Export format / destination accessors (valid after exec() returns Accepted)
+        bool exportAsXVA() const { return this->m_exportAsXVA; }
+        QString exportDirectory() const { return this->m_exportDirectory; }
+        QString exportFileName() const { return this->m_exportFileName; }
+        bool verifyExport() const;
+        void setSelectedObjectName(const QString& name) { this->m_selectedObjectName = name; }
+        void setExportFileName(const QString& fileName);
 
         // Connection and VM context
         void SetConnection(XenConnection* connection);
@@ -117,13 +83,11 @@ class ExportWizard : public QWizard
         void initializePage(int id) override;
 
     private:
-        QWizardPage* createFormatPage();
-        QWizardPage* createVMsPage();
-        QWizardPage* createOptionsPage();
-        QWizardPage* createFinishPage();
-
+        void setupWizardPages();
         void updateSummary();
         void populateVmList();
+
+        Ui::ExportWizard* ui;
 
         // Connection and preselected VM context
         XenConnection* m_connection;
@@ -133,27 +97,6 @@ class ExportWizard : public QWizard
         QString m_exportDirectory;
         QString m_exportFileName;
         QString m_selectedObjectName;
-
-        // Format page widgets
-        QComboBox* m_formatComboBox;
-        QLineEdit* m_directoryLineEdit;
-        QPushButton* m_directoryBrowseButton;
-        QLineEdit* m_fileNameLineEdit;
-
-        // VMs page widgets
-        QListWidget* m_vmListWidget;
-
-        // Options page widgets
-        QCheckBox* m_createManifestCheckBox;
-        QCheckBox* m_signApplianceCheckBox;
-        QCheckBox* m_encryptFilesCheckBox;
-        QCheckBox* m_createOVACheckBox;
-        QCheckBox* m_compressOVFCheckBox;
-        QCheckBox* m_verifyExportCheckBox;
-
-        // Finish page widgets
-        QPlainTextEdit* m_summaryTextEdit;
 };
 
 #endif // EXPORTWIZARD_H
-

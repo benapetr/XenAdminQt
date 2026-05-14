@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ExportWizard</class>
+ <widget class="QWizard" name="ExportWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Export Virtual Appliance</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+
+  <!-- ══ Page 0: Format and Destination ═══════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageFormat">
+   <property name="title">
+    <string>Format and Destination</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the export format and destination for your virtual machines.</string>
+   </property>
+   <layout class="QVBoxLayout" name="formatPageLayout">
+    <item>
+     <widget class="QGroupBox" name="formatGroup">
+      <property name="title">
+       <string>Export Format</string>
+      </property>
+      <layout class="QVBoxLayout" name="formatGroupLayout">
+       <item>
+        <widget class="QLabel" name="formatLabel">
+         <property name="text">
+          <string>Format:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="formatComboBox"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="destinationGroup">
+      <property name="title">
+       <string>Export Destination</string>
+      </property>
+      <layout class="QFormLayout" name="destinationFormLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="directoryLabel">
+         <property name="text">
+          <string>Directory:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="directoryRowLayout">
+         <item>
+          <widget class="QLineEdit" name="directoryLineEdit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="directoryBrowseButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="fileNameLabel">
+         <property name="text">
+          <string>File name:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="fileNameLineEdit">
+         <property name="placeholderText">
+          <string>appliance</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="formatPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 1: Virtual Machines ═════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageVMs">
+   <property name="title">
+    <string>Virtual Machines</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the virtual machines to export.</string>
+   </property>
+   <layout class="QVBoxLayout" name="vmsPageLayout">
+    <item>
+     <widget class="QLabel" name="vmInstructionLabel">
+      <property name="text">
+       <string>Select the virtual machines you want to export:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QListWidget" name="vmListWidget">
+      <property name="selectionMode">
+       <enum>QAbstractItemView::NoSelection</enum>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="vmButtonLayout">
+      <item>
+       <widget class="QPushButton" name="selectAllButton">
+        <property name="text">
+         <string>Select All</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="deselectAllButton">
+        <property name="text">
+         <string>Deselect All</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="vmButtonSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 2: Export Options ════════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageOptions">
+   <property name="title">
+    <string>Export Options</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure additional export options.</string>
+   </property>
+   <layout class="QVBoxLayout" name="optionsPageLayout">
+    <item>
+     <widget class="QGroupBox" name="ovfGroup">
+      <property name="title">
+       <string>OVF Options</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="ovfGroupLayout">
+       <item>
+        <widget class="QCheckBox" name="createManifestCheckBox">
+         <property name="text">
+          <string>Create manifest</string>
+         </property>
+         <property name="toolTip">
+          <string>Create a manifest file (.mf) to verify package integrity</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="signApplianceCheckBox">
+         <property name="text">
+          <string>Sign appliance</string>
+         </property>
+         <property name="toolTip">
+          <string>Digitally sign the appliance for verification</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="encryptFilesCheckBox">
+         <property name="text">
+          <string>Encrypt files</string>
+         </property>
+         <property name="toolTip">
+          <string>Encrypt the exported files</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="createOVACheckBox">
+         <property name="text">
+          <string>Create OVA package</string>
+         </property>
+         <property name="toolTip">
+          <string>Package all files into a single OVA file</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="compressOVFCheckBox">
+         <property name="text">
+          <string>Compress OVF files</string>
+         </property>
+         <property name="toolTip">
+          <string>Compress the OVF files to reduce size</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="generalGroup">
+      <property name="title">
+       <string>General Options</string>
+      </property>
+      <layout class="QVBoxLayout" name="generalGroupLayout">
+       <item>
+        <widget class="QCheckBox" name="verifyExportCheckBox">
+         <property name="text">
+          <string>Verify export on completion</string>
+         </property>
+         <property name="toolTip">
+          <string>Verify the exported files after completion</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="optionsPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- ══ Page 3: Summary (Finish) ══════════════════════════════════════════ -->
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Summary</string>
+   </property>
+   <property name="subTitle">
+    <string>Review your export settings.</string>
+   </property>
+   <layout class="QVBoxLayout" name="finishPageLayout">
+    <item>
+     <widget class="QLabel" name="summaryReviewLabel">
+      <property name="text">
+       <string>Please review the settings below and click Finish to start the export:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="summaryTextEdit">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
