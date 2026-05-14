@@ -217,6 +217,7 @@ SOURCES += \
     commands/template/newvmfromtemplatecommand.cpp \
     commands/template/instantvmfromtemplatecommand.cpp \
     commands/template/copytemplatecommand.cpp \
+    commands/template/templatepropertiescommand.cpp \
     commands/storage/repairsrcommand.cpp \
     commands/storage/detachsrcommand.cpp \
     commands/storage/setdefaultsrcommand.cpp \

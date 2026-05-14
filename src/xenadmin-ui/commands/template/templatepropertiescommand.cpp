@@ -25,19 +25,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TEMPLATEPROPERTIESCOMMAND_H
-#define TEMPLATEPROPERTIESCOMMAND_H
+#include "templatepropertiescommand.h"
+#include "../../dialogs/vmpropertiesdialog.h"
+#include "../../mainwindow.h"
+#include "xenlib/xen/vm.h"
 
-#include "templatecommand.h"
-
-class TemplatePropertiesCommand : public TemplateCommand
+TemplatePropertiesCommand::TemplatePropertiesCommand(MainWindow* mainWindow, QObject* parent) : TemplateCommand(mainWindow, parent)
 {
-    public:
-        explicit TemplatePropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+}
 
-        void Run() override;
-        bool CanRun() const override;
-        QString MenuText() const override;
-};
+void TemplatePropertiesCommand::Run()
+{
+    if (!this->CanRun())
+        return;
 
-#endif // TEMPLATEPROPERTIESCOMMAND_H
+    QSharedPointer<VM> templateVm = this->getTemplate();
+    if (!templateVm)
+        return;
+
+    VMPropertiesDialog dialog(templateVm, MainWindow::instance());
+    if (dialog.exec() == QDialog::Accepted && this->mainWindow())
+        this->mainWindow()->RefreshServerTree();
+}
+
+bool TemplatePropertiesCommand::CanRun() const
+{
+    if (this->getSelectedObjects().size() != 1)
+        return false;
+
+    QSharedPointer<VM> templateVm = this->getTemplate();
+    if (!templateVm)
+        return false;
+
+    if (!templateVm->GetConnection() || !templateVm->GetConnection()->IsConnected())
+        return false;
+
+    return templateVm->IsTemplate() && !templateVm->IsSnapshot() && !templateVm->IsLocked();
+}
+
+QString TemplatePropertiesCommand::MenuText() const
+{
+    return tr("Properties...");
+}
