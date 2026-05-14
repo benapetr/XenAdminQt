@@ -59,21 +59,15 @@ void ExportVMCommand::Run()
         return;
     }
 
-    // Create and show the Export Wizard
-    if (!this->m_exportWizard)
-    {
-        this->m_exportWizard = new ExportWizard(MainWindow::instance());
-        connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
-                this, &ExportVMCommand::onWizardFinished);
-    }
-
     QSharedPointer<VM> vm = this->getVM();
-    if (vm)
-    {
-        this->m_exportWizard->setSelectedObjectName(vm->GetName());
-        if (this->m_exportWizard->exportFileName().isEmpty())
-            this->m_exportWizard->setExportFileName(vm->GetName());
-    }
+    if (!vm)
+        return;
+
+    // Create wizard with connection context and preselect the current VM
+    this->m_exportWizard = new ExportWizard(vm->GetConnection(), MainWindow::instance());
+    this->m_exportWizard->SetPreselectedVMs({vm});
+    connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
+            this, &ExportVMCommand::onWizardFinished);
 
     this->m_exportWizard->show();
     this->m_exportWizard->raise();
@@ -93,7 +87,7 @@ void ExportVMCommand::onWizardFinished(int result)
         {
             QString fullPath;
             QSharedPointer<VM> vm = this->getVM();
-            if (vm && this->validateXvaDestination(&fullPath))
+            if (vm && this->m_exportWizard->ValidateXvaDestination(MainWindow::instance(), &fullPath))
             {
                 QSharedPointer<Host> host = vm->GetHome();
                 ExportVmAction* action = new ExportVmAction(vm, host, fullPath, this->m_exportWizard->verifyExport(), MainWindow::instance());
@@ -124,92 +118,6 @@ void ExportVMCommand::onWizardFinished(int result)
 QString ExportVMCommand::MenuText() const
 {
     return "Export...";
-}
-
-bool ExportVMCommand::validateXvaDestination(QString* fullPath) const
-{
-    if (!this->m_exportWizard || !fullPath)
-        return false;
-
-    const QString directory = this->m_exportWizard->exportDirectory().trimmed();
-    const QString fileName = this->m_exportWizard->exportFileName().trimmed();
-
-    if (directory.isEmpty())
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                             tr("Please select an export directory."));
-        return false;
-    }
-
-    if (fileName.isEmpty())
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                             tr("Please enter an export file name."));
-        return false;
-    }
-
-    if (QDir::isAbsolutePath(fileName) || fileName.contains('/') || fileName.contains('\\') ||
-        fileName == "." || fileName == "..")
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                             tr("Please enter a file name only, without path separators."));
-        return false;
-    }
-
-    QDir dir(directory);
-    if (!dir.exists())
-    {
-        const QMessageBox::StandardButton reply = QMessageBox::question(
-            MainWindow::instance(),
-            tr("Create Export Directory"),
-            tr("The export directory does not exist:\n%1\n\nCreate it?").arg(directory),
-            QMessageBox::Yes | QMessageBox::No);
-        if (reply != QMessageBox::Yes)
-            return false;
-
-        if (!QDir().mkpath(directory))
-        {
-            QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                                 tr("Could not create the export directory:\n%1").arg(directory));
-            return false;
-        }
-        dir = QDir(directory);
-    }
-
-    if (!dir.exists())
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                             tr("The export directory does not exist."));
-        return false;
-    }
-
-    QString path = dir.filePath(fileName);
-    if (!path.toLower().endsWith(".xva"))
-        path += ".xva";
-
-    if (QFile::exists(path))
-    {
-        const QMessageBox::StandardButton reply = QMessageBox::question(
-            MainWindow::instance(),
-            tr("Overwrite Export"),
-            tr("The export file already exists:\n%1\n\nOverwrite it?").arg(path),
-            QMessageBox::Yes | QMessageBox::No);
-        if (reply != QMessageBox::Yes)
-            return false;
-    }
-
-    QFile probe(path + ".write-test");
-    if (!probe.open(QIODevice::WriteOnly))
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                             tr("Cannot write to the export directory:\n%1").arg(probe.errorString()));
-        return false;
-    }
-    probe.close();
-    QFile::remove(probe.fileName());
-
-    *fullPath = QFileInfo(path).absoluteFilePath();
-    return true;
 }
 
 bool ExportVMCommand::isVMExportable() const

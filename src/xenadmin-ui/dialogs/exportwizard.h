@@ -45,9 +45,12 @@
 #include <QGroupBox>
 #include <QRadioButton>
 #include <QSpinBox>
+#include <QSharedPointer>
+#include <QList>
 
 class QMainWindow;
 class VM;
+class XenConnection;
 
 class ExportWizard : public QWizard
 {
@@ -55,6 +58,7 @@ class ExportWizard : public QWizard
 
     public:
         explicit ExportWizard(QWidget* parent = nullptr);
+        explicit ExportWizard(XenConnection* connection, QWidget* parent = nullptr);
 
         // Page IDs
         enum
@@ -68,11 +72,11 @@ class ExportWizard : public QWizard
         // Export format
         bool exportAsXVA() const
         {
-            return m_exportAsXVA;
+            return this->m_exportAsXVA;
         }
         QString exportDirectory() const
         {
-            return m_exportDirectory;
+            return this->m_exportDirectory;
         }
         QString exportFileName() const
         {
@@ -93,12 +97,24 @@ class ExportWizard : public QWizard
                 this->m_fileNameLineEdit->setText(fileName);
         }
 
+        // Connection and VM context
+        void SetConnection(XenConnection* connection);
+        void SetPreselectedVMs(const QList<QSharedPointer<VM>>& vms);
+
+        // Returns checked VMs (OVF) or preselected VMs (XVA)
+        QList<QSharedPointer<VM>> GetSelectedVMs() const;
+
+        // Validate XVA destination and build the full output path.
+        // Returns true when valid, sets *fullPath. Shows QMessageBox on failure.
+        bool ValidateXvaDestination(QWidget* parent, QString* fullPath) const;
+
     private slots:
         void onFormatChanged();
         void onDirectoryBrowse();
 
     protected:
         int nextId() const override;
+        void initializePage(int id) override;
 
     private:
         QWizardPage* createFormatPage();
@@ -107,6 +123,11 @@ class ExportWizard : public QWizard
         QWizardPage* createFinishPage();
 
         void updateSummary();
+        void populateVmList();
+
+        // Connection and preselected VM context
+        XenConnection* m_connection;
+        QList<QSharedPointer<VM>> m_preselectedVMs;
 
         bool m_exportAsXVA;
         QString m_exportDirectory;
@@ -135,3 +156,4 @@ class ExportWizard : public QWizard
 };
 
 #endif // EXPORTWIZARD_H
+
