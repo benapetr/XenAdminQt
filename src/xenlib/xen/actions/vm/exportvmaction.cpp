@@ -35,6 +35,7 @@
 #include "../../vm.h"
 #include "../../pool.h"
 #include "../../host.h"
+#include "../../failure.h"
 #include "../../../xencache.h"
 #include "../../../xva/xvaverifier.h"
 #include <QFile>
@@ -85,8 +86,8 @@ void ExportVmAction::progressPoll()
 {
     try
     {
-        // Poll task progress
-        this->pollToCompletion(0, this->verify_ ? 50 : 95);
+        // Poll task progress — mirrors C# ProgressPoll() which calls PollToCompletion()
+        this->pollToCompletion(this->GetRelatedTaskRef(), 0, this->verify_ ? 50 : 95);
     }
     catch (const std::exception& e)
     {
@@ -191,12 +192,31 @@ void ExportVmAction::run()
     if (!success)
     {
         QFile::remove(tmpFile);
-        
-        if (!this->exception_.isEmpty())
+
+        // Diagnose failure type in priority order, matching C# ExportVmAction failure descriptions.
+        // 1. VDI_IN_USE comes from the XenServer task — set by pollTask() via setError().
+        // 2. Disk full is detected at write-time by HttpClient.
+        // 3. Any explicit exception from the progress-poll thread.
+        // 4. Fall back to the raw HTTP/socket error.
+        const QString taskError = this->GetErrorMessage();
+        if (!taskError.isEmpty() && taskError.contains(QString::fromLatin1(Failure::VDI_IN_USE)))
+        {
+            this->SetDescription(tr("Export failed: a virtual disk is in use by another operation"));
+            // Keep the task error already set by pollTask()
+        } else if (this->httpClient_->IsDiskFull())
+        {
+            this->SetDescription(tr("Export failed: the target disk is full"));
+            this->setError(tr("The target disk is full."));
+        } else if (!this->exception_.isEmpty())
+        {
+            this->SetDescription(tr("Export failed"));
             this->setError(this->exception_);
-        else
+        } else
+        {
+            this->SetDescription(tr("Export failed"));
             this->setError(this->httpClient_->lastError());
-        
+        }
+
         this->setState(OperationState::Failed);
         return;
     }
