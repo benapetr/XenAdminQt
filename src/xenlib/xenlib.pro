@@ -297,7 +297,8 @@ HEADERS += \
     xen/vbdmetrics.h \
     otherconfig/otherconfigandtagswatcher.h \
     folders/foldersmanager.h \
-    ovf/ovfpackage.h
+    ovf/ovfpackage.h \
+    xva/xvaverifier.h
 
 # Source files
 SOURCES += \
@@ -541,7 +542,8 @@ SOURCES += \
     xen/vmmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp \
     folders/foldersmanager.cpp \
-    ovf/ovfpackage.cpp
+    ovf/ovfpackage.cpp \
+    xva/xvaverifier.cpp
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

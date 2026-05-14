@@ -662,6 +662,7 @@ FORMS += \
     dialogs/networkingpropertiesdialog.ui \
     dialogs/networkingpropertiespage.ui \
     dialogs/newvmwizard.ui \
+    dialogs/exportwizard.ui \
     dialogs/importwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/hawizard.ui \
