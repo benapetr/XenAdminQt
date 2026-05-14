@@ -72,7 +72,9 @@ SnapshotTreeView::SnapshotTreeView(QWidget* parent)
 
 SnapshotTreeView::~SnapshotTreeView()
 {
-    this->Clear();
+    // This is not necessary, Qt will cleanup the container anyway and this may
+    // call selection change related signals which can cause crash on exit
+    //this->Clear();
 }
 
 QPixmap SnapshotTreeView::GetImage(int index) const

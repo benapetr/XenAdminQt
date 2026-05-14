@@ -407,7 +407,7 @@ void NetworkTabPage::populateVIFsForVM()
             if (!ipAddresses.isEmpty())
             {
                 // Join multiple IPs with comma+space
-                ipAddress = ipAddresses.join(", ");
+                ipAddress = Misc::Deduplicate(ipAddresses).join(", ");
             }
         }
         this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(ipAddress));
@@ -892,7 +892,7 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
         QStringList ipAddresses;
         QSharedPointer<VIF> vif = this->getSelectedVif();
         if (vif && vif->IsValid())
-            ipAddresses = Misc::Deduplicate(this->collectVifIPAddresses(vif));
+            ipAddresses = this->collectVifIPAddresses(vif);
 
         QMenu* copyMenu = contextMenu.addMenu(tr("Copy"));
 
@@ -1091,7 +1091,7 @@ QStringList NetworkTabPage::collectVifIPAddresses(const QSharedPointer<VIF>& vif
         }
     }
 
-    return result;
+    return Misc::Deduplicate(result);
 }
 
 void NetworkTabPage::copyToClipboard()
