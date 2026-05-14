@@ -27,9 +27,14 @@
 
 #include "exportwizard.h"
 #include "../settingsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
 #include <QApplication>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QGridLayout>
 #include <QVBoxLayout>
@@ -37,7 +42,21 @@
 #include <QFormLayout>
 
 ExportWizard::ExportWizard(QWidget* parent)
-    : QWizard(parent), m_exportAsXVA(true), m_formatComboBox(nullptr), m_directoryLineEdit(nullptr), m_directoryBrowseButton(nullptr), m_fileNameLineEdit(nullptr), m_vmListWidget(nullptr), m_createManifestCheckBox(nullptr), m_signApplianceCheckBox(nullptr), m_encryptFilesCheckBox(nullptr), m_createOVACheckBox(nullptr), m_compressOVFCheckBox(nullptr), m_verifyExportCheckBox(nullptr), m_summaryTextEdit(nullptr)
+    : QWizard(parent)
+    , m_connection(nullptr)
+    , m_exportAsXVA(true)
+    , m_formatComboBox(nullptr)
+    , m_directoryLineEdit(nullptr)
+    , m_directoryBrowseButton(nullptr)
+    , m_fileNameLineEdit(nullptr)
+    , m_vmListWidget(nullptr)
+    , m_createManifestCheckBox(nullptr)
+    , m_signApplianceCheckBox(nullptr)
+    , m_encryptFilesCheckBox(nullptr)
+    , m_createOVACheckBox(nullptr)
+    , m_compressOVFCheckBox(nullptr)
+    , m_verifyExportCheckBox(nullptr)
+    , m_summaryTextEdit(nullptr)
 {
     this->setWindowTitle(tr("Export Virtual Appliance"));
     this->setWindowIcon(QIcon(":/icons/export-32.png"));
@@ -59,10 +78,194 @@ ExportWizard::ExportWizard(QWidget* parent)
 
     connect(this, &QWizard::currentIdChanged, this, [this](int id) {
         if (id == Page_Finish)
-        {
             this->updateSummary();
-        }
     });
+}
+
+ExportWizard::ExportWizard(XenConnection* connection, QWidget* parent)
+    : ExportWizard(parent)
+{
+    this->m_connection = connection;
+}
+
+void ExportWizard::SetConnection(XenConnection* connection)
+{
+    this->m_connection = connection;
+}
+
+void ExportWizard::SetPreselectedVMs(const QList<QSharedPointer<VM>>& vms)
+{
+    this->m_preselectedVMs = vms;
+
+    // Pre-fill filename from first preselected VM
+    if (!vms.isEmpty() && this->m_exportFileName.isEmpty())
+    {
+        QSharedPointer<VM> first = vms.first();
+        if (first && first->IsValid())
+        {
+            this->m_exportFileName = first->GetName();
+            if (this->m_fileNameLineEdit)
+                this->m_fileNameLineEdit->setText(this->m_exportFileName);
+        }
+    }
+}
+
+QList<QSharedPointer<VM>> ExportWizard::GetSelectedVMs() const
+{
+    // XVA: single preselected VM — return it directly
+    if (this->m_exportAsXVA)
+        return this->m_preselectedVMs;
+
+    // OVF: return VMs checked in the list widget
+    QList<QSharedPointer<VM>> result;
+    if (!this->m_vmListWidget || !this->m_connection)
+        return this->m_preselectedVMs;  // fallback
+
+    XenCache* cache = this->m_connection->GetCache();
+    for (int i = 0; i < this->m_vmListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = this->m_vmListWidget->item(i);
+        if (!item || item->checkState() != Qt::Checked)
+            continue;
+        const QString ref = item->data(Qt::UserRole).toString();
+        if (ref.isEmpty())
+            continue;
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, ref);
+        if (vm && vm->IsValid())
+            result << vm;
+    }
+    return result;
+}
+
+bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) const
+{
+    if (!fullPath)
+        return false;
+
+    const QString directory = this->m_exportDirectory.trimmed();
+    const QString fileName  = this->m_exportFileName.trimmed();
+
+    if (directory.isEmpty())
+    {
+        QMessageBox::warning(parent, tr("Export VM"), tr("Please select an export directory."));
+        return false;
+    }
+
+    if (fileName.isEmpty())
+    {
+        QMessageBox::warning(parent, tr("Export VM"), tr("Please enter an export file name."));
+        return false;
+    }
+
+    if (QDir::isAbsolutePath(fileName) || fileName.contains('/') || fileName.contains('\\') ||
+        fileName == "." || fileName == "..")
+    {
+        QMessageBox::warning(parent, tr("Export VM"), tr("Please enter a file name only, without path separators."));
+        return false;
+    }
+
+    QDir dir(directory);
+    if (!dir.exists())
+    {
+        const QMessageBox::StandardButton reply = QMessageBox::question(
+            parent, tr("Create Export Directory"),
+            tr("The export directory does not exist:\n%1\n\nCreate it?").arg(directory),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes)
+            return false;
+
+        if (!QDir().mkpath(directory))
+        {
+            QMessageBox::warning(parent, tr("Export VM"),
+                                 tr("Could not create the export directory:\n%1").arg(directory));
+            return false;
+        }
+        dir = QDir(directory);
+    }
+
+    QString path = dir.filePath(fileName);
+    if (!path.toLower().endsWith(".xva"))
+        path += ".xva";
+
+    if (QFile::exists(path))
+    {
+        const QMessageBox::StandardButton reply = QMessageBox::question(
+            parent, tr("Overwrite Export"),
+            tr("The export file already exists:\n%1\n\nOverwrite it?").arg(path),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes)
+            return false;
+    }
+
+    *fullPath = path;
+    return true;
+}
+
+void ExportWizard::initializePage(int id)
+{
+    if (id == Page_VMs)
+        this->populateVmList();
+
+    QWizard::initializePage(id);
+}
+
+void ExportWizard::populateVmList()
+{
+    if (!this->m_vmListWidget)
+        return;
+
+    this->m_vmListWidget->clear();
+
+    // Collect preselected refs for fast lookup
+    QSet<QString> preselectedRefs;
+    for (const QSharedPointer<VM>& vm : this->m_preselectedVMs)
+    {
+        if (vm && vm->IsValid())
+            preselectedRefs.insert(vm->OpaqueRef());
+    }
+
+    if (this->m_connection)
+    {
+        XenCache* cache = this->m_connection->GetCache();
+        const QList<QSharedPointer<VM>> vms = cache->GetAll<VM>();
+        for (const QSharedPointer<VM>& vm : vms)
+        {
+            if (!vm || !vm->IsValid())
+                continue;
+            if (vm->IsControlDomain())
+                continue;
+            if (vm->IsTemplate() || vm->IsSnapshot())
+                continue;
+            if (!vm->GetAllowedOperations().contains("export"))
+                continue;
+
+            QListWidgetItem* item = new QListWidgetItem(vm->GetName());
+            item->setData(Qt::UserRole, vm->OpaqueRef());
+            item->setCheckState(preselectedRefs.contains(vm->OpaqueRef()) ? Qt::Checked : Qt::Unchecked);
+            this->m_vmListWidget->addItem(item);
+        }
+    }
+
+    if (this->m_vmListWidget->count() == 0)
+    {
+        // Fallback: show preselected VMs even when cache isn't available
+        for (const QSharedPointer<VM>& vm : this->m_preselectedVMs)
+        {
+            if (!vm || !vm->IsValid())
+                continue;
+            QListWidgetItem* item = new QListWidgetItem(vm->GetName());
+            item->setData(Qt::UserRole, vm->OpaqueRef());
+            item->setCheckState(Qt::Checked);
+            this->m_vmListWidget->addItem(item);
+        }
+    }
+
+    if (this->m_vmListWidget->count() == 0)
+    {
+        QListWidgetItem* placeholder = new QListWidgetItem(tr("(no exportable VMs found)"));
+        placeholder->setFlags(Qt::NoItemFlags);
+        this->m_vmListWidget->addItem(placeholder);
+    }
 }
 
 QWizardPage* ExportWizard::createFormatPage()
@@ -112,6 +315,8 @@ QWizardPage* ExportWizard::createFormatPage()
     // File name
     this->m_fileNameLineEdit = new QLineEdit;
     this->m_fileNameLineEdit->setPlaceholderText(tr("appliance"));
+    if (!this->m_exportFileName.isEmpty())
+        this->m_fileNameLineEdit->setText(this->m_exportFileName);
     connect(this->m_fileNameLineEdit, &QLineEdit::textChanged, this, [this](const QString& text) {
         this->m_exportFileName = text;
     });
@@ -125,10 +330,6 @@ QWizardPage* ExportWizard::createFormatPage()
     mainLayout->addStretch();
 
     page->setLayout(mainLayout);
-
-    // Register fields for validation
-    // Store widget references for later use (removed registerField calls due to Qt access restrictions)
-
     return page;
 }
 
@@ -144,47 +345,35 @@ QWizardPage* ExportWizard::createVMsPage()
     layout->addWidget(instructionLabel);
 
     this->m_vmListWidget = new QListWidget;
-    this->m_vmListWidget->setSelectionMode(QAbstractItemView::MultiSelection);
-
-    // TODO: Populate with actual VMs from the current connection
-    // For now, add some placeholder items
-    QListWidgetItem* vm1 = new QListWidgetItem("VM1 (Windows 10)");
-    vm1->setCheckState(Qt::Unchecked);
-    this->m_vmListWidget->addItem(vm1);
-
-    QListWidgetItem* vm2 = new QListWidgetItem("VM2 (Ubuntu 20.04)");
-    vm2->setCheckState(Qt::Unchecked);
-    this->m_vmListWidget->addItem(vm2);
-
-    QListWidgetItem* vm3 = new QListWidgetItem("VM3 (CentOS 8)");
-    vm3->setCheckState(Qt::Unchecked);
-    this->m_vmListWidget->addItem(vm3);
-
+    this->m_vmListWidget->setSelectionMode(QAbstractItemView::NoSelection);
     layout->addWidget(this->m_vmListWidget);
 
-    // Add select/deselect all buttons
+    // Select / deselect all buttons
     QHBoxLayout* buttonLayout = new QHBoxLayout;
-    QPushButton* selectAllButton = new QPushButton(tr("Select All"));
+    QPushButton* selectAllButton   = new QPushButton(tr("Select All"));
     QPushButton* deselectAllButton = new QPushButton(tr("Deselect All"));
 
     connect(selectAllButton, &QPushButton::clicked, [this]() {
         for (int i = 0; i < this->m_vmListWidget->count(); ++i)
         {
-            this->m_vmListWidget->item(i)->setCheckState(Qt::Checked);
+            QListWidgetItem* item = this->m_vmListWidget->item(i);
+            if (item->flags() & Qt::ItemIsEnabled)
+                item->setCheckState(Qt::Checked);
         }
     });
 
     connect(deselectAllButton, &QPushButton::clicked, [this]() {
         for (int i = 0; i < this->m_vmListWidget->count(); ++i)
         {
-            this->m_vmListWidget->item(i)->setCheckState(Qt::Unchecked);
+            QListWidgetItem* item = this->m_vmListWidget->item(i);
+            if (item->flags() & Qt::ItemIsEnabled)
+                item->setCheckState(Qt::Unchecked);
         }
     });
 
     buttonLayout->addWidget(selectAllButton);
     buttonLayout->addWidget(deselectAllButton);
     buttonLayout->addStretch();
-
     layout->addLayout(buttonLayout);
 
     page->setLayout(layout);
@@ -227,6 +416,7 @@ QWizardPage* ExportWizard::createOptionsPage()
     ovfLayout->addWidget(this->m_compressOVFCheckBox);
     ovfGroup->setLayout(ovfLayout);
     ovfGroup->setVisible(!this->m_exportAsXVA);
+    ovfGroup->setObjectName("ovfGroup");
 
     // General options group
     QGroupBox* generalGroup = new QGroupBox(tr("General Options"));
@@ -244,10 +434,6 @@ QWizardPage* ExportWizard::createOptionsPage()
     layout->addStretch();
 
     page->setLayout(layout);
-
-    // Store the groups for show/hide based on format
-    ovfGroup->setObjectName("ovfGroup");
-
     return page;
 }
 
@@ -275,23 +461,17 @@ void ExportWizard::onFormatChanged()
 {
     this->m_exportAsXVA = this->m_formatComboBox->currentData().toBool();
 
-    // Update window title based on format
     if (this->m_exportAsXVA)
-    {
         this->setWindowTitle(tr("Export VM as XVA"));
-    } else
-    {
+    else
         this->setWindowTitle(tr("Export Virtual Appliance"));
-    }
 
-    // Show/hide OVF-specific options
+    // Show/hide OVF-specific options on the options page
     if (this->currentId() == Page_Options)
     {
         QGroupBox* ovfGroup = this->page(Page_Options)->findChild<QGroupBox*>("ovfGroup");
         if (ovfGroup)
-        {
             ovfGroup->setVisible(!this->m_exportAsXVA);
-        }
     }
 }
 
@@ -315,6 +495,7 @@ int ExportWizard::nextId() const
     switch (this->currentId())
     {
         case Page_Format:
+            // XVA exports a single preselected VM — skip VM selection page
             return this->m_exportAsXVA ? Page_Options : Page_VMs;
         case Page_VMs:
             return Page_Options;
@@ -329,46 +510,45 @@ void ExportWizard::updateSummary()
 {
     QString summary;
 
-    // Format and destination
     summary += tr("Export Format: %1\n").arg(this->m_exportAsXVA ? tr("XVA Package") : tr("OVF Package"));
     summary += tr("Destination: %1\n").arg(this->m_exportDirectory);
     summary += tr("File Name: %1\n\n").arg(this->m_exportFileName);
 
-    if (this->m_exportAsXVA)
+    // VM list
+    const QList<QSharedPointer<VM>> selectedVMs = this->GetSelectedVMs();
+    if (!selectedVMs.isEmpty())
     {
-        summary += tr("Virtual Machine: %1\n\n").arg(this->m_selectedObjectName.isEmpty()
-            ? this->m_exportFileName
-            : this->m_selectedObjectName);
-    }
-    else
-    {
-        // Selected VMs
         summary += tr("Virtual Machines:\n");
-        for (int i = 0; i < this->m_vmListWidget->count(); ++i)
+        for (const QSharedPointer<VM>& vm : selectedVMs)
         {
-            QListWidgetItem* item = this->m_vmListWidget->item(i);
-            if (item->checkState() == Qt::Checked)
-            {
-                summary += tr("  • %1\n").arg(item->text());
-            }
+            if (vm && vm->IsValid())
+                summary += tr("  \u2022 %1\n").arg(vm->GetName());
         }
         summary += "\n";
+    } else if (!this->m_selectedObjectName.isEmpty())
+    {
+        summary += tr("Virtual Machine: %1\n\n").arg(this->m_selectedObjectName);
     }
 
-    // Options (only for OVF)
-    if (!this->m_exportAsXVA)
+    // Options (OVF only)
+    if (!this->m_exportAsXVA && this->m_createManifestCheckBox)
     {
         summary += tr("Export Options:\n");
-        summary += tr("  • Create manifest: %1\n").arg(this->m_createManifestCheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  • Sign appliance: %1\n").arg(this->m_signApplianceCheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  • Encrypt files: %1\n").arg(this->m_encryptFilesCheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  • Create OVA package: %1\n").arg(this->m_createOVACheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  • Compress files: %1\n").arg(this->m_compressOVFCheckBox->isChecked() ? tr("Yes") : tr("No"));
+        summary += tr("  \u2022 Create manifest: %1\n").arg(this->m_createManifestCheckBox->isChecked() ? tr("Yes") : tr("No"));
+        summary += tr("  \u2022 Sign appliance: %1\n").arg(this->m_signApplianceCheckBox->isChecked() ? tr("Yes") : tr("No"));
+        summary += tr("  \u2022 Encrypt files: %1\n").arg(this->m_encryptFilesCheckBox->isChecked() ? tr("Yes") : tr("No"));
+        summary += tr("  \u2022 Create OVA package: %1\n").arg(this->m_createOVACheckBox->isChecked() ? tr("Yes") : tr("No"));
+        summary += tr("  \u2022 Compress files: %1\n").arg(this->m_compressOVFCheckBox->isChecked() ? tr("Yes") : tr("No"));
         summary += "\n";
     }
 
-    summary += tr("General Options:\n");
-    summary += tr("  • Verify export: %1\n").arg(this->m_verifyExportCheckBox->isChecked() ? tr("Yes") : tr("No"));
+    if (this->m_verifyExportCheckBox)
+    {
+        summary += tr("General Options:\n");
+        summary += tr("  \u2022 Verify export: %1\n").arg(this->m_verifyExportCheckBox->isChecked() ? tr("Yes") : tr("No"));
+    }
 
-    this->m_summaryTextEdit->setPlainText(summary);
+    if (this->m_summaryTextEdit)
+        this->m_summaryTextEdit->setPlainText(summary);
 }
+

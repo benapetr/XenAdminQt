@@ -49,7 +49,6 @@ class ExportVMCommand : public VMCommand
 
     private:
         bool isVMExportable() const;
-        bool validateXvaDestination(QString* fullPath) const;
         ExportWizard* m_exportWizard;
 };
 
