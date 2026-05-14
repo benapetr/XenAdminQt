@@ -26,6 +26,7 @@
  */
 
 #include "exportwizard.h"
+#include "../settingsmanager.h"
 #include <QApplication>
 #include <QStandardPaths>
 #include <QDir>
@@ -36,26 +37,25 @@
 #include <QFormLayout>
 
 ExportWizard::ExportWizard(QWidget* parent)
-    : QWizard(parent), m_exportAsXVA(false), m_formatComboBox(nullptr), m_directoryLineEdit(nullptr), m_directoryBrowseButton(nullptr), m_fileNameLineEdit(nullptr), m_vmListWidget(nullptr), m_createManifestCheckBox(nullptr), m_signApplianceCheckBox(nullptr), m_encryptFilesCheckBox(nullptr), m_createOVACheckBox(nullptr), m_compressOVFCheckBox(nullptr), m_verifyExportCheckBox(nullptr), m_summaryTextEdit(nullptr)
+    : QWizard(parent), m_exportAsXVA(true), m_formatComboBox(nullptr), m_directoryLineEdit(nullptr), m_directoryBrowseButton(nullptr), m_fileNameLineEdit(nullptr), m_vmListWidget(nullptr), m_createManifestCheckBox(nullptr), m_signApplianceCheckBox(nullptr), m_encryptFilesCheckBox(nullptr), m_createOVACheckBox(nullptr), m_compressOVFCheckBox(nullptr), m_verifyExportCheckBox(nullptr), m_summaryTextEdit(nullptr)
 {
     this->setWindowTitle(tr("Export Virtual Appliance"));
     this->setWindowIcon(QIcon(":/icons/export-32.png"));
     this->setPixmap(QWizard::LogoPixmap, QPixmap(":/images/export_wizard.png"));
     this->resize(600, 500);
 
+    QString defaultPath = SettingsManager::instance().GetDefaultExportPath();
+    if (defaultPath.isEmpty())
+        defaultPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (defaultPath.isEmpty())
+        defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    this->m_exportDirectory = defaultPath;
+
     // Add pages
     this->setPage(Page_Format, this->createFormatPage());
     this->setPage(Page_VMs, this->createVMsPage());
     this->setPage(Page_Options, this->createOptionsPage());
     this->setPage(Page_Finish, this->createFinishPage());
-
-    // Set default export directory to Downloads
-    QString downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    if (downloadsPath.isEmpty())
-    {
-        downloadsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    }
-    this->m_exportDirectory = downloadsPath;
 
     connect(this, &QWizard::currentIdChanged, this, [this](int id) {
         if (id == Page_Finish)
@@ -79,9 +79,9 @@ QWizardPage* ExportWizard::createFormatPage()
     QVBoxLayout* formatLayout = new QVBoxLayout;
 
     this->m_formatComboBox = new QComboBox;
-    this->m_formatComboBox->addItem(tr("OVF/OVA Package (.ovf)"), false);
     this->m_formatComboBox->addItem(tr("XVA Package (.xva)"), true);
-    this->m_formatComboBox->setCurrentIndex(0); // Default to OVF
+    this->m_formatComboBox->addItem(tr("OVF/OVA Package (.ovf)"), false);
+    this->m_formatComboBox->setCurrentIndex(0);
 
     connect(this->m_formatComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ExportWizard::onFormatChanged);
@@ -226,6 +226,7 @@ QWizardPage* ExportWizard::createOptionsPage()
     ovfLayout->addWidget(this->m_createOVACheckBox);
     ovfLayout->addWidget(this->m_compressOVFCheckBox);
     ovfGroup->setLayout(ovfLayout);
+    ovfGroup->setVisible(!this->m_exportAsXVA);
 
     // General options group
     QGroupBox* generalGroup = new QGroupBox(tr("General Options"));
@@ -309,6 +310,21 @@ void ExportWizard::onDirectoryBrowse()
     }
 }
 
+int ExportWizard::nextId() const
+{
+    switch (this->currentId())
+    {
+        case Page_Format:
+            return this->m_exportAsXVA ? Page_Options : Page_VMs;
+        case Page_VMs:
+            return Page_Options;
+        case Page_Options:
+            return Page_Finish;
+        default:
+            return -1;
+    }
+}
+
 void ExportWizard::updateSummary()
 {
     QString summary;
@@ -318,17 +334,26 @@ void ExportWizard::updateSummary()
     summary += tr("Destination: %1\n").arg(this->m_exportDirectory);
     summary += tr("File Name: %1\n\n").arg(this->m_exportFileName);
 
-    // Selected VMs
-    summary += tr("Virtual Machines:\n");
-    for (int i = 0; i < this->m_vmListWidget->count(); ++i)
+    if (this->m_exportAsXVA)
     {
-        QListWidgetItem* item = this->m_vmListWidget->item(i);
-        if (item->checkState() == Qt::Checked)
-        {
-            summary += tr("  • %1\n").arg(item->text());
-        }
+        summary += tr("Virtual Machine: %1\n\n").arg(this->m_selectedObjectName.isEmpty()
+            ? this->m_exportFileName
+            : this->m_selectedObjectName);
     }
-    summary += "\n";
+    else
+    {
+        // Selected VMs
+        summary += tr("Virtual Machines:\n");
+        for (int i = 0; i < this->m_vmListWidget->count(); ++i)
+        {
+            QListWidgetItem* item = this->m_vmListWidget->item(i);
+            if (item->checkState() == Qt::Checked)
+            {
+                summary += tr("  • %1\n").arg(item->text());
+            }
+        }
+        summary += "\n";
+    }
 
     // Options (only for OVF)
     if (!this->m_exportAsXVA)

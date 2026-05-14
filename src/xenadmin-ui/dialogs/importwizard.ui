@@ -277,22 +277,16 @@ HTTP/HTTPS URI imports are downloaded before import.</string>
       <property name="columnCount">
        <number>2</number>
       </property>
-      <attribute name="horizontalHeaderItem">
-       <column>0</column>
-       <item>
-        <property name="text">
-         <string>Disk File</string>
-        </property>
-       </item>
-      </attribute>
-      <attribute name="horizontalHeaderItem">
-       <column>1</column>
-       <item>
-        <property name="text">
-         <string>Storage Repository</string>
-        </property>
-       </item>
-      </attribute>
+      <column>
+       <property name="text">
+        <string>Disk File</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Storage Repository</string>
+       </property>
+      </column>
      </widget>
     </item>
     <item>
