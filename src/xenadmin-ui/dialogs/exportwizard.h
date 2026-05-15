@@ -31,6 +31,7 @@
 #include <QWizard>
 #include <QSharedPointer>
 #include <QList>
+#include <QListWidget>
 
 namespace Ui { class ExportWizard; }
 
@@ -52,7 +53,9 @@ class ExportWizard : public QWizard
             Page_Format = 0,
             Page_VMs = 1,
             Page_Options = 2,
-            Page_Finish = 3
+            Page_Finish = 3,
+            Page_Rbac = 4,  // Programmatic page inserted after Page_Format when RBAC check is needed
+            Page_Eula = 5   // Programmatic page between VM selection and options (OVF/OVA only)
         };
 
         // Export format / destination accessors (valid after exec() returns Accepted)
@@ -60,6 +63,9 @@ class ExportWizard : public QWizard
         QString exportDirectory() const { return this->m_exportDirectory; }
         QString exportFileName() const { return this->m_exportFileName; }
         bool verifyExport() const;
+        bool createManifest() const;
+        bool createOva() const;
+        bool compressOVF() const;
         void setSelectedObjectName(const QString& name) { this->m_selectedObjectName = name; }
         void setExportFileName(const QString& fileName);
 
@@ -78,13 +84,52 @@ class ExportWizard : public QWizard
         // Returns checked VMs (OVF) or preselected VMs (XVA)
         QList<QSharedPointer<VM>> GetSelectedVMs() const;
 
+        /**
+         * @brief Returns the list of EULA file paths the user added on the EULA page.
+         *
+         * Matches C# ExportEulaPage.Eulas.  Only meaningful for OVF/OVA exports.
+         * An empty list is valid (no EULAs in the appliance).
+         */
+        QStringList GetEulas() const;
+
+        /**
+         * @brief Returns the certificate file path selected for signing.
+         * Empty string when signing is disabled.
+         */
+        QString GetCertificatePath() const;
+
+        /**
+         * @brief Returns the certificate password entered by the user.
+         * Empty string if none was entered.
+         */
+        QString GetCertificatePassword() const;
+
+        /**
+         * @brief Returns the encryption password entered by the user.
+         * Empty string when encryption is disabled.
+         */
+        QString GetEncryptionPassword() const;
+
         // Validate XVA destination and build the full output path.
         // Returns true when valid, sets *fullPath. Shows QMessageBox on failure.
         bool ValidateXvaDestination(QWidget* parent, QString* fullPath) const;
 
+        // Validate OVF/OVA destination directory and appliance name.
+        // Returns true when valid, sets *resolvedPath to the full path of the
+        // primary descriptor file (e.g. /dir/name.ovf or /dir/name.ova).
+        // Shows QMessageBox on failure.  Mirrors C# CheckDestinationFolderExists +
+        // CheckPermissions + CheckApplianceExists from ExportAppliancePage.
+        bool ValidateOvfDestination(QWidget* parent, QString* resolvedPath) const;
+
     private slots:
         void onFormatChanged();
         void onDirectoryBrowse();
+        void onAddEula();
+        void onRemoveEula();
+        void onCertBrowse();
+        void onSignApplianceToggled(bool checked);
+        void onEncryptFilesToggled(bool checked);
+        void onManifestToggled(bool checked);
 
     protected:
         int nextId() const override;
@@ -94,7 +139,9 @@ class ExportWizard : public QWizard
     private:
         void setupWizardPages();
         void updateSummary();
+        void updateRbacPage();
         void populateVmList();
+        bool hasApiPermissions(const QStringList& methods, QStringList* missing) const;
 
         Ui::ExportWizard* ui;
 
@@ -106,6 +153,12 @@ class ExportWizard : public QWizard
         QString m_exportDirectory;
         QString m_exportFileName;
         QString m_selectedObjectName;
+
+        // RBAC state (populated when leaving Page_Format)
+        QStringList m_blockingRbacMissing;
+
+        // Programmatic EULA page widgets (owned by the QWizardPage parent)
+        QListWidget* m_eulaListWidget;
 };
 
 #endif // EXPORTWIZARD_H

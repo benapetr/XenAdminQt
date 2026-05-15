@@ -192,6 +192,76 @@
         </widget>
        </item>
        <item>
+        <widget class="QWidget" name="certWidget">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="certWidgetLayout">
+          <property name="margin">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="certPathLayout">
+            <item>
+             <widget class="QLabel" name="certPathLabel">
+              <property name="text">
+               <string>Certificate file:</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="certPathLineEdit">
+              <property name="placeholderText">
+               <string>Path to .pem or .pfx certificate</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="certBrowseButton">
+              <property name="text">
+               <string>Browse...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="certPasswordLayout">
+            <item>
+             <widget class="QLabel" name="certPasswordLabel">
+              <property name="text">
+               <string>Password:</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="certPasswordLineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+              <property name="placeholderText">
+               <string>Certificate password (if any)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="encryptFilesCheckBox">
          <property name="text">
           <string>Encrypt files</string>
@@ -199,6 +269,66 @@
          <property name="toolTip">
           <string>Encrypt the exported files</string>
          </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="encryptWidget">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="encryptWidgetLayout">
+          <property name="margin">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="encryptPasswordLayout">
+            <item>
+             <widget class="QLabel" name="encryptPasswordLabel">
+              <property name="text">
+               <string>Password:</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="encryptPasswordLineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="encryptReenterLayout">
+            <item>
+             <widget class="QLabel" name="encryptReenterLabel">
+              <property name="text">
+               <string>Re-enter password:</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>120</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="encryptReenterLineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>

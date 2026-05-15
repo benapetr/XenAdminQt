@@ -29,8 +29,14 @@
 #include "ui_exportwizard.h"
 #include "../settingsmanager.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QListWidget>
+#include <QPushButton>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
@@ -44,6 +50,7 @@ ExportWizard::ExportWizard(QWidget* parent)
     , ui(new Ui::ExportWizard)
     , m_connection(nullptr)
     , m_exportAsXVA(true)
+    , m_eulaListWidget(nullptr)
 {
     QString defaultPath = SettingsManager::instance().GetDefaultExportPath();
     if (defaultPath.isEmpty())
@@ -54,11 +61,6 @@ ExportWizard::ExportWizard(QWidget* parent)
 
     this->ui->setupUi(this);
     this->setupWizardPages();
-
-    connect(this, &QWizard::currentIdChanged, this, [this](int id) {
-        if (id == Page_Finish)
-            this->updateSummary();
-    });
 }
 
 ExportWizard::ExportWizard(XenConnection* connection, QWidget* parent)
@@ -74,10 +76,47 @@ ExportWizard::~ExportWizard()
 
 void ExportWizard::setupWizardPages()
 {
+    // Programmatic RBAC page — inserted after Page_Format when the connected user
+    // is missing required permissions (matches C# RBACWarningPage pattern).
+    QWizardPage* rbacPage = new QWizardPage(this);
+    rbacPage->setTitle(tr("Security Permissions"));
+    rbacPage->setSubTitle(tr("Review permissions required for export."));
+    QVBoxLayout* rbacLayout = new QVBoxLayout;
+    QLabel* rbacLabel = new QLabel(rbacPage);
+    rbacLabel->setObjectName("rbacWarningLabel");
+    rbacLabel->setWordWrap(true);
+    rbacLayout->addWidget(rbacLabel);
+    rbacLayout->addStretch();
+    rbacPage->setLayout(rbacLayout);
+
     this->setPage(Page_Format, this->ui->pageFormat);
     this->setPage(Page_VMs,    this->ui->pageVMs);
     this->setPage(Page_Options, this->ui->pageOptions);
+    this->setPage(Page_Rbac,   rbacPage);
     this->setPage(Page_Finish,  this->ui->pageFinish);
+
+    // Programmatic EULA page — shown between VM selection and options for OVF/OVA exports.
+    // Matches C# ExportEulaPage: user can attach up to 25 EULA text files to the appliance.
+    QWizardPage* eulaPage = new QWizardPage(this);
+    eulaPage->setTitle(tr("EULAs"));
+    eulaPage->setSubTitle(tr("Add End User License Agreements to include in the exported appliance (optional)."));
+    QVBoxLayout* eulaMainLayout = new QVBoxLayout;
+    eulaMainLayout->addWidget(new QLabel(tr("EULA documents to include (maximum 25):")));
+    this->m_eulaListWidget = new QListWidget;
+    this->m_eulaListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    eulaMainLayout->addWidget(this->m_eulaListWidget);
+    QHBoxLayout* eulaButtonLayout = new QHBoxLayout;
+    QPushButton* addEulaButton    = new QPushButton(tr("Add EULA..."));
+    QPushButton* removeEulaButton = new QPushButton(tr("Remove Selected"));
+    eulaButtonLayout->addWidget(addEulaButton);
+    eulaButtonLayout->addWidget(removeEulaButton);
+    eulaButtonLayout->addStretch();
+    eulaMainLayout->addLayout(eulaButtonLayout);
+    eulaPage->setLayout(eulaMainLayout);
+    this->setPage(Page_Eula, eulaPage);
+
+    connect(addEulaButton,    &QPushButton::clicked, this, &ExportWizard::onAddEula);
+    connect(removeEulaButton, &QPushButton::clicked, this, &ExportWizard::onRemoveEula);
 
     this->ui->pageFinish->setFinalPage(true);
 
@@ -115,6 +154,17 @@ void ExportWizard::setupWizardPages()
                 item->setCheckState(Qt::Unchecked);
         }
     });
+
+    // OVF options page: sign / manifest linkage, cert browse, encrypt toggle.
+    // Matches C# ExportOptionsPage checkbox-changed handlers.
+    connect(this->ui->certBrowseButton, &QPushButton::clicked,
+            this, &ExportWizard::onCertBrowse);
+    connect(this->ui->signApplianceCheckBox, &QCheckBox::toggled,
+            this, &ExportWizard::onSignApplianceToggled);
+    connect(this->ui->encryptFilesCheckBox, &QCheckBox::toggled,
+            this, &ExportWizard::onEncryptFilesToggled);
+    connect(this->ui->createManifestCheckBox, &QCheckBox::toggled,
+            this, &ExportWizard::onManifestToggled);
 }
 
 void ExportWizard::SetConnection(XenConnection* connection)
@@ -157,6 +207,21 @@ bool ExportWizard::verifyExport() const
     return this->ui->verifyExportCheckBox->isChecked();
 }
 
+bool ExportWizard::createManifest() const
+{
+    return this->ui->createManifestCheckBox->isChecked();
+}
+
+bool ExportWizard::createOva() const
+{
+    return this->ui->createOVACheckBox->isChecked();
+}
+
+bool ExportWizard::compressOVF() const
+{
+    return this->ui->compressOVFCheckBox->isChecked();
+}
+
 void ExportWizard::setExportFileName(const QString& fileName)
 {
     this->m_exportFileName = fileName;
@@ -188,6 +253,36 @@ QList<QSharedPointer<VM>> ExportWizard::GetSelectedVMs() const
             result << vm;
     }
     return result;
+}
+
+QStringList ExportWizard::GetEulas() const
+{
+    // Matches C# ExportEulaPage.Eulas: return the list of EULA file paths.
+    QStringList result;
+    if (!this->m_eulaListWidget)
+        return result;
+    for (int i = 0; i < this->m_eulaListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = this->m_eulaListWidget->item(i);
+        if (item)
+            result << item->text();
+    }
+    return result;
+}
+
+QString ExportWizard::GetCertificatePath() const
+{
+    return this->ui->certPathLineEdit->text().trimmed();
+}
+
+QString ExportWizard::GetCertificatePassword() const
+{
+    return this->ui->certPasswordLineEdit->text();
+}
+
+QString ExportWizard::GetEncryptionPassword() const
+{
+    return this->ui->encryptPasswordLineEdit->text();
 }
 
 bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) const
@@ -236,6 +331,20 @@ bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) co
         dir = QDir(directory);
     }
 
+    // Check write permission: attempt to create/delete a probe file (matches C# CheckPermissions).
+    {
+        const QString probeFile = dir.filePath("_xenadmin_probe_");
+        QFile f(probeFile);
+        if (!f.open(QIODevice::WriteOnly))
+        {
+            QMessageBox::warning(parent, tr("Export VM"),
+                                 tr("You do not have write permission to the export directory:\n%1").arg(directory));
+            return false;
+        }
+        f.close();
+        f.remove();
+    }
+
     // Check available disk space (warn if low — we can't know exact VM size upfront,
     // but an obviously-full disk should be flagged before a long download starts)
     const QStorageInfo storageInfo(dir.absolutePath());
@@ -275,10 +384,94 @@ bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) co
     return true;
 }
 
+bool ExportWizard::ValidateOvfDestination(QWidget* parent, QString* resolvedPath) const
+{
+    if (!resolvedPath)
+        return false;
+
+    const QString directory = this->m_exportDirectory.trimmed();
+    const QString fileName  = this->m_exportFileName.trimmed();
+
+    if (directory.isEmpty())
+    {
+        QMessageBox::warning(parent, tr("Export Appliance"), tr("Please select a destination directory."));
+        return false;
+    }
+
+    if (fileName.isEmpty())
+    {
+        QMessageBox::warning(parent, tr("Export Appliance"), tr("Please enter an appliance name."));
+        return false;
+    }
+
+    if (fileName.contains('/') || fileName.contains('\\') || fileName == "." || fileName == "..")
+    {
+        QMessageBox::warning(parent, tr("Export Appliance"),
+                             tr("Please enter an appliance name without path separators."));
+        return false;
+    }
+
+    // Destination directory must already exist (C# CheckDestinationFolderExists).
+    QDir dir(directory);
+    if (!dir.exists())
+    {
+        QMessageBox::warning(parent, tr("Export Appliance"),
+                             tr("The destination directory does not exist:\n%1").arg(directory));
+        return false;
+    }
+
+    // Check write permission via touch file (C# CheckPermissions).
+    {
+        const QString probeFile = dir.filePath("_xenadmin_probe_");
+        QFile f(probeFile);
+        if (!f.open(QIODevice::WriteOnly))
+        {
+            QMessageBox::warning(parent, tr("Export Appliance"),
+                                 tr("You do not have write permission to the destination directory:\n%1").arg(directory));
+            return false;
+        }
+        f.close();
+        f.remove();
+    }
+
+    // Build primary descriptor path, stripping any user-supplied extension first.
+    QString baseName = fileName;
+    if (baseName.toLower().endsWith(".ovf") || baseName.toLower().endsWith(".ova"))
+        baseName = baseName.left(baseName.length() - 4);
+
+    // Determine extension from format combo (OVF vs OVA).
+    const bool isOva = !this->m_exportAsXVA &&
+                       this->ui->formatComboBox->currentData().toString().toLower().contains("ova");
+    const QString ext = isOva ? ".ova" : ".ovf";
+    const QString primaryPath = dir.filePath(baseName + ext);
+
+    // Check for existing appliance files / sub-folder (C# CheckApplianceExists).
+    bool alreadyExists = QFile::exists(dir.filePath(baseName + ".ovf")) ||
+                         QFile::exists(dir.filePath(baseName + ".ova")) ||
+                         QDir(dir.filePath(baseName)).exists();
+    if (alreadyExists)
+    {
+        const QMessageBox::StandardButton reply = QMessageBox::question(
+            parent, tr("Overwrite Appliance"),
+            tr("An appliance named '%1' already exists in:\n%2\n\nOverwrite it?")
+                .arg(baseName, directory),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes)
+            return false;
+    }
+
+    *resolvedPath = primaryPath;
+    return true;
+}
+
 void ExportWizard::initializePage(int id)
 {
     if (id == Page_VMs)
         this->populateVmList();
+    else if (id == Page_Rbac)
+        this->updateRbacPage();
+    else if (id == Page_Finish)
+        this->updateSummary();
 
     QWizard::initializePage(id);
 }
@@ -303,20 +496,9 @@ void ExportWizard::populateVmList()
         {
             if (!vm || !vm->IsValid())
                 continue;
-            if (vm->IsControlDomain())
+            // OVF export requires Halted or Suspended; XVA export accepts any power state.
+            if (this->m_exportAsXVA ? !vm->IsXvaExportable() : !vm->IsOvfExportable())
                 continue;
-            if (vm->IsTemplate() || vm->IsSnapshot())
-                continue;
-            if (!vm->GetAllowedOperations().contains("export"))
-                continue;
-            // OVF export requires the VM to be halted or suspended (matches C# IsVmExportable).
-            // XVA export can target any power state selected via command context.
-            if (!this->m_exportAsXVA)
-            {
-                const QString ps = vm->GetPowerState();
-                if (ps != "Halted" && ps != "Suspended")
-                    continue;
-            }
 
             QListWidgetItem* item = new QListWidgetItem(vm->GetName());
             item->setData(Qt::UserRole, vm->OpaqueRef());
@@ -345,6 +527,77 @@ void ExportWizard::populateVmList()
         placeholder->setFlags(Qt::NoItemFlags);
         this->ui->vmListWidget->addItem(placeholder);
     }
+}
+
+void ExportWizard::onAddEula()
+{
+    if (!this->m_eulaListWidget)
+        return;
+
+    // Matches C# MAX_EULA_DOCS = 25.
+    if (this->m_eulaListWidget->count() >= 25)
+    {
+        QMessageBox::information(this, tr("Add EULA"),
+                                 tr("A maximum of 25 EULA documents may be added."));
+        return;
+    }
+
+    const QStringList files = QFileDialog::getOpenFileNames(
+        this,
+        tr("Select EULA File"),
+        QString(),
+        tr("Text Files (*.txt *.rtf);;All Files (*)"));
+
+    for (const QString& f : files)
+    {
+        if (f.isEmpty())
+            continue;
+        // Don't add duplicates.
+        if (this->m_eulaListWidget->findItems(f, Qt::MatchExactly).isEmpty())
+            this->m_eulaListWidget->addItem(f);
+    }
+}
+
+void ExportWizard::onRemoveEula()
+{
+    if (!this->m_eulaListWidget)
+        return;
+    const QList<QListWidgetItem*> selected = this->m_eulaListWidget->selectedItems();
+    for (QListWidgetItem* item : selected)
+        delete this->m_eulaListWidget->takeItem(this->m_eulaListWidget->row(item));
+}
+
+void ExportWizard::onCertBrowse()
+{
+    const QString file = QFileDialog::getOpenFileName(
+        this,
+        tr("Select Certificate"),
+        QString(),
+        tr("Certificate Files (*.pem *.pfx *.p12 *.crt *.cer);;All Files (*)"));
+    if (!file.isEmpty())
+        this->ui->certPathLineEdit->setText(file);
+}
+
+void ExportWizard::onSignApplianceToggled(bool checked)
+{
+    this->ui->certWidget->setVisible(checked);
+    // Signing requires a manifest — auto-check manifest when signing is enabled.
+    // Matches C# m_checkBoxSign_CheckedChanged.
+    if (checked)
+        this->ui->createManifestCheckBox->setChecked(true);
+}
+
+void ExportWizard::onEncryptFilesToggled(bool checked)
+{
+    this->ui->encryptWidget->setVisible(checked);
+}
+
+void ExportWizard::onManifestToggled(bool checked)
+{
+    // Unchecking manifest forces sign off (can't sign without a manifest).
+    // Matches C# m_checkBoxManifest_CheckedChanged.
+    if (!checked)
+        this->ui->signApplianceCheckBox->setChecked(false);
 }
 
 void ExportWizard::onFormatChanged()
@@ -395,6 +648,102 @@ bool ExportWizard::validateCurrentPage()
             return false;
         }
     }
+
+    // Format page: lightweight destination validation + RBAC check.
+    // Matches C# ExportAppliancePage.EnableNext() guards and AddRbacPage().
+    if (this->currentId() == Page_Format)
+    {
+        const QString directory = this->m_exportDirectory.trimmed();
+        const QString fileName  = this->m_exportFileName.trimmed();
+
+        if (directory.isEmpty())
+        {
+            QMessageBox::warning(this, tr("Export"), tr("Please select a destination directory."));
+            return false;
+        }
+
+        if (fileName.isEmpty())
+        {
+            QMessageBox::warning(this, tr("Export"),
+                                 this->m_exportAsXVA ? tr("Please enter an export file name.")
+                                                     : tr("Please enter an appliance name."));
+            return false;
+        }
+
+        // RBAC check. XVA: task.create + http/get_export (ExportVmAction.StaticRBACDependencies).
+        // OVF/OVA: ApplianceAction.StaticRBACDependencies (C# uses this for appliance export).
+        QStringList required;
+        if (this->m_exportAsXVA)
+        {
+            required << "task.create" << "http/get_export";
+        } else
+        {
+            // Matches ApplianceAction.StaticRBACDependencies from C#.
+            required << "VM.add_to_other_config"
+                     << "VM.create"
+                     << "VM.destroy"
+                     << "VM.hard_shutdown"
+                     << "VM.remove_from_other_config"
+                     << "VM.set_HVM_boot_params"
+                     << "VM.start"
+                     << "VDI.create"
+                     << "VDI.destroy"
+                     << "VBD.create"
+                     << "VBD.eject"
+                     << "VIF.create"
+                     << "Host.call_plugin";
+        }
+        this->hasApiPermissions(required, &this->m_blockingRbacMissing);
+        // Only show RBAC page when permissions are actually missing (saves a click for superusers).
+    }
+
+    // RBAC page: block if any required permission is missing.
+    if (this->currentId() == Page_Rbac)
+    {
+        if (!this->m_blockingRbacMissing.isEmpty())
+            return false;
+    }
+
+    // Options page: validate certificate and encryption when enabled.
+    // Matches C# ExportOptionsPage.CheckSignature() + CheckEncryption().
+    if (this->currentId() == Page_Options)
+    {
+        if (this->ui->signApplianceCheckBox->isChecked())
+        {
+            const QString certPath = this->ui->certPathLineEdit->text().trimmed();
+            if (certPath.isEmpty())
+            {
+                QMessageBox::warning(this, tr("Sign Appliance"),
+                                     tr("Please select a certificate file for signing."));
+                return false;
+            }
+            if (!QFile::exists(certPath))
+            {
+                QMessageBox::warning(this, tr("Sign Appliance"),
+                                     tr("The certificate file does not exist:\n%1").arg(certPath));
+                return false;
+            }
+        }
+
+        if (this->ui->encryptFilesCheckBox->isChecked())
+        {
+            const QString pw1 = this->ui->encryptPasswordLineEdit->text();
+            const QString pw2 = this->ui->encryptReenterLineEdit->text();
+            if (pw1.isEmpty())
+            {
+                QMessageBox::warning(this, tr("Encrypt Files"),
+                                     tr("Please enter an encryption password."));
+                return false;
+            }
+            if (pw1 != pw2)
+            {
+                QMessageBox::warning(this, tr("Encrypt Files"),
+                                     tr("The encryption passwords do not match."));
+                return false;
+            }
+        }
+    }
+
     return QWizard::validateCurrentPage();
 }
 
@@ -403,9 +752,19 @@ int ExportWizard::nextId() const
     switch (this->currentId())
     {
         case Page_Format:
+            // If any required permissions are missing, show the RBAC warning page.
+            // Matches C# AddRbacPage() inserted after ExportAppliancePage.
+            if (!this->m_blockingRbacMissing.isEmpty())
+                return Page_Rbac;
             // XVA exports a single preselected VM — skip VM selection page
             return this->m_exportAsXVA ? Page_Options : Page_VMs;
+        case Page_Rbac:
+            // Continue after RBAC page (only reachable if permissions are present)
+            return this->m_exportAsXVA ? Page_Options : Page_VMs;
         case Page_VMs:
+            // OVF/OVA: after VM selection show the EULA page (C# ExportEulaPage)
+            return Page_Eula;
+        case Page_Eula:
             return Page_Options;
         case Page_Options:
             return Page_Finish;
@@ -416,13 +775,38 @@ int ExportWizard::nextId() const
 
 void ExportWizard::updateSummary()
 {
+    // Matches C# ExportFinishPage.SummaryRetriever: format, target path, VMs, options.
     QString summary;
 
     summary += tr("Export Format: %1\n").arg(this->m_exportAsXVA ? tr("XVA Package") : tr("OVF Package"));
-    summary += tr("Destination: %1\n").arg(this->m_exportDirectory);
-    summary += tr("File Name: %1\n\n").arg(this->m_exportFileName);
 
-    // VM list
+    // Full resolved output path (matches C# finish page showing applianceDirectory + name).
+    const QString dir  = this->m_exportDirectory.trimmed();
+    const QString name = this->m_exportFileName.trimmed();
+    if (!dir.isEmpty() && !name.isEmpty())
+    {
+        QString fullPath = QDir(dir).filePath(name);
+        if (this->m_exportAsXVA)
+        {
+            if (!fullPath.toLower().endsWith(".xva"))
+                fullPath += ".xva";
+        } else
+        {
+            const bool isOva = this->ui->formatComboBox->currentData().toString().toLower().contains("ova");
+            const QString ext = isOva ? ".ova" : ".ovf";
+            // Strip existing extension then re-apply
+            if (fullPath.toLower().endsWith(".ovf") || fullPath.toLower().endsWith(".ova"))
+                fullPath = fullPath.left(fullPath.length() - 4);
+            fullPath += ext;
+        }
+        summary += tr("Target: %1\n\n").arg(fullPath);
+    } else
+    {
+        summary += tr("Destination: %1\n").arg(dir);
+        summary += tr("File Name: %1\n\n").arg(name);
+    }
+
+    // VM list with power state (matches C# ExportFinishPage VM rows).
     const QList<QSharedPointer<VM>> selectedVMs = this->GetSelectedVMs();
     if (!selectedVMs.isEmpty())
     {
@@ -430,7 +814,10 @@ void ExportWizard::updateSummary()
         for (const QSharedPointer<VM>& vm : selectedVMs)
         {
             if (vm && vm->IsValid())
-                summary += tr("  \u2022 %1\n").arg(vm->GetName());
+            {
+                const QString ps = vm->GetPowerState();
+                summary += tr("  \u2022 %1 (%2)\n").arg(vm->GetName(), ps.isEmpty() ? tr("Unknown") : ps);
+            }
         }
         summary += "\n";
     } else if (!this->m_selectedObjectName.isEmpty())
@@ -438,13 +825,43 @@ void ExportWizard::updateSummary()
         summary += tr("Virtual Machine: %1\n\n").arg(this->m_selectedObjectName);
     }
 
+    // EULAs (OVF only, matches C# ExportFinishPage EULA summary row)
+    if (!this->m_exportAsXVA && this->m_eulaListWidget)
+    {
+        const int eulaCount = this->m_eulaListWidget->count();
+        if (eulaCount > 0)
+        {
+            summary += tr("EULAs:\n");
+            for (int i = 0; i < eulaCount; ++i)
+            {
+                QListWidgetItem* item = this->m_eulaListWidget->item(i);
+                if (item)
+                    summary += tr("  \u2022 %1\n").arg(QFileInfo(item->text()).fileName());
+            }
+            summary += "\n";
+        }
+    }
+
     // Options (OVF only)
     if (!this->m_exportAsXVA)
     {
         summary += tr("Export Options:\n");
         summary += tr("  \u2022 Create manifest: %1\n").arg(this->ui->createManifestCheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  \u2022 Sign appliance: %1\n").arg(this->ui->signApplianceCheckBox->isChecked() ? tr("Yes") : tr("No"));
-        summary += tr("  \u2022 Encrypt files: %1\n").arg(this->ui->encryptFilesCheckBox->isChecked() ? tr("Yes") : tr("No"));
+
+        if (this->ui->signApplianceCheckBox->isChecked())
+        {
+            const QString certName = QFileInfo(this->ui->certPathLineEdit->text().trimmed()).fileName();
+            summary += tr("  \u2022 Sign appliance: Yes (%1)\n").arg(certName.isEmpty() ? tr("no certificate selected") : certName);
+        } else
+        {
+            summary += tr("  \u2022 Sign appliance: No\n");
+        }
+
+        if (this->ui->encryptFilesCheckBox->isChecked())
+            summary += tr("  \u2022 Encrypt files: Yes (password set)\n");
+        else
+            summary += tr("  \u2022 Encrypt files: No\n");
+
         summary += tr("  \u2022 Create OVA package: %1\n").arg(this->ui->createOVACheckBox->isChecked() ? tr("Yes") : tr("No"));
         summary += tr("  \u2022 Compress files: %1\n").arg(this->ui->compressOVFCheckBox->isChecked() ? tr("Yes") : tr("No"));
         summary += "\n";
@@ -454,4 +871,61 @@ void ExportWizard::updateSummary()
     summary += tr("  \u2022 Verify export: %1\n").arg(this->ui->verifyExportCheckBox->isChecked() ? tr("Yes") : tr("No"));
 
     this->ui->summaryTextEdit->setPlainText(summary);
+}
+
+bool ExportWizard::hasApiPermissions(const QStringList& methods, QStringList* missing) const
+{
+    if (missing)
+        missing->clear();
+    if (!this->m_connection || !this->m_connection->GetSession())
+        return true;   // No session — can't check; let the action fail naturally
+
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (session->IsLocalSuperuser())
+        return true;
+
+    const QStringList permissions = session->GetPermissions();
+    if (permissions.isEmpty())
+        return true;   // Empty list means we couldn't fetch permissions; assume OK
+
+    QSet<QString> permSet;
+    for (const QString& p : permissions)
+        permSet.insert(p.toLower());
+
+    QStringList missingMethods;
+    for (const QString& method : methods)
+    {
+        if (!permSet.contains(method.toLower()))
+            missingMethods << method;
+    }
+
+    if (missing)
+        *missing = missingMethods;
+    return missingMethods.isEmpty();
+}
+
+void ExportWizard::updateRbacPage()
+{
+    QLabel* label = this->page(Page_Rbac)->findChild<QLabel*>("rbacWarningLabel");
+    if (!label)
+        return;
+
+    QStringList lines;
+    if (!this->m_blockingRbacMissing.isEmpty())
+    {
+        lines << tr("Your current role is missing permissions required to export:");
+        for (const QString& method : this->m_blockingRbacMissing)
+            lines << tr("  \u2022 %1").arg(method);
+        lines << QString();
+        lines << tr("The export cannot continue with the current role.");
+    } else
+    {
+        // All permissions present — show confirmation
+        const QStringList methods = { "task.create", "http/get_export" };
+        lines << tr("The following permissions are required for this export:");
+        for (const QString& method : methods)
+            lines << tr("  \u2713 %1").arg(method);
+    }
+
+    label->setText(lines.join("\n"));
 }

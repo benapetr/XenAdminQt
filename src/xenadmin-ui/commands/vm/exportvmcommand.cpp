@@ -31,6 +31,7 @@
 #include "../../dialogs/actionprogressdialog.h"
 #include "../../dialogs/exportwizard.h"
 #include "xenlib/xen/actions/vm/exportvmaction.h"
+#include "xenlib/xen/actions/vm/exportapplianceaction.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
 #include <QFile>
@@ -80,8 +81,42 @@ void ExportVMCommand::onWizardFinished(int result)
     {
         if (!this->m_exportWizard->exportAsXVA())
         {
-            QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                                 tr("OVF/OVA export is not implemented yet. Select XVA Package to export this VM."));
+            // OVF/OVA export: validate destination then launch ExportApplianceAction.
+            // Matches C# ExportApplianceWizard.WizardPagesCollection + ExportApplianceAction.
+            QString resolvedPath;
+            if (this->m_exportWizard->ValidateOvfDestination(MainWindow::instance(), &resolvedPath))
+            {
+                const QString appDir  = QFileInfo(resolvedPath).absolutePath();
+                const QString appName = QFileInfo(resolvedPath).baseName();
+                const bool createOva  = this->m_exportWizard->createOva();
+                const bool createMf   = this->m_exportWizard->createManifest();
+                const bool compress   = this->m_exportWizard->compressOVF();
+                const bool verify     = this->m_exportWizard->verifyExport();
+
+                QList<QSharedPointer<VM>> vms = this->m_exportWizard->GetSelectedVMs();
+                if (vms.isEmpty())
+                {
+                    QSharedPointer<VM> vm = this->getVM();
+                    if (vm)
+                        vms << vm;
+                }
+
+                if (!vms.isEmpty())
+                {
+                    ExportApplianceAction* action = new ExportApplianceAction(
+                        vms, appDir, appName,
+                        this->m_exportWizard->GetEulas(),
+                        createMf, createOva, compress, verify,
+                        MainWindow::instance());
+                    ActionProgressDialog* dlg = new ActionProgressDialog(action, MainWindow::instance());
+                    dlg->setShowCancel(true);
+                    dlg->exec();
+                    dlg->deleteLater();
+
+                    if (action->IsCompleted())
+                        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
+                }
+            }
         }
         else
         {

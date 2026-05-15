@@ -159,6 +159,7 @@ HEADERS += \
     xen/actions/vm/importapplianceaction.h \
     xen/actions/vm/importimageaction.h \
     xen/actions/vm/exportvmaction.h \
+    xen/actions/vm/exportapplianceaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/hvmbootaction.h \
@@ -298,6 +299,7 @@ HEADERS += \
     otherconfig/otherconfigandtagswatcher.h \
     folders/foldersmanager.h \
     ovf/ovfpackage.h \
+    ovf/ovfwriter.h \
     xva/xvaverifier.h
 
 # Source files
@@ -404,6 +406,7 @@ SOURCES += \
     xen/actions/vm/importapplianceaction.cpp \
     xen/actions/vm/importimageaction.cpp \
     xen/actions/vm/exportvmaction.cpp \
+    xen/actions/vm/exportapplianceaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
@@ -543,6 +546,7 @@ SOURCES += \
     otherconfig/otherconfigandtagswatcher.cpp \
     folders/foldersmanager.cpp \
     ovf/ovfpackage.cpp \
+    ovf/ovfwriter.cpp \
     xva/xvaverifier.cpp
 
 # Installation

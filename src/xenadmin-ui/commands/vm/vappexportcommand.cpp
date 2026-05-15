@@ -28,9 +28,12 @@
 #include "vappexportcommand.h"
 #include "../../dialogs/exportwizard.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/actionprogressdialog.h"
+#include "xenlib/xen/actions/vm/exportapplianceaction.h"
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
+#include <QFileInfo>
 #include <QMessageBox>
 
 VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_exportWizard(nullptr)
@@ -96,9 +99,33 @@ void VappExportCommand::onWizardFinished(int result)
     if (result == QDialog::Accepted && this->m_exportWizard)
     {
         // vApp export is always OVF/OVA (XVA option is hidden by SetOvfModeOnly()).
-        // OVF export is not yet implemented; inform the user.
-        QMessageBox::information(MainWindow::instance(), tr("Export vApp"),
-                                 tr("OVF/OVA export is not yet implemented."));
+        QString resolvedPath;
+        if (this->m_exportWizard->ValidateOvfDestination(MainWindow::instance(), &resolvedPath))
+        {
+            const QString appDir  = QFileInfo(resolvedPath).absolutePath();
+            const QString appName = QFileInfo(resolvedPath).baseName();
+            const bool createOva  = this->m_exportWizard->createOva();
+            const bool createMf   = this->m_exportWizard->createManifest();
+            const bool compress   = this->m_exportWizard->compressOVF();
+            const bool verify     = this->m_exportWizard->verifyExport();
+
+            const QList<QSharedPointer<VM>> vms = this->m_exportWizard->GetSelectedVMs();
+            if (!vms.isEmpty())
+            {
+                ExportApplianceAction* action = new ExportApplianceAction(
+                    vms, appDir, appName,
+                    this->m_exportWizard->GetEulas(),
+                    createMf, createOva, compress, verify,
+                    MainWindow::instance());
+                ActionProgressDialog* dlg = new ActionProgressDialog(action, MainWindow::instance());
+                dlg->setShowCancel(true);
+                dlg->exec();
+                dlg->deleteLater();
+
+                if (action->IsCompleted())
+                    MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
+            }
+        }
     }
 
     if (this->m_exportWizard)
