@@ -5,6 +5,7 @@
 
 #include "test_helpers.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/xenobjecttype.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -77,11 +78,15 @@ XenCache* LoadCacheFromEventJson(const QString& resourcePath)
 
         if (op == "add" || op == "mod")
         {
-            cache->Update(type, ref, snapshot.toVariantMap());
+            const XenObjectType objType = XenObjectTypeFromString(type);
+            if (objType != XenObjectType::Null)
+                cache->Update(objType, ref, snapshot.toVariantMap());
         }
         else if (op == "del")
         {
-            cache->Remove(type, ref);
+            const XenObjectType objType = XenObjectTypeFromString(type);
+            if (objType != XenObjectType::Null)
+                cache->Remove(objType, ref);
         }
     }
 
