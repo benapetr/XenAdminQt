@@ -31,6 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 #include <QStringList>
+#include <QMap>
 #include <QMutex>
 #include <QWaitCondition>
 
@@ -78,8 +79,39 @@ class ImportVmAction : public AsyncOperation
         */
         QString vmRef() const { return this->vmRef_; }
 
+    signals:
+        /**
+        * @brief Emitted when the uploaded VM has been discovered in the cache,
+        *        just before the action enters the wizard-wait phase.
+        *        The wizard connects to this to close the upload progress dialog
+        *        and advance to the network configuration page.
+        * @param vmRef OpaqueRef of the discovered VM
+        */
+        void vmDiscovered(const QString& vmRef);
+
+        /**
+        * @brief Emitted when the auto-start step fails (non-fatal — import itself succeeded).
+        *
+        * Mirrors the C# \c _failureDiagnosisDelegate pattern from ImportVmAction.
+        * The UI layer connects to this to show a diagnostic dialog.
+        *
+        * @param vmRef      OpaqueRef of the VM that failed to start
+        * @param errorCode  XenAPI error code (e.g. \c Failure::NO_HOSTS_AVAILABLE).
+        *                   Empty string when the failure is not a XenAPI \c Failure.
+        * @param hostReasons Per-host \c assert_can_boot_here failure messages.
+        *                   Populated only for \c NO_HOSTS_AVAILABLE; empty otherwise.
+        */
+        void vmStartFailed(const QString& vmRef, const QString& errorCode,
+                           const QMap<QString, QString>& hostReasons);
+
     protected:
         void run() override;
+
+        /// Wake the wizard-wait condition so cancel exits the wait loop immediately.
+        void onCancel() override
+        {
+            this->waitCondition_.wakeAll();
+        }
 
     private:
         QString uploadFile();

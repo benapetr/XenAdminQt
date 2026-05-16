@@ -1659,8 +1659,8 @@ void MainWindow::loadSettings()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    // Match C# behavior: prompt only when there are running operations
-    bool hasRunningOperations = false;
+    // Prompt when there are running import operations marked unsafe to exit.
+    bool hasUnsafeImportRunning = false;
     const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
     for (OperationManager::OperationRecord* record : records)
     {
@@ -1669,14 +1669,22 @@ void MainWindow::closeEvent(QCloseEvent* event)
             continue;
         if (qobject_cast<MeddlingAction*>(operation))
             continue;
-        if (record->state != AsyncOperation::Completed)
+
+        if (!operation->IsRunning())
+            continue;
+        if (operation->IsSafeToExit())
+            continue;
+
+        // Keep this warning import-focused to avoid prompting on unrelated safe actions.
+        const QString title = operation->GetTitle();
+        if (title.contains("import", Qt::CaseInsensitive))
         {
-            hasRunningOperations = true;
+            hasUnsafeImportRunning = true;
             break;
         }
     }
 
-    if (hasRunningOperations)
+    if (hasUnsafeImportRunning)
     {
         CloseXenCenterWarningDialog dlg(false, nullptr, this);
         if (dlg.exec() != QDialog::Accepted)

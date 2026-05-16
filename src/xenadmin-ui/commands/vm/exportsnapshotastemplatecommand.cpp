@@ -26,13 +26,17 @@
  */
 
 #include "exportsnapshotastemplatecommand.h"
-#include "exportvmcommand.h"
 #include "../../dialogs/exportwizard.h"
+#include "../../dialogs/actionprogressdialog.h"
+#include "../../mainwindow.h"
+#include "../../settingsmanager.h"
+#include "xenlib/xen/actions/vm/exportvmaction.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
-#include "../../mainwindow.h"
+#include "xenlib/xen/host.h"
+#include <QFileInfo>
 #include <QMessageBox>
 
 ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -70,11 +74,7 @@ bool ExportSnapshotAsTemplateCommand::CanRun() const
 
 void ExportSnapshotAsTemplateCommand::Run()
 {
-    QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
-
-    if (vmRef.isEmpty() || type != XenObjectType::VM)
-        return;
+    const QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
 
     XenConnection* connection = this->m_connection;
     if (!connection)
@@ -83,33 +83,42 @@ void ExportSnapshotAsTemplateCommand::Run()
         connection = selectedObject ? selectedObject->GetConnection() : nullptr;
     }
     XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
+    if (!cache || vmRef.isEmpty())
         return;
 
     QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
-    if (!snapshot)
+    if (!snapshot || !snapshot->IsSnapshot())
         return;
 
-    if (!snapshot->IsSnapshot())
+    ExportWizard wizard(connection, MainWindow::instance());
+    wizard.SetPreselectedVMs({snapshot});
+
+    if (wizard.exec() != QDialog::Accepted)
+        return;
+
+    if (!wizard.exportAsXVA())
     {
-        QMessageBox::warning(MainWindow::instance(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(MainWindow::instance(), tr("Export Snapshot"),
+                             tr("OVF/OVA export is not implemented yet. Select XVA Package to export this snapshot."));
         return;
     }
 
-    if (!this->m_snapshotRef.isEmpty())
-    {
-        ExportWizard* wizard = new ExportWizard(MainWindow::instance());
-        connect(wizard, &QWizard::finished, wizard, &QObject::deleteLater);
-        wizard->show();
-        wizard->raise();
-        wizard->activateWindow();
+    QString fullPath;
+    if (!wizard.ValidateXvaDestination(MainWindow::instance(), &fullPath))
         return;
-    }
 
-    // Reuse ExportVMCommand - snapshots are exported just like VMs
-    ExportVMCommand* exportCmd = new ExportVMCommand(MainWindow::instance(), this);
-    exportCmd->Run();
-    exportCmd->deleteLater();
+    QSharedPointer<Host> host = snapshot->GetHome();
+    ExportVmAction* action = new ExportVmAction(snapshot, host, fullPath, wizard.verifyExport(), MainWindow::instance());
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
+    progressDialog->setShowCancel(true);
+    progressDialog->exec();
+    progressDialog->deleteLater();
+
+    if (action->IsCompleted())
+    {
+        SettingsManager::instance().SetDefaultExportPath(QFileInfo(fullPath).absolutePath());
+        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
+    }
 }
 
 QString ExportSnapshotAsTemplateCommand::MenuText() const

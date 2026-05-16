@@ -104,6 +104,12 @@ class XENLIB_EXPORT HttpClient : public QObject
         */
         QString lastError() const { return this->lastError_; }
 
+        /**
+        * @brief Returns true if the last getFile() failure was caused by a full destination disk.
+        * Matches C# IOException check with ERROR_DISK_FULL.
+        */
+        bool IsDiskFull() const { return this->isDiskFull_; }
+
     signals:
         void error(const QString& message);
 
@@ -118,6 +124,7 @@ class XENLIB_EXPORT HttpClient : public QObject
                         CancelCallback cancelCallback);
 
         QString lastError_;
+        bool isDiskFull_ = false;
 };
 
 #endif // HTTPCLIENT_H

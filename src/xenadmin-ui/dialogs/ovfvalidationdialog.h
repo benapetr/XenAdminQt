@@ -25,27 +25,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IMPORTVMCOMMAND_H
-#define IMPORTVMCOMMAND_H
+#ifndef OVFVALIDATIONDIALOG_H
+#define OVFVALIDATIONDIALOG_H
 
-#include "../command.h"
+#include <QDialog>
+#include <QStringList>
 
-class ImportVMCommand : public Command
+namespace Ui
+{
+    class OvfValidationDialog;
+}
+
+/**
+ * @brief Shows OVF package validation warnings before allowing import to proceed.
+ *
+ * Displays all validation warnings from OvfPackage::Validate() in a list.
+ * The user can proceed (OK) or cancel.  A "do not show again" checkbox saves
+ * the preference to SettingsManager::SetIgnoreOvfValidationWarnings().
+ *
+ * C# equivalent: XenAdmin.Dialogs.OvfValidationDialog
+ */
+class OvfValidationDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit ImportVMCommand(QObject* parent = nullptr);
-        explicit ImportVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit OvfValidationDialog(const QStringList& warnings, QWidget* parent = nullptr);
+        ~OvfValidationDialog() override;
 
-        void Run() override;
-        bool CanRun() const override;
-        QString MenuText() const override;
-        void SetOvfOnlyMode(bool ovfOnly);
+    protected:
+        void accept() override;
 
     private:
-        void showImportWizard();
-        bool m_ovfOnlyMode = false;
+        Ui::OvfValidationDialog* ui;
 };
 
-#endif // IMPORTVMCOMMAND_H
+#endif // OVFVALIDATIONDIALOG_H

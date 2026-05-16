@@ -25,27 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IMPORTVMCOMMAND_H
-#define IMPORTVMCOMMAND_H
+#ifndef DECOMPRESSGZACTION_H
+#define DECOMPRESSGZACTION_H
 
-#include "../command.h"
+#include "../xen/asyncoperation.h"
 
-class ImportVMCommand : public Command
+/**
+ * @brief Decompresses a gzip-compressed file to a given destination path.
+ *
+ * Client-side file preprocessing — no XenServer connection required.
+ * Used by ImportWizard to decompress .xva.gz and .ova.gz files before
+ * the import action begins.
+ *
+ * The output file is created at the path given to the constructor.
+ * On cancellation or failure the partial output file is removed.
+ *
+ * C# equivalent: ImportSourcePage.Uncompress() / _unzipWorker_DoWork()
+ */
+class XENLIB_EXPORT DecompressGzAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        explicit ImportVMCommand(QObject* parent = nullptr);
-        explicit ImportVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        /**
+         * @brief Construct with source and destination paths.
+         * @param sourceGzPath  Absolute path to the .gz input file.
+         * @param destPath      Absolute path for the decompressed output file.
+         * @param parent        Optional QObject parent.
+         */
+        explicit DecompressGzAction(const QString& sourceGzPath,
+                                    const QString& destPath,
+                                    QObject* parent = nullptr);
 
-        void Run() override;
-        bool CanRun() const override;
-        QString MenuText() const override;
-        void SetOvfOnlyMode(bool ovfOnly);
+        /** @brief Destination path supplied to the constructor. */
+        QString OutputPath() const { return this->m_destPath; }
+
+    protected:
+        void run() override;
 
     private:
-        void showImportWizard();
-        bool m_ovfOnlyMode = false;
+        QString m_sourceGzPath;
+        QString m_destPath;
 };
 
-#endif // IMPORTVMCOMMAND_H
+#endif // DECOMPRESSGZACTION_H

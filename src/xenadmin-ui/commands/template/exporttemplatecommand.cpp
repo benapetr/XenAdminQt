@@ -27,9 +27,14 @@
 
 #include "exporttemplatecommand.h"
 #include "../../mainwindow.h"
+#include "../../settingsmanager.h"
 #include "../../dialogs/exportwizard.h"
-#include "xen/api.h"
+#include "../../dialogs/actionprogressdialog.h"
+#include "xenlib/xen/actions/vm/exportvmaction.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
+#include <QFileInfo>
+#include <QMessageBox>
 
 ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* parent) : TemplateCommand(mainWindow, parent)
 {
@@ -46,24 +51,39 @@ bool ExportTemplateCommand::CanRun() const
 
 void ExportTemplateCommand::Run()
 {
-    QString templateRef = this->getSelectedTemplateRef();
-    QString templateName = this->getSelectedTemplateName();
-
-    if (templateRef.isEmpty() || templateName.isEmpty())
+    QSharedPointer<VM> tmplVm = this->getTemplate();
+    if (!tmplVm)
         return;
 
-    // Launch the export wizard
-    // Note: The wizard will allow the user to select which templates/VMs to export
-    // The currently selected template will be the default choice
-    ExportWizard wizard(MainWindow::instance());
+    XenConnection* conn = tmplVm->GetConnection();
+    ExportWizard wizard(conn, MainWindow::instance());
+    wizard.SetPreselectedVMs({tmplVm});
 
-    if (wizard.exec() == QDialog::Accepted)
+    if (wizard.exec() != QDialog::Accepted)
+        return;
+
+    if (!wizard.exportAsXVA())
     {
-        // TODO: Launch ExportVmAction with wizard parameters
-        // For now, show a message that action will be implemented
-        MainWindow::instance()->ShowStatusMessage(
-            QString("Export template '%1' - action pending HTTP infrastructure integration").arg(templateName), 
-            5000);
+        QMessageBox::warning(MainWindow::instance(), tr("Export Template"),
+                             tr("OVF/OVA export is not implemented yet. Select XVA Package to export this template."));
+        return;
+    }
+
+    QString fullPath;
+    if (!wizard.ValidateXvaDestination(MainWindow::instance(), &fullPath))
+        return;
+
+    QSharedPointer<Host> host = tmplVm->GetHome();
+    ExportVmAction* action = new ExportVmAction(tmplVm, host, fullPath, wizard.verifyExport(), MainWindow::instance());
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
+    progressDialog->setShowCancel(true);
+    progressDialog->exec();
+    progressDialog->deleteLater();
+
+    if (action->IsCompleted())
+    {
+        SettingsManager::instance().SetDefaultExportPath(QFileInfo(fullPath).absolutePath());
+        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
     }
 }
 

@@ -547,6 +547,26 @@ class XENLIB_EXPORT VM : public XenObject
         bool IsRealVM() const;
 
         /**
+         * @brief Check whether this VM can be exported as XVA.
+         *
+         * Requires: not a template, not a snapshot, not a control domain,
+         * and "export" in allowed_operations.
+         *
+         * C# equivalent: ExportVMCommand.IsVMExportable() + ExportWizardPage filter.
+         */
+        bool IsXvaExportable() const;
+
+        /**
+         * @brief Check whether this VM can be exported as OVF/OVA appliance.
+         *
+         * Same requirements as IsXvaExportable(), plus the power state must be
+         * Halted or Suspended (running VMs cannot be captured into OVF).
+         *
+         * C# equivalent: ExportAppliancePage appliance-mode VM filter.
+         */
+        bool IsOvfExportable() const;
+
+        /**
          * @brief Get operating system name from guest_metrics
          * @return OS name string (e.g., "Ubuntu 20.04", "Windows Server 2019")
          * 

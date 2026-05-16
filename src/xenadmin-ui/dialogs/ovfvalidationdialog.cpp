@@ -25,27 +25,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IMPORTVMCOMMAND_H
-#define IMPORTVMCOMMAND_H
+#include "ovfvalidationdialog.h"
+#include "ui_ovfvalidationdialog.h"
+#include "../settingsmanager.h"
 
-#include "../command.h"
-
-class ImportVMCommand : public Command
+OvfValidationDialog::OvfValidationDialog(const QStringList& warnings, QWidget* parent)
+    : QDialog(parent)
+    , ui(new Ui::OvfValidationDialog)
 {
-    Q_OBJECT
+    this->ui->setupUi(this);
 
-    public:
-        explicit ImportVMCommand(QObject* parent = nullptr);
-        explicit ImportVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    for (const QString& warning : warnings)
+    {
+        QListWidgetItem* item = new QListWidgetItem(warning);
+        item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
+        this->ui->warningsList->addItem(item);
+    }
 
-        void Run() override;
-        bool CanRun() const override;
-        QString MenuText() const override;
-        void SetOvfOnlyMode(bool ovfOnly);
+    // Initialise from saved preference
+    this->ui->doNotShowAgainCheck->setChecked(
+        SettingsManager::instance().GetIgnoreOvfValidationWarnings());
+}
 
-    private:
-        void showImportWizard();
-        bool m_ovfOnlyMode = false;
-};
+OvfValidationDialog::~OvfValidationDialog()
+{
+    delete this->ui;
+}
 
-#endif // IMPORTVMCOMMAND_H
+void OvfValidationDialog::accept()
+{
+    // Save the "do not show again" preference when user clicks OK (C# stores it on FormClosing)
+    SettingsManager::instance().SetIgnoreOvfValidationWarnings(
+        this->ui->doNotShowAgainCheck->isChecked());
+    QDialog::accept();
+}

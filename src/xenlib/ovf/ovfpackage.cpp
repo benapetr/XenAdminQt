@@ -1,0 +1,1278 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "ovfpackage.h"
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QDomDocument>
+#include <QDomNodeList>
+#include <QDomElement>
+#include <QDataStream>
+#include <QCryptographicHash>
+#include <QDebug>
+
+// ─── TAR extraction ──────────────────────────────────────────────────────────
+
+// Minimal POSIX ustar/GNU TAR reader.
+// We only need the OVF descriptor (first .ovf entry in the archive).
+//
+// TAR block size is always 512 bytes.
+// Header layout (POSIX ustar):
+//   offset  size  field
+//      0   100   filename
+//    100     8   permissions (octal, ASCII)
+//    ...
+//    124    12   file size (octal, ASCII)
+//    ...
+//    257     6   "ustar" magic
+//    ...
+// For GNU TAR extended headers (long filename) the first header has type 'L'
+// and the data block contains the real filename.
+
+static bool readTarHeader(QFile& file, QString& entryName, qint64& entrySize)
+{
+    const int BLOCK = 512;
+    QByteArray header = file.read(BLOCK);
+    if (header.size() < BLOCK)
+        return false;
+
+    // All-zero block signals end of archive
+    bool allZero = true;
+    for (char c : header) { if (c != 0) { allZero = false; break; } }
+    if (allZero)
+        return false;
+
+    // File name: first 100 bytes, null-terminated
+    entryName = QString::fromLatin1(header.constData(), qstrnlen(header.constData(), 100));
+
+    // GNU TAR prefix at offset 345 extends the filename for long paths (ustar format)
+    // Prefix is at bytes 345–499 for POSIX ustar
+    const QByteArray magic = header.mid(257, 5);
+    if (magic == "ustar")
+    {
+        QByteArray prefix = header.mid(345, 155);
+        QString prefixStr = QString::fromLatin1(prefix.constData(), qstrnlen(prefix.constData(), 155));
+        if (!prefixStr.isEmpty())
+            entryName = prefixStr + "/" + entryName;
+    }
+
+    // Size field: 12 bytes at offset 124, octal ASCII
+    QByteArray sizeField = header.mid(124, 12);
+    bool ok = false;
+    entrySize = QString::fromLatin1(sizeField.constData(), qstrnlen(sizeField.constData(), 12)).toLongLong(&ok, 8);
+    if (!ok)
+        entrySize = 0;
+
+    return true;
+}
+
+// ─── OvfPackage ──────────────────────────────────────────────────────────────
+
+OvfPackage::OvfPackage(const QString& filePath)
+    : sourceFile_(filePath)
+    , valid_(false)
+    , hasEncryption_(false)
+    , hasManifest_(false)
+    , hasSignature_(false)
+{
+    QFileInfo fi(filePath);
+    if (!fi.exists())
+    {
+        this->parseError_ = QString("File not found: %1").arg(filePath);
+        return;
+    }
+
+    const QString ext = fi.suffix().toLower();
+    const QString ext2 = fi.completeSuffix().toLower(); // e.g. "ova.gz"
+
+    if (ext == "ovf")
+    {
+        this->packageName_ = fi.completeBaseName();
+        this->parseOvfFile(filePath);
+    }
+    else if (ext == "ova")
+    {
+        this->packageName_ = fi.completeBaseName();
+        this->parseOvaFile(filePath);
+    }
+    else if (ext2 == "ova.gz" || ext2 == "tar.gz")
+    {
+        this->packageName_ = fi.baseName(); // strip last extension
+        this->parseError_ = "Compressed OVA (.ova.gz) is not yet supported for source inspection. "
+                            "The file will be accepted for import but metadata cannot be read.";
+        // Mark valid so the wizard can still proceed; metadata will just be empty
+        this->valid_ = true;
+    }
+    else
+    {
+        this->parseError_ = QString("Unsupported OVF package extension: %1").arg(ext);
+    }
+}
+
+void OvfPackage::parseOvfFile(const QString& ovfFilePath)
+{
+    QFile f(ovfFilePath);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        this->parseError_ = QString("Cannot open OVF file: %1").arg(f.errorString());
+        return;
+    }
+
+    const QString xml = QString::fromUtf8(f.readAll());
+    f.close();
+
+    // Check for companion .mf and .cert files
+    QFileInfo fi(ovfFilePath);
+    const QString base = fi.absoluteDir().filePath(fi.completeBaseName());
+    this->hasManifest_ = QFile::exists(base + ".mf");
+    this->hasSignature_ = QFile::exists(base + ".cert");
+
+    this->parseFromOvfXml(xml);
+}
+
+void OvfPackage::parseOvaFile(const QString& ovaFilePath)
+{
+    // Extract OVF descriptor text from the TAR archive
+    const QString xml = this->extractOvfFromTar(ovaFilePath);
+    if (xml.isEmpty())
+    {
+        if (this->parseError_.isEmpty())
+            this->parseError_ = "No OVF descriptor found inside OVA archive.";
+        return;
+    }
+
+    // Manifest/signature are also inside the TAR; we don't extract them here
+    // but we note they may exist. A more complete implementation would scan all entries.
+    this->parseFromOvfXml(xml);
+}
+
+QString OvfPackage::extractOvfFromTar(const QString& tarFilePath)
+{
+    QFile file(tarFilePath);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        this->parseError_ = QString("Cannot open OVA archive: %1").arg(file.errorString());
+        return QString();
+    }
+
+    const int BLOCK = 512;
+    QString ovfXml;
+
+    while (!file.atEnd())
+    {
+        QString entryName;
+        qint64 entrySize = 0;
+
+        if (!readTarHeader(file, entryName, entrySize))
+            break;
+
+        const bool isOvf = entryName.endsWith(".ovf", Qt::CaseInsensitive);
+        const bool isMf  = entryName.endsWith(".mf",  Qt::CaseInsensitive);
+        const bool isCert = entryName.endsWith(".cert", Qt::CaseInsensitive);
+
+        if (entrySize > 0)
+        {
+            if (isOvf && ovfXml.isEmpty())
+            {
+                QByteArray data = file.read(entrySize);
+                ovfXml = QString::fromUtf8(data);
+                // Advance to next block boundary
+                const qint64 padding = (BLOCK - (entrySize % BLOCK)) % BLOCK;
+                if (padding > 0)
+                    file.skip(padding);
+            }
+            else if (isMf)
+            {
+                this->hasManifest_ = true;
+                // Advance past data
+                const qint64 blocks = (entrySize + BLOCK - 1) / BLOCK * BLOCK;
+                file.skip(blocks);
+            }
+            else if (isCert)
+            {
+                this->hasSignature_ = true;
+                const qint64 blocks = (entrySize + BLOCK - 1) / BLOCK * BLOCK;
+                file.skip(blocks);
+            }
+            else
+            {
+                // Skip data for other entries
+                const qint64 blocks = (entrySize + BLOCK - 1) / BLOCK * BLOCK;
+                file.skip(blocks);
+            }
+        }
+
+        // If we found the OVF and already noted manifest/signature, we can stop
+        if (!ovfXml.isEmpty() && (this->hasManifest_ || this->hasSignature_))
+            break;
+    }
+
+    file.close();
+    return ovfXml;
+}
+
+// ─── OVF XML parsing ─────────────────────────────────────────────────────────
+
+// Return attribute value by local name regardless of namespace prefix.
+// OVF files may use 'ovf:name', 'name', or other prefixed forms.
+QString OvfPackage::firstAttributeByLocalName(const QDomElement& element, const QString& localName)
+{
+    QDomNamedNodeMap attrs = element.attributes();
+    for (int i = 0; i < attrs.count(); ++i)
+    {
+        QDomAttr attr = attrs.item(i).toAttr();
+        if (attr.localName() == localName)
+            return attr.value();
+    }
+    return QString();
+}
+
+// Return all descendant elements with the given local name, regardless of namespace.
+QDomNodeList OvfPackage::elementsByLocalName(QDomDocument doc, const QString& localName)
+{
+    // QDomDocument::elementsByTagName does prefix-aware matching only when a namespace
+    // is not given. Since OVF files may use different prefixes, we use elementsByTagNameNS
+    // with the known OVF namespaces and fall back to a wildcard scan.
+    // Try standard OVF namespace first, then Citrix/Xen extension namespace.
+    // Note: QDomDocument is passed by value (implicit sharing — cheap) because
+    // elementsByTagNameNS/elementsByTagName are not marked const in Qt's implementation.
+    static const QStringList ovfNamespaces = {
+        "http://schemas.dmtf.org/ovf/envelope/1",
+        "http://schemas.citrix.com/ovf/envelope/1"
+    };
+
+    for (const QString& ns : ovfNamespaces)
+    {
+        QDomNodeList list = doc.elementsByTagNameNS(ns, localName);
+        if (!list.isEmpty())
+            return list;
+    }
+
+    // Last resort: scan all elements for matching local name
+    return doc.elementsByTagName(localName);
+}
+
+void OvfPackage::collectEulas(const QDomElement& root, QStringList& eulas)
+{
+    // EulaSection may appear at envelope level or inside VirtualSystem
+    // Child element is <License> containing the EULA text
+    QDomNodeList eulaSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        eulaSections = root.ownerDocument().elementsByTagNameNS(ns, "EulaSection");
+        if (!eulaSections.isEmpty()) break;
+    }
+    if (eulaSections.isEmpty())
+        eulaSections = root.ownerDocument().elementsByTagName("EulaSection");
+
+    for (int i = 0; i < eulaSections.count(); ++i)
+    {
+        QDomElement section = eulaSections.at(i).toElement();
+        // Look for <License> child
+        QDomNodeList licenseNodes = section.elementsByTagName("License");
+        if (licenseNodes.isEmpty())
+        {
+            // Try namespace-aware
+            for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                       QString("http://schemas.citrix.com/ovf/envelope/1")})
+            {
+                licenseNodes = section.elementsByTagNameNS(ns, "License");
+                if (!licenseNodes.isEmpty()) break;
+            }
+        }
+        if (!licenseNodes.isEmpty())
+        {
+            const QString text = licenseNodes.at(0).toElement().text().trimmed();
+            if (!text.isEmpty() && !eulas.contains(text))
+                eulas << text;
+        }
+    }
+}
+
+void OvfPackage::collectVirtualSystemNames(const QDomElement& root, QStringList& names)
+{
+    // VirtualSystem elements may be direct children of Envelope, or nested inside
+    // VirtualSystemCollection for multi-VM appliances.
+    QDomNodeList vsList;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        vsList = root.ownerDocument().elementsByTagNameNS(ns, "VirtualSystem");
+        if (!vsList.isEmpty()) break;
+    }
+    if (vsList.isEmpty())
+        vsList = root.ownerDocument().elementsByTagName("VirtualSystem");
+
+    for (int i = 0; i < vsList.count(); ++i)
+    {
+        QDomElement vs = vsList.at(i).toElement();
+
+        // Try <Name> child element first
+        QDomNodeList nameNodes = vs.elementsByTagName("Name");
+        if (nameNodes.isEmpty())
+        {
+            for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                       QString("http://schemas.citrix.com/ovf/envelope/1")})
+            {
+                nameNodes = vs.elementsByTagNameNS(ns, "Name");
+                if (!nameNodes.isEmpty()) break;
+            }
+        }
+
+        if (!nameNodes.isEmpty())
+        {
+            const QString name = nameNodes.at(0).toElement().text().trimmed();
+            if (!name.isEmpty())
+            {
+                names << name;
+                continue;
+            }
+        }
+
+        // Fall back to ovf:id attribute
+        QString id = firstAttributeByLocalName(vs, "id");
+        if (!id.isEmpty())
+            names << id;
+    }
+}
+
+// ─── RASD virtual hardware parsing ───────────────────────────────────────────
+
+// CIM 28 ResourceType values used in OVF RASD elements
+namespace RasdType
+{
+    static const int CPU           = 3;
+    static const int Memory        = 4;
+    static const int Ethernet      = 10;
+    static const int DiskDrive     = 17;
+    static const int StorageExtent = 19;
+    static const int VirtualDisk   = 22;
+}
+
+// Return the text content of the first child element matching any of the given local names.
+// Handles namespace-prefixed elements (e.g. "rasd:VirtualQuantity", "VirtualQuantity").
+static QString rasdChildText(const QDomElement& rasdItem, const QString& localName)
+{
+    QDomNodeList children = rasdItem.childNodes();
+    for (int i = 0; i < children.count(); ++i)
+    {
+        QDomElement child = children.at(i).toElement();
+        if (child.isNull())
+            continue;
+        if (child.localName() == localName)
+            return child.text().trimmed();
+    }
+    return QString();
+}
+
+OvfVirtualHardware OvfPackage::collectVirtualHardware(const QDomElement& virtualSystemElem,
+                                                        const QMap<QString,qint64>& capacitiesByRef)
+{
+    OvfVirtualHardware hw;
+
+    // VirtualHardwareSection may use various namespace prefixes
+    QDomNodeList hwSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        hwSections = virtualSystemElem.elementsByTagNameNS(ns, "VirtualHardwareSection");
+        if (!hwSections.isEmpty()) break;
+    }
+    if (hwSections.isEmpty())
+        hwSections = virtualSystemElem.elementsByTagName("VirtualHardwareSection");
+
+    for (int si = 0; si < hwSections.count(); ++si)
+    {
+        QDomElement hwSection = hwSections.at(si).toElement();
+
+        // Collect all Item (RASD) elements
+        QDomNodeList items;
+        for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                   QString("http://schemas.citrix.com/ovf/envelope/1"),
+                                   QString("http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData")})
+        {
+            items = hwSection.elementsByTagNameNS(ns, "Item");
+            if (!items.isEmpty()) break;
+        }
+        if (items.isEmpty())
+            items = hwSection.elementsByTagName("Item");
+
+        for (int ii = 0; ii < items.count(); ++ii)
+        {
+            QDomElement item = items.at(ii).toElement();
+
+            const QString typeStr = rasdChildText(item, "ResourceType");
+            if (typeStr.isEmpty())
+                continue;
+            bool ok = false;
+            const int resourceType = typeStr.toInt(&ok);
+            if (!ok)
+                continue;
+
+            const QString quantity  = rasdChildText(item, "VirtualQuantity");
+            const QString allocUnit = rasdChildText(item, "AllocationUnits").toLower();
+
+            if (resourceType == RasdType::CPU && hw.vcpuCount == 0)
+            {
+                const int q = quantity.toInt();
+                if (q > 0)
+                    hw.vcpuCount = q;
+            }
+            else if (resourceType == RasdType::Memory && hw.memoryBytes == 0)
+            {
+                const qint64 q = quantity.toLongLong(&ok);
+                if (ok && q > 0)
+                {
+                    // AllocationUnits examples: "MegaBytes", "byte * 2^20", "GigaBytes"
+                    if (allocUnit.contains("giga") || allocUnit.contains("2^30"))
+                        hw.memoryBytes = q * 1024LL * 1024 * 1024;
+                    else if (allocUnit.contains("kilo") || allocUnit.contains("2^10"))
+                        hw.memoryBytes = q * 1024LL;
+                    else if (allocUnit.contains("byte") && !allocUnit.contains("mega") && !allocUnit.contains("kilo"))
+                        hw.memoryBytes = q;
+                    else
+                        hw.memoryBytes = q * 1024LL * 1024; // default: MB
+                }
+            }
+            else if (resourceType == RasdType::Ethernet)
+            {
+                hw.ethernetCount++;
+            }
+            else if (resourceType == RasdType::VirtualDisk ||
+                     resourceType == RasdType::DiskDrive ||
+                     resourceType == RasdType::StorageExtent)
+            {
+                // HostResource attribute links to a disk ref like "ovf:/disk/disk1"
+                const QString hostRes = rasdChildText(item, "HostResource");
+                // Strip "ovf:/disk/" prefix if present
+                const QString diskId = hostRes.section('/', -1);
+                if (!diskId.isEmpty() && capacitiesByRef.contains(diskId))
+                    hw.diskSizesByHref.insert(diskId, capacitiesByRef.value(diskId));
+            }
+        }
+    }
+
+    return hw;
+}
+
+QStringList OvfPackage::collectDiskFileRefsForSystem(const QDomElement& virtualSystemElem,
+                                                     const QMap<QString, QString>& diskHrefById)
+{
+    QStringList hrefs;
+
+    QDomNodeList hwSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        hwSections = virtualSystemElem.elementsByTagNameNS(ns, "VirtualHardwareSection");
+        if (!hwSections.isEmpty()) break;
+    }
+    if (hwSections.isEmpty())
+        hwSections = virtualSystemElem.elementsByTagName("VirtualHardwareSection");
+
+    for (int si = 0; si < hwSections.count(); ++si)
+    {
+        QDomElement hwSection = hwSections.at(si).toElement();
+        QDomNodeList items;
+        for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                   QString("http://schemas.citrix.com/ovf/envelope/1"),
+                                   QString("http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData")})
+        {
+            items = hwSection.elementsByTagNameNS(ns, "Item");
+            if (!items.isEmpty()) break;
+        }
+        if (items.isEmpty())
+            items = hwSection.elementsByTagName("Item");
+
+        for (int ii = 0; ii < items.count(); ++ii)
+        {
+            QDomElement item = items.at(ii).toElement();
+            if (item.isNull())
+                continue;
+
+            bool ok = false;
+            const int resourceType = rasdChildText(item, "ResourceType").toInt(&ok);
+            if (!ok || (resourceType != RasdType::VirtualDisk &&
+                        resourceType != RasdType::DiskDrive &&
+                        resourceType != RasdType::StorageExtent))
+                continue;
+
+            const QString diskId = rasdChildText(item, "HostResource").section('/', -1);
+            const QString href = diskHrefById.value(diskId);
+            if (!href.isEmpty() && !hrefs.contains(href))
+                hrefs << href;
+        }
+    }
+
+    return hrefs;
+}
+
+// ─── OvfPackage::parseRecommendations ────────────────────────────────────────
+// Parses Xen-specific VM restrictions from VirtualSystemOtherConfigurationData
+// where Name == "recommendations".  The value is a CDATA block containing:
+//   <restrictions>
+//     <restriction field="allow-network-sriov" value="1"/>
+//     <restriction field="supports-uefi" value="yes"/>
+//     ...
+//   </restrictions>
+//
+// C# equivalent: OVF.cs + VM.GetRecommendations() / GetRestrictionValue<T>()
+
+OvfRecommendations OvfPackage::parseRecommendations(const QDomElement& virtualSystemElem)
+{
+    OvfRecommendations rec;
+
+    // The Citrix OVF namespace holds VirtualSystemOtherConfigurationData.
+    const QString citrixNs = "http://schemas.citrix.com/ovf/envelope/1";
+    QDomNodeList configData = virtualSystemElem.elementsByTagNameNS(citrixNs, "VirtualSystemOtherConfigurationData");
+    if (configData.isEmpty())
+        configData = virtualSystemElem.elementsByTagName("VirtualSystemOtherConfigurationData");
+
+    for (int i = 0; i < configData.count(); ++i)
+    {
+        QDomElement elem = configData.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        // Look for the entry named "recommendations" (namespace-safe attribute check)
+        const QString name = elem.attributeNS(citrixNs, "Name");
+        const QString nameNoNs = elem.attribute("Name");
+        if (name != "recommendations" && nameNoNs != "recommendations")
+            continue;
+
+        // The value is inside a <Value> child element (possibly CDATA)
+        QDomNodeList valueNodes = elem.elementsByTagName("Value");
+        if (valueNodes.isEmpty())
+            continue;
+        const QString restrictionsXml = valueNodes.at(0).toElement().text().trimmed();
+        if (restrictionsXml.isEmpty())
+            continue;
+
+        // Parse the nested <restrictions> XML
+        QDomDocument rDoc;
+        if (!rDoc.setContent(restrictionsXml))
+            continue;
+        QDomNodeList restrictions = rDoc.elementsByTagName("restriction");
+        for (int r = 0; r < restrictions.count(); ++r)
+        {
+            QDomElement restr = restrictions.at(r).toElement();
+            const QString field = restr.attribute("field");
+            const QString value = restr.attribute("value");
+            const QString maxVal = restr.attribute("max");
+            const QString minVal = restr.attribute("min");
+
+            if (field == "allow-network-sriov")
+                rec.allowNetworkSriov = value.toInt();
+            else if (field == "vcpus-max" && !maxVal.isEmpty())
+                rec.maxVcpus = maxVal.toInt();
+            else if (field == "vcpus-min" && !minVal.isEmpty())
+                rec.minVcpus = minVal.toInt();
+            else if (field == "memory-static-max" && !maxVal.isEmpty())
+                rec.maxMemoryBytes = maxVal.toLongLong();
+            else if (field == "supports-uefi")
+                rec.supportsUefi = (value.toLower() == "yes");
+            else if (field == "supports-secure-boot")
+                rec.supportsSecureBoot = (value.toLower() == "yes");
+        }
+        break; // Only one "recommendations" entry per VirtualSystem
+    }
+
+    return rec;
+}
+
+// ─── OvfPackage::parseXenConfig ─────────────────────────────────────────────
+// Parses Xen-specific VM configuration data written into VirtualHardwareSection.
+// Handles two serialisation formats:
+//
+//   Qt OvfWriter format (src/xenlib/ovf/ovfwriter.cpp):
+//     <xen:Data ovf:required="false">
+//       <xen:Name>HVM_boot_policy</xen:Name>
+//       <xen:Value>BIOS order</xen:Value>
+//     </xen:Data>
+//   … where the xen prefix maps to http://www.citrix.com/xencenter/2009/xen.
+//
+//   C# XenAdmin format (XenOvfApi/OVF.cs AddOtherSystemSettingData()):
+//     <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
+//       <Value>BIOS order</Value>
+//     </citrix:VirtualSystemOtherConfigurationData>
+//   … where the citrix prefix maps to http://schemas.citrix.com/ovf/envelope/1.
+//
+// The "recommendations" key is skipped (handled by parseRecommendations).
+// C# equivalent: OVF.GetOtherSystemSettingData() / SetHostData()
+
+QMap<QString, QString> OvfPackage::parseXenConfig(const QDomElement& virtualSystemElem)
+{
+    QMap<QString, QString> result;
+
+    // ── Qt OvfWriter format: xen:Data elements ────────────────────────────────
+    const QString xenNs = "http://www.citrix.com/xencenter/2009/xen";
+    QDomNodeList dataNodes = virtualSystemElem.elementsByTagNameNS(xenNs, "Data");
+    if (dataNodes.isEmpty())
+    {
+        // Fallback for documents without explicit namespace declarations
+        dataNodes = virtualSystemElem.elementsByTagName("xen:Data");
+    }
+
+    for (int i = 0; i < dataNodes.count(); ++i)
+    {
+        QDomElement elem = dataNodes.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        QString key, val;
+        QDomNodeList children = elem.childNodes();
+        for (int j = 0; j < children.count(); ++j)
+        {
+            const QDomElement child = children.at(j).toElement();
+            if (child.isNull())
+                continue;
+            if (child.localName() == QLatin1String("Name"))
+                key = child.text().trimmed();
+            else if (child.localName() == QLatin1String("Value"))
+                val = child.text().trimmed();
+        }
+        if (!key.isEmpty())
+            result.insert(key, val);
+    }
+
+    // ── C# XenAdmin format: VirtualSystemOtherConfigurationData elements ──────
+    const QString citrixNs = "http://schemas.citrix.com/ovf/envelope/1";
+    QDomNodeList configData = virtualSystemElem.elementsByTagNameNS(citrixNs, "VirtualSystemOtherConfigurationData");
+    if (configData.isEmpty())
+        configData = virtualSystemElem.elementsByTagName("VirtualSystemOtherConfigurationData");
+
+    for (int i = 0; i < configData.count(); ++i)
+    {
+        QDomElement elem = configData.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        // Name comes from a namespace-prefixed or plain Name attribute
+        QString key = elem.attributeNS(citrixNs, "Name");
+        if (key.isEmpty())
+            key = elem.attribute("Name");
+        if (key.isEmpty() || key == QLatin1String("recommendations"))
+            continue; // recommendations is handled by parseRecommendations
+
+        QDomNodeList valueNodes = elem.elementsByTagName("Value");
+        if (valueNodes.isEmpty())
+            continue;
+        const QString val = valueNodes.at(0).toElement().text().trimmed();
+        result.insert(key, val);
+    }
+
+    return result;
+}
+
+bool OvfPackage::AllowsNetworkSriov() const
+{
+    for (const OvfRecommendations& rec : this->m_recommendationsBySystem)
+    {
+        // Explicit prohibition: allow-network-sriov == 0
+        if (rec.allowNetworkSriov == 0)
+            return false;
+    }
+    return true; // allowed when unrestricted or no recommendations present
+}
+
+void OvfPackage::parseFromOvfXml(const QString& xml){
+    this->descriptorXml_ = xml;
+
+    QDomDocument doc;
+    QString errorMsg;
+    int errorLine = 0, errorCol = 0;
+    if (!doc.setContent(xml, true, &errorMsg, &errorLine, &errorCol))
+    {
+        this->parseError_ = QString("OVF XML parse error at line %1 col %2: %3")
+                             .arg(errorLine).arg(errorCol).arg(errorMsg);
+        return;
+    }
+
+    QDomElement root = doc.documentElement();
+    if (root.isNull())
+    {
+        this->parseError_ = "OVF XML has no root element.";
+        return;
+    }
+
+    // ── NetworkSection/Network ────────────────────────────────────────────────
+    QDomNodeList networkSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        networkSections = doc.elementsByTagNameNS(ns, "NetworkSection");
+        if (!networkSections.isEmpty()) break;
+    }
+    if (networkSections.isEmpty())
+        networkSections = doc.elementsByTagName("NetworkSection");
+
+    for (int i = 0; i < networkSections.count(); ++i)
+    {
+        QDomElement section = networkSections.at(i).toElement();
+        QDomNodeList networks = section.childNodes();
+        for (int j = 0; j < networks.count(); ++j)
+        {
+            QDomElement net = networks.at(j).toElement();
+            if (net.isNull()) continue;
+            if (net.localName() != "Network") continue;
+
+            const QString name = firstAttributeByLocalName(net, "name");
+            if (!name.isEmpty() && !this->networkNames_.contains(name))
+                this->networkNames_ << name;
+        }
+    }
+
+    // ── References/File ───────────────────────────────────────────────────────
+    QDomNodeList refSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        refSections = doc.elementsByTagNameNS(ns, "References");
+        if (!refSections.isEmpty()) break;
+    }
+    if (refSections.isEmpty())
+        refSections = doc.elementsByTagName("References");
+
+    QMap<QString, QString> fileHrefById; // File id -> href
+    for (int i = 0; i < refSections.count(); ++i)
+    {
+        QDomElement section = refSections.at(i).toElement();
+        QDomNodeList files = section.childNodes();
+        for (int j = 0; j < files.count(); ++j)
+        {
+            QDomElement fileElem = files.at(j).toElement();
+            if (fileElem.isNull() || fileElem.localName() != "File") continue;
+
+            const QString href = firstAttributeByLocalName(fileElem, "href");
+            const QString id = firstAttributeByLocalName(fileElem, "id");
+            if (!id.isEmpty() && !href.isEmpty())
+                fileHrefById.insert(id, href);
+            if (!href.isEmpty() && !this->diskFileRefs_.contains(href))
+                this->diskFileRefs_ << href;
+        }
+    }
+
+    // ── VirtualSystem names ───────────────────────────────────────────────────
+    collectVirtualSystemNames(root, this->virtualSystemNames_);
+
+    // ── DiskSection capacities (used by RASD parsing) ─────────────────────────
+    // DiskSection/Disk elements carry ovf:capacity attribute (in MB by default,
+    // or in units specified by ovf:capacityAllocationUnits).
+    QMap<QString, qint64> diskCapacities; // diskId → bytes
+    QMap<QString, QString> diskHrefById;  // diskId → file href
+    QDomNodeList diskSections;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        diskSections = doc.elementsByTagNameNS(ns, "DiskSection");
+        if (!diskSections.isEmpty()) break;
+    }
+    if (diskSections.isEmpty())
+        diskSections = doc.elementsByTagName("DiskSection");
+
+    for (int i = 0; i < diskSections.count(); ++i)
+    {
+        QDomElement section = diskSections.at(i).toElement();
+        QDomNodeList disks = section.childNodes();
+        for (int j = 0; j < disks.count(); ++j)
+        {
+            QDomElement disk = disks.at(j).toElement();
+            if (disk.isNull() || disk.localName() != "Disk") continue;
+
+            const QString diskId   = firstAttributeByLocalName(disk, "diskId");
+            const QString fileRef  = firstAttributeByLocalName(disk, "fileRef");
+            const QString capStr   = firstAttributeByLocalName(disk, "capacity");
+            const QString capUnits = firstAttributeByLocalName(disk, "capacityAllocationUnits").toLower();
+
+            if (!diskId.isEmpty() && !fileRef.isEmpty() && fileHrefById.contains(fileRef))
+                diskHrefById.insert(diskId, fileHrefById.value(fileRef));
+
+            bool ok = false;
+            const qint64 cap = capStr.toLongLong(&ok);
+            if (!ok || diskId.isEmpty()) continue;
+
+            qint64 bytes = cap;
+            if (capUnits.contains("giga") || capUnits.contains("2^30"))
+                bytes = cap * 1024LL * 1024 * 1024;
+            else if (capUnits.contains("mega") || capUnits.contains("2^20") || capUnits.isEmpty())
+                bytes = cap * 1024LL * 1024;
+            else if (capUnits.contains("kilo") || capUnits.contains("2^10"))
+                bytes = cap * 1024LL;
+            // else assume bytes
+
+            diskCapacities.insert(diskId, bytes);
+        }
+    }
+
+    // ── Virtual hardware per system ───────────────────────────────────────────
+    QDomNodeList vsList;
+    for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                               QString("http://schemas.citrix.com/ovf/envelope/1")})
+    {
+        vsList = doc.elementsByTagNameNS(ns, "VirtualSystem");
+        if (!vsList.isEmpty()) break;
+    }
+    if (vsList.isEmpty())
+        vsList = doc.elementsByTagName("VirtualSystem");
+
+    for (int i = 0; i < vsList.count(); ++i)
+    {
+        QDomElement vs = vsList.at(i).toElement();
+
+        // Determine system name (match logic from collectVirtualSystemNames)
+        QString vsName;
+        QDomNodeList nameNodes = vs.elementsByTagName("Name");
+        if (nameNodes.isEmpty())
+        {
+            for (const QString& ns : {QString("http://schemas.dmtf.org/ovf/envelope/1"),
+                                       QString("http://schemas.citrix.com/ovf/envelope/1")})
+            {
+                nameNodes = vs.elementsByTagNameNS(ns, "Name");
+                if (!nameNodes.isEmpty()) break;
+            }
+        }
+        if (!nameNodes.isEmpty())
+            vsName = nameNodes.at(0).toElement().text().trimmed();
+        if (vsName.isEmpty())
+            vsName = firstAttributeByLocalName(vs, "id");
+
+        if (vsName.isEmpty())
+            vsName = QString("VM %1").arg(i + 1);
+
+        const OvfVirtualHardware hw = collectVirtualHardware(vs, diskCapacities);
+        this->virtualHardwareBySystem_.insert(vsName, hw);
+        this->diskFileRefsBySystem_.insert(vsName, collectDiskFileRefsForSystem(vs, diskHrefById));
+
+        const OvfRecommendations rec = parseRecommendations(vs);
+        this->m_recommendationsBySystem.insert(vsName, rec);
+
+        const QMap<QString, QString> xenCfg = parseXenConfig(vs);
+        this->m_xenConfigBySystem_.insert(vsName, xenCfg);
+    }
+
+    // ── EULA sections ─────────────────────────────────────────────────────────
+    collectEulas(root, this->eulas_);
+
+    // ── Encryption detection ─────────────────────────────────────────────────
+    // SecuritySection_Type is a Xen/Citrix OVF extension. Also check for
+    // xenovf:Encryption elements as a broad heuristic.
+    QDomNodeList secNodes = doc.elementsByTagName("SecuritySection");
+    if (secNodes.isEmpty())
+    {
+        for (const QString& ns : {QString("http://schemas.citrix.com/ovf/envelope/1"),
+                                   QString("http://schemas.dmtf.org/ovf/envelope/1")})
+        {
+            secNodes = doc.elementsByTagNameNS(ns, "SecuritySection");
+            if (!secNodes.isEmpty()) break;
+        }
+    }
+    if (secNodes.isEmpty())
+    {
+        // Also check raw XML text as a safety net
+        this->hasEncryption_ = xml.contains("SecuritySection", Qt::CaseInsensitive)
+                             || xml.contains("Encryption",     Qt::CaseInsensitive);
+    }
+    else
+    {
+        this->hasEncryption_ = true;
+    }
+
+    this->valid_ = true;
+    qDebug() << "OvfPackage: Parsed" << this->packageName_
+             << "| VMs:" << this->virtualSystemNames_.size()
+             << "| Networks:" << this->networkNames_.size()
+             << "| Disks:" << this->diskFileRefs_.size()
+             << "| EULAs:" << this->eulas_.size()
+             << "| Encrypted:" << this->hasEncryption_;
+}
+
+// ─── OvfPackage::ExtractAllToDir ─────────────────────────────────────────────
+
+bool OvfPackage::ExtractAllToDir(const QString& ovaPath,
+                                 const QString& destDir,
+                                 QString& errorOut,
+                                 std::function<bool()> cancelCheck)
+{
+    QFile archive(ovaPath);
+    if (!archive.open(QIODevice::ReadOnly))
+    {
+        errorOut = QString("Cannot open OVA archive: %1").arg(archive.errorString());
+        return false;
+    }
+
+    const int BLOCK = 512;
+
+    while (!archive.atEnd())
+    {
+        if (cancelCheck && cancelCheck())
+        {
+            errorOut = "Extraction cancelled";
+            archive.close();
+            return false;
+        }
+
+        QString entryName;
+        qint64 entrySize = 0;
+
+        if (!readTarHeader(archive, entryName, entrySize))
+            break;  // end of archive or error
+
+        // Strip any leading directory components — all files land flat in destDir.
+        // This matches how most OVA archives are structured (single top-level folder).
+        const QString baseName = QFileInfo(entryName).fileName();
+
+        if (entrySize > 0 && !baseName.isEmpty())
+        {
+            const QString outPath = QDir(destDir).filePath(baseName);
+            QFile outFile(outPath);
+            if (!outFile.open(QIODevice::WriteOnly))
+            {
+                errorOut = QString("Cannot create extracted file %1: %2")
+                               .arg(outPath, outFile.errorString());
+                archive.close();
+                return false;
+            }
+
+            qint64 remaining = entrySize;
+            QByteArray buf(64 * 1024, '\0');
+            while (remaining > 0)
+            {
+                if (cancelCheck && cancelCheck())
+                {
+                    outFile.close();
+                    QFile::remove(outPath);
+                    errorOut = "Extraction cancelled";
+                    archive.close();
+                    return false;
+                }
+
+                const qint64 chunk = qMin(remaining, static_cast<qint64>(buf.size()));
+                const qint64 got = archive.read(buf.data(), chunk);
+                if (got <= 0)
+                {
+                    errorOut = "Unexpected end of OVA archive";
+                    outFile.close();
+                    archive.close();
+                    return false;
+                }
+                outFile.write(buf.constData(), got);
+                remaining -= got;
+            }
+            outFile.close();
+
+            // Advance to next 512-byte block boundary
+            const qint64 padding = (BLOCK - (entrySize % BLOCK)) % BLOCK;
+            if (padding > 0)
+                archive.skip(padding);
+        }
+        else if (entrySize > 0)
+        {
+            // Entry has no usable name (e.g. directory entry) — skip data
+            const qint64 blocks = (entrySize + BLOCK - 1) / BLOCK * BLOCK;
+            archive.skip(blocks);
+        }
+    }
+
+    archive.close();
+    return true;
+}
+
+// ─── OvfPackage::VerifyManifest ───────────────────────────────────────────────
+
+bool OvfPackage::VerifyManifest(const QString& workingDir,
+                                const QString& baseName,
+                                QString& errorOut,
+                                std::function<bool()> cancelCheck)
+{
+    const QString mfPath = QDir(workingDir).filePath(baseName + ".mf");
+    QFile mfFile(mfPath);
+    if (!mfFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        errorOut = QString("Cannot open manifest file '%1': %2").arg(mfPath, mfFile.errorString());
+        return false;
+    }
+
+    // ── Parse manifest lines ─────────────────────────────────────────────────
+    // Line format: ALGORITHM(filename)= hexdigest
+    // e.g.  SHA256(mypackage.ovf)= abcdef0123...
+    //        SHA1(disk-1.vhd)= 01234567...
+    struct Digest
+    {
+        QString algorithm;    // "SHA1", "SHA256", etc.
+        QString fileName;
+        QString hexDigest;
+    };
+
+    QList<Digest> entries;
+    while (!mfFile.atEnd())
+    {
+        const QString rawLine = QString::fromUtf8(mfFile.readLine()).trimmed();
+        if (rawLine.isEmpty())
+            continue;
+
+        // Split on the opening paren to get algorithm name
+        const int parenOpen  = rawLine.indexOf('(');
+        const int parenClose = rawLine.indexOf(')');
+        const int equals     = rawLine.indexOf('=', parenClose);
+        if (parenOpen < 0 || parenClose < 0 || equals < 0)
+        {
+            qWarning() << "OvfPackage::VerifyManifest: skipping unrecognised manifest line:" << rawLine;
+            continue;
+        }
+
+        Digest d;
+        d.algorithm  = rawLine.left(parenOpen).trimmed().toUpper();
+        d.fileName   = rawLine.mid(parenOpen + 1, parenClose - parenOpen - 1).trimmed();
+        d.hexDigest  = rawLine.mid(equals + 1).trimmed();
+        if (d.algorithm.isEmpty() || d.fileName.isEmpty() || d.hexDigest.isEmpty())
+            continue;
+        entries.append(d);
+    }
+    mfFile.close();
+
+    if (entries.isEmpty())
+    {
+        errorOut = QString("Manifest file '%1' contains no entries.").arg(mfPath);
+        return false;
+    }
+
+    // ── Verify each listed file ───────────────────────────────────────────────
+    for (const Digest& d : entries)
+    {
+        if (cancelCheck && cancelCheck())
+        {
+            errorOut = "Manifest verification cancelled.";
+            return false;
+        }
+
+        // Map algorithm name to Qt enum
+        QCryptographicHash::Algorithm algo;
+        const QString algUpper = d.algorithm.toUpper();
+        if (algUpper == "SHA1" || algUpper == "SHA-1")
+            algo = QCryptographicHash::Sha1;
+        else if (algUpper == "SHA256" || algUpper == "SHA-256")
+            algo = QCryptographicHash::Sha256;
+        else if (algUpper == "SHA512" || algUpper == "SHA-512")
+            algo = QCryptographicHash::Sha512;
+        else if (algUpper == "MD5")
+            algo = QCryptographicHash::Md5;
+        else
+        {
+            errorOut = QString("Unsupported digest algorithm '%1' in manifest.").arg(d.algorithm);
+            return false;
+        }
+
+        const QString filePath = QDir(workingDir).filePath(d.fileName);
+        QFile dataFile(filePath);
+        if (!dataFile.open(QIODevice::ReadOnly))
+        {
+            errorOut = QString("Manifest references '%1' but the file could not be opened: %2")
+                           .arg(d.fileName, dataFile.errorString());
+            return false;
+        }
+
+        QCryptographicHash hasher(algo);
+        const int CHUNK = 256 * 1024;
+        QByteArray buf(CHUNK, '\0');
+        while (!dataFile.atEnd())
+        {
+            if (cancelCheck && cancelCheck())
+            {
+                dataFile.close();
+                errorOut = "Manifest verification cancelled.";
+                return false;
+            }
+            const qint64 got = dataFile.read(buf.data(), CHUNK);
+            if (got > 0)
+                hasher.addData(buf.constData(), static_cast<int>(got));
+        }
+        dataFile.close();
+
+        const QString computed = QString::fromLatin1(hasher.result().toHex());
+        if (computed.compare(d.hexDigest, Qt::CaseInsensitive) != 0)
+        {
+            errorOut = QString("Manifest verification failed for '%1': "
+                               "expected %2, computed %3.")
+                           .arg(d.fileName, d.hexDigest, computed);
+            return false;
+        }
+
+        qDebug() << "OvfPackage::VerifyManifest:" << d.fileName << "OK";
+    }
+
+    return true;
+}
+
+// ─── OvfPackage::Validate ─────────────────────────────────────────────────────
+
+bool OvfPackage::Validate(QStringList& warningsOut) const
+{
+    warningsOut.clear();
+
+    if (!this->valid_)
+    {
+        warningsOut << this->parseError_;
+        return false;
+    }
+
+    QDomDocument doc;
+    if (!doc.setContent(this->descriptorXml_))
+    {
+        warningsOut << QString("Could not re-parse OVF descriptor XML.");
+        return false;
+    }
+
+    const QDomElement root = doc.documentElement();
+
+    // ── Version check ──────────────────────────────────────────────────────────
+    // C# equivalent: ValidationFlags.Version / ValidateVersion()
+    static const QStringList knownVersions = { "0.9", "1.0.0", "1.0", "2.0.0", "2.0" };
+    const QString version = root.attribute("version");
+    if (version.isEmpty())
+    {
+        warningsOut << "OVF version is not set. Assuming version 1.0.0.";
+    }
+    else if (!knownVersions.contains(version))
+    {
+        warningsOut << QString("OVF version '%1' is not officially supported. Import may not work correctly.").arg(version);
+    }
+
+    // ── Collect file references from References/File elements ──────────────────
+    // C# equivalent: ValidationFlags.Files
+    const QString packageDir = QFileInfo(this->sourceFile_).absolutePath();
+    QMap<QString, QString> fileById;   // id → href
+    QSet<QString> linkedHrefs;         // hrefs that are referenced by a RASD
+
+    const auto collectRefs = [&](const QDomElement& refs)
+    {
+        QDomNodeList files = refs.elementsByTagName("File");
+        for (int i = 0; i < files.count(); i++)
+        {
+            QDomElement fe = files.at(i).toElement();
+            const QString id   = fe.attribute("id");
+            const QString href = fe.attribute("href");
+            if (id.isEmpty() || href.isEmpty())
+                continue;
+            fileById[id] = href;
+
+            // Skip manifest/certificate entries
+            const QString ext = QFileInfo(href).suffix().toLower();
+            if (ext == "mf" || ext == "cert")
+                continue;
+
+            // Check the referenced file exists (for .ovf folder packages)
+            // For .ova archives the files have already been extracted by the time
+            // we validate, so a missing file is a real problem.
+            const QString fullPath = QDir(packageDir).filePath(href);
+            if (!QFile::exists(fullPath))
+            {
+                warningsOut << QString("Referenced file '%1' was not found in the package directory.").arg(href);
+            }
+            else
+            {
+                // Warn about unknown extensions
+                static const QStringList knownExts = { "vmdk", "vhd", "iso", "img", "ovf", "mf", "cert", "gz", "xva" };
+                if (!knownExts.contains(ext))
+                    warningsOut << QString("File '%1' has an unrecognised extension. It may not be imported correctly.").arg(href);
+            }
+        }
+    };
+
+    // The References element may be a direct child of Envelope
+    QDomNodeList refNodes = root.elementsByTagName("References");
+    if (refNodes.count() > 0)
+        collectRefs(refNodes.at(0).toElement());
+
+    // ── Disk-to-file linkage check ─────────────────────────────────────────────
+    // Collect DiskSection disk elements: diskId → fileRef
+    QMap<QString, QString> diskFileRefById; // diskId → File id
+    QDomNodeList diskSections = root.elementsByTagName("DiskSection");
+    for (int di = 0; di < diskSections.count(); di++)
+    {
+        QDomNodeList disks = diskSections.at(di).toElement().elementsByTagName("Disk");
+        for (int i = 0; i < disks.count(); i++)
+        {
+            QDomElement disk = disks.at(i).toElement();
+            const QString diskId  = disk.attribute("diskId");
+            const QString fileRef = disk.attribute("fileRef");
+            if (!diskId.isEmpty() && !fileRef.isEmpty())
+                diskFileRefById[diskId] = fileRef;
+        }
+    }
+
+    // Walk VirtualHardwareSection RASD items for disk-type resources
+    // Resource types: 17=CD/DVD, 19=Storage Extent (general), 20=Ethernet, 21=USB
+    // We check types 17 and 19 which reference disk files.
+    auto markLinked = [&](const QDomElement& rasd)
+    {
+        const QDomNodeList types = rasd.elementsByTagName("ResourceType");
+        if (types.isEmpty())
+            return;
+        const int resType = types.at(0).toElement().text().toInt();
+        if (resType != 17 && resType != 19 && resType != 20 && resType != 21)
+            return;
+
+        // HostResource value is typically "ovf:/disk/diskId"
+        const QDomNodeList hrs = rasd.elementsByTagName("HostResource");
+        for (int hi = 0; hi < hrs.count(); hi++)
+        {
+            const QString val = hrs.at(hi).toElement().text();
+            // Extract diskId from "ovf:/disk/diskId"
+            const int slashPos = val.lastIndexOf('/');
+            const QString diskId = (slashPos >= 0) ? val.mid(slashPos + 1) : val;
+            if (diskFileRefById.contains(diskId))
+            {
+                const QString fileRef = diskFileRefById[diskId];
+                if (fileById.contains(fileRef))
+                    linkedHrefs.insert(fileById[fileRef]);
+            }
+        }
+    };
+
+    QDomNodeList vhSections = root.elementsByTagName("VirtualHardwareSection");
+    for (int vi = 0; vi < vhSections.count(); vi++)
+    {
+        QDomNodeList items = vhSections.at(vi).toElement().elementsByTagName("Item");
+        for (int i = 0; i < items.count(); i++)
+            markLinked(items.at(i).toElement());
+    }
+
+    // Warn about files not linked to any RASD
+    for (auto it = fileById.cbegin(); it != fileById.cend(); ++it)
+    {
+        const QString href = it.value();
+        const QString ext  = QFileInfo(href).suffix().toLower();
+        if (ext == "mf" || ext == "cert" || ext == "ovf")
+            continue;
+        if (!linkedHrefs.contains(href))
+            warningsOut << QString("File '%1' is listed in References but not linked to any virtual hardware item. It may be unused.").arg(href);
+    }
+
+    return true;
+}

@@ -29,25 +29,14 @@
 #define EXPORTWIZARD_H
 
 #include <QWizard>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFormLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QFileDialog>
-#include <QComboBox>
-#include <QCheckBox>
+#include <QSharedPointer>
+#include <QList>
 #include <QListWidget>
-#include <QProgressBar>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QGroupBox>
-#include <QRadioButton>
-#include <QSpinBox>
 
-class QMainWindow;
+namespace Ui { class ExportWizard; }
+
 class VM;
+class XenConnection;
 
 class ExportWizard : public QWizard
 {
@@ -55,6 +44,8 @@ class ExportWizard : public QWizard
 
     public:
         explicit ExportWizard(QWidget* parent = nullptr);
+        explicit ExportWizard(XenConnection* connection, QWidget* parent = nullptr);
+        ~ExportWizard();
 
         // Page IDs
         enum
@@ -62,58 +53,111 @@ class ExportWizard : public QWizard
             Page_Format = 0,
             Page_VMs = 1,
             Page_Options = 2,
-            Page_Finish = 3
+            Page_Finish = 3,
+            Page_Rbac = 4,  // Programmatic page inserted after Page_Format when RBAC check is needed
+            Page_Eula = 5   // Programmatic page between VM selection and options (OVF/OVA only)
         };
 
-        // Export format
-        bool exportAsXVA() const
-        {
-            return m_exportAsXVA;
-        }
-        QString exportDirectory() const
-        {
-            return m_exportDirectory;
-        }
-        QString exportFileName() const
-        {
-            return m_exportFileName;
-        }
+        // Export format / destination accessors (valid after exec() returns Accepted)
+        bool exportAsXVA() const { return this->m_exportAsXVA; }
+        QString exportDirectory() const { return this->m_exportDirectory; }
+        QString exportFileName() const { return this->m_exportFileName; }
+        bool verifyExport() const;
+        bool createManifest() const;
+        bool createOva() const;
+        bool compressOVF() const;
+        bool signAppliance() const;
+        void setSelectedObjectName(const QString& name) { this->m_selectedObjectName = name; }
+        void setExportFileName(const QString& fileName);
+
+        // Connection and VM context
+        void SetConnection(XenConnection* connection);
+        void SetPreselectedVMs(const QList<QSharedPointer<VM>>& vms);
+
+        /**
+         * @brief Lock the wizard to OVF/OVA mode only (XVA option hidden).
+         *
+         * Matches C# ExportAppliancePage.OvfModeOnly.
+         * Call before exec() when exporting a vApp (which is always OVF/OVA).
+         */
+        void SetOvfModeOnly();
+
+        // Returns checked VMs (OVF) or preselected VMs (XVA)
+        QList<QSharedPointer<VM>> GetSelectedVMs() const;
+
+        /**
+         * @brief Returns the list of EULA file paths the user added on the EULA page.
+         *
+         * Matches C# ExportEulaPage.Eulas.  Only meaningful for OVF/OVA exports.
+         * An empty list is valid (no EULAs in the appliance).
+         */
+        QStringList GetEulas() const;
+
+        /**
+         * @brief Returns the certificate file path selected for signing.
+         * Empty string when signing is disabled.
+         */
+        QString GetCertificatePath() const;
+
+        /**
+         * @brief Returns the certificate password entered by the user.
+         * Empty string if none was entered.
+         */
+        QString GetCertificatePassword() const;
+
+        // Validate XVA destination and build the full output path.
+        // Returns true when valid, sets *fullPath. Shows QMessageBox on failure.
+        bool ValidateXvaDestination(QWidget* parent, QString* fullPath) const;
+
+        // Validate OVF/OVA destination directory and appliance name.
+        // Returns true when valid.  Sets *resolvedPath to a path of the form
+        // /dir/name.{ovf,ova} — callers use QFileInfo(resolvedPath).absolutePath()
+        // and QFileInfo(resolvedPath).baseName() to recover the parent directory and
+        // appliance name passed to ExportApplianceAction.
+        // NOTE: for OVF the action writes the package into a sub-folder
+        //   /dir/name/name.ovf  (not /dir/name.ovf).
+        // For OVA the action writes a single file /dir/name.ova.
+        // Shows QMessageBox on failure.  Mirrors C# CheckDestinationFolderExists +
+        // CheckPermissions + CheckApplianceExists from ExportAppliancePage.
+        bool ValidateOvfDestination(QWidget* parent, QString* resolvedPath) const;
 
     private slots:
         void onFormatChanged();
         void onDirectoryBrowse();
+        void onAddEula();
+        void onRemoveEula();
+        void onCertBrowse();
+        void onSignApplianceToggled(bool checked);
+        void onManifestToggled(bool checked);
+
+    protected:
+        int nextId() const override;
+        void initializePage(int id) override;
+        bool validateCurrentPage() override;
 
     private:
-        QWizardPage* createFormatPage();
-        QWizardPage* createVMsPage();
-        QWizardPage* createOptionsPage();
-        QWizardPage* createFinishPage();
-
+        void setupWizardPages();
         void updateSummary();
+        void updateRbacPage();
+        void populateVmList();
+        bool hasApiPermissions(const QStringList& methods, QStringList* missing) const;
+
+        Ui::ExportWizard* ui;
+
+        // Connection and preselected VM context
+        XenConnection* m_connection;
+        QList<QSharedPointer<VM>> m_preselectedVMs;
 
         bool m_exportAsXVA;
         QString m_exportDirectory;
         QString m_exportFileName;
+        QString m_selectedObjectName;
 
-        // Format page widgets
-        QComboBox* m_formatComboBox;
-        QLineEdit* m_directoryLineEdit;
-        QPushButton* m_directoryBrowseButton;
-        QLineEdit* m_fileNameLineEdit;
+        // RBAC state (populated when leaving Page_Format)
+        QStringList m_blockingRbacMissing;
 
-        // VMs page widgets
-        QListWidget* m_vmListWidget;
-
-        // Options page widgets
-        QCheckBox* m_createManifestCheckBox;
-        QCheckBox* m_signApplianceCheckBox;
-        QCheckBox* m_encryptFilesCheckBox;
-        QCheckBox* m_createOVACheckBox;
-        QCheckBox* m_compressOVFCheckBox;
-        QCheckBox* m_verifyExportCheckBox;
-
-        // Finish page widgets
-        QPlainTextEdit* m_summaryTextEdit;
+        // Programmatic EULA page widgets (owned by the QWizardPage parent)
+        QListWidget* m_eulaListWidget;
 };
 
 #endif // EXPORTWIZARD_H
