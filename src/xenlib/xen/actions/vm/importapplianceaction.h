@@ -28,7 +28,7 @@
 #ifndef IMPORTAPPLIANCEACTION_H
 #define IMPORTAPPLIANCEACTION_H
 
-#include "../../asyncoperation.h"
+#include "vmimportactionbase.h"
 #include "../../../xenlib_global.h"
 #include <QString>
 #include <QStringList>
@@ -91,7 +91,7 @@ struct OvfVmMapping
  * Threading: runs on the AsyncOperation worker thread; all XenAPI calls block
  * on the ConnectionWorker thread (never the UI thread).
  */
-class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
+class XENLIB_EXPORT ImportApplianceAction : public VmImportActionBase
 {
     Q_OBJECT
 
@@ -134,75 +134,6 @@ class XENLIB_EXPORT ImportApplianceAction : public AsyncOperation
     protected:
         void run() override;
         void onCancel() override;
-
-        // ── XenAPI workflow helpers (also available to ImportImageAction) ────
-
-        /**
-         * @brief Create a VM record via XenAPI.
-         * @param vmRecord QVariantMap suitable for VM.create
-         * @param applianceRef OpaqueRef of parent VM_appliance or empty
-         * @return OpaqueRef of the created VM
-         */
-        QString createVm(const QVariantMap& vmRecord, const QString& applianceRef);
-
-        /**
-         * @brief Create a VDI and upload disk content via HTTP PUT /import_raw_vdi.
-         * @param srRef          Target SR OpaqueRef
-         * @param diskLabel      Human-readable disk name
-         * @param diskFilePath   Local path of the disk file (.vhd or raw)
-         * @param virtualSizeBytes Capacity to advertise when creating the VDI
-         * @param progressStart  Lower bound of the overall percent range for this disk
-         * @param progressEnd    Upper bound of the overall percent range for this disk
-         * @return OpaqueRef of the created VDI
-         */
-        QString uploadDisk(const QString& srRef,
-                           const QString& diskLabel,
-                           const QString& diskFilePath,
-                           qint64 virtualSizeBytes,
-                           int progressStart,
-                           int progressEnd);
-
-        /**
-         * @brief Attach a VDI to a VM as a VBD.
-         */
-        void attachDisk(const QString& vmRef,
-                        const QString& vdiRef,
-                        bool bootable,
-                        const QString& mode,
-                        const QString& type);
-
-        /**
-         * @brief Create a VIF connecting the VM to a network.
-         */
-        void createVif(const QString& vmRef,
-                       const QString& networkRef,
-                       int deviceIndex,
-                       const QString& mac);
-
-        /**
-         * @brief Destroy a partially-created VM and any owned VDIs/VBDs.
-         */
-        void cleanupVm(const QString& vmRef);
-
-        /**
-         * @brief Attach the OS fixup ISO as a CDROM and adjust boot order to boot from it first.
-         *
-         * Searches the fixup ISO SR for a VDI whose name contains "linuxfixup" or "xenserver-linuxfixup".
-         * If found, creates a read-only CD VBD and prepends "d" to the VM's HVM_boot_params["order"].
-         * Logs a warning and returns false (non-fatal) when the ISO cannot be found.
-         *
-         * @param vmRef OpaqueRef of the VM to configure
-         * @return true if the fixup CDROM was attached successfully
-         */
-        bool applyFixups(const QString& vmRef);
-
-        /**
-         * @brief Throw a CancelledException if cancellation has been requested.
-         */
-        void checkCancelled() const;
-
-        //! Source file path used for VDI description strings
-        QString m_ovfFilePath;
 
     private:
         // ── OVF parsing helpers ──────────────────────────────────────────────

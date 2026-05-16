@@ -28,28 +28,32 @@
 #include "importapplianceaction.h"
 #include "../../../ovf/ovfpackage.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/xenapi_VDI.h"
-#include "../../xenapi/xenapi_VBD.h"
-#include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_Task.h"
-#include "../../xenapi/xenapi_SR.h"
 #include "../../xenapi/vm_appliance.h"
 #include "../../session.h"
 #include "../../network/connection.h"
-#include "../../network/httpclient.h"
 #include "../../failure.h"
-#include "../../../xencache.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
 #include <QTemporaryDir>
 #include <QDebug>
 
-// ─── CancelledException ──────────────────────────────────────────────────────
+// ─── Local helpers ───────────────────────────────────────────────────────────
 
-namespace
+// Parse a semicolon-separated "key=value;key2=value2" string into a QVariantMap.
+// Matches the inverse of the export serialisation in ExportApplianceAction::buildVirtualSystem().
+static QVariantMap parseSemicolonKvMap(const QString& s)
 {
-    struct CancelledException {};
+    QVariantMap result;
+    const QStringList parts = s.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    for (const QString& part : parts)
+    {
+        const int eq = part.indexOf(QLatin1Char('='));
+        if (eq > 0)
+            result.insert(part.left(eq).trimmed(), part.mid(eq + 1).trimmed());
+    }
+    return result;
 }
 
 // ─── Constructor ─────────────────────────────────────────────────────────────
@@ -63,8 +67,7 @@ ImportApplianceAction::ImportApplianceAction(XenConnection* connection,
                                              const QString& fixupIsoSrRef,
                                              bool startAutomatically,
                                              QObject* parent)
-    : AsyncOperation(connection, "Import Appliance", "Importing OVF/OVA appliance...", parent)
-    , m_ovfFilePath(ovfFilePath)
+    : VmImportActionBase(connection, "Import Appliance", "Importing OVF/OVA appliance...", parent)
     , m_vmMappings(vmMappings)
     , m_verifyManifest(verifyManifest)
     , m_verifySignature(verifySignature)
@@ -74,32 +77,23 @@ ImportApplianceAction::ImportApplianceAction(XenConnection* connection,
 {
     this->SetSafeToExit(false);
     this->SetCanCancel(true);
+    this->m_sourcePath = ovfFilePath;
 
     // RBAC checks matching C# ApplianceAction
     this->AddApiMethodToRoleCheck("VM.create");
     this->AddApiMethodToRoleCheck("VM.destroy");
     this->AddApiMethodToRoleCheck("VM.hard_shutdown");
     this->AddApiMethodToRoleCheck("VM.start");
-    this->AddApiMethodToRoleCheck("VM.set_affinity");
     this->AddApiMethodToRoleCheck("VM.add_to_other_config");
     this->AddApiMethodToRoleCheck("VM.remove_from_other_config");
     this->AddApiMethodToRoleCheck("VM.set_HVM_boot_params");
-    this->AddApiMethodToRoleCheck("VM_appliance.create");
-    this->AddApiMethodToRoleCheck("VM_appliance.start");
     this->AddApiMethodToRoleCheck("VDI.create");
     this->AddApiMethodToRoleCheck("VDI.destroy");
     this->AddApiMethodToRoleCheck("VBD.create");
     this->AddApiMethodToRoleCheck("VIF.create");
-    this->AddApiMethodToRoleCheck("http/import_raw_vdi");
 }
 
-// ─── Cancellation ────────────────────────────────────────────────────────────
-
-void ImportApplianceAction::checkCancelled() const
-{
-    if (this->IsCancelled())
-        throw CancelledException();
-}
+// ─── onCancel ────────────────────────────────────────────────────────────────
 
 void ImportApplianceAction::onCancel()
 {
@@ -128,9 +122,9 @@ void ImportApplianceAction::run()
         // when it goes out of scope at the end of run().
         // C# equivalent: ImportApplianceAction.RunCore() → m_package.ExtractToWorkingDir()
         QTemporaryDir workingDir;
-        QString effectiveOvfPath = this->m_ovfFilePath;
+        QString effectiveOvfPath = this->m_sourcePath;
 
-        if (this->m_ovfFilePath.toLower().endsWith(".ova"))
+        if (this->m_sourcePath.toLower().endsWith(".ova"))
         {
             if (!workingDir.isValid())
             {
@@ -145,7 +139,7 @@ void ImportApplianceAction::run()
 
             QString extractErr;
             const bool ok = OvfPackage::ExtractAllToDir(
-                this->m_ovfFilePath,
+                this->m_sourcePath,
                 workingDir.path(),
                 extractErr,
                 [this]() { return this->IsCancelled(); });
@@ -153,7 +147,7 @@ void ImportApplianceAction::run()
             if (!ok)
             {
                 if (this->IsCancelled())
-                    throw CancelledException();
+                    throw VmImportActionBase::CancelledException();
                 this->setError(QString("OVA extraction failed: %1").arg(extractErr));
                 this->setState(Failed);
                 return;
@@ -218,7 +212,7 @@ void ImportApplianceAction::run()
                 [this]() { return this->IsCancelled(); });
 
             if (this->IsCancelled())
-                throw CancelledException();
+                throw VmImportActionBase::CancelledException();
 
             if (!ok)
             {
@@ -244,7 +238,7 @@ void ImportApplianceAction::run()
             QVariantMap appRecord;
             appRecord["name_label"]       = pkg.PackageName();
             appRecord["name_description"] = QString("Imported from %1").arg(
-                                                QFileInfo(this->m_ovfFilePath).fileName());
+                                                QFileInfo(this->m_sourcePath).fileName());
             try
             {
                 this->m_applianceRef = XenAPI::VM_appliance::create(session, appRecord);
@@ -291,7 +285,7 @@ void ImportApplianceAction::run()
             QVariantMap vmRecord;
             vmRecord["name_label"]             = vmName;
             vmRecord["name_description"]       = QString("Imported from %1").arg(
-                                                       QFileInfo(this->m_ovfFilePath).fileName());
+                                                       QFileInfo(this->m_sourcePath).fileName());
             vmRecord["memory_static_max"]      = memMax;
             vmRecord["memory_static_min"]      = memMin;
             vmRecord["memory_dynamic_max"]     = memMax;
@@ -301,17 +295,63 @@ void ImportApplianceAction::run()
             vmRecord["actions_after_shutdown"] = QString("destroy");
             vmRecord["actions_after_reboot"]   = QString("restart");
             vmRecord["actions_after_crash"]    = QString("restart");
-            vmRecord["HVM_boot_policy"]        = QString("BIOS order");
-            QVariantMap bootParams;
-            bootParams["order"] = "dc";
-            vmRecord["HVM_boot_params"] = bootParams;
-            QVariantMap platform;
-            platform["nx"]     = "true";
-            platform["acpi"]   = "1";
-            platform["apic"]   = "true";
-            platform["pae"]    = "true";
-            platform["stdvga"] = "false";
-            vmRecord["platform"] = platform;
+
+            // ── Boot / platform from OVF xen config (or safe defaults) ───
+            // Prefer values exported by OvfWriter (xen:Data elements) or C# XenAdmin
+            // (VirtualSystemOtherConfigurationData). Fall back to HVM BIOS defaults only
+            // when no xen config is present (e.g. third-party OVF tools).
+            const QMap<QString, QString> xenCfg = pkg.XenConfigBySystem().value(vmName);
+
+            const bool hasPvConfig = xenCfg.contains("PV_bootloader")
+                                  || xenCfg.contains("PV_kernel");
+
+            if (xenCfg.contains("HVM_boot_policy"))
+            {
+                vmRecord["HVM_boot_policy"] = xenCfg.value("HVM_boot_policy");
+            }
+            else if (!hasPvConfig)
+            {
+                // No PV configuration present → assume HVM with BIOS order
+                vmRecord["HVM_boot_policy"] = QString("BIOS order");
+            }
+            // else: PV VM — leave HVM_boot_policy absent
+
+            if (xenCfg.contains("HVM_boot_params"))
+            {
+                vmRecord["HVM_boot_params"] = parseSemicolonKvMap(xenCfg.value("HVM_boot_params"));
+            }
+            else if (!hasPvConfig)
+            {
+                QVariantMap bootParams;
+                bootParams["order"] = "dc";
+                vmRecord["HVM_boot_params"] = bootParams;
+            }
+
+            if (xenCfg.contains("platform"))
+            {
+                vmRecord["platform"] = parseSemicolonKvMap(xenCfg.value("platform"));
+            }
+            else
+            {
+                QVariantMap platform;
+                platform["nx"]     = "true";
+                platform["acpi"]   = "1";
+                platform["apic"]   = "true";
+                platform["pae"]    = "true";
+                platform["stdvga"] = "false";
+                vmRecord["platform"] = platform;
+            }
+
+            if (xenCfg.contains("PV_bootloader"))
+                vmRecord["PV_bootloader"] = xenCfg.value("PV_bootloader");
+            if (xenCfg.contains("PV_kernel"))
+                vmRecord["PV_kernel"] = xenCfg.value("PV_kernel");
+            if (xenCfg.contains("PV_ramdisk"))
+                vmRecord["PV_ramdisk"] = xenCfg.value("PV_ramdisk");
+            if (xenCfg.contains("PV_args"))
+                vmRecord["PV_args"] = xenCfg.value("PV_args");
+            if (xenCfg.contains("PV_bootloader_args"))
+                vmRecord["PV_bootloader_args"] = xenCfg.value("PV_bootloader_args");
             // Hide from XenCenter until fully configured — matches C# pattern.
             // After full setup we call VM.destroy-and-recreate isn't possible;
             // instead we omit HideFromXenCenter and make the VM visible from the start.
@@ -328,7 +368,7 @@ void ImportApplianceAction::run()
                 this->setDescriptionSafe(QString("Creating VM record for '%1'...").arg(vmName));
                 vmRef = this->createVm(vmRecord, this->m_applianceRef);
             }
-            catch (const CancelledException&)
+            catch (const VmImportActionBase::CancelledException&)
             {
                 throw;
             }
@@ -388,7 +428,7 @@ void ImportApplianceAction::run()
                     vdiRef = this->uploadDisk(srRef, dm.diskHref, diskPath, 0,
                                               diskProgressStart, diskProgressEnd);
                 }
-                catch (const CancelledException&)
+                catch (const VmImportActionBase::CancelledException&)
                 {
                     this->cleanupVm(vmRef);
                     throw;
@@ -445,7 +485,7 @@ void ImportApplianceAction::run()
             {
                 this->checkCancelled();
                 this->setDescriptionSafe(QString("Applying OS fixups for '%1'...").arg(vmName));
-                if (!this->applyFixups(vmRef))
+                if (!this->applyFixups(vmRef, this->m_fixupIsoSrRef))
                     qWarning() << "ImportApplianceAction: fixups requested but could not be applied for VM" << vmRef;
             }
 
@@ -495,7 +535,7 @@ void ImportApplianceAction::run()
         this->setDescriptionSafe("Import complete.");
         this->setState(Completed);
     }
-    catch (const CancelledException&)
+    catch (const VmImportActionBase::CancelledException&)
     {
         this->setDescriptionSafe("Import cancelled.");
         this->setState(Cancelled);
@@ -512,300 +552,6 @@ void ImportApplianceAction::run()
     }
 }
 
-// ─── createVm ────────────────────────────────────────────────────────────────
+// ─── QList<QVariantMap> parseVirtualSystems / buildVmRecord
+// (implementations moved to importapplianceaction_vs.cpp if needed, or inlined below)
 
-QString ImportApplianceAction::createVm(const QVariantMap& vmRecord, const QString& /*applianceRef*/)
-{
-    XenAPI::Session* session = this->GetSession();
-    const QString vmRef = XenAPI::VM::create(session, vmRecord);
-    if (vmRef.isEmpty())
-        throw std::runtime_error("VM.create returned an empty reference");
-    qDebug() << "ImportApplianceAction: created VM" << vmRef;
-    return vmRef;
-}
-
-// ─── uploadDisk ──────────────────────────────────────────────────────────────
-
-QString ImportApplianceAction::uploadDisk(const QString& srRef,
-                                          const QString& diskLabel,
-                                          const QString& diskFilePath,
-                                          qint64 virtualSizeBytes,
-                                          int progressStart,
-                                          int progressEnd)
-{
-    XenAPI::Session* session = this->GetSession();
-
-    // Determine virtual size from file size when not provided by caller
-    if (virtualSizeBytes <= 0)
-    {
-        QFileInfo fi(diskFilePath);
-        virtualSizeBytes = fi.size();
-    }
-
-    // Create the target VDI
-    QVariantMap vdiRecord;
-    vdiRecord["name_label"]       = diskLabel;
-    vdiRecord["name_description"] = QString("Imported from %1").arg(QFileInfo(this->m_ovfFilePath).fileName());
-    vdiRecord["SR"]               = srRef;
-    vdiRecord["virtual_size"]     = virtualSizeBytes;
-    vdiRecord["type"]             = QString("user");
-    vdiRecord["sharable"]         = false;
-    vdiRecord["read_only"]        = false;
-    vdiRecord["other_config"]     = QVariantMap();
-
-    const QString vdiRef = XenAPI::VDI::create(session, vdiRecord);
-    if (vdiRef.isEmpty())
-        throw std::runtime_error("VDI.create returned an empty reference");
-    qDebug() << "ImportApplianceAction: created VDI" << vdiRef;
-
-    const QVariantMap createdVdiRecord = XenAPI::VDI::get_record(session, vdiRef);
-    const QString vdiUuid = createdVdiRecord.value("uuid").toString();
-    if (vdiUuid.isEmpty())
-    {
-        try { XenAPI::VDI::destroy(session, vdiRef); } catch (...) {}
-        throw std::runtime_error("Created VDI has no UUID");
-    }
-
-    // Determine target host address
-    QString hostAddr;
-    if (this->GetConnection())
-        hostAddr = this->GetConnection()->GetHostname();
-
-    // Create a task to track the upload
-    const QString taskRef = XenAPI::Task::Create(session,
-                                                  "import_raw_vdi_task",
-                                                  hostAddr);
-    this->SetRelatedTaskRef(taskRef);
-
-    // Build HTTP PUT query parameters matching /import_raw_vdi endpoint
-    QMap<QString, QString> queryParams;
-    queryParams["session_id"] = session->GetSessionID();
-    queryParams["task_id"]    = taskRef;
-    queryParams["vdi"]        = vdiUuid;
-    queryParams["format"]     = "vhd";
-
-    // Upload via HTTP PUT
-    HttpClient http(this);
-    int lastPct = progressStart;
-    const bool uploadOk = http.putFile(
-        diskFilePath,
-        hostAddr,
-        "/import_raw_vdi",
-        queryParams,
-        [this, progressStart, progressEnd, &lastPct](int pct)
-        {
-            const int mapped = progressStart +
-                static_cast<int>(pct / 100.0 * (progressEnd - progressStart));
-            if (mapped != lastPct)
-            {
-                lastPct = mapped;
-                this->setPercentCompleteSafe(mapped);
-            }
-        },
-        [this]() -> bool { return this->IsCancelled(); }
-    );
-
-    this->pollToCompletion(taskRef, progressStart, progressEnd, false);
-    this->SetRelatedTaskRef(QString()); // clear after upload completes
-
-    if (!uploadOk)
-    {
-        const QString uploadError = http.lastError();
-        // Try to clean up the VDI on upload failure
-        try { XenAPI::VDI::destroy(session, vdiRef); } catch (...) {}
-        throw std::runtime_error(uploadError.toStdString());
-    }
-
-    return vdiRef;
-}
-
-// ─── attachDisk ──────────────────────────────────────────────────────────────
-
-void ImportApplianceAction::attachDisk(const QString& vmRef,
-                                       const QString& vdiRef,
-                                       bool bootable,
-                                       const QString& mode,
-                                       const QString& type)
-{
-    XenAPI::Session* session = this->GetSession();
-
-    // Determine the next available device slot
-    QVariant allowedDevices = XenAPI::VM::get_allowed_VBD_devices(session, vmRef);
-    QString userDevice = "0";
-    if (allowedDevices.canConvert<QVariantList>())
-    {
-        const QVariantList devices = allowedDevices.toList();
-        if (!devices.isEmpty())
-            userDevice = devices.first().toString();
-    }
-
-    QVariantMap vbdRecord;
-    vbdRecord["VM"]          = vmRef;
-    vbdRecord["VDI"]         = vdiRef;
-    vbdRecord["userdevice"]  = userDevice;
-    vbdRecord["bootable"]    = bootable;
-    vbdRecord["mode"]        = mode;
-    vbdRecord["type"]        = type;
-    vbdRecord["empty"]       = false;
-    vbdRecord["other_config"] = QVariantMap({ {"owner", "true"} });
-
-    const QString vbdRef = XenAPI::VBD::create(session, vbdRecord);
-    qDebug() << "ImportApplianceAction: created VBD" << vbdRef;
-}
-
-// ─── createVif ───────────────────────────────────────────────────────────────
-
-void ImportApplianceAction::createVif(const QString& vmRef,
-                                      const QString& networkRef,
-                                      int deviceIndex,
-                                      const QString& mac)
-{
-    XenAPI::Session* session = this->GetSession();
-
-    QVariantMap vifRecord;
-    vifRecord["device"]        = QString::number(deviceIndex);
-    vifRecord["network"]       = networkRef;
-    vifRecord["VM"]            = vmRef;
-    vifRecord["MAC"]           = mac;
-    vifRecord["MTU"]           = 1500;
-    vifRecord["other_config"]  = QVariantMap();
-    vifRecord["locking_mode"]  = QString("network_default");
-
-    const QString vifRef = XenAPI::VIF::create(session, vifRecord);
-    qDebug() << "ImportApplianceAction: created VIF" << vifRef;
-}
-
-// ─── applyFixups ─────────────────────────────────────────────────────────────
-
-bool ImportApplianceAction::applyFixups(const QString& vmRef)
-{
-    if (this->m_fixupIsoSrRef.isEmpty())
-    {
-        qWarning() << "ImportApplianceAction::applyFixups: no fixup ISO SR specified";
-        return false;
-    }
-
-    XenAPI::Session* session = this->GetSession();
-
-    // ── Step 1: Find the fixup ISO VDI on the selected SR ─────────────────
-    // The SR record contains a list of VDI OpaqueRefs. We scan those to find
-    // one whose name_label contains the canonical fixup ISO name fragment.
-    QVariantList vdiRefs;
-    try
-    {
-        QVariantMap srRecord = XenAPI::SR::get_record(session, this->m_fixupIsoSrRef);
-        QVariant vdiField = srRecord.value("VDIs");
-        if (vdiField.canConvert<QVariantList>())
-            vdiRefs = vdiField.toList();
-    }
-    catch (const std::exception& e)
-    {
-        qWarning() << "ImportApplianceAction::applyFixups: failed to read SR record:" << e.what();
-        return false;
-    }
-
-    QString fixupVdiRef;
-    for (const QVariant& v : vdiRefs)
-    {
-        const QString ref = v.toString();
-        if (ref.isEmpty())
-            continue;
-        try
-        {
-            const QString name = XenAPI::VDI::get_name_label(session, ref);
-            // Match C# constant FIXUP_ISO = "External Tools\\xenserver-linuxfixup-disk.iso"
-            if (name.contains("linuxfixup", Qt::CaseInsensitive) ||
-                name.contains("xenserver-linuxfixup", Qt::CaseInsensitive))
-            {
-                fixupVdiRef = ref;
-                break;
-            }
-        }
-        catch (const std::exception&)
-        {
-            // VDI may have been deleted between list and get — skip it
-        }
-    }
-
-    if (fixupVdiRef.isEmpty())
-    {
-        qWarning() << "ImportApplianceAction::applyFixups: fixup ISO not found on SR"
-                   << this->m_fixupIsoSrRef
-                   << "— ensure 'xenserver-linuxfixup-disk.iso' is uploaded to that SR";
-        return false;
-    }
-
-    // ── Step 2: Attach it as a read-only CDROM ────────────────────────────
-    // Get the next free device slot from the VM
-    QVariant allowedDevices = XenAPI::VM::get_allowed_VBD_devices(session, vmRef);
-    QString cdDevice = "3";   // Safe fallback if API call fails
-    if (allowedDevices.canConvert<QVariantList>())
-    {
-        const QVariantList devices = allowedDevices.toList();
-        if (!devices.isEmpty())
-            cdDevice = devices.first().toString();
-    }
-
-    try
-    {
-        QVariantMap vbdRecord;
-        vbdRecord["VM"]           = vmRef;
-        vbdRecord["VDI"]          = fixupVdiRef;
-        vbdRecord["userdevice"]   = cdDevice;
-        vbdRecord["bootable"]     = false;
-        vbdRecord["mode"]         = QString("RO");
-        vbdRecord["type"]         = QString("CD");
-        vbdRecord["empty"]        = false;
-        vbdRecord["other_config"] = QVariantMap();
-
-        XenAPI::VBD::create(session, vbdRecord);
-        qDebug() << "ImportApplianceAction::applyFixups: attached fixup ISO VDI" << fixupVdiRef;
-    }
-    catch (const std::exception& e)
-    {
-        qWarning() << "ImportApplianceAction::applyFixups: VBD create failed:" << e.what();
-        return false;
-    }
-
-    // ── Step 3: Prepend "d" (DVD/CD) to the HVM boot order ───────────────
-    // C# equivalent: OVF.SetRunOnceBootCDROM sets HVM_boot_params["order"] = "d" + old_order
-    try
-    {
-        QVariantMap bootParams = XenAPI::VM::get_HVM_boot_params(session, vmRef);
-        const QString oldOrder = bootParams.value("order", "dc").toString();
-        // Only prepend if "d" is not already first
-        const QString newOrder = oldOrder.startsWith('d') ? oldOrder : ("d" + oldOrder);
-        bootParams["order"] = newOrder;
-        XenAPI::VM::set_HVM_boot_params(session, vmRef, bootParams);
-        qDebug() << "ImportApplianceAction::applyFixups: boot order set to" << newOrder;
-    }
-    catch (const std::exception& e)
-    {
-        qWarning() << "ImportApplianceAction::applyFixups: failed to update boot order:" << e.what();
-        // Non-fatal — the CDROM is attached; the user can fix boot order manually
-    }
-
-    return true;
-}
-
-// ─── cleanupVm ───────────────────────────────────────────────────────────────
-
-void ImportApplianceAction::cleanupVm(const QString& vmRef)
-{
-    if (vmRef.isEmpty())
-        return;
-
-    XenAPI::Session* session = this->GetSession();
-    if (!session)
-        return;
-
-    qDebug() << "ImportApplianceAction: cleaning up partial VM" << vmRef;
-    try
-    {
-        XenAPI::VM::destroy(session, vmRef);
-    }
-    catch (const std::exception& e)
-    {
-        qWarning() << "ImportApplianceAction: cleanup destroy failed:" << e.what();
-    }
-}

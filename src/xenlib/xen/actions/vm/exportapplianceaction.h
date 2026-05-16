@@ -66,17 +66,23 @@ class ExportApplianceAction : public AsyncOperation
          *                         a sub-directory with this name is created inside
          *                         @p applianceDir, matching C# ExportApplianceAction.
          * @param eulas            EULA file paths to embed (may be empty).
+         * @param signAppliance    Whether to sign the package with an X.509 certificate.
          * @param createManifest   Whether to create a SHA-256 manifest (.mf).
+         * @param certPath         Path to PKCS#12 certificate file (only used when @p signAppliance is true).
+         * @param certPassword     Password for the PKCS#12 file.
          * @param createOva        Whether to pack the folder into a single OVA file.
-         * @param compressFiles    Not yet implemented (placeholder for gzip VHDs).
-         * @param shouldVerify     Not yet implemented (placeholder for package verify).
+         * @param compressFiles    Whether to gzip-compress VHD files before writing the OVF.
+         * @param shouldVerify     Whether to verify the package checksums after export.
          * @param parent           Parent QObject.
          */
         explicit ExportApplianceAction(const QList<QSharedPointer<VM>>& vms,
                                        const QString& applianceDir,
                                        const QString& applianceName,
                                        const QStringList& eulas,
+                                       bool signAppliance,
                                        bool createManifest,
+                                       const QString& certPath,
+                                       const QString& certPassword,
                                        bool createOva,
                                        bool compressFiles,
                                        bool shouldVerify,
@@ -127,14 +133,21 @@ class ExportApplianceAction : public AsyncOperation
                          int vmTotal, int vmIndex,
                          int vbdIndex, int vbdTotal);
 
+        /// Remove the appliance folder on error/cancel if we created it.
+        void cleanupOnError(const QString& appFolder);
+
         QList<QSharedPointer<VM>> m_vms;
         QString m_applianceDir;
         QString m_applianceName;
         QStringList m_eulaFilePaths;
+        bool m_signAppliance;
         bool m_createManifest;
+        QString m_certPath;
+        QString m_certPassword;
         bool m_createOva;
         bool m_compressFiles;
         bool m_shouldVerify;
+        bool m_createdAppFolder = false; ///< true if run() created the appliance subfolder
 };
 
 #endif // EXPORTAPPLIANCEACTION_H

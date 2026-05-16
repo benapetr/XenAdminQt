@@ -28,7 +28,7 @@
 #ifndef IMPORTIMAGEACTION_H
 #define IMPORTIMAGEACTION_H
 
-#include "importapplianceaction.h"
+#include "vmimportactionbase.h"
 #include "../../../xenlib_global.h"
 #include <QString>
 
@@ -38,7 +38,7 @@ class XenConnection;
  * @brief Import a raw VHD disk image as a new VM.
  *
  * Ports the C# XenAdmin.Actions.OvfActions.ImportImageAction to Qt.
- * Inherits from ImportApplianceAction to reuse uploadDisk / attachDisk / createVif helpers.
+ * Inherits from VmImportActionBase to reuse uploadDisk / attachDisk / createVif helpers.
  *
  * Responsibilities:
  *  - Create a new VM record from user-supplied name, vCPU, and memory settings.
@@ -50,7 +50,7 @@ class XenConnection;
  *
  * Threading: runs on the AsyncOperation worker thread.
  */
-class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
+class XENLIB_EXPORT ImportImageAction : public VmImportActionBase
 {
     Q_OBJECT
 
@@ -116,6 +116,7 @@ class XENLIB_EXPORT ImportImageAction : public ImportApplianceAction
         bool    m_startAutomatically;
         QString m_imageVmRef;
         bool    m_runFixups;
+        QString m_fixupIsoSrRef;
 };
 
 #endif // IMPORTIMAGEACTION_H

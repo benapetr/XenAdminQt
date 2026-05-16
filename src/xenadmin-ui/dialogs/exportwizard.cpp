@@ -155,14 +155,12 @@ void ExportWizard::setupWizardPages()
         }
     });
 
-    // OVF options page: sign / manifest linkage, cert browse, encrypt toggle.
+    // OVF options page: sign / manifest linkage, cert browse.
     // Matches C# ExportOptionsPage checkbox-changed handlers.
     connect(this->ui->certBrowseButton, &QPushButton::clicked,
             this, &ExportWizard::onCertBrowse);
     connect(this->ui->signApplianceCheckBox, &QCheckBox::toggled,
             this, &ExportWizard::onSignApplianceToggled);
-    connect(this->ui->encryptFilesCheckBox, &QCheckBox::toggled,
-            this, &ExportWizard::onEncryptFilesToggled);
     connect(this->ui->createManifestCheckBox, &QCheckBox::toggled,
             this, &ExportWizard::onManifestToggled);
 }
@@ -222,6 +220,11 @@ bool ExportWizard::compressOVF() const
     return this->ui->compressOVFCheckBox->isChecked();
 }
 
+bool ExportWizard::signAppliance() const
+{
+    return this->ui->signApplianceCheckBox->isChecked();
+}
+
 void ExportWizard::setExportFileName(const QString& fileName)
 {
     this->m_exportFileName = fileName;
@@ -278,11 +281,6 @@ QString ExportWizard::GetCertificatePath() const
 QString ExportWizard::GetCertificatePassword() const
 {
     return this->ui->certPasswordLineEdit->text();
-}
-
-QString ExportWizard::GetEncryptionPassword() const
-{
-    return this->ui->encryptPasswordLineEdit->text();
 }
 
 bool ExportWizard::ValidateXvaDestination(QWidget* parent, QString* fullPath) const
@@ -445,9 +443,9 @@ bool ExportWizard::ValidateOvfDestination(QWidget* parent, QString* resolvedPath
     const QString ext = isOva ? ".ova" : ".ovf";
     const QString primaryPath = dir.filePath(baseName + ext);
 
-    // Check for existing appliance files / sub-folder (C# CheckApplianceExists).
-    bool alreadyExists = QFile::exists(dir.filePath(baseName + ".ovf")) ||
-                         QFile::exists(dir.filePath(baseName + ".ova")) ||
+    // Check for an existing OVA file or OVF sub-folder (C# CheckApplianceExists).
+    // For OVF the action creates a sub-folder dir/name/; for OVA it writes dir/name.ova.
+    bool alreadyExists = QFile::exists(dir.filePath(baseName + ".ova")) ||
                          QDir(dir.filePath(baseName)).exists();
     if (alreadyExists)
     {
@@ -587,11 +585,6 @@ void ExportWizard::onSignApplianceToggled(bool checked)
         this->ui->createManifestCheckBox->setChecked(true);
 }
 
-void ExportWizard::onEncryptFilesToggled(bool checked)
-{
-    this->ui->encryptWidget->setVisible(checked);
-}
-
 void ExportWizard::onManifestToggled(bool checked)
 {
     // Unchecking manifest forces sign off (can't sign without a manifest).
@@ -725,23 +718,6 @@ bool ExportWizard::validateCurrentPage()
             }
         }
 
-        if (this->ui->encryptFilesCheckBox->isChecked())
-        {
-            const QString pw1 = this->ui->encryptPasswordLineEdit->text();
-            const QString pw2 = this->ui->encryptReenterLineEdit->text();
-            if (pw1.isEmpty())
-            {
-                QMessageBox::warning(this, tr("Encrypt Files"),
-                                     tr("Please enter an encryption password."));
-                return false;
-            }
-            if (pw1 != pw2)
-            {
-                QMessageBox::warning(this, tr("Encrypt Files"),
-                                     tr("The encryption passwords do not match."));
-                return false;
-            }
-        }
     }
 
     return QWizard::validateCurrentPage();
@@ -793,11 +769,21 @@ void ExportWizard::updateSummary()
         } else
         {
             const bool isOva = this->ui->formatComboBox->currentData().toString().toLower().contains("ova");
-            const QString ext = isOva ? ".ova" : ".ovf";
-            // Strip existing extension then re-apply
-            if (fullPath.toLower().endsWith(".ovf") || fullPath.toLower().endsWith(".ova"))
-                fullPath = fullPath.left(fullPath.length() - 4);
-            fullPath += ext;
+            if (isOva)
+            {
+                // OVA: single archive file at dir/name.ova
+                if (fullPath.toLower().endsWith(".ovf") || fullPath.toLower().endsWith(".ova"))
+                    fullPath = fullPath.left(fullPath.length() - 4);
+                fullPath += ".ova";
+            } else
+            {
+                // OVF: package written into a sub-folder dir/name/ — show the folder path
+                // so the user knows where to look.  Matches C# finish page showing
+                // applianceDirectory (the parent dir) + name (the sub-folder).
+                if (fullPath.toLower().endsWith(".ovf") || fullPath.toLower().endsWith(".ova"))
+                    fullPath = fullPath.left(fullPath.length() - 4);
+                fullPath = fullPath + QDir::separator();
+            }
         }
         summary += tr("Target: %1\n\n").arg(fullPath);
     } else
@@ -856,11 +842,6 @@ void ExportWizard::updateSummary()
         {
             summary += tr("  \u2022 Sign appliance: No\n");
         }
-
-        if (this->ui->encryptFilesCheckBox->isChecked())
-            summary += tr("  \u2022 Encrypt files: Yes (password set)\n");
-        else
-            summary += tr("  \u2022 Encrypt files: No\n");
 
         summary += tr("  \u2022 Create OVA package: %1\n").arg(this->ui->createOVACheckBox->isChecked() ? tr("Yes") : tr("No"));
         summary += tr("  \u2022 Compress files: %1\n").arg(this->ui->compressOVFCheckBox->isChecked() ? tr("Yes") : tr("No"));

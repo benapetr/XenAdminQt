@@ -606,6 +606,90 @@ OvfRecommendations OvfPackage::parseRecommendations(const QDomElement& virtualSy
     return rec;
 }
 
+// ─── OvfPackage::parseXenConfig ─────────────────────────────────────────────
+// Parses Xen-specific VM configuration data written into VirtualHardwareSection.
+// Handles two serialisation formats:
+//
+//   Qt OvfWriter format (src/xenlib/ovf/ovfwriter.cpp):
+//     <xen:Data ovf:required="false">
+//       <xen:Name>HVM_boot_policy</xen:Name>
+//       <xen:Value>BIOS order</xen:Value>
+//     </xen:Data>
+//   … where the xen prefix maps to http://www.citrix.com/xencenter/2009/xen.
+//
+//   C# XenAdmin format (XenOvfApi/OVF.cs AddOtherSystemSettingData()):
+//     <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
+//       <Value>BIOS order</Value>
+//     </citrix:VirtualSystemOtherConfigurationData>
+//   … where the citrix prefix maps to http://schemas.citrix.com/ovf/envelope/1.
+//
+// The "recommendations" key is skipped (handled by parseRecommendations).
+// C# equivalent: OVF.GetOtherSystemSettingData() / SetHostData()
+
+QMap<QString, QString> OvfPackage::parseXenConfig(const QDomElement& virtualSystemElem)
+{
+    QMap<QString, QString> result;
+
+    // ── Qt OvfWriter format: xen:Data elements ────────────────────────────────
+    const QString xenNs = "http://www.citrix.com/xencenter/2009/xen";
+    QDomNodeList dataNodes = virtualSystemElem.elementsByTagNameNS(xenNs, "Data");
+    if (dataNodes.isEmpty())
+    {
+        // Fallback for documents without explicit namespace declarations
+        dataNodes = virtualSystemElem.elementsByTagName("xen:Data");
+    }
+
+    for (int i = 0; i < dataNodes.count(); ++i)
+    {
+        QDomElement elem = dataNodes.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        QString key, val;
+        QDomNodeList children = elem.childNodes();
+        for (int j = 0; j < children.count(); ++j)
+        {
+            const QDomElement child = children.at(j).toElement();
+            if (child.isNull())
+                continue;
+            if (child.localName() == QLatin1String("Name"))
+                key = child.text().trimmed();
+            else if (child.localName() == QLatin1String("Value"))
+                val = child.text().trimmed();
+        }
+        if (!key.isEmpty())
+            result.insert(key, val);
+    }
+
+    // ── C# XenAdmin format: VirtualSystemOtherConfigurationData elements ──────
+    const QString citrixNs = "http://schemas.citrix.com/ovf/envelope/1";
+    QDomNodeList configData = virtualSystemElem.elementsByTagNameNS(citrixNs, "VirtualSystemOtherConfigurationData");
+    if (configData.isEmpty())
+        configData = virtualSystemElem.elementsByTagName("VirtualSystemOtherConfigurationData");
+
+    for (int i = 0; i < configData.count(); ++i)
+    {
+        QDomElement elem = configData.at(i).toElement();
+        if (elem.isNull())
+            continue;
+
+        // Name comes from a namespace-prefixed or plain Name attribute
+        QString key = elem.attributeNS(citrixNs, "Name");
+        if (key.isEmpty())
+            key = elem.attribute("Name");
+        if (key.isEmpty() || key == QLatin1String("recommendations"))
+            continue; // recommendations is handled by parseRecommendations
+
+        QDomNodeList valueNodes = elem.elementsByTagName("Value");
+        if (valueNodes.isEmpty())
+            continue;
+        const QString val = valueNodes.at(0).toElement().text().trimmed();
+        result.insert(key, val);
+    }
+
+    return result;
+}
+
 bool OvfPackage::AllowsNetworkSriov() const
 {
     for (const OvfRecommendations& rec : this->m_recommendationsBySystem)
@@ -787,6 +871,9 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
 
         const OvfRecommendations rec = parseRecommendations(vs);
         this->m_recommendationsBySystem.insert(vsName, rec);
+
+        const QMap<QString, QString> xenCfg = parseXenConfig(vs);
+        this->m_xenConfigBySystem_.insert(vsName, xenCfg);
     }
 
     // ── EULA sections ─────────────────────────────────────────────────────────
