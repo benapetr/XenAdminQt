@@ -184,6 +184,67 @@ class OvfWriter
                        const QString& ovfFileName,
                        const QString& ovaPath) const;
 
+        // ── Compression ─────────────────────────────────────────────────────
+
+        /**
+         * @brief Gzip-compress all non-CDROM disk files in the package.
+         *
+         * Each .vhd file is compressed to .vhd.gz in-place and deleted.
+         * The corresponding @c href field in @p envelope is updated to the
+         * new compressed name so that a subsequent @c saveToFile() call
+         * writes the correct References/DiskSection entries.
+         *
+         * Call AFTER downloading VHDs but BEFORE writing the .ovf file.
+         * Matches C# @c OVF.CompressFiles().
+         *
+         * @param envelope    Data model — hrefs are updated in-place.
+         * @param packageDir  Directory containing the VHD files.
+         * @return true on success.
+         */
+        bool compressVhds(OvfEnvelopeData& envelope, const QString& packageDir) const;
+
+        // ── Verification ────────────────────────────────────────────────────
+
+        /**
+         * @brief Verify the package by re-reading each file listed in the
+         *        manifest and comparing its SHA-256 checksum.
+         *
+         * @param packageDir   Directory containing package files.
+         * @param ovfFileName  Base name of the .ovf file (e.g. "myvm.ovf").
+         * @param errorMsg     Populated with a human-readable error on failure.
+         * @return true if all checksums match.
+         */
+        bool verifyPackage(const QString& packageDir,
+                           const QString& ovfFileName,
+                           QString& errorMsg) const;
+
+        // ── Signing ─────────────────────────────────────────────────────────
+
+        /**
+         * @brief Sign the manifest with an X.509 certificate from a PKCS#12 file.
+         *
+         * Computes an RSA-SHA256 signature over the .mf manifest using the private
+         * key from the PKCS#12 file and writes a .cert file containing the signed
+         * hash (hex) and the PEM-encoded certificate.
+         *
+         * Matches C# @c ExportApplianceAction.Sign().
+         *
+         * Currently implemented on Linux/Unix (OpenSSL required).
+         * Returns false with an appropriate @p errorMsg on unsupported platforms.
+         *
+         * @param packageDir   Directory containing package files (must contain .mf).
+         * @param ovfFileName  Base name of the .ovf file (e.g. "myvm.ovf").
+         * @param p12Path      Path to the PKCS#12 (.p12/.pfx) certificate file.
+         * @param password     Password protecting the PKCS#12 file.
+         * @param errorMsg     Populated with a human-readable error on failure.
+         * @return true on success.
+         */
+        bool signPackage(const QString& packageDir,
+                         const QString& ovfFileName,
+                         const QString& p12Path,
+                         const QString& password,
+                         QString& errorMsg) const;
+
     private:
         void writeReferences(QXmlStreamWriter& xml, const OvfEnvelopeData& env) const;
         void writeDiskSection(QXmlStreamWriter& xml, const OvfEnvelopeData& env) const;

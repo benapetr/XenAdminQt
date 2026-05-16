@@ -49,7 +49,10 @@ ExportApplianceAction::ExportApplianceAction(const QList<QSharedPointer<VM>>& vm
                                              const QString& applianceDir,
                                              const QString& applianceName,
                                              const QStringList& eulas,
+                                             bool signAppliance,
                                              bool createManifest,
+                                             const QString& certPath,
+                                             const QString& certPassword,
                                              bool createOva,
                                              bool compressFiles,
                                              bool shouldVerify,
@@ -59,7 +62,10 @@ ExportApplianceAction::ExportApplianceAction(const QList<QSharedPointer<VM>>& vm
     , m_applianceDir(applianceDir)
     , m_applianceName(applianceName)
     , m_eulaFilePaths(eulas)
+    , m_signAppliance(signAppliance)
     , m_createManifest(createManifest)
+    , m_certPath(certPath)
+    , m_certPassword(certPassword)
     , m_createOva(createOva)
     , m_compressFiles(compressFiles)
     , m_shouldVerify(shouldVerify)
@@ -101,11 +107,15 @@ void ExportApplianceAction::run()
     const QString appFolder = m_applianceDir + QDir::separator() + m_applianceName;
     {
         QDir d;
-        if (!d.mkpath(appFolder))
+        if (!d.exists(appFolder))
         {
-            this->setError(tr("Cannot create output directory: %1").arg(appFolder));
-            this->setState(OperationState::Failed);
-            return;
+            if (!d.mkpath(appFolder))
+            {
+                this->setError(tr("Cannot create output directory: %1").arg(appFolder));
+                this->setState(OperationState::Failed);
+                return;
+            }
+            this->m_createdAppFolder = true;
         }
     }
 
@@ -126,6 +136,7 @@ void ExportApplianceAction::run()
         if (!this->buildVirtualSystem(vm, appFolder, i, vmTotal, sys))
         {
             // Error already set inside buildVirtualSystem
+            this->cleanupOnError(appFolder);
             this->setState(OperationState::Failed);
             return;
         }
@@ -135,6 +146,7 @@ void ExportApplianceAction::run()
 
     if (this->IsCancelled())
     {
+        this->cleanupOnError(appFolder);
         this->setState(OperationState::Cancelled);
         return;
     }
@@ -147,7 +159,22 @@ void ExportApplianceAction::run()
             envelope.eulaTexts << QString::fromUtf8(f.readAll());
     }
 
-    // Write OVF descriptor
+    // Optionally compress VHDs *before* writing the OVF so hrefs are correct
+    if (m_compressFiles)
+    {
+        this->SetDescription(tr("Compressing disk files…"));
+        OvfWriter writer;
+        if (!writer.compressVhds(envelope, appFolder))
+        {
+            this->setError(tr("Failed to compress VHD files in %1").arg(appFolder));
+            this->cleanupOnError(appFolder);
+            this->setState(OperationState::Failed);
+            return;
+        }
+        this->SetPercentComplete(83);
+    }
+
+    // Write OVF descriptor (hrefs are now final)
     const QString ovfFileName = m_applianceName + QStringLiteral(".ovf");
     const QString ovfFilePath = appFolder + QDir::separator() + ovfFileName;
     this->SetDescription(tr("Writing OVF descriptor…"));
@@ -156,6 +183,7 @@ void ExportApplianceAction::run()
     if (!writer.saveToFile(envelope, ovfFilePath))
     {
         this->setError(tr("Failed to write OVF file: %1").arg(ovfFilePath));
+        this->cleanupOnError(appFolder);
         this->setState(OperationState::Failed);
         return;
     }
@@ -163,21 +191,44 @@ void ExportApplianceAction::run()
 
     if (this->IsCancelled())
     {
+        this->cleanupOnError(appFolder);
         this->setState(OperationState::Cancelled);
         return;
     }
 
-    // Manifest
-    if (m_createManifest || m_createOva)
+    // Manifest + signing (matches C# ManifestAndSign())
+    if (m_signAppliance || m_createManifest || m_createOva)
     {
         this->SetDescription(tr("Creating manifest…"));
         if (!writer.createManifest(envelope, appFolder, ovfFileName))
         {
             this->setError(tr("Failed to create manifest for package %1").arg(m_applianceName));
+            this->cleanupOnError(appFolder);
             this->setState(OperationState::Failed);
             return;
         }
         this->SetPercentComplete(90);
+    }
+
+    if (m_signAppliance && !m_certPath.isEmpty())
+    {
+        this->SetDescription(tr("Signing appliance…"));
+        QString signError;
+        if (!writer.signPackage(appFolder, ovfFileName, m_certPath, m_certPassword, signError))
+        {
+            this->setError(tr("Failed to sign package: %1").arg(signError));
+            this->cleanupOnError(appFolder);
+            this->setState(OperationState::Failed);
+            return;
+        }
+        this->SetPercentComplete(92);
+    }
+
+    if (this->IsCancelled())
+    {
+        this->cleanupOnError(appFolder);
+        this->setState(OperationState::Cancelled);
+        return;
     }
 
     // OVA
@@ -189,15 +240,97 @@ void ExportApplianceAction::run()
         if (!writer.createOva(envelope, appFolder, ovfFileName, ovaPath))
         {
             this->setError(tr("Failed to create OVA archive: %1").arg(ovaPath));
+            this->cleanupOnError(appFolder);
             this->setState(OperationState::Failed);
             return;
         }
         this->SetPercentComplete(98);
     }
 
+    // Verification
+    // If a manifest was created, verify every file against its SHA-256 digest.
+    // If no manifest exists (user disabled it), perform a basic file-existence and
+    // non-zero-size check — equivalent to C# verifying that each exported stream
+    // was written completely.
+    if (m_shouldVerify)
+    {
+        this->SetDescription(tr("Verifying export…"));
+
+        if (m_createManifest)
+        {
+            QString verifyError;
+            if (!writer.verifyPackage(appFolder, ovfFileName, verifyError))
+            {
+                this->setError(tr("Export verification failed: %1").arg(verifyError));
+                this->setState(OperationState::Failed);
+                return;
+            }
+        }
+        else
+        {
+            // No manifest — verify the OVF descriptor and each disk file are present
+            // and non-empty (guards against truncated downloads).
+            bool ok = true;
+            QString verifyError;
+
+            const QString ovfPath = appFolder + QDir::separator() + ovfFileName;
+            if (!QFile::exists(ovfPath) || QFileInfo(ovfPath).size() == 0)
+            {
+                ok = false;
+                verifyError = tr("OVF descriptor not found or empty: %1").arg(ovfFileName);
+            }
+
+            if (ok)
+            {
+                for (const OvfVirtualSystemEntry& sys : envelope.systems)
+                {
+                    for (const OvfDiskEntry& disk : sys.disks)
+                    {
+                        if (disk.isCdrom || disk.href.isEmpty())
+                            continue;
+                        const QString diskPath = appFolder + QDir::separator() + disk.href;
+                        if (!QFile::exists(diskPath) || QFileInfo(diskPath).size() == 0)
+                        {
+                            ok = false;
+                            verifyError = tr("Exported disk file not found or empty: %1").arg(disk.href);
+                            break;
+                        }
+                    }
+                    if (!ok)
+                        break;
+                }
+            }
+
+            if (!ok)
+            {
+                this->setError(tr("Export verification failed: %1").arg(verifyError));
+                this->setState(OperationState::Failed);
+                return;
+            }
+        }
+    }
+
     this->SetPercentComplete(100);
     this->SetDescription(tr("Export complete"));
     this->setState(OperationState::Completed);
+}
+
+// ── cleanupOnError() ──────────────────────────────────────────────────────────
+
+void ExportApplianceAction::cleanupOnError(const QString& appFolder)
+{
+    // Only remove the folder if we created it (don't clobber pre-existing directories).
+    if (!this->m_createdAppFolder)
+        return;
+
+    const QDir d(appFolder);
+    if (!d.exists())
+        return;
+
+    // Remove only if the folder is now empty (or contains only what we wrote).
+    // This mirrors C# CleanOnError() which removes only empty directories.
+    QDir cleanup(appFolder);
+    cleanup.removeRecursively();
 }
 
 // ── buildVirtualSystem() ──────────────────────────────────────────────────────

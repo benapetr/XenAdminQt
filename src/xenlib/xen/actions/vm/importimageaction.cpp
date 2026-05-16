@@ -50,15 +50,7 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
                                      bool runFixups,
                                      const QString& fixupIsoSrRef,
                                      QObject* parent)
-    : ImportApplianceAction(connection,
-                            filePath,       // m_ovfFilePath (used for VDI description strings)
-                            {},             // vmMappings (unused — run() does its own logic)
-                            false,          // verifyManifest
-                            false,          // verifySignature
-                            runFixups,      // passed through so applyFixups() can use m_runFixups
-                            fixupIsoSrRef,  // passed through so applyFixups() can use m_fixupIsoSrRef
-                            false,          // startAutomatically (handled locally)
-                            parent)
+    : VmImportActionBase(connection, "Import Image", QString("Importing disk image '%1'...").arg(vmName), parent)
     , m_vmName(vmName)
     , m_vcpuCount(qMax(1, vcpuCount))
     , m_memoryMb(qMax(static_cast<qint64>(64), memoryMb))
@@ -70,7 +62,9 @@ ImportImageAction::ImportImageAction(XenConnection* connection,
     , m_assignVtpm(assignVtpm)
     , m_startAutomatically(startAutomatically)
     , m_runFixups(runFixups)
+    , m_fixupIsoSrRef(fixupIsoSrRef)
 {
+    this->m_sourcePath = filePath;
     this->setDescriptionSafe(QString("Importing disk image '%1'...").arg(vmName));
 }
 
@@ -88,7 +82,7 @@ void ImportImageAction::run()
 
     try
     {
-        if (this->m_ovfFilePath.endsWith(".vmdk", Qt::CaseInsensitive))
+        if (this->m_sourcePath.endsWith(".vmdk", Qt::CaseInsensitive))
         {
             this->setError("VMDK disk-image import is not supported yet. Convert the disk to VHD and import the VHD file.");
             this->setState(Failed);
@@ -106,7 +100,7 @@ void ImportImageAction::run()
         QVariantMap vmRecord;
         vmRecord["name_label"]             = this->m_vmName;
         vmRecord["name_description"]       = QString("Imported from %1")
-                                               .arg(QFileInfo(this->m_ovfFilePath).fileName());
+                                               .arg(QFileInfo(this->m_sourcePath).fileName());
         vmRecord["memory_static_max"]      = memBytes;
         vmRecord["memory_static_min"]      = memMinBytes;
         vmRecord["memory_dynamic_max"]     = memBytes;
@@ -188,13 +182,13 @@ void ImportImageAction::run()
         // Use provided capacity; fall back to file size for VMDK or undetected formats
         qint64 virtualSizeBytes = this->m_diskCapacityBytes;
         if (virtualSizeBytes <= 0)
-            virtualSizeBytes = QFileInfo(this->m_ovfFilePath).size();
+            virtualSizeBytes = QFileInfo(this->m_sourcePath).size();
 
         const QString diskLabel = this->m_vmName + " disk";
         QString vdiRef;
         try
         {
-            vdiRef = this->uploadDisk(this->m_srRef, diskLabel, this->m_ovfFilePath,
+            vdiRef = this->uploadDisk(this->m_srRef, diskLabel, this->m_sourcePath,
                                       virtualSizeBytes, 15, 85);
         }
         catch (const std::exception& e)
@@ -242,7 +236,7 @@ void ImportImageAction::run()
         {
             this->checkCancelled();
             this->setDescriptionSafe("Applying OS fixups...");
-            if (!this->applyFixups(vmRef))
+            if (!this->applyFixups(vmRef, this->m_fixupIsoSrRef))
                 qWarning() << "ImportImageAction: fixups requested but could not be applied";
         }
 
@@ -275,11 +269,8 @@ void ImportImageAction::run()
             try { this->cleanupVm(this->m_imageVmRef); } catch (...) {}
         this->setState(Failed);
     }
-    catch (...)
+    catch (const VmImportActionBase::CancelledException&)
     {
-        // CancelledException from checkCancelled() is defined in an anonymous
-        // namespace inside importapplianceaction.cpp and cannot be caught by name here.
-        // Treat any other thrown object as a cancellation.
         if (!this->m_imageVmRef.isEmpty())
             try { this->cleanupVm(this->m_imageVmRef); } catch (...) {}
         this->setDescriptionSafe("Import cancelled.");

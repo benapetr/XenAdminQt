@@ -30,10 +30,26 @@
 #include <QXmlStreamWriter>
 #include <QFile>
 #include <QFileInfo>
+#include <QDir>
 #include <QCryptographicHash>
 #include <QTextStream>
 #include <QByteArray>
+#include <QRegularExpression>
+#include <QDebug>
 #include <cstring>
+#include <zlib.h>
+
+#ifndef XENADMIN_NO_CRYPTO
+// OpenSSL is only used for signing on Linux where -lssl -lcrypto is linked
+// and headers are in the standard system include path.
+#  if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#    include <openssl/pkcs12.h>
+#    include <openssl/evp.h>
+#    include <openssl/x509.h>
+#    include <openssl/err.h>
+#    define XENADMIN_OPENSSL_AVAILABLE 1
+#  endif
+#endif
 
 // ── OVF namespace constants ──────────────────────────────────────────────────
 
@@ -501,4 +517,250 @@ bool OvfWriter::createOva(const OvfEnvelopeData& envelope,
     ova.write(eofBlocks, 1024);
 
     return true;
+}
+
+// ── Compression ──────────────────────────────────────────────────────────────
+
+bool OvfWriter::compressVhds(OvfEnvelopeData& envelope, const QString& packageDir) const
+{
+    static const int BUF_SIZE = 64 * 1024;
+
+    for (OvfVirtualSystemEntry& sys : envelope.systems)
+    {
+        for (OvfDiskEntry& disk : sys.disks)
+        {
+            if (disk.isCdrom || disk.href.isEmpty())
+                continue;
+
+            const QString srcPath = packageDir + QDir::separator() + disk.href;
+            const QString gzPath  = srcPath + QStringLiteral(".gz");
+
+            if (!QFile::exists(srcPath))
+                continue;
+
+            QFile src(srcPath);
+            if (!src.open(QIODevice::ReadOnly))
+            {
+                qWarning() << "OvfWriter::compressVhds: cannot open" << srcPath;
+                return false;
+            }
+
+            gzFile gz = gzopen(gzPath.toLocal8Bit().constData(), "wb9");
+            if (!gz)
+            {
+                qWarning() << "OvfWriter::compressVhds: cannot create" << gzPath;
+                return false;
+            }
+
+            QByteArray buf(BUF_SIZE, 0);
+            bool ok = true;
+            while (!src.atEnd())
+            {
+                const qint64 n = src.read(buf.data(), BUF_SIZE);
+                if (n <= 0)
+                    break;
+                if (gzwrite(gz, buf.constData(), static_cast<unsigned int>(n)) != static_cast<int>(n))
+                {
+                    ok = false;
+                    break;
+                }
+            }
+            gzclose(gz);
+            src.close();
+
+            if (!ok)
+            {
+                QFile::remove(gzPath);
+                return false;
+            }
+
+            QFile::remove(srcPath);
+            disk.href = disk.href + QStringLiteral(".gz");
+        }
+    }
+
+    return true;
+}
+
+// ── Verification ─────────────────────────────────────────────────────────────
+
+bool OvfWriter::verifyPackage(const QString& packageDir,
+                              const QString& ovfFileName,
+                              QString& errorMsg) const
+{
+    const QString baseName = QFileInfo(ovfFileName).baseName();
+    const QString mfPath   = packageDir + QDir::separator()
+                             + baseName + QStringLiteral(".mf");
+
+    QFile mf(mfPath);
+    if (!mf.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        errorMsg = QString("Cannot open manifest: %1").arg(mfPath);
+        return false;
+    }
+
+    // Parse lines:  SHA256 (filename)= hexhash
+    static const QRegularExpression re(
+        QStringLiteral(R"(^SHA256\s+\(([^)]+)\)\s*=\s*([0-9a-fA-F]+)$)"));
+
+    QTextStream ts(&mf);
+    while (!ts.atEnd())
+    {
+        const QString line = ts.readLine().trimmed();
+        if (line.isEmpty())
+            continue;
+
+        const QRegularExpressionMatch m = re.match(line);
+        if (!m.hasMatch())
+        {
+            errorMsg = QString("Unrecognised manifest line: %1").arg(line);
+            return false;
+        }
+
+        const QString name     = m.captured(1);
+        const QString expected = m.captured(2).toLower();
+        const QString filePath = packageDir + QDir::separator() + name;
+
+        QFile f(filePath);
+        if (!f.open(QIODevice::ReadOnly))
+        {
+            errorMsg = QString("File listed in manifest not found: %1").arg(name);
+            return false;
+        }
+
+        // Stream-hash to avoid loading large VHDs entirely into memory
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        static const int CHUNK = 64 * 1024;
+        while (!f.atEnd())
+        {
+            const QByteArray chunk = f.read(CHUNK);
+            if (chunk.isEmpty())
+                break;
+            hash.addData(chunk);
+        }
+
+        const QString actual = QString::fromLatin1(hash.result().toHex());
+        if (actual != expected)
+        {
+            errorMsg = QString("Checksum mismatch for %1: expected %2, got %3")
+                       .arg(name, expected, actual);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// ── Signing ──────────────────────────────────────────────────────────────────
+
+bool OvfWriter::signPackage(const QString& packageDir,
+                            const QString& ovfFileName,
+                            const QString& p12Path,
+                            const QString& password,
+                            QString& errorMsg) const
+{
+#ifdef XENADMIN_OPENSSL_AVAILABLE
+    const QString baseName  = QFileInfo(ovfFileName).baseName();
+    const QString mfName    = baseName + QStringLiteral(".mf");
+    const QString mfPath    = packageDir + QDir::separator() + mfName;
+    const QString certOutPath = packageDir + QDir::separator()
+                               + baseName + QStringLiteral(".cert");
+
+    // ── Load PKCS12 ──────────────────────────────────────────────────────────
+    FILE* fp = fopen(p12Path.toLocal8Bit().constData(), "rb");
+    if (!fp)
+    {
+        errorMsg = QString("Cannot open certificate file: %1").arg(p12Path);
+        return false;
+    }
+    PKCS12* p12 = d2i_PKCS12_fp(fp, nullptr);
+    fclose(fp);
+    if (!p12)
+    {
+        errorMsg = QStringLiteral("Failed to parse PKCS12 file (invalid format or password).");
+        return false;
+    }
+
+    EVP_PKEY* pkey = nullptr;
+    X509*     cert = nullptr;
+    if (!PKCS12_parse(p12, password.toUtf8().constData(), &pkey, &cert, nullptr))
+    {
+        PKCS12_free(p12);
+        errorMsg = QStringLiteral("Failed to extract key/certificate from PKCS12 (wrong password?).");
+        return false;
+    }
+    PKCS12_free(p12);
+
+    // ── Read manifest ────────────────────────────────────────────────────────
+    QFile mf(mfPath);
+    if (!mf.open(QIODevice::ReadOnly))
+    {
+        EVP_PKEY_free(pkey);
+        X509_free(cert);
+        errorMsg = QString("Cannot open manifest for signing: %1").arg(mfPath);
+        return false;
+    }
+    const QByteArray mfData = mf.readAll();
+    mf.close();
+
+    // ── RSA-SHA256 sign ──────────────────────────────────────────────────────
+    EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+    if (!mdctx || EVP_DigestSignInit(mdctx, nullptr, EVP_sha256(), nullptr, pkey) <= 0)
+    {
+        if (mdctx) EVP_MD_CTX_free(mdctx);
+        EVP_PKEY_free(pkey);
+        X509_free(cert);
+        errorMsg = QStringLiteral("Failed to initialise signing context.");
+        return false;
+    }
+
+    EVP_DigestSignUpdate(mdctx,
+                         reinterpret_cast<const unsigned char*>(mfData.constData()),
+                         static_cast<size_t>(mfData.size()));
+
+    size_t sigLen = 0;
+    EVP_DigestSignFinal(mdctx, nullptr, &sigLen);
+    QByteArray sig(static_cast<int>(sigLen), '\0');
+    EVP_DigestSignFinal(mdctx,
+                        reinterpret_cast<unsigned char*>(sig.data()),
+                        &sigLen);
+    sig.resize(static_cast<int>(sigLen));
+    EVP_MD_CTX_free(mdctx);
+
+    // ── DER-encode certificate for PEM block ─────────────────────────────────
+    const int derLen = i2d_X509(cert, nullptr);
+    QByteArray derCert(derLen, '\0');
+    unsigned char* derPtr = reinterpret_cast<unsigned char*>(derCert.data());
+    i2d_X509(cert, &derPtr);
+
+    EVP_PKEY_free(pkey);
+    X509_free(cert);
+
+    // ── Write .cert file ─────────────────────────────────────────────────────
+    // Format matches C# FileDigest.ToManifestLine() + PEM certificate block.
+    QFile certOut(certOutPath);
+    if (!certOut.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        errorMsg = QString("Cannot write .cert file: %1").arg(certOutPath);
+        return false;
+    }
+    QTextStream ts(&certOut);
+    ts << "SHA256 (" << mfName << ")= " << QString::fromLatin1(sig.toHex()) << "\n";
+    ts << "-----BEGIN CERTIFICATE-----\n";
+    const QString b64 = QString::fromLatin1(derCert.toBase64());
+    for (int i = 0; i < b64.length(); i += 64)
+        ts << b64.mid(i, 64) << "\n";
+    ts << "-----END CERTIFICATE-----\n";
+
+    return true;
+
+#else
+    Q_UNUSED(packageDir);
+    Q_UNUSED(ovfFileName);
+    Q_UNUSED(p12Path);
+    Q_UNUSED(password);
+    errorMsg = QStringLiteral("Certificate signing requires OpenSSL. "
+                               "This build does not include OpenSSL support.");
+    return false;
+#endif
 }

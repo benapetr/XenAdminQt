@@ -106,7 +106,11 @@ void ExportVMCommand::onWizardFinished(int result)
                     ExportApplianceAction* action = new ExportApplianceAction(
                         vms, appDir, appName,
                         this->m_exportWizard->GetEulas(),
-                        createMf, createOva, compress, verify,
+                        this->m_exportWizard->signAppliance(),
+                        createMf,
+                        this->m_exportWizard->GetCertificatePath(),
+                        this->m_exportWizard->GetCertificatePassword(),
+                        createOva, compress, verify,
                         MainWindow::instance());
                     ActionProgressDialog* dlg = new ActionProgressDialog(action, MainWindow::instance());
                     dlg->setShowCancel(true);

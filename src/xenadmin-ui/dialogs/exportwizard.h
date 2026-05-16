@@ -66,6 +66,7 @@ class ExportWizard : public QWizard
         bool createManifest() const;
         bool createOva() const;
         bool compressOVF() const;
+        bool signAppliance() const;
         void setSelectedObjectName(const QString& name) { this->m_selectedObjectName = name; }
         void setExportFileName(const QString& fileName);
 
@@ -104,19 +105,18 @@ class ExportWizard : public QWizard
          */
         QString GetCertificatePassword() const;
 
-        /**
-         * @brief Returns the encryption password entered by the user.
-         * Empty string when encryption is disabled.
-         */
-        QString GetEncryptionPassword() const;
-
         // Validate XVA destination and build the full output path.
         // Returns true when valid, sets *fullPath. Shows QMessageBox on failure.
         bool ValidateXvaDestination(QWidget* parent, QString* fullPath) const;
 
         // Validate OVF/OVA destination directory and appliance name.
-        // Returns true when valid, sets *resolvedPath to the full path of the
-        // primary descriptor file (e.g. /dir/name.ovf or /dir/name.ova).
+        // Returns true when valid.  Sets *resolvedPath to a path of the form
+        // /dir/name.{ovf,ova} — callers use QFileInfo(resolvedPath).absolutePath()
+        // and QFileInfo(resolvedPath).baseName() to recover the parent directory and
+        // appliance name passed to ExportApplianceAction.
+        // NOTE: for OVF the action writes the package into a sub-folder
+        //   /dir/name/name.ovf  (not /dir/name.ovf).
+        // For OVA the action writes a single file /dir/name.ova.
         // Shows QMessageBox on failure.  Mirrors C# CheckDestinationFolderExists +
         // CheckPermissions + CheckApplianceExists from ExportAppliancePage.
         bool ValidateOvfDestination(QWidget* parent, QString* resolvedPath) const;
@@ -128,7 +128,6 @@ class ExportWizard : public QWizard
         void onRemoveEula();
         void onCertBrowse();
         void onSignApplianceToggled(bool checked);
-        void onEncryptFilesToggled(bool checked);
         void onManifestToggled(bool checked);
 
     protected:

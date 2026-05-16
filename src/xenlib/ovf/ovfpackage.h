@@ -206,6 +206,21 @@ class OvfPackage
         }
 
         /**
+         * @brief Xen-specific VM configuration data per virtual system, keyed by system name/id.
+         *
+         * Contains key→value pairs read from xen:Data elements (Qt OvfWriter format) and
+         * VirtualSystemOtherConfigurationData elements (C# XenAdmin format).  Keys include
+         * HVM_boot_policy, HVM_boot_params, platform, PV_bootloader, PV_kernel, PV_args, etc.
+         * The "recommendations" entry is excluded (see RecommendationsBySystem()).
+         *
+         * C# equivalent: OVF.GetOtherSystemSettingData() / SetHostData()
+         */
+        QMap<QString, QMap<QString, QString>> XenConfigBySystem() const
+        {
+            return this->m_xenConfigBySystem_;
+        }
+
+        /**
          * @brief Whether any virtual system in this package allows SR-IOV network assignment.
          *
          * Returns @c true when all virtual systems either allow SR-IOV or do not specify the
@@ -316,6 +331,7 @@ class OvfPackage
         static QStringList collectDiskFileRefsForSystem(const QDomElement& virtualSystemElem,
                                                         const QMap<QString, QString>& diskHrefById);
         static OvfRecommendations parseRecommendations(const QDomElement& virtualSystemElem);
+        static QMap<QString, QString> parseXenConfig(const QDomElement& virtualSystemElem);
 
         QString sourceFile_;
         QString packageName_;
@@ -334,6 +350,7 @@ class OvfPackage
         QStringList virtualSystemNames_;
         QMap<QString, OvfVirtualHardware> virtualHardwareBySystem_;
         QMap<QString, OvfRecommendations> m_recommendationsBySystem;
+        QMap<QString, QMap<QString, QString>> m_xenConfigBySystem_;
 };
 
 #endif // OVFPACKAGE_H
