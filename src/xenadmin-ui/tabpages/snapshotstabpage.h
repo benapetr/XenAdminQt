@@ -41,6 +41,7 @@ namespace Ui
 QT_END_NAMESPACE
 
 class VM;
+class XenObject;
 
 class SnapshotsTabPage : public BaseTabPage
 {
@@ -68,7 +69,7 @@ class SnapshotsTabPage : public BaseTabPage
         void onDeleteSnapshot();
         void onRevertToSnapshot();
         void onSnapshotSelectionChanged();
-        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(QSharedPointer<XenObject> object);
         void onSnapshotContextMenu(const QPoint& pos);
         void onScheduledSnapshotsToggled();
         void onVmssLinkClicked();
@@ -89,6 +90,7 @@ class SnapshotsTabPage : public BaseTabPage
         void refreshVmssPanel();
         bool shouldShowSnapshot(const QSharedPointer<VM>& snapshot) const;
         bool isScheduledSnapshot(const QSharedPointer<VM>& snapshot) const;
+        bool cacheObjectAffectsSnapshots(const QSharedPointer<XenObject>& object) const;
         void buildSnapshotTree(const QString& snapshotRef, SnapshotIcon* parentIcon, const QHash<QString, QSharedPointer<VM>>& snapshots, const QMultiHash<QString, QString>& childrenByParent);
         void updateDetailsPanel(bool force = false);
         void showDisabledDetails();

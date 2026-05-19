@@ -157,7 +157,7 @@ void SnapshotsTabPage::removeObject()
         return;
 
     XenCache* cache = this->m_connection->GetCache();
-    disconnect(cache, &XenCache::itemChanged, this, &SnapshotsTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged);
 }
 
 void SnapshotsTabPage::updateObject()
@@ -166,7 +166,7 @@ void SnapshotsTabPage::updateObject()
     if (!this->m_vm)
         return;
     XenCache* cache = this->m_vm->GetCache();
-    connect(cache, &XenCache::itemChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     this->setViewMode(this->s_viewByVmRef.value(this->m_vm->OpaqueRef(), SnapshotsView::TreeView));
 }
 
@@ -465,15 +465,12 @@ void SnapshotsTabPage::onSnapshotSelectionChanged()
     updateSpinningIcon();
 }
 
-void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void SnapshotsTabPage::onCacheObjectChanged(QSharedPointer<XenObject> object)
 {
-    (void) connection;
-    (void) ref;
-
-    if (!this->m_object)
+    if (!this->m_object || !object)
         return;
 
-    if (this->m_object->GetObjectType() == XenObjectType::VM && (type == "vm" || type == "vdi" || type == "vbd"))
+    if (this->m_object->GetObjectType() == XenObjectType::VM && this->cacheObjectAffectsSnapshots(object))
     {
         this->populateSnapshotTree();
         this->updateButtonStates();
@@ -481,8 +478,53 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
         this->updateSpinningIcon();
     }
 
-    if (this->m_object->GetObjectType() == XenObjectType::VM && (type == "vm" || type == "vmss"))
+    const XenObjectType objectType = object->GetObjectType();
+    if (this->m_object->GetObjectType() == XenObjectType::VM && (objectType == XenObjectType::VM || objectType == XenObjectType::VMSS))
         this->refreshVmssPanel();
+}
+
+bool SnapshotsTabPage::cacheObjectAffectsSnapshots(const QSharedPointer<XenObject>& object) const
+{
+    if (!this->m_vm || !object || object->OpaqueRef().isEmpty())
+        return false;
+
+    QSet<QString> vmRefs;
+    vmRefs.insert(this->m_vm->OpaqueRef());
+    for (const QString& snapshotRef : this->m_vm->GetSnapshotRefs())
+    {
+        if (!snapshotRef.isEmpty())
+            vmRefs.insert(snapshotRef);
+    }
+
+    switch (object->GetObjectType())
+    {
+        case XenObjectType::VM:
+            return vmRefs.contains(object->OpaqueRef());
+
+        case XenObjectType::VBD:
+        {
+            QSharedPointer<VBD> vbd = qSharedPointerDynamicCast<VBD>(object);
+            return vbd && vmRefs.contains(vbd->GetVMRef());
+        }
+
+        case XenObjectType::VDI:
+        {
+            QSharedPointer<VDI> vdi = qSharedPointerDynamicCast<VDI>(object);
+            if (!vdi)
+                return false;
+
+            const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+            for (const QSharedPointer<VBD>& vbd : vbds)
+            {
+                if (vmRefs.contains(vbd->GetVMRef()))
+                    return true;
+            }
+            return false;
+        }
+
+        default:
+            return false;
+    }
 }
 
 void SnapshotsTabPage::updateButtonStates()
