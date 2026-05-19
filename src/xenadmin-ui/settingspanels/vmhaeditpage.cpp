@@ -700,11 +700,11 @@ void VMHAEditPage::onLinkActivated(const QString& link)
     }
 }
 
-void VMHAEditPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void VMHAEditPage::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(connection);
     Q_UNUSED(ref);
-    if (type != "pool" && type != "host" && type != "host_metrics")
+    if (type != XenObjectType::Pool && type != XenObjectType::Host && type != XenObjectType::HostMetrics)
         return;
 
     this->updateEnablement();

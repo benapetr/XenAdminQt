@@ -347,10 +347,10 @@ void RepairSRDialog::onSrPropertyChanged()
     this->buildTree();
 }
 
-void RepairSRDialog::onHostCollectionChanged(XenConnection* connection, const QString& type, const QString& ref)
+void RepairSRDialog::onHostCollectionChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(ref);
-    if (type != "host")
+    if (type != XenObjectType::Host)
         return;
 
     for (const auto& sr : this->srList)
@@ -363,10 +363,10 @@ void RepairSRDialog::onHostCollectionChanged(XenConnection* connection, const QS
     }
 }
 
-void RepairSRDialog::onPbdCollectionChanged(XenConnection* connection, const QString& type, const QString& ref)
+void RepairSRDialog::onPbdCollectionChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(ref);
-    if (type != "pbd")
+    if (type != XenObjectType::PBD)
         return;
 
     for (const auto& sr : this->srList)

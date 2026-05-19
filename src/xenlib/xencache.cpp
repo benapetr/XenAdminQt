@@ -477,7 +477,7 @@ void XenCache::Update(XenObjectType type, const QString &ref, const QVariantMap 
 
     QSharedPointer<XenObject> object = this->ResolveObject(type, ref);
     emit this->objectChanged(object);
-    emit itemChanged(this->m_connection, this->typeToCacheString(type), ref);
+    emit itemChanged(this->m_connection, type, ref);
 }
 
 void XenCache::UpdateBulk(XenObjectType type, const QVariantMap &allRecords)
@@ -516,7 +516,7 @@ void XenCache::UpdateBulk(XenObjectType type, const QVariantMap &allRecords)
     qDebug() << "XenCache: Bulk update completed for" << XenObject::TypeToString(type)
              << "- added/updated" << updateCount << "objects";
 
-    emit bulkUpdateComplete(this->typeToCacheString(type), updateCount);
+    emit bulkUpdateComplete(type, updateCount);
 }
 
 void XenCache::Remove(XenObjectType type, const QString &ref)
@@ -540,7 +540,7 @@ void XenCache::Remove(XenObjectType type, const QString &ref)
 
     this->evictObject(type, ref);
     emit this->objectRemoved(object);
-    emit itemRemoved(this->m_connection, this->typeToCacheString(type), ref);
+    emit itemRemoved(this->m_connection, type, ref);
 }
 
 void XenCache::ClearType(XenObjectType type)

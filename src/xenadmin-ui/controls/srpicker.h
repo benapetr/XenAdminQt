@@ -34,6 +34,7 @@
 #include <QVariantMap>
 #include <QList>
 #include <QSharedPointer>
+#include "xenlib/xen/xenobjecttype.h"
 
 namespace Ui
 {
@@ -141,8 +142,8 @@ class SrPicker : public QWidget
     private slots:
         void onSelectionChanged();
         void onItemDoubleClicked(int row, int column);
-        void onCacheUpdated(XenConnection *connection, const QString &type, const QString &ref);
-        void onCacheRemoved(XenConnection *connection, const QString& type, const QString& ref);
+        void onCacheUpdated(XenConnection *connection, XenObjectType type, const QString &ref);
+        void onCacheRemoved(XenConnection *connection, XenObjectType type, const QString& ref);
         void onSrRefreshCompleted();
 
     private:

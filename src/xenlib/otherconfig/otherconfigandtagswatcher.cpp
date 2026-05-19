@@ -127,15 +127,16 @@ void OtherConfigAndTagsWatcher::onConnectionStateChanged()
     this->markEventsReadyToFire(false);
 }
 
-void OtherConfigAndTagsWatcher::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void OtherConfigAndTagsWatcher::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(ref);
     Q_UNUSED(connection);
 
-    if (type == "pool")
+    if (type == XenObjectType::Pool)
         this->fireGuiConfigEvent_ = true;
 
-    if (type == "pool" || type == "host" || type == "vm" || type == "sr" || type == "vdi" || type == "network")
+    if (type == XenObjectType::Pool || type == XenObjectType::Host || type == XenObjectType::VM ||
+        type == XenObjectType::SR || type == XenObjectType::VDI || type == XenObjectType::Network)
     {
         this->fireOtherConfigEvent_ = true;
         this->fireTagsEvent_ = true;

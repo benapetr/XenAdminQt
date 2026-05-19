@@ -83,7 +83,7 @@ class GpuTabPage : public BaseTabPage
     private slots:
         void onCacheObjectChanged(QSharedPointer<XenObject> object);
         void onCacheObjectRemoved(QSharedPointer<XenObject> object);
-        void onCacheBulkUpdateComplete(const QString& type, int count);
+        void onCacheBulkUpdateComplete(XenObjectType type, int count);
         void onCacheCleared();
 
     private:

@@ -79,9 +79,9 @@ class MemoryTabPage : public BaseTabPage
 
     private slots:
         void onEditButtonClicked();
-        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheBulkUpdateComplete(const QString& type, int count);
+        void onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onCacheBulkUpdateComplete(XenObjectType type, int count);
         void onCacheCleared();
 
     private:

@@ -1515,7 +1515,7 @@ void NetworkTabPage::onNetworksDataUpdated(const QVariantList& networks)
     this->refreshContent();
 }
 
-void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_ASSERT(this->m_connection == connection);
 
@@ -1524,14 +1524,14 @@ void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, const QStri
 
     Q_UNUSED(ref);
 
-    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
-        type == "network_sriov" || type == "pif_metrics")
+    if (type == XenObjectType::Network || type == XenObjectType::PIF || type == XenObjectType::VIF ||
+        type == XenObjectType::Bond || type == XenObjectType::NetworkSriov || type == XenObjectType::PIFMetrics)
     {
         this->refreshContent();
     }
 }
 
-void NetworkTabPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+void NetworkTabPage::onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_ASSERT(this->m_connection == connection);
 
@@ -1540,19 +1540,19 @@ void NetworkTabPage::onCacheObjectRemoved(XenConnection* connection, const QStri
 
     Q_UNUSED(ref);
 
-    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
-        type == "network_sriov" || type == "pif_metrics")
+    if (type == XenObjectType::Network || type == XenObjectType::PIF || type == XenObjectType::VIF ||
+        type == XenObjectType::Bond || type == XenObjectType::NetworkSriov || type == XenObjectType::PIFMetrics)
     {
         this->refreshContent();
     }
 }
 
-void NetworkTabPage::onCacheBulkUpdateComplete(const QString& type, int count)
+void NetworkTabPage::onCacheBulkUpdateComplete(XenObjectType type, int count)
 {
     Q_UNUSED(count);
 
-    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
-        type == "network_sriov" || type == "pif_metrics")
+    if (type == XenObjectType::Network || type == XenObjectType::PIF || type == XenObjectType::VIF ||
+        type == XenObjectType::Bond || type == XenObjectType::NetworkSriov || type == XenObjectType::PIFMetrics)
     {
         this->refreshContent();
     }

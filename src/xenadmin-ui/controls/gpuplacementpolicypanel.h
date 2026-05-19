@@ -31,6 +31,7 @@
 
 #include <QWidget>
 #include <QSharedPointer>
+#include "xenlib/xen/xenobjecttype.h"
 
 class QLabel;
 class QPushButton;
@@ -56,8 +57,8 @@ class GpuPlacementPolicyPanel : public QWidget
 
     private slots:
         void onEditClicked();
-        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
         void onCacheCleared();
 
     private:

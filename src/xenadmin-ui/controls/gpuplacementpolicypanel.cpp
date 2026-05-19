@@ -184,15 +184,15 @@ void GpuPlacementPolicyPanel::onEditClicked()
     }
 }
 
-void GpuPlacementPolicyPanel::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString&)
+void GpuPlacementPolicyPanel::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString&)
 {
     if (!this->m_object || connection != this->m_object->GetConnection())
         return;
-    if (type == QLatin1String("gpu_group") || type == QLatin1String("host") || type == QLatin1String("pool"))
+    if (type == XenObjectType::GPUGroup || type == XenObjectType::Host || type == XenObjectType::Pool)
         this->PopulatePage();
 }
 
-void GpuPlacementPolicyPanel::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString&)
+void GpuPlacementPolicyPanel::onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString&)
 {
     this->onCacheObjectChanged(connection, type, QString());
 }

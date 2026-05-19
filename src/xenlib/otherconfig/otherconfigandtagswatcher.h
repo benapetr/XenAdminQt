@@ -34,6 +34,7 @@
 #include <QHash>
 #include <QStringList>
 #include <QVariantMap>
+#include "xen/xenobjecttype.h"
 
 class XenConnection;
 
@@ -111,7 +112,7 @@ private slots:
     void onConnectionRemoved(XenConnection* connection);
     void onConnectionXenObjectsUpdated();
     void onConnectionStateChanged();
-    void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
+    void onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref);
 
 private:
     explicit OtherConfigAndTagsWatcher(QObject* parent = nullptr);

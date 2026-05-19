@@ -28,6 +28,7 @@
 #ifndef XENOBJECTTYPE_H
 #define XENOBJECTTYPE_H
 
+#include <QMetaType>
 #include <QtGlobal>
 
 enum class XenObjectType
@@ -91,5 +92,7 @@ inline uint qHash(XenObjectType key, uint seed = 0) noexcept
 {
     return ::qHash(static_cast<int>(key), seed);
 }
+
+Q_DECLARE_METATYPE(XenObjectType)
 
 #endif // XENOBJECTTYPE_H

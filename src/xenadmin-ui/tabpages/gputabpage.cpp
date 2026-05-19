@@ -263,17 +263,17 @@ void GpuTabPage::onCacheObjectRemoved(QSharedPointer<XenObject> object)
     this->onCacheObjectChanged(object);
 }
 
-void GpuTabPage::onCacheBulkUpdateComplete(const QString& type, int count)
+void GpuTabPage::onCacheBulkUpdateComplete(XenObjectType type, int count)
 {
     Q_UNUSED(count);
     if (!this->isVisible())
         return;
-    if (type == QLatin1String("pgpu")
-        || type == QLatin1String("gpu_group")
-        || type == QLatin1String("vgpu")
-        || type == QLatin1String("vgpu_type")
-        || type == QLatin1String("host")
-        || type == QLatin1String("pool"))
+    if (type == XenObjectType::PGPU
+        || type == XenObjectType::GPUGroup
+        || type == XenObjectType::VGPU
+        || type == XenObjectType::VGPUType
+        || type == XenObjectType::Host
+        || type == XenObjectType::Pool)
     {
         this->rebuild();
     }

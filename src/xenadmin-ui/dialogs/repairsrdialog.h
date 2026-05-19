@@ -33,6 +33,7 @@
 #include <QPointer>
 #include <QSharedPointer>
 #include <QTreeWidgetItem>
+#include "xenlib/xen/xenobjecttype.h"
 
 class SR;
 class Host;
@@ -100,8 +101,8 @@ class RepairSRDialog : public QDialog
         void onRepairButtonClicked();
         void onCloseButtonClicked();
         void onSrPropertyChanged();
-        void onHostCollectionChanged(XenConnection* connection, const QString& type, const QString& ref);
-        void onPbdCollectionChanged(XenConnection* connection, const QString& type, const QString& ref);
+        void onHostCollectionChanged(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onPbdCollectionChanged(XenConnection* connection, XenObjectType type, const QString& ref);
         void onActionChanged();
         void onActionCompleted();
 

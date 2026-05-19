@@ -36,6 +36,7 @@
 #include "xenlib/xensearch/queryfilter.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xen/xenobjecttype.h"
 
 // Forward declarations
 class QueryElement;
@@ -409,7 +410,7 @@ namespace XenSearch
 
         private slots:
             void onConnectionsChanged();
-            void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+            void onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref);
 
         private:
             PropertyNames property_;
@@ -637,7 +638,7 @@ namespace XenSearch
 
         private slots:
             void onConnectionsChanged();
-            void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+            void onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref);
 
         protected:
             PropertyNames property_;

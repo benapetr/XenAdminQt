@@ -388,12 +388,12 @@ void SrPicker::onItemDoubleClicked(int row, int column)
     emit this->doubleClickOnRow();
 }
 
-void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, const QString& ref)
+void SrPicker::onCacheUpdated(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     if (!this->m_connection || this->m_connection != connection)
         return;
 
-    if (type == "sr")
+    if (type == XenObjectType::SR)
     {
         QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(ref);
 
@@ -436,7 +436,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         return;
     }
 
-    if (type == "pbd")
+    if (type == XenObjectType::PBD)
     {
         QSharedPointer<PBD> pbd = this->m_connection->GetCache()->ResolveObject<PBD>(ref);
         QString srRef = pbd ? pbd->GetSRRef() : QString();
@@ -451,7 +451,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         return;
     }
 
-    if (type == "pool")
+    if (type == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>(ref);
         if (pool)
@@ -463,9 +463,9 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
     }
 }
 
-void SrPicker::onCacheRemoved(XenConnection* connection, const QString& type, const QString& ref)
+void SrPicker::onCacheRemoved(XenConnection* connection, XenObjectType type, const QString& ref)
 {
-    if (!this->m_connection || this->m_connection != connection || type != "sr")
+    if (!this->m_connection || this->m_connection != connection || type != XenObjectType::SR)
         return;
 
     this->removeSR(ref);

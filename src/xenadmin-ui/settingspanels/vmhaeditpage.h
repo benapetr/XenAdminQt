@@ -32,6 +32,7 @@
 #include <QMap>
 #include <QVariantMap>
 #include <QPointer>
+#include "xenlib/xen/xenobjecttype.h"
 
 class AsyncOperation;
 class QThread;
@@ -116,7 +117,7 @@ class VMHAEditPage : public IEditPage
     private slots:
         void onPriorityChanged();
         void onLinkActivated(const QString& link);
-        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(XenConnection *connection, XenObjectType type, const QString& ref);
 };
 
 #endif // VMHAEDITPAGE_H

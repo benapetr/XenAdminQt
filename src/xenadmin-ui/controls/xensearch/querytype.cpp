@@ -916,7 +916,7 @@ void ValuePropertyQueryType::onConnectionsChanged()
     emit SomeThingChanged(); // Notify QueryElement to refresh dropdowns
 }
 
-void ValuePropertyQueryType::onCacheChanged(XenConnection* connection, const QString& type, const QString& ref)
+void ValuePropertyQueryType::onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(connection);
     Q_UNUSED(type);
@@ -1364,7 +1364,7 @@ void XenModelObjectListContainsQueryType::onConnectionsChanged()
     }
 }
 
-void XenModelObjectListContainsQueryType::onCacheChanged(XenConnection* connection, const QString& type, const QString& ref)
+void XenModelObjectListContainsQueryType::onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(connection);
     Q_UNUSED(type);

@@ -315,16 +315,14 @@ class XenCache : public QObject
          * @param type Object type
          * @param ref Object reference
          */
-        //void itemChanged(XenConnection *connection, XenObjectType type, const QString& ref);
-        void itemChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void itemChanged(XenConnection *connection, XenObjectType type, const QString& ref);
 
         /**
          * @brief Emitted when an object item is removed
          * @param type Object type
          * @param ref Object reference
          */
-        //void itemRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
-        void itemRemoved(XenConnection* connection, const QString& type, const QString& ref);
+        void itemRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
 
         /**
          * @brief Emitted when cache is cleared
@@ -336,8 +334,7 @@ class XenCache : public QObject
          * @param type Object type that was updated
          * @param count Number of objects updated
          */
-        void bulkUpdateComplete(const QString& type, int count);
-        //void bulkUpdateComplete(XenObjectType type, int count);
+        void bulkUpdateComplete(XenObjectType type, int count);
 
     private:
         static XenCache *dummyCache;

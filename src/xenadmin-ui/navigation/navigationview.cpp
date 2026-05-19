@@ -56,20 +56,16 @@
 
 using namespace XenSearch;
 
-static bool isTypeRelevantForTree(const QString& type)
+static bool isTypeRelevantForTree(XenObjectType type)
 {
-    const QString normalized = type.toLower();
-
-    return normalized == "pool" ||
-           normalized == "host" ||
-           normalized == "vm" ||
-           normalized == "sr" ||
-           normalized == "vdi" ||
-           normalized == "network" ||
-           normalized == "folder" ||
-           normalized == "vm_appliance" ||
-           normalized == "vmappliance" ||
-           normalized == "appliance";
+    return type == XenObjectType::Pool ||
+           type == XenObjectType::Host ||
+           type == XenObjectType::VM ||
+           type == XenObjectType::SR ||
+           type == XenObjectType::VDI ||
+           type == XenObjectType::Network ||
+           type == XenObjectType::Folder ||
+           type == XenObjectType::VMAppliance;
 }
 
 NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
@@ -251,7 +247,7 @@ void NavigationView::SetSearchText(const QString& text)
     this->ui->searchLineEdit->setText(text);
 }
 
-void NavigationView::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void NavigationView::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     Q_UNUSED(ref);
     Q_UNUSED(connection);

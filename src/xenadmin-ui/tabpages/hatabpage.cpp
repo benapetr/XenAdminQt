@@ -435,24 +435,24 @@ void HATabPage::onCopyHeartbeatRows()
         QApplication::clipboard()->setText(lines.join("\n"));
 }
 
-void HATabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void HATabPage::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     if (!this->m_connection || connection != this->m_connection)
         return;
     Q_UNUSED(ref);
-    if (type == "pool" || type == "host" || type == "vdi")
+    if (type == XenObjectType::Pool || type == XenObjectType::Host || type == XenObjectType::VDI)
         this->refreshContent();
 }
 
-void HATabPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+void HATabPage::onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     this->onCacheObjectChanged(connection, type, ref);
 }
 
-void HATabPage::onCacheBulkUpdateComplete(const QString& type, int count)
+void HATabPage::onCacheBulkUpdateComplete(XenObjectType type, int count)
 {
     Q_UNUSED(count);
-    if (type == "pool" || type == "host" || type == "vdi")
+    if (type == XenObjectType::Pool || type == XenObjectType::Host || type == XenObjectType::VDI)
         this->refreshContent();
 }
 

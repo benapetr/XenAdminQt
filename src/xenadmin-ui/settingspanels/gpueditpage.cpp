@@ -393,27 +393,27 @@ void GpuEditPage::disconnectCacheSignals()
     qDebug() << "[GpuEditPage] cache signals disconnected";
 }
 
-void GpuEditPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+void GpuEditPage::onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     if (!this->m_vm || connection != this->m_vm->GetConnection())
         return;
 
     qDebug() << "[GpuEditPage] cache objectChanged:"
-             << "type=" << type
+             << "type=" << XenObject::TypeToString(type)
              << "ref=" << ref
              << "waitingForCacheSync=" << this->m_waitingForCacheSync;
     this->applyCacheRefreshIfNeeded(type, ref);
 }
 
-void GpuEditPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+void GpuEditPage::onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref)
 {
     this->onCacheObjectChanged(connection, type, ref);
 }
 
-void GpuEditPage::onCacheBulkUpdateComplete(const QString& type, int count)
+void GpuEditPage::onCacheBulkUpdateComplete(XenObjectType type, int count)
 {
     qDebug() << "[GpuEditPage] cache bulkUpdateComplete:"
-             << "type=" << type
+             << "type=" << XenObject::TypeToString(type)
              << "count=" << count
              << "waitingForCacheSync=" << this->m_waitingForCacheSync;
     this->applyCacheRefreshIfNeeded(type, QString());
@@ -429,24 +429,23 @@ void GpuEditPage::onCacheCleared()
     this->m_waitingForCacheSync = false;
 }
 
-void GpuEditPage::applyCacheRefreshIfNeeded(const QString& type, const QString& ref)
+void GpuEditPage::applyCacheRefreshIfNeeded(XenObjectType type, const QString& ref)
 {
     if (!this->m_waitingForCacheSync || !this->m_vm)
         return;
 
-    const QString normalizedType = type.toLower();
     const QString vmRef = this->m_vm->OpaqueRef();
 
-    const bool vmChanged = (normalizedType == QLatin1String("vm") && ref == vmRef);
-    const bool vgpuChanged = (normalizedType == QLatin1String("vgpu"));
-    const bool vmBulk = (normalizedType == QLatin1String("vm") && ref.isEmpty());
+    const bool vmChanged = (type == XenObjectType::VM && ref == vmRef);
+    const bool vgpuChanged = (type == XenObjectType::VGPU);
+    const bool vmBulk = (type == XenObjectType::VM && ref.isEmpty());
 
     // Ignore early VGPU-only events while waiting for cache sync.
     // VM.vGPUs in cache may still be stale at that point and would wipe UI rows.
     if (vgpuChanged)
     {
         qDebug() << "[GpuEditPage] applyCacheRefreshIfNeeded:"
-                 << "type=" << type
+                 << "type=" << XenObject::TypeToString(type)
                  << "ref=" << ref
                  << "vmRef=" << vmRef
                  << "vmChanged=" << vmChanged
@@ -460,7 +459,7 @@ void GpuEditPage::applyCacheRefreshIfNeeded(const QString& type, const QString& 
         return;
 
     qDebug() << "[GpuEditPage] applyCacheRefreshIfNeeded:"
-             << "type=" << type
+             << "type=" << XenObject::TypeToString(type)
              << "ref=" << ref
              << "vmRef=" << vmRef
              << "vmChanged=" << vmChanged

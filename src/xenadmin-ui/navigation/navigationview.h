@@ -37,6 +37,7 @@
 #include "mainwindowtreebuilder.h"
 #include "navigationpane.h" // For NavigationMode enum
 #include "xensearch/search.h"
+#include "xenlib/xen/xenobjecttype.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -132,7 +133,7 @@ class NavigationView : public QWidget
 
     private slots:
         void onSearchTextChanged(const QString& text);
-        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void onCacheObjectChanged(XenConnection *connection, XenObjectType type, const QString& ref);
         void onRefreshTimerTimeout();
         void onConnectionAdded(XenConnection* connection);
         void onConnectionRemoved(XenConnection* connection);

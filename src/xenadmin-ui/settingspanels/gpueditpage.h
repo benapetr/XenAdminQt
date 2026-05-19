@@ -30,6 +30,7 @@
 #define GPUEDITPAGE_H
 
 #include "ieditpage.h"
+#include "xenlib/xen/xenobjecttype.h"
 
 class VM;
 class QTableWidget;
@@ -64,9 +65,9 @@ class GpuEditPage : public IEditPage
         void onAddGpuClicked();
         void onRemoveGpuClicked();
         void onSelectionChanged();
-        void onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref);
-        void onCacheBulkUpdateComplete(const QString& type, int count);
+        void onCacheObjectChanged(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onCacheObjectRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
+        void onCacheBulkUpdateComplete(XenObjectType type, int count);
         void onCacheCleared();
 
     private:
@@ -88,7 +89,7 @@ class GpuEditPage : public IEditPage
         void updateEnablement();
         void connectCacheSignals();
         void disconnectCacheSignals();
-        void applyCacheRefreshIfNeeded(const QString& type, const QString& ref = QString());
+        void applyCacheRefreshIfNeeded(XenObjectType type, const QString& ref = QString());
 
         QSharedPointer<VM> m_vm;
         QString m_originalStateKey;

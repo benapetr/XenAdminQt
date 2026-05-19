@@ -129,9 +129,9 @@ class NetworkTabPage : public BaseTabPage
         void onEditNetwork();    // EditNetworkButton_Click
         void onRemoveNetwork();  // RemoveNetworkButton_Click
         void onActivateToggle(); // buttonActivateToggle_Click
-        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
-        void onCacheObjectRemoved(XenConnection *connection, const QString& type, const QString& ref);
-        void onCacheBulkUpdateComplete(const QString& type, int count);
+        void onCacheObjectChanged(XenConnection *connection, XenObjectType type, const QString& ref);
+        void onCacheObjectRemoved(XenConnection *connection, XenObjectType type, const QString& ref);
+        void onCacheBulkUpdateComplete(XenObjectType type, int count);
 
     private slots:
         void onConfigureClicked();
