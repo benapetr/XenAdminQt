@@ -34,6 +34,9 @@
 #include <QCryptographicHash>
 #include <QTextStream>
 #include <QByteArray>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QTextCodec>
+#endif
 #include <QRegularExpression>
 #include <QDebug>
 #include <cstring>
@@ -99,7 +102,11 @@ bool OvfWriter::saveToFile(const OvfEnvelopeData& envelope, const QString& ovfFi
     if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
     QTextStream ts(&f);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     ts.setEncoding(QStringConverter::Utf8);
+#else
+    ts.setCodec("UTF-8");
+#endif
     ts << xml;
     return true;
 }

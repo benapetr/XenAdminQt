@@ -30,6 +30,7 @@
 #include "vif.h"
 #include "xencache.h"
 #include "network_sriov.h"
+#include <QSet>
 
 Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
