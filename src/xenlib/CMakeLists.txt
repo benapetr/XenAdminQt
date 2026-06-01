@@ -104,9 +104,12 @@ set(XENLIB_SOURCES
     xen/actions/vm/createcddriveaction.cpp
     xen/actions/vm/createvmaction.cpp
     xen/actions/vm/createvmfastaction.cpp
+    xen/actions/vm/exportapplianceaction.cpp
     xen/actions/vm/exportvmaction.cpp
     xen/actions/vm/gpuassignaction.cpp
     xen/actions/vm/hvmbootaction.cpp
+    xen/actions/vm/importapplianceaction.cpp
+    xen/actions/vm/importimageaction.cpp
     xen/actions/vm/importvmaction.cpp
     xen/actions/vm/resumeandstartvmsaction.cpp
     xen/actions/vm/setvmotherconfigaction.cpp
@@ -118,6 +121,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/vmcrosspoolmigrateaction.cpp
     xen/actions/vm/vmdestroyaction.cpp
     xen/actions/vm/vmenlightenmentaction.cpp
+    xen/actions/vm/vmimportactionbase.cpp
     xen/actions/vm/vmmigrateaction.cpp
     xen/actions/vm/vmmoveaction.cpp
     xen/actions/vm/vmpauseaction.cpp
