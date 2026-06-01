@@ -77,6 +77,7 @@ if command -v dpkg-query >/dev/null 2>&1; then
     require_pkg dpkg-dev
     require_pkg pkg-config
     require_pkg libssl-dev
+    require_pkg zlib1g-dev
     require_one_of qtbase5-dev qt6-base-dev
     require_one_of libqt5charts5-dev qt6-charts-dev
     optional_groups=()

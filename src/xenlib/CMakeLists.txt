@@ -16,9 +16,14 @@ set(XENLIB_SOURCES
     operations/parallelaction.cpp
     operations/producerconsumerqueue.cpp
     otherconfig/otherconfigandtagswatcher.cpp
+    ovf/ovfpackage.cpp
+    ovf/ovfwriter.cpp
+    utils/decompressgzaction.cpp
+    utils/downloadfileaction.cpp
     utils/encryption.cpp
     utils/misc.cpp
     vmhelpers.cpp
+    xva/xvaverifier.cpp
     xen/actions/delegatedasyncoperation.cpp
     xen/actions/general/enabledatasourceaction.cpp
     xen/actions/general/generaleditpageaction.cpp
@@ -257,6 +262,7 @@ target_link_libraries(xenlib
         Qt6::Gui
         Qt6::Network
         Qt6::Xml
+        ZLIB::ZLIB
 )
 
 option(XENADMIN_NO_CRYPTO "Disable crypto/OpenSSL support" OFF)

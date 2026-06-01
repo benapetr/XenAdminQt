@@ -767,8 +767,12 @@ unix {
     LIBS += -lz
 }
 win32 {
-    INCLUDEPATH += $$[QT_INSTALL_PREFIX]/include/QtZlib
-    LIBS += -lzlib
+    INCLUDEPATH += $$[QT_INSTALL_HEADERS]/QtZlib
+    greaterThan(QT_MAJOR_VERSION, 5) {
+        LIBS += -lQt6Zlib
+    } else {
+        LIBS += -lQt5Zlib
+    }
 }
 
 # RDP support configuration (platform-specific)

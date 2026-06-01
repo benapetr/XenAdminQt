@@ -246,6 +246,8 @@ set(XENADMIN_SOURCES
     dialogs/newvmwizard.ui
     dialogs/optionsdialog.cpp
     dialogs/optionsdialog.ui
+    dialogs/ovfvalidationdialog.cpp
+    dialogs/ovfvalidationdialog.ui
     dialogs/optionspages/confirmationoptionspage.cpp
     dialogs/optionspages/confirmationoptionspage.ui
     dialogs/optionspages/connectionoptionspage.cpp

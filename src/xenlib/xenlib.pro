@@ -30,9 +30,13 @@ unix {
     LIBS += -lz
 }
 win32 {
-    # On Windows the Qt distribution ships zlib; use its include path and lib.
-    INCLUDEPATH += $$[QT_INSTALL_PREFIX]/include/QtZlib
-    LIBS += -lzlib
+    # On Windows the Qt distribution ships zlib as QtZlib.
+    INCLUDEPATH += $$[QT_INSTALL_HEADERS]/QtZlib
+    greaterThan(QT_MAJOR_VERSION, 5) {
+        LIBS += -lQt6Zlib
+    } else {
+        LIBS += -lQt5Zlib
+    }
 }
 
 greaterThan(QT_MAJOR_VERSION, 5) {

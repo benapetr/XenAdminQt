@@ -140,6 +140,7 @@ if command -v rpm >/dev/null 2>&1; then
     require_pkg git
     require_pkg pkgconf-pkg-config
     require_pkg openssl-devel
+    require_pkg zlib-devel
     require_pkg mesa-libGL-devel
     require_pkg mesa-libGLU-devel
     require_pkg mesa-libEGL-devel
@@ -329,6 +330,8 @@ BuildRequires:  mesa-libGLU-devel
 BuildRequires:  mesa-libEGL-devel
 BuildRequires:  libxkbcommon-devel
 BuildRequires:  pkgconf-pkg-config
+BuildRequires:  openssl-devel
+BuildRequires:  zlib-devel
 
 %description
 XenAdmin Qt is a C++/Qt6 rewrite of the original XenAdmin client,
