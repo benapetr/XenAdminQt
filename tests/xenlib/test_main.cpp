@@ -2,7 +2,10 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/xenobjecttype.h"
+#include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
+#include <QTemporaryFile>
+#include <QTextStream>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers: build minimal cache entries to exercise VM methods in isolation
@@ -169,6 +172,223 @@ private slots:
         d["is_control_domain"] = true;
         auto vm = makeVm("ref-22", d);
         QVERIFY(!vm->IsRealVM());
+    }
+
+    // ── OvfPackage::XenConfigBySystem — Qt OvfWriter format ──────────────────
+    // Format: <xen:Data><xen:Name>key</xen:Name><xen:Value>val</xen:Value></xen:Data>
+    // Namespace: http://www.citrix.com/xencenter/2009/xen
+
+    void ovfXenConfig_qtFormat_parsesHvmBootPolicy()
+    {
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="myvm">
+    <Name>myvm</Name>
+    <VirtualHardwareSection>
+      <xen:Data ovf:required="false">
+        <xen:Name>HVM_boot_policy</xen:Name>
+        <xen:Value>BIOS order</xen:Value>
+      </xen:Data>
+      <xen:Data ovf:required="false">
+        <xen:Name>platform</xen:Name>
+        <xen:Value>nx=true;acpi=1</xen:Value>
+      </xen:Data>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("myvm"));
+        QCOMPARE(cfg["myvm"]["HVM_boot_policy"], QString("BIOS order"));
+        QCOMPARE(cfg["myvm"]["platform"], QString("nx=true;acpi=1"));
+    }
+
+    void ovfXenConfig_qtFormat_pvBootloader()
+    {
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="pvvm">
+    <Name>pvvm</Name>
+    <VirtualHardwareSection>
+      <xen:Data ovf:required="false">
+        <xen:Name>PV_bootloader</xen:Name>
+        <xen:Value>pygrub</xen:Value>
+      </xen:Data>
+      <xen:Data ovf:required="false">
+        <xen:Name>PV_args</xen:Name>
+        <xen:Value>quiet splash</xen:Value>
+      </xen:Data>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("pvvm"));
+        QCOMPARE(cfg["pvvm"]["PV_bootloader"], QString("pygrub"));
+        QCOMPARE(cfg["pvvm"]["PV_args"], QString("quiet splash"));
+        QVERIFY(!cfg["pvvm"].contains("HVM_boot_policy"));
+    }
+
+    // ── OvfPackage::XenConfigBySystem — C# XenAdmin format ───────────────────
+    // Format: <citrix:VirtualSystemOtherConfigurationData Name="key"><Value>v</Value>...
+    // Namespace: http://schemas.citrix.com/ovf/envelope/1
+
+    void ovfXenConfig_csFormat_parsesBootPolicy()
+    {
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:citrix="http://schemas.citrix.com/ovf/envelope/1"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="csvm">
+    <Name>csvm</Name>
+    <VirtualHardwareSection>
+      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
+        <Value>BIOS order</Value>
+      </citrix:VirtualSystemOtherConfigurationData>
+      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_params">
+        <Value>order=dc</Value>
+      </citrix:VirtualSystemOtherConfigurationData>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("csvm"));
+        QCOMPARE(cfg["csvm"]["HVM_boot_policy"], QString("BIOS order"));
+        QCOMPARE(cfg["csvm"]["HVM_boot_params"], QString("order=dc"));
+    }
+
+    void ovfXenConfig_csFormat_recommendationsKeyExcluded()
+    {
+        // The "recommendations" entry must be skipped by parseXenConfig (handled by parseRecommendations).
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:citrix="http://schemas.citrix.com/ovf/envelope/1"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="vm1">
+    <Name>vm1</Name>
+    <VirtualHardwareSection>
+      <citrix:VirtualSystemOtherConfigurationData Name="recommendations">
+        <Value><restrictions><restriction field="vcpus-max" value="8"/></restrictions></Value>
+      </citrix:VirtualSystemOtherConfigurationData>
+      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
+        <Value>BIOS order</Value>
+      </citrix:VirtualSystemOtherConfigurationData>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("vm1"));
+        QVERIFY(!cfg["vm1"].contains("recommendations"));
+        QCOMPARE(cfg["vm1"]["HVM_boot_policy"], QString("BIOS order"));
+    }
+
+    // ── OvfPackage::XenConfigBySystem — no xen config section ────────────────
+
+    void ovfXenConfig_noXenSection_returnsEmptyMap()
+    {
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="plainvm">
+    <Name>plainvm</Name>
+    <VirtualHardwareSection/>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        // System is present (from VirtualSystem element) but config map is empty
+        QVERIFY(cfg.contains("plainvm"));
+        QVERIFY(cfg["plainvm"].isEmpty());
+    }
+
+    // ── OvfPackage::XenConfigBySystem — multi-VM package ─────────────────────
+
+    void ovfXenConfig_multipleVms_configsAreSeparate()
+    {
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystemCollection ovf:id="myvapp">
+    <VirtualSystem ovf:id="vm-hvm">
+      <Name>vm-hvm</Name>
+      <VirtualHardwareSection>
+        <xen:Data ovf:required="false">
+          <xen:Name>HVM_boot_policy</xen:Name>
+          <xen:Value>BIOS order</xen:Value>
+        </xen:Data>
+      </VirtualHardwareSection>
+    </VirtualSystem>
+    <VirtualSystem ovf:id="vm-pv">
+      <Name>vm-pv</Name>
+      <VirtualHardwareSection>
+        <xen:Data ovf:required="false">
+          <xen:Name>PV_bootloader</xen:Name>
+          <xen:Value>pygrub</xen:Value>
+        </xen:Data>
+      </VirtualHardwareSection>
+    </VirtualSystem>
+  </VirtualSystemCollection>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("vm-hvm"));
+        QVERIFY(cfg.contains("vm-pv"));
+        QCOMPARE(cfg["vm-hvm"]["HVM_boot_policy"], QString("BIOS order"));
+        QVERIFY(!cfg["vm-hvm"].contains("PV_bootloader"));
+        QCOMPARE(cfg["vm-pv"]["PV_bootloader"], QString("pygrub"));
+        QVERIFY(!cfg["vm-pv"].contains("HVM_boot_policy"));
+    }
+
+    void ovfXenConfig_emptyValueAllowed()
+    {
+        // A key with an empty value should still be stored (it may override a default).
+        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
+          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
+  <References/>
+  <VirtualSystem ovf:id="uefivm">
+    <Name>uefivm</Name>
+    <VirtualHardwareSection>
+      <xen:Data ovf:required="false">
+        <xen:Name>HVM_boot_policy</xen:Name>
+        <xen:Value></xen:Value>
+      </xen:Data>
+    </VirtualHardwareSection>
+  </VirtualSystem>
+</Envelope>)";
+
+        OvfPackage pkg = OvfPackage::FromXml(xml);
+        QVERIFY(pkg.IsValid());
+        const auto cfg = pkg.XenConfigBySystem();
+        QVERIFY(cfg.contains("uefivm"));
+        QVERIFY(cfg["uefivm"].contains("HVM_boot_policy"));
+        QCOMPARE(cfg["uefivm"]["HVM_boot_policy"], QString(""));
     }
 };
 

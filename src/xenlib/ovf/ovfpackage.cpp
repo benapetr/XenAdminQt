@@ -912,6 +912,17 @@ void OvfPackage::parseFromOvfXml(const QString& xml){
              << "| Encrypted:" << this->hasEncryption_;
 }
 
+// ─── OvfPackage::FromXml ─────────────────────────────────────────────────────
+
+OvfPackage OvfPackage::FromXml(const QString& xml)
+{
+    OvfPackage pkg("");
+    pkg.parseError_.clear();
+    pkg.packageName_ = "inline";
+    pkg.parseFromOvfXml(xml);
+    return pkg;
+}
+
 // ─── OvfPackage::ExtractAllToDir ─────────────────────────────────────────────
 
 bool OvfPackage::ExtractAllToDir(const QString& ovaPath,

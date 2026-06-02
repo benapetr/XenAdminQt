@@ -109,9 +109,11 @@ class OvfPackage
 
         ~OvfPackage() = default;
 
-        // Non-copyable
+        // Non-copyable, but movable (needed for FromXml return-by-value)
         OvfPackage(const OvfPackage&) = delete;
         OvfPackage& operator=(const OvfPackage&) = delete;
+        OvfPackage(OvfPackage&&) = default;
+        OvfPackage& operator=(OvfPackage&&) = default;
 
         /** @brief Whether the package was parsed successfully. */
         bool IsValid() const { return this->valid_; }
@@ -315,6 +317,17 @@ class OvfPackage
                                     const QString& destDir,
                                     QString& errorOut,
                                     std::function<bool()> cancelCheck = nullptr);
+
+        /**
+         * @brief Construct an OvfPackage directly from an OVF XML string.
+         *
+         * Intended for unit tests and in-memory parsing.  The resulting package
+         * has an empty SourceFile() and a PackageName() of "inline".
+         *
+         * @param xml  Full OVF XML document as a string.
+         * @return     Parsed OvfPackage; check IsValid() before use.
+         */
+        static OvfPackage FromXml(const QString& xml);
 
     private:
         void parseFromOvfXml(const QString& xml);
