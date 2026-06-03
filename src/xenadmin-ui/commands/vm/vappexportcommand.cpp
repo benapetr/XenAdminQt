@@ -28,15 +28,11 @@
 #include "vappexportcommand.h"
 #include "../../dialogs/exportwizard.h"
 #include "../../mainwindow.h"
-#include "../../dialogs/actionprogressdialog.h"
-#include "xenlib/xen/actions/vm/exportapplianceaction.h"
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
-#include <QFileInfo>
-#include <QMessageBox>
 
-VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_exportWizard(nullptr)
+VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -83,60 +79,13 @@ void VappExportCommand::Run()
         }
     }
 
-    this->m_exportWizard = new ExportWizard(conn, MainWindow::instance());
-    this->m_exportWizard->SetPreselectedVMs(memberVms);
-    this->m_exportWizard->SetOvfModeOnly();
-    connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
-            this, &VappExportCommand::onWizardFinished);
-
-    this->m_exportWizard->show();
-    this->m_exportWizard->raise();
-    this->m_exportWizard->activateWindow();
-}
-
-void VappExportCommand::onWizardFinished(int result)
-{
-    if (result == QDialog::Accepted && this->m_exportWizard)
-    {
-        // vApp export is always OVF/OVA (XVA option is hidden by SetOvfModeOnly()).
-        QString resolvedPath;
-        if (this->m_exportWizard->ValidateOvfDestination(MainWindow::instance(), &resolvedPath))
-        {
-            const QString appDir  = QFileInfo(resolvedPath).absolutePath();
-            const QString appName = QFileInfo(resolvedPath).baseName();
-            const bool createOva  = this->m_exportWizard->createOva();
-            const bool createMf   = this->m_exportWizard->createManifest();
-            const bool compress   = this->m_exportWizard->compressOVF();
-            const bool verify     = this->m_exportWizard->verifyExport();
-
-            const QList<QSharedPointer<VM>> vms = this->m_exportWizard->GetSelectedVMs();
-            if (!vms.isEmpty())
-            {
-                ExportApplianceAction* action = new ExportApplianceAction(
-                    vms, appDir, appName,
-                    this->m_exportWizard->GetEulas(),
-                    this->m_exportWizard->signAppliance(),
-                    createMf,
-                    this->m_exportWizard->GetCertificatePath(),
-                    this->m_exportWizard->GetCertificatePassword(),
-                    createOva, compress, verify,
-                    MainWindow::instance());
-                ActionProgressDialog* dlg = new ActionProgressDialog(action, MainWindow::instance());
-                dlg->setShowCancel(true);
-                dlg->exec();
-                dlg->deleteLater();
-
-                if (action->IsCompleted())
-                    MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
-            }
-        }
-    }
-
-    if (this->m_exportWizard)
-    {
-        this->m_exportWizard->deleteLater();
-        this->m_exportWizard = nullptr;
-    }
+    ExportWizard* wizard = new ExportWizard(conn, MainWindow::instance());
+    wizard->SetPreselectedVMs(memberVms);
+    wizard->SetOvfModeOnly();
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    wizard->show();
+    wizard->raise();
+    wizard->activateWindow();
 }
 
 QString VappExportCommand::MenuText() const

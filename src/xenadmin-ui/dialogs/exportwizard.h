@@ -54,8 +54,8 @@ class ExportWizard : public QWizard
             Page_VMs = 1,
             Page_Options = 2,
             Page_Finish = 3,
-            Page_Rbac = 4,  // Programmatic page inserted after Page_Format when RBAC check is needed
-            Page_Eula = 5   // Programmatic page between VM selection and options (OVF/OVA only)
+            Page_Rbac = 4,  // Shown after Page_Format when RBAC check is needed
+            Page_Eula = 5   // Shown between VM selection and options (OVF/OVA only)
         };
 
         // Export format / destination accessors (valid after exec() returns Accepted)
@@ -131,6 +131,7 @@ class ExportWizard : public QWizard
         void onManifestToggled(bool checked);
 
     protected:
+        void accept() override;
         int nextId() const override;
         void initializePage(int id) override;
         bool validateCurrentPage() override;
@@ -156,7 +157,7 @@ class ExportWizard : public QWizard
         // RBAC state (populated when leaving Page_Format)
         QStringList m_blockingRbacMissing;
 
-        // Programmatic EULA page widgets (owned by the QWizardPage parent)
+        // EULA page widget owned by the generated .ui page
         QListWidget* m_eulaListWidget;
 };
 

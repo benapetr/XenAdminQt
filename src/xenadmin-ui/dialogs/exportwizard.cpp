@@ -27,7 +27,11 @@
 
 #include "exportwizard.h"
 #include "ui_exportwizard.h"
+#include "../mainwindow.h"
 #include "../settingsmanager.h"
+#include "xenlib/xen/actions/vm/exportapplianceaction.h"
+#include "xenlib/xen/actions/vm/exportvmaction.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xencache.h"
@@ -41,6 +45,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStorageInfo>
+#include <QDebug>
 
 ExportWizard::ExportWizard(QWidget* parent)
     : QWizard(parent)
@@ -125,6 +130,90 @@ void ExportWizard::setupWizardPages()
             this, &ExportWizard::onSignApplianceToggled);
     connect(this->ui->createManifestCheckBox, &QCheckBox::toggled,
             this, &ExportWizard::onManifestToggled);
+}
+
+void ExportWizard::accept()
+{
+    if (this->m_exportAsXVA)
+    {
+        QString fullPath;
+        if (!this->ValidateXvaDestination(this, &fullPath))
+            return;
+
+        const QList<QSharedPointer<VM>> vms = this->GetSelectedVMs();
+        QSharedPointer<VM> vm = vms.isEmpty() ? QSharedPointer<VM>() : vms.first();
+        if (!vm || !vm->IsValid())
+        {
+            QMessageBox::warning(this, tr("Export VM"), tr("No virtual machine was selected for export."));
+            return;
+        }
+
+        QSharedPointer<Host> host = vm->GetHome();
+        ExportVmAction* action = new ExportVmAction(vm, host, fullPath, this->verifyExport(), nullptr);
+        const QString exportDir = QFileInfo(fullPath).absolutePath();
+        MainWindow* mainWindow = MainWindow::instance();
+        if (mainWindow)
+        {
+            connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, exportDir]() {
+                SettingsManager::instance().SetDefaultExportPath(exportDir);
+                SettingsManager::instance().AddRecentExportPath(exportDir);
+                mainWindow->ShowStatusMessage(QObject::tr("Export completed"), 3000);
+            });
+        }
+
+        qDebug() << "ExportWizard: starting XVA export action"
+                 << "vm" << vm->GetName()
+                 << "path" << fullPath
+                 << "verify" << this->verifyExport();
+        action->RunAsync(true);
+    } else
+    {
+        QString resolvedPath;
+        if (!this->ValidateOvfDestination(this, &resolvedPath))
+            return;
+
+        QList<QSharedPointer<VM>> vms = this->GetSelectedVMs();
+        if (vms.isEmpty())
+        {
+            QMessageBox::warning(this, tr("Export Appliance"),
+                                 tr("Please select at least one virtual machine to export."));
+            return;
+        }
+
+        const QString appDir = QFileInfo(resolvedPath).absolutePath();
+        const QString appName = QFileInfo(resolvedPath).baseName();
+        ExportApplianceAction* action = new ExportApplianceAction(
+            vms,
+            appDir,
+            appName,
+            this->GetEulas(),
+            this->signAppliance(),
+            this->createManifest(),
+            this->GetCertificatePath(),
+            this->GetCertificatePassword(),
+            this->createOva(),
+            this->compressOVF(),
+            this->verifyExport(),
+            nullptr);
+
+        MainWindow* mainWindow = MainWindow::instance();
+        if (mainWindow)
+        {
+            connect(action, &AsyncOperation::completed, mainWindow, [mainWindow]() {
+                mainWindow->ShowStatusMessage(QObject::tr("Export completed"), 3000);
+            });
+        }
+
+        qDebug() << "ExportWizard: starting OVF export action"
+                 << "vmCount" << vms.size()
+                 << "appDir" << appDir
+                 << "appName" << appName
+                 << "createOva" << this->createOva()
+                 << "verify" << this->verifyExport();
+        action->RunAsync(true);
+    }
+
+    QWizard::accept();
 }
 
 void ExportWizard::SetConnection(XenConnection* connection)
@@ -400,8 +489,7 @@ bool ExportWizard::ValidateOvfDestination(QWidget* parent, QString* resolvedPath
         baseName = baseName.left(baseName.length() - 4);
 
     // Determine extension from format combo (OVF vs OVA).
-    const bool isOva = !this->m_exportAsXVA &&
-                       this->ui->formatComboBox->currentData().toString().toLower().contains("ova");
+    const bool isOva = !this->m_exportAsXVA && this->createOva();
     const QString ext = isOva ? ".ova" : ".ovf";
     const QString primaryPath = dir.filePath(baseName + ext);
 
@@ -730,7 +818,7 @@ void ExportWizard::updateSummary()
                 fullPath += ".xva";
         } else
         {
-            const bool isOva = this->ui->formatComboBox->currentData().toString().toLower().contains("ova");
+            const bool isOva = this->createOva();
             if (isOva)
             {
                 // OVA: single archive file at dir/name.ova

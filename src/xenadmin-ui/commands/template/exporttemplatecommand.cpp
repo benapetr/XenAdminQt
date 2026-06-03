@@ -27,14 +27,8 @@
 
 #include "exporttemplatecommand.h"
 #include "../../mainwindow.h"
-#include "../../settingsmanager.h"
 #include "../../dialogs/exportwizard.h"
-#include "../../dialogs/actionprogressdialog.h"
-#include "xenlib/xen/actions/vm/exportvmaction.h"
-#include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
-#include <QFileInfo>
-#include <QMessageBox>
 
 ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* parent) : TemplateCommand(mainWindow, parent)
 {
@@ -58,33 +52,7 @@ void ExportTemplateCommand::Run()
     XenConnection* conn = tmplVm->GetConnection();
     ExportWizard wizard(conn, MainWindow::instance());
     wizard.SetPreselectedVMs({tmplVm});
-
-    if (wizard.exec() != QDialog::Accepted)
-        return;
-
-    if (!wizard.exportAsXVA())
-    {
-        QMessageBox::warning(MainWindow::instance(), tr("Export Template"),
-                             tr("OVF/OVA export is not implemented yet. Select XVA Package to export this template."));
-        return;
-    }
-
-    QString fullPath;
-    if (!wizard.ValidateXvaDestination(MainWindow::instance(), &fullPath))
-        return;
-
-    QSharedPointer<Host> host = tmplVm->GetHome();
-    ExportVmAction* action = new ExportVmAction(tmplVm, host, fullPath, wizard.verifyExport(), MainWindow::instance());
-    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
-    progressDialog->setShowCancel(true);
-    progressDialog->exec();
-    progressDialog->deleteLater();
-
-    if (action->IsCompleted())
-    {
-        SettingsManager::instance().SetDefaultExportPath(QFileInfo(fullPath).absolutePath());
-        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
-    }
+    wizard.exec();
 }
 
 QString ExportTemplateCommand::MenuText() const

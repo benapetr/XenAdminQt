@@ -27,20 +27,12 @@
 
 #include "exportvmcommand.h"
 #include "../../mainwindow.h"
-#include "../../settingsmanager.h"
-#include "../../dialogs/actionprogressdialog.h"
 #include "../../dialogs/exportwizard.h"
-#include "xenlib/xen/actions/vm/exportvmaction.h"
-#include "xenlib/xen/actions/vm/exportapplianceaction.h"
-#include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
-#include <QFile>
-#include <QFileInfo>
-#include <QMessageBox>
-#include <QDir>
+#include <QDebug>
 
 ExportVMCommand::ExportVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent), m_exportWizard(nullptr)
+    : VMCommand(mainWindow, parent)
 {
 }
 
@@ -57,101 +49,24 @@ void ExportVMCommand::Run()
 {
     if (!this->CanRun())
     {
+        qDebug() << "ExportVMCommand: Run ignored because CanRun() is false" << this;
         return;
     }
 
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
+    {
+        qDebug() << "ExportVMCommand: Run ignored because no VM resolved" << this;
         return;
+    }
 
     // Create wizard with connection context and preselect the current VM
-    this->m_exportWizard = new ExportWizard(vm->GetConnection(), MainWindow::instance());
-    this->m_exportWizard->SetPreselectedVMs({vm});
-    connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
-            this, &ExportVMCommand::onWizardFinished);
-
-    this->m_exportWizard->show();
-    this->m_exportWizard->raise();
-    this->m_exportWizard->activateWindow();
-}
-
-void ExportVMCommand::onWizardFinished(int result)
-{
-    if (result == QDialog::Accepted && this->m_exportWizard)
-    {
-        if (!this->m_exportWizard->exportAsXVA())
-        {
-            // OVF/OVA export: validate destination then launch ExportApplianceAction.
-            // Matches C# ExportApplianceWizard.WizardPagesCollection + ExportApplianceAction.
-            QString resolvedPath;
-            if (this->m_exportWizard->ValidateOvfDestination(MainWindow::instance(), &resolvedPath))
-            {
-                const QString appDir  = QFileInfo(resolvedPath).absolutePath();
-                const QString appName = QFileInfo(resolvedPath).baseName();
-                const bool createOva  = this->m_exportWizard->createOva();
-                const bool createMf   = this->m_exportWizard->createManifest();
-                const bool compress   = this->m_exportWizard->compressOVF();
-                const bool verify     = this->m_exportWizard->verifyExport();
-
-                QList<QSharedPointer<VM>> vms = this->m_exportWizard->GetSelectedVMs();
-                if (vms.isEmpty())
-                {
-                    QSharedPointer<VM> vm = this->getVM();
-                    if (vm)
-                        vms << vm;
-                }
-
-                if (!vms.isEmpty())
-                {
-                    ExportApplianceAction* action = new ExportApplianceAction(
-                        vms, appDir, appName,
-                        this->m_exportWizard->GetEulas(),
-                        this->m_exportWizard->signAppliance(),
-                        createMf,
-                        this->m_exportWizard->GetCertificatePath(),
-                        this->m_exportWizard->GetCertificatePassword(),
-                        createOva, compress, verify,
-                        MainWindow::instance());
-                    ActionProgressDialog* dlg = new ActionProgressDialog(action, MainWindow::instance());
-                    dlg->setShowCancel(true);
-                    dlg->exec();
-                    dlg->deleteLater();
-
-                    if (action->IsCompleted())
-                        MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
-                }
-            }
-        }
-        else
-        {
-            QString fullPath;
-            QSharedPointer<VM> vm = this->getVM();
-            if (vm && this->m_exportWizard->ValidateXvaDestination(MainWindow::instance(), &fullPath))
-            {
-                QSharedPointer<Host> host = vm->GetHome();
-                ExportVmAction* action = new ExportVmAction(vm, host, fullPath, this->m_exportWizard->verifyExport(), MainWindow::instance());
-                ActionProgressDialog* progressDialog = new ActionProgressDialog(action, MainWindow::instance());
-                progressDialog->setShowCancel(true);
-                progressDialog->exec();
-                progressDialog->deleteLater();
-
-                if (action->IsCompleted())
-                {
-                    const QString exportDir = QFileInfo(fullPath).absolutePath();
-                    SettingsManager::instance().SetDefaultExportPath(exportDir);
-                    SettingsManager::instance().AddRecentExportPath(exportDir);
-                    MainWindow::instance()->ShowStatusMessage(tr("Export completed"), 3000);
-                }
-            }
-        }
-    }
-
-    // Clean up wizard
-    if (this->m_exportWizard)
-    {
-        this->m_exportWizard->deleteLater();
-        this->m_exportWizard = nullptr;
-    }
+    ExportWizard* wizard = new ExportWizard(vm->GetConnection(), MainWindow::instance());
+    wizard->SetPreselectedVMs({vm});
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    wizard->show();
+    wizard->raise();
+    wizard->activateWindow();
 }
 
 QString ExportVMCommand::MenuText() const
