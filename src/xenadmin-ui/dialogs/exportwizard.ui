@@ -320,10 +320,10 @@
   </widget>
 
   <!-- ══ Page 3: Summary (Finish) ══════════════════════════════════════════ -->
-  <widget class="QWizardPage" name="pageFinish">
-   <property name="title">
-    <string>Summary</string>
-   </property>
+	  <widget class="QWizardPage" name="pageFinish">
+	   <property name="title">
+	    <string>Summary</string>
+	   </property>
    <property name="subTitle">
     <string>Review your export settings.</string>
    </property>
@@ -342,10 +342,90 @@
       </property>
      </widget>
     </item>
-   </layout>
-  </widget>
+	   </layout>
+	  </widget>
 
- </widget>
- <resources/>
- <connections/>
+	  <!-- Page 4: RBAC Warning -->
+	  <widget class="QWizardPage" name="pageRbac">
+	   <property name="title">
+	    <string>Security Permissions</string>
+	   </property>
+	   <property name="subTitle">
+	    <string>Review permissions required for export.</string>
+	   </property>
+	   <layout class="QVBoxLayout" name="rbacPageLayout">
+	    <item>
+	     <widget class="QLabel" name="rbacWarningLabel">
+	      <property name="wordWrap">
+	       <bool>true</bool>
+	      </property>
+	      <property name="text">
+	       <string/>
+	      </property>
+	     </widget>
+	    </item>
+	    <item>
+	     <spacer name="rbacPageSpacer">
+	      <property name="orientation">
+	       <enum>Qt::Vertical</enum>
+	      </property>
+	     </spacer>
+	    </item>
+	   </layout>
+	  </widget>
+
+	  <!-- Page 5: EULAs -->
+	  <widget class="QWizardPage" name="pageEula">
+	   <property name="title">
+	    <string>EULAs</string>
+	   </property>
+	   <property name="subTitle">
+	    <string>Add End User License Agreements to include in the exported appliance (optional).</string>
+	   </property>
+	   <layout class="QVBoxLayout" name="eulaPageLayout">
+	    <item>
+	     <widget class="QLabel" name="eulaInstructionLabel">
+	      <property name="text">
+	       <string>EULA documents to include (maximum 25):</string>
+	      </property>
+	     </widget>
+	    </item>
+	    <item>
+	     <widget class="QListWidget" name="eulaListWidget">
+	      <property name="selectionMode">
+	       <enum>QAbstractItemView::ExtendedSelection</enum>
+	      </property>
+	     </widget>
+	    </item>
+	    <item>
+	     <layout class="QHBoxLayout" name="eulaButtonLayout">
+	      <item>
+	       <widget class="QPushButton" name="addEulaButton">
+	        <property name="text">
+	         <string>Add EULA...</string>
+	        </property>
+	       </widget>
+	      </item>
+	      <item>
+	       <widget class="QPushButton" name="removeEulaButton">
+	        <property name="text">
+	         <string>Remove Selected</string>
+	        </property>
+	       </widget>
+	      </item>
+	      <item>
+	       <spacer name="eulaButtonSpacer">
+	        <property name="orientation">
+	         <enum>Qt::Horizontal</enum>
+	        </property>
+	       </spacer>
+	      </item>
+	     </layout>
+	    </item>
+	   </layout>
+	  </widget>
+
+	 </widget>
+	 <resources/>
+	 <connections/>
 </ui>

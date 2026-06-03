@@ -32,9 +32,6 @@
 #include "xenlib/xen/session.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QListWidget>
 #include <QPushButton>
 #include <QStandardPaths>
@@ -76,47 +73,12 @@ ExportWizard::~ExportWizard()
 
 void ExportWizard::setupWizardPages()
 {
-    // Programmatic RBAC page — inserted after Page_Format when the connected user
-    // is missing required permissions (matches C# RBACWarningPage pattern).
-    QWizardPage* rbacPage = new QWizardPage(this);
-    rbacPage->setTitle(tr("Security Permissions"));
-    rbacPage->setSubTitle(tr("Review permissions required for export."));
-    QVBoxLayout* rbacLayout = new QVBoxLayout;
-    QLabel* rbacLabel = new QLabel(rbacPage);
-    rbacLabel->setObjectName("rbacWarningLabel");
-    rbacLabel->setWordWrap(true);
-    rbacLayout->addWidget(rbacLabel);
-    rbacLayout->addStretch();
-    rbacPage->setLayout(rbacLayout);
+    // setupUi() registers the .ui QWizardPage children in enum order:
+    // Page_Format, Page_VMs, Page_Options, Page_Finish, Page_Rbac, Page_Eula.
+    this->m_eulaListWidget = this->ui->eulaListWidget;
 
-    this->setPage(Page_Format, this->ui->pageFormat);
-    this->setPage(Page_VMs,    this->ui->pageVMs);
-    this->setPage(Page_Options, this->ui->pageOptions);
-    this->setPage(Page_Rbac,   rbacPage);
-    this->setPage(Page_Finish,  this->ui->pageFinish);
-
-    // Programmatic EULA page — shown between VM selection and options for OVF/OVA exports.
-    // Matches C# ExportEulaPage: user can attach up to 25 EULA text files to the appliance.
-    QWizardPage* eulaPage = new QWizardPage(this);
-    eulaPage->setTitle(tr("EULAs"));
-    eulaPage->setSubTitle(tr("Add End User License Agreements to include in the exported appliance (optional)."));
-    QVBoxLayout* eulaMainLayout = new QVBoxLayout;
-    eulaMainLayout->addWidget(new QLabel(tr("EULA documents to include (maximum 25):")));
-    this->m_eulaListWidget = new QListWidget;
-    this->m_eulaListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    eulaMainLayout->addWidget(this->m_eulaListWidget);
-    QHBoxLayout* eulaButtonLayout = new QHBoxLayout;
-    QPushButton* addEulaButton    = new QPushButton(tr("Add EULA..."));
-    QPushButton* removeEulaButton = new QPushButton(tr("Remove Selected"));
-    eulaButtonLayout->addWidget(addEulaButton);
-    eulaButtonLayout->addWidget(removeEulaButton);
-    eulaButtonLayout->addStretch();
-    eulaMainLayout->addLayout(eulaButtonLayout);
-    eulaPage->setLayout(eulaMainLayout);
-    this->setPage(Page_Eula, eulaPage);
-
-    connect(addEulaButton,    &QPushButton::clicked, this, &ExportWizard::onAddEula);
-    connect(removeEulaButton, &QPushButton::clicked, this, &ExportWizard::onRemoveEula);
+    connect(this->ui->addEulaButton, &QPushButton::clicked, this, &ExportWizard::onAddEula);
+    connect(this->ui->removeEulaButton, &QPushButton::clicked, this, &ExportWizard::onRemoveEula);
 
     this->ui->pageFinish->setFinalPage(true);
 
@@ -887,8 +849,7 @@ bool ExportWizard::hasApiPermissions(const QStringList& methods, QStringList* mi
 
 void ExportWizard::updateRbacPage()
 {
-    QLabel* label = this->page(Page_Rbac)->findChild<QLabel*>("rbacWarningLabel");
-    if (!label)
+    if (!this->ui->rbacWarningLabel)
         return;
 
     QStringList lines;
@@ -908,5 +869,5 @@ void ExportWizard::updateRbacPage()
             lines << tr("  \u2713 %1").arg(method);
     }
 
-    label->setText(lines.join("\n"));
+    this->ui->rbacWarningLabel->setText(lines.join("\n"));
 }
