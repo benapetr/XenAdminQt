@@ -52,7 +52,6 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
     , m_host(host)
     , filename_(filename)
     , verify_(verify)
-    , httpClient_(nullptr)
     , progressThread_(nullptr)
 {
     if (!vm)
@@ -71,9 +70,6 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
 
 ExportVmAction::~ExportVmAction()
 {
-    if (this->httpClient_)
-        delete this->httpClient_;
-        
     if (this->progressThread_)
     {
         this->progressThread_->quit();
@@ -161,13 +157,11 @@ void ExportVmAction::run()
     params["session_id"] = this->GetSession()->GetSessionID();
     params["uuid"] = vmUuid;
 
-    // Create HTTP client
-    this->httpClient_ = new HttpClient(this);
-
     // Download file with progress tracking
     QString tmpFile = this->filename_ + ".tmp";
-    
-    bool success = this->httpClient_->getFile(
+
+    HttpClient httpClient;
+    bool success = httpClient.getFile(
         targetHost,
         "/export",
         params,
@@ -203,7 +197,7 @@ void ExportVmAction::run()
         {
             this->SetDescription(tr("Export failed: a virtual disk is in use by another operation"));
             // Keep the task error already set by pollTask()
-        } else if (this->httpClient_->IsDiskFull())
+        } else if (httpClient.IsDiskFull())
         {
             this->SetDescription(tr("Export failed: the target disk is full"));
             this->setError(tr("The target disk is full."));
@@ -214,7 +208,7 @@ void ExportVmAction::run()
         } else
         {
             this->SetDescription(tr("Export failed"));
-            this->setError(this->httpClient_->lastError());
+            this->setError(httpClient.lastError());
         }
 
         this->setState(OperationState::Failed);

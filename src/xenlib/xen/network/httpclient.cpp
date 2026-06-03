@@ -86,7 +86,7 @@ bool HttpClient::connectToHost(const QUrl& url, QSslSocket*& socket)
     if (!socket->waitForEncrypted(30000))
     {
         this->lastError_ = QString("Failed to establish SSL connection: %1").arg(socket->errorString());
-        socket->deleteLater();
+        delete socket;
         socket = nullptr;
         return false;
     }
@@ -99,12 +99,52 @@ bool HttpClient::sendHttpHeaders(QSslSocket* socket, const QStringList& headers)
     for (const QString& header : headers)
     {
         QString line = header + "\r\n";
-        socket->write(line.toLatin1());
+        qint64 bytesWritten = socket->write(line.toLatin1());
+        if (bytesWritten < 0)
+        {
+            qWarning() << "HttpClient: Failed to queue HTTP header"
+                       << "state" << socket->state()
+                       << "encrypted" << socket->isEncrypted()
+                       << "socketError" << socket->error()
+                       << "errorString" << socket->errorString();
+            return false;
+        }
     }
-    socket->write("\r\n");
+
+    qint64 bytesWritten = socket->write("\r\n");
+    if (bytesWritten < 0)
+    {
+        qWarning() << "HttpClient: Failed to queue HTTP header terminator"
+                   << "state" << socket->state()
+                   << "encrypted" << socket->isEncrypted()
+                   << "socketError" << socket->error()
+                   << "errorString" << socket->errorString();
+        return false;
+    }
+
     socket->flush();
-    
-    return socket->waitForBytesWritten(30000);
+
+    if (!socket->waitForBytesWritten(30000))
+    {
+        qWarning() << "HttpClient: Timed out sending HTTP headers"
+                   << "state" << socket->state()
+                   << "encrypted" << socket->isEncrypted()
+                   << "socketError" << socket->error()
+                   << "errorString" << socket->errorString()
+                   << "bytesToWrite" << socket->bytesToWrite();
+
+        if (socket->state() == QAbstractSocket::ConnectedState &&
+            socket->error() == QAbstractSocket::UnknownSocketError &&
+            socket->bytesToWrite() == 0)
+        {
+            qWarning() << "HttpClient: HTTP headers have no pending bytes; continuing to read response";
+            return true;
+        }
+
+        return false;
+    }
+
+    return true;
 }
 
 bool HttpClient::readHttpResponse(QSslSocket* socket)
@@ -159,19 +199,18 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
     QByteArray buffer(BUFFER_SIZE, Qt::Uninitialized);
     QDateTime lastUpdate = QDateTime::currentDateTime();
 
-    while (!source->atEnd())
-    {
-        // Check for cancellation
-        if (cancelCallback && cancelCallback())
+    auto reportProgress = [&]() {
+        if (progressCallback && totalSize > 0)
         {
-            this->lastError_ = "Operation cancelled by user";
-            return -1;
+            int percent = static_cast<int>((bytesTransferred * 100) / totalSize);
+            progressCallback(percent);
         }
 
-        qint64 bytesRead = source->read(buffer.data(), buffer.size());
-        if (bytesRead <= 0)
-            break;
+        if (dataCopiedCallback)
+            dataCopiedCallback(bytesTransferred);
+    };
 
+    auto writeBytes = [&](qint64 bytesRead) -> bool {
         qint64 bytesWritten = dest->write(buffer.constData(), bytesRead);
         if (bytesWritten != bytesRead)
         {
@@ -181,7 +220,7 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
             {
                 this->isDiskFull_ = true;
                 this->lastError_ = "The target disk is full.";
-                return -1;
+                return false;
             }
 #endif
             // Generic write error — include the file's error string where available
@@ -189,40 +228,91 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
             this->lastError_ = destFile
                 ? QString("Failed to write data: %1").arg(destFile->errorString())
                 : QString("Failed to write data");
-            return -1;
+            return false;
         }
 
         bytesTransferred += bytesWritten;
 
         // Update progress every 500ms
-        if (QDateTime::currentDateTime().msecsTo(lastUpdate) > 500)
+        QDateTime now = QDateTime::currentDateTime();
+        if (lastUpdate.msecsTo(now) > 500)
         {
-            if (progressCallback && totalSize > 0)
+            reportProgress();
+            lastUpdate = now;
+        }
+
+        return true;
+    };
+
+    QAbstractSocket* sourceSocket = qobject_cast<QAbstractSocket*>(source);
+    if (sourceSocket)
+    {
+        while (sourceSocket->state() == QAbstractSocket::ConnectedState ||
+               sourceSocket->bytesAvailable() > 0)
+        {
+            // Check for cancellation
+            if (cancelCallback && cancelCallback())
             {
-                int percent = static_cast<int>((bytesTransferred * 100) / totalSize);
-                progressCallback(percent);
+                this->lastError_ = "Operation cancelled by user";
+                return -1;
             }
-            
-            if (dataCopiedCallback)
+
+            if (sourceSocket->bytesAvailable() <= 0)
             {
-                dataCopiedCallback(bytesTransferred);
+                if (!sourceSocket->waitForReadyRead(HTTP_TIMEOUT_MS))
+                {
+                    if (sourceSocket->bytesAvailable() > 0)
+                        continue;
+
+                    if (sourceSocket->state() == QAbstractSocket::UnconnectedState ||
+                        sourceSocket->error() == QAbstractSocket::RemoteHostClosedError)
+                    {
+                        break;
+                    }
+
+                    this->lastError_ = QString("Timeout waiting for data: %1").arg(sourceSocket->errorString());
+                    return -1;
+                }
             }
-            
-            lastUpdate = QDateTime::currentDateTime();
+
+            while (sourceSocket->bytesAvailable() > 0)
+            {
+                qint64 bytesRead = sourceSocket->read(buffer.data(), buffer.size());
+                if (bytesRead < 0)
+                {
+                    this->lastError_ = QString("Failed to read data: %1").arg(sourceSocket->errorString());
+                    return -1;
+                }
+
+                if (bytesRead == 0)
+                    break;
+
+                if (!writeBytes(bytesRead))
+                    return -1;
+            }
+        }
+    } else
+    {
+        while (!source->atEnd())
+        {
+            // Check for cancellation
+            if (cancelCallback && cancelCallback())
+            {
+                this->lastError_ = "Operation cancelled by user";
+                return -1;
+            }
+
+            qint64 bytesRead = source->read(buffer.data(), buffer.size());
+            if (bytesRead <= 0)
+                break;
+
+            if (!writeBytes(bytesRead))
+                return -1;
         }
     }
 
     // Final progress update
-    if (progressCallback && totalSize > 0)
-    {
-        int percent = static_cast<int>((bytesTransferred * 100) / totalSize);
-        progressCallback(percent);
-    }
-    
-    if (dataCopiedCallback)
-    {
-        dataCopiedCallback(bytesTransferred);
-    }
+    reportProgress();
 
     return bytesTransferred;
 }
@@ -269,7 +359,7 @@ bool HttpClient::putFile(const QString& localFilePath,
     {
         this->lastError_ = "Failed to send HTTP headers";
         emit this->error(this->lastError_);
-        socket->deleteLater();
+        delete socket;
         file.close();
         return false;
     }
@@ -283,7 +373,7 @@ bool HttpClient::putFile(const QString& localFilePath,
     if (bytesTransferred < 0)
     {
         emit this->error(this->lastError_);
-        socket->deleteLater();
+        delete socket;
         return false;
     }
 
@@ -297,7 +387,7 @@ bool HttpClient::putFile(const QString& localFilePath,
     if (socket->state() != QAbstractSocket::UnconnectedState)
         socket->waitForDisconnected(5000);
     
-    socket->deleteLater();
+    delete socket;
 
     if (!success)
         emit this->error(this->lastError_);
@@ -335,7 +425,7 @@ bool HttpClient::getFile(const QString& hostname,
     {
         this->lastError_ = "Failed to send HTTP headers";
         emit this->error(this->lastError_);
-        socket->deleteLater();
+        delete socket;
         return false;
     }
 
@@ -343,7 +433,7 @@ bool HttpClient::getFile(const QString& hostname,
     if (!this->readHttpResponse(socket))
     {
         emit this->error(this->lastError_);
-        socket->deleteLater();
+        delete socket;
         return false;
     }
 
@@ -354,7 +444,7 @@ bool HttpClient::getFile(const QString& hostname,
     {
         this->lastError_ = QString("Failed to create file: %1").arg(file.errorString());
         emit this->error(this->lastError_);
-        socket->deleteLater();
+        delete socket;
         return false;
     }
 
@@ -369,7 +459,7 @@ bool HttpClient::getFile(const QString& hostname,
     if (socket->state() != QAbstractSocket::UnconnectedState)
         socket->waitForDisconnected(5000);
     
-    socket->deleteLater();
+    delete socket;
 
     if (bytesTransferred < 0)
     {
