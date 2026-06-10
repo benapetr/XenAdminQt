@@ -162,6 +162,12 @@ void ExportApplianceAction::run()
     // Optionally compress VHDs *before* writing the OVF so hrefs are correct
     if (m_compressFiles)
     {
+#ifdef XENADMIN_NO_ZLIB
+        this->setError(tr("Gzip compression support is not available in this build."));
+        this->cleanupOnError(appFolder);
+        this->setState(OperationState::Failed);
+        return;
+#else
         this->SetDescription(tr("Compressing disk files…"));
         OvfWriter writer;
         if (!writer.compressVhds(envelope, appFolder))
@@ -172,6 +178,7 @@ void ExportApplianceAction::run()
             return;
         }
         this->SetPercentComplete(83);
+#endif
     }
 
     // Write OVF descriptor (hrefs are now final)

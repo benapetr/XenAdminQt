@@ -1463,6 +1463,12 @@ bool ImportWizard::validateCurrentPage()
         // The decompressed file is what the rest of the wizard and the action use.
         if (filePath.endsWith(".gz", Qt::CaseInsensitive))
         {
+#ifdef XENADMIN_NO_ZLIB
+            QMessageBox::warning(this, tr("Unsupported File"),
+                                 tr("Gzip-compressed imports are not available in this build. "
+                                    "Please decompress the file first and select the uncompressed file."));
+            return false;
+#else
             // Compute output path: strip .gz suffix
             const QString decompPath = filePath.left(filePath.length() - 3);
 
@@ -1492,6 +1498,7 @@ bool ImportWizard::validateCurrentPage()
             filePath = decompPath;
             if (filePathEdit)
                 filePathEdit->setText(filePath);
+#endif
         }
 
         // Detect and validate import type; caches result in m_importType

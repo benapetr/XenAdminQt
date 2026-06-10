@@ -8,7 +8,10 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network Xml Widgets Charts)
-find_package(ZLIB REQUIRED)
+option(XENADMIN_NO_ZLIB "Disable gzip/zlib import and export compression support" OFF)
+if(NOT XENADMIN_NO_ZLIB)
+    find_package(ZLIB REQUIRED)
+endif()
 qt_standard_project_setup()
 
 add_subdirectory(src/xenlib)

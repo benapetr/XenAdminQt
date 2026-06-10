@@ -25,18 +25,11 @@ contains(CONFIG, no_crypto) {
 # This allows us to use absolute include path instead of hard-to-read relative paths
 INCLUDEPATH += ..
 
-# zlib — used by DecompressGzAction for .gz decompression
-unix {
+# zlib — used by gzip import/export compression support
+contains(CONFIG, no_zlib) {
+    DEFINES += XENADMIN_NO_ZLIB
+} else {
     LIBS += -lz
-}
-win32 {
-    # On Windows the Qt distribution ships zlib as QtZlib.
-    INCLUDEPATH += $$[QT_INSTALL_HEADERS]/QtZlib
-    greaterThan(QT_MAJOR_VERSION, 5) {
-        LIBS += -lQt6Zlib
-    } else {
-        LIBS += -lQt5Zlib
-    }
 }
 
 greaterThan(QT_MAJOR_VERSION, 5) {

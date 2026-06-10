@@ -27,12 +27,15 @@
 
 #include "decompressgzaction.h"
 
-#include <zlib.h>
 #include <QFile>
 #include <QFileInfo>
 
+#ifndef XENADMIN_NO_ZLIB
+#include <zlib.h>
+
 // Read buffer: 64 KB is a good balance of throughput vs. cancellation latency
 static const int GZ_BUF_SIZE = 64 * 1024;
+#endif
 
 DecompressGzAction::DecompressGzAction(const QString& sourceGzPath,
                                        const QString& destPath,
@@ -50,6 +53,10 @@ void DecompressGzAction::run()
     this->SetCanCancel(true);
     this->setDescriptionSafe(tr("Decompressing %1...").arg(QFileInfo(this->m_sourceGzPath).fileName()));
 
+#ifdef XENADMIN_NO_ZLIB
+    this->setError(tr("Gzip decompression support is not available in this build."));
+    this->setState(Failed);
+#else
     const qint64 compressedSize = QFileInfo(this->m_sourceGzPath).size();
 
     // Open gzip input. gzopen handles the gzip header transparently.
@@ -117,4 +124,5 @@ void DecompressGzAction::run()
 
     this->setPercentCompleteSafe(100);
     this->setState(Completed);
+#endif
 }

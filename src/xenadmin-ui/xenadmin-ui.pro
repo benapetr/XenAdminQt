@@ -762,17 +762,11 @@ win32 {
     }
 }
 
-# zlib — required by xenlib DecompressGzAction
-unix {
+# zlib — required by gzip import/export compression support in static xenlib
+contains(CONFIG, no_zlib) {
+    DEFINES += XENADMIN_NO_ZLIB
+} else {
     LIBS += -lz
-}
-win32 {
-    INCLUDEPATH += $$[QT_INSTALL_HEADERS]/QtZlib
-    greaterThan(QT_MAJOR_VERSION, 5) {
-        LIBS += -lQt6Zlib
-    } else {
-        LIBS += -lQt5Zlib
-    }
 }
 
 # RDP support configuration (platform-specific)

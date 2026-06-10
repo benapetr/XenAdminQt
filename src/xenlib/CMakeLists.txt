@@ -267,8 +267,13 @@ target_link_libraries(xenlib
         Qt6::Gui
         Qt6::Network
         Qt6::Xml
-        ZLIB::ZLIB
 )
+
+if(NOT XENADMIN_NO_ZLIB)
+    target_link_libraries(xenlib PUBLIC ZLIB::ZLIB)
+else()
+    target_compile_definitions(xenlib PUBLIC XENADMIN_NO_ZLIB)
+endif()
 
 option(XENADMIN_NO_CRYPTO "Disable crypto/OpenSSL support" OFF)
 if(NOT XENADMIN_NO_CRYPTO)

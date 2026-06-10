@@ -40,7 +40,9 @@
 #include <QRegularExpression>
 #include <QDebug>
 #include <cstring>
+#ifndef XENADMIN_NO_ZLIB
 #include <zlib.h>
+#endif
 
 #ifndef XENADMIN_NO_CRYPTO
 // OpenSSL is only used for signing on Linux where -lssl -lcrypto is linked
@@ -530,6 +532,12 @@ bool OvfWriter::createOva(const OvfEnvelopeData& envelope,
 
 bool OvfWriter::compressVhds(OvfEnvelopeData& envelope, const QString& packageDir) const
 {
+#ifdef XENADMIN_NO_ZLIB
+    Q_UNUSED(envelope)
+    Q_UNUSED(packageDir)
+    qWarning() << "OvfWriter::compressVhds: gzip compression support is not available in this build";
+    return false;
+#else
     static const int BUF_SIZE = 64 * 1024;
 
     for (OvfVirtualSystemEntry& sys : envelope.systems)
@@ -587,6 +595,7 @@ bool OvfWriter::compressVhds(OvfEnvelopeData& envelope, const QString& packageDi
     }
 
     return true;
+#endif
 }
 
 // ── Verification ─────────────────────────────────────────────────────────────
