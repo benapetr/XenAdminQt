@@ -30,11 +30,6 @@
 
 #include "../../asyncoperation.h"
 #include <QString>
-#include <QStringList>
-#include <QMutex>
-#include <QWaitCondition>
-
-class HttpClient;
 
 /**
  * @brief Import a VM from an XVA file
@@ -64,14 +59,7 @@ class ImportVmAction : public AsyncOperation
                                 const QString& srRef,
                                 QObject* parent = nullptr);
 
-        ~ImportVmAction() override;
-
-        /**
-        * @brief Called by wizard when it finishes configuration
-        * @param startAutomatically Whether to start VM after import
-        * @param vifRefs List of VIF references to create
-        */
-        void endWizard(bool startAutomatically, const QStringList& vifRefs);
+        ~ImportVmAction() override = default;
 
         /**
         * @brief Get imported VM reference (available after completion)
@@ -85,22 +73,12 @@ class ImportVmAction : public AsyncOperation
         QString uploadFile();
         QString defaultVMName(const QString& vmName);
         int vmsWithName(const QString& name);
-        void updateNetworks(const QString& vmRef, const QString& importTaskRef);
 
         QString hostRef_;
         QString filename_;
         QString srRef_;
         QString vmRef_;
         QString importTaskRef_;
-        
-        bool wizardDone_;
-        bool startAutomatically_;
-        QStringList vifRefs_;
-        
-        QMutex mutex_;
-        QWaitCondition waitCondition_;
-        
-        HttpClient* httpClient_;
 };
 
 #endif // IMPORTVMACTION_H

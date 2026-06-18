@@ -314,4 +314,36 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Throws on error
     }
 
+    // VM_appliance.create
+    QString VM_appliance::create(Session* session, const QVariantMap& record)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID();
+        params << record;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.create", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    // VM_appliance.destroy
+    void VM_appliance::destroy(Session* session, const QString& applianceRef)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID();
+        params << applianceRef;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.destroy", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Throws on error
+    }
+
 } // namespace XenAPI

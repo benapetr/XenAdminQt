@@ -44,12 +44,8 @@ class ExportVMCommand : public VMCommand
         void Run() override;
         QString MenuText() const override;
 
-    private slots:
-        void onWizardFinished(int result);
-
     private:
         bool isVMExportable() const;
-        ExportWizard* m_exportWizard;
 };
 
 #endif // EXPORTVMCOMMAND_H

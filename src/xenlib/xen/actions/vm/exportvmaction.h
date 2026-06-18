@@ -34,8 +34,6 @@
 #include <QString>
 #include <QThread>
 
-class HttpClient;
-
 /**
  * @brief Export a VM or template to an XVA file
  *
@@ -74,7 +72,6 @@ class ExportVmAction : public AsyncOperation
         QString filename_;
         bool verify_;
         
-        HttpClient* httpClient_;
         QThread* progressThread_;
         QString exception_;
 };

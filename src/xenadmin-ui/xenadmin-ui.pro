@@ -37,6 +37,7 @@ SOURCES += \
     dialogs/movevmdialog.cpp \
     dialogs/newvmwizard.cpp \
     dialogs/importwizard.cpp \
+    dialogs/ovfvalidationdialog.cpp \
     dialogs/exportwizard.cpp \
     dialogs/newnetworkwizard.cpp \
     dialogs/newsrwizard.cpp \
@@ -344,6 +345,7 @@ HEADERS += \
     dialogs/movevmdialog.h \
     dialogs/newvmwizard.h \
     dialogs/importwizard.h \
+    dialogs/ovfvalidationdialog.h \
     dialogs/exportwizard.h \
     dialogs/newnetworkwizard.h \
     dialogs/newsrwizard.h \
@@ -655,10 +657,13 @@ FORMS += \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
+    dialogs/ovfvalidationdialog.ui \
     dialogs/newnetworkwizard.ui \
     dialogs/networkingpropertiesdialog.ui \
     dialogs/networkingpropertiespage.ui \
     dialogs/newvmwizard.ui \
+    dialogs/exportwizard.ui \
+    dialogs/importwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/hawizard.ui \
     dialogs/crosspoolmigratewizard.ui \
@@ -755,6 +760,13 @@ win32 {
     macx {
         # macOS: CommonCrypto framework (built-in, no linking needed)
     }
+}
+
+# zlib — required by gzip import/export compression support in static xenlib
+contains(CONFIG, no_zlib) {
+    DEFINES += XENADMIN_NO_ZLIB
+} else {
+    LIBS += -lz
 }
 
 # RDP support configuration (platform-specific)

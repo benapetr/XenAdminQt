@@ -164,7 +164,8 @@ class XENLIB_EXPORT AsyncOperation : public QObject
 
     public slots:
         // Execution control
-        virtual void RunAsync(bool auto_delete = false);
+        virtual void RunAsync();
+        virtual void RunAsync(bool autoDelete);
         virtual void RunSync(XenAPI::Session* session = nullptr);
         virtual void Cancel();
 

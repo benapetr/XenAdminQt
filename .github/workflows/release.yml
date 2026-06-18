@@ -43,7 +43,8 @@ jobs:
           sudo apt-get install -y \
             build-essential debhelper dpkg-dev pkg-config \
             qt6-base-dev qt6-charts-dev \
-            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev \
+            libssl-dev zlib1g-dev
 
       - name: Determine version and tag
         id: meta
@@ -74,4 +75,3 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           done
-

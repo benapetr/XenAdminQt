@@ -487,11 +487,9 @@ void AsyncOperation::SetSafeToExit(bool safe)
 }
 
 // Execution control
-void AsyncOperation::RunAsync(bool auto_delete)
+void AsyncOperation::RunAsync()
 {
     QMutexLocker locker(&this->m_mutex);
-
-    this->m_autoDelete = auto_delete;
 
     if (this->m_state != NotStarted)
     {
@@ -517,6 +515,16 @@ void AsyncOperation::RunAsync(bool auto_delete)
     QThreadPool::globalInstance()->start([this]() {
         this->runOnWorkerThread();
     });
+}
+
+void AsyncOperation::RunAsync(bool autoDelete)
+{
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_autoDelete = autoDelete;
+    }
+
+    this->RunAsync();
 }
 
 void AsyncOperation::runOnWorkerThread()
@@ -914,32 +922,38 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
         {
             QString resultStr = resultVariant.toString();
 
-            // Task result may be wrapped in "<value>...</value>".
-            // Parse it as XML so escaped payload (e.g. "&lt;SRlist&gt;") is decoded.
-            if (resultStr.contains("<value>") && resultStr.contains("</value>"))
+            // Task results returned by XenServer may be XML-RPC fragments stored as strings.
+            // Common forms:
+            //   "<value><string>OpaqueRef:xxx</string></value>"
+            //   "<value />"  (empty — e.g. VM.start)
+            //   "OpaqueRef:xxx"  (plain, already extracted by caller)
+            //
+            // We iteratively strip outer <value> and <string> wrappers until we reach a
+            // plain string, an array, or an empty result.
+            auto stripOneWrapper = [](const QString& s, const QString& tag) -> QString
             {
-                QXmlStreamReader valueReader(resultStr);
-                while (!valueReader.atEnd())
-                {
-                    valueReader.readNext();
-                    if (valueReader.isStartElement() && valueReader.name() == QLatin1String("value"))
-                    {
-                        const QString innerValue = valueReader.readElementText();
-                        if (!innerValue.isEmpty())
-                            resultStr = innerValue;
-                        break;
-                    }
-                }
+                const QString open  = QString("<%1>").arg(tag);
+                const QString close = QString("</%1>").arg(tag);
+                const int start = s.indexOf(open);
+                const int end   = s.lastIndexOf(close);
+                if (start >= 0 && end > start)
+                    return s.mid(start + open.length(), end - start - open.length()).trimmed();
+                return s;
+            };
 
-                // Fallback to manual extraction if parsing failed to locate the value node.
-                if (resultStr.contains("<value>") && resultStr.contains("</value>"))
-                {
-                    int startIdx = resultStr.indexOf("<value>") + 7; // length of "<value>"
-                    int endIdx = resultStr.indexOf("</value>");
-                    if (startIdx >= 7 && endIdx > startIdx)
-                        resultStr = resultStr.mid(startIdx, endIdx - startIdx);
-                }
+            // Strip up to two levels of wrapping: <value><string>ref</string></value>
+            for (int pass = 0; pass < 4; ++pass)
+            {
+                const QString stripped = stripOneWrapper(resultStr, "value");
+                if (stripped != resultStr) { resultStr = stripped.trimmed(); continue; }
+                const QString strippedS = stripOneWrapper(resultStr, "string");
+                if (strippedS != resultStr) { resultStr = strippedS.trimmed(); continue; }
+                break; // nothing more to unwrap
             }
+
+            // Self-closing <value /> means empty result — keep as empty string
+            if (resultStr == "<value />" || resultStr == "<value/>")
+                resultStr.clear();
 
             SetResult(resultStr);
         }

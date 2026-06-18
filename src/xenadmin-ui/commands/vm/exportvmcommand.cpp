@@ -29,15 +29,10 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
 #include "xenlib/xen/vm.h"
-#include <QProgressDialog>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QStandardPaths>
-#include <QDir>
-#include <QThread>
+#include <QDebug>
 
 ExportVMCommand::ExportVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent), m_exportWizard(nullptr)
+    : VMCommand(mainWindow, parent)
 {
 }
 
@@ -54,62 +49,24 @@ void ExportVMCommand::Run()
 {
     if (!this->CanRun())
     {
+        qDebug() << "ExportVMCommand: Run ignored because CanRun() is false" << this;
         return;
     }
 
-    // Create and show the Export Wizard
-    if (!this->m_exportWizard)
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
     {
-        this->m_exportWizard = new ExportWizard(MainWindow::instance());
-        connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished),
-                this, &ExportVMCommand::onWizardFinished);
+        qDebug() << "ExportVMCommand: Run ignored because no VM resolved" << this;
+        return;
     }
 
-    this->m_exportWizard->show();
-    this->m_exportWizard->raise();
-    this->m_exportWizard->activateWindow();
-}
-
-void ExportVMCommand::onWizardFinished(int result)
-{
-    if (result == QDialog::Accepted && this->m_exportWizard)
-    {
-        // Get export settings from wizard
-        QString directory = this->m_exportWizard->exportDirectory();
-        QString fileName = this->m_exportWizard->exportFileName();
-        bool isXVA = this->m_exportWizard->exportAsXVA();
-
-        if (directory.isEmpty() || fileName.isEmpty())
-        {
-            QMessageBox::warning(MainWindow::instance(), tr("Export VM"),
-                                 tr("Invalid export settings. Please check directory and filename."));
-            return;
-        }
-
-        // Construct full file path with appropriate extension
-        QString fullPath = QDir(directory).filePath(fileName);
-        if (isXVA && !fullPath.toLower().endsWith(".xva"))
-        {
-            fullPath += ".xva";
-        } else if (!isXVA && !fullPath.toLower().endsWith(".ovf"))
-        {
-            fullPath += ".ovf";
-        }
-
-        // TODO: Start actual export operation using selected VMs and settings
-        // This would integrate with the XenLib to perform the actual export
-        QMessageBox::information(MainWindow::instance(), tr("Export Started"),
-                                 tr("Export operation has been started.\nDestination: %1").arg(fullPath));
-
-        MainWindow::instance()->ShowStatusMessage(tr("Export started"), 3000);
-    }
-
-    // Clean up wizard
-    if (this->m_exportWizard)
-    {
-        this->m_exportWizard->deleteLater();
-        this->m_exportWizard = nullptr;
-    }
+    // Create wizard with connection context and preselect the current VM
+    ExportWizard* wizard = new ExportWizard(vm->GetConnection(), MainWindow::instance());
+    wizard->SetPreselectedVMs({vm});
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    wizard->show();
+    wizard->raise();
+    wizard->activateWindow();
 }
 
 QString ExportVMCommand::MenuText() const

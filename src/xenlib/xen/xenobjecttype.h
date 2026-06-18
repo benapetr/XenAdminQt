@@ -95,4 +95,63 @@ inline uint qHash(XenObjectType key, uint seed = 0) noexcept
 
 Q_DECLARE_METATYPE(XenObjectType)
 
+#include <QString>
+
+/// Convert the lowercase XAPI class name (as used in XenServer event streams)
+/// to the corresponding XenObjectType.  Returns XenObjectType::Null when the
+/// name is unknown.
+inline XenObjectType XenObjectTypeFromString(const QString& name)
+{
+    // Lower-case comparison to match the XAPI event "class" field.
+    const QString n = name.toLower();
+    if (n == "vm")              return XenObjectType::VM;
+    if (n == "host")            return XenObjectType::Host;
+    if (n == "pool")            return XenObjectType::Pool;
+    if (n == "sr")              return XenObjectType::SR;
+    if (n == "network")         return XenObjectType::Network;
+    if (n == "vbd")             return XenObjectType::VBD;
+    if (n == "vdi")             return XenObjectType::VDI;
+    if (n == "vif")             return XenObjectType::VIF;
+    if (n == "pif")             return XenObjectType::PIF;
+    if (n == "pbd")             return XenObjectType::PBD;
+    if (n == "pif_metrics")     return XenObjectType::PIFMetrics;
+    if (n == "vbd_metrics")     return XenObjectType::VBDMetrics;
+    if (n == "host_metrics")    return XenObjectType::HostMetrics;
+    if (n == "host_cpu")        return XenObjectType::HostCPU;
+    if (n == "host_crashdump")  return XenObjectType::HostCrashdump;
+    if (n == "host_patch")      return XenObjectType::HostPatch;
+    if (n == "task")            return XenObjectType::Task;
+    if (n == "console")         return XenObjectType::Console;
+    if (n == "vm_guest_metrics") return XenObjectType::VMGuestMetrics;
+    if (n == "vm_metrics")      return XenObjectType::VMMetrics;
+    if (n == "vm_appliance")    return XenObjectType::VMAppliance;
+    if (n == "sm")              return XenObjectType::SM;
+    if (n == "role")            return XenObjectType::Role;
+    if (n == "user")            return XenObjectType::User;
+    if (n == "bond")            return XenObjectType::Bond;
+    if (n == "vlan")            return XenObjectType::VLAN;
+    if (n == "tunnel")          return XenObjectType::Tunnel;
+    if (n == "message")         return XenObjectType::Message;
+    if (n == "certificate")     return XenObjectType::Certificate;
+    if (n == "cluster")         return XenObjectType::Cluster;
+    if (n == "cluster_host")    return XenObjectType::ClusterHost;
+    if (n == "feature")         return XenObjectType::Feature;
+    if (n == "pgpu")            return XenObjectType::PGPU;
+    if (n == "pci")             return XenObjectType::PCI;
+    if (n == "gpu_group")       return XenObjectType::GPUGroup;
+    if (n == "vgpu")            return XenObjectType::VGPU;
+    if (n == "vgpu_type")       return XenObjectType::VGPUType;
+    if (n == "network_sriov")   return XenObjectType::NetworkSriov;
+    if (n == "pusb")            return XenObjectType::PUSB;
+    if (n == "usb_group")       return XenObjectType::USBGroup;
+    if (n == "vusb")            return XenObjectType::VUSB;
+    if (n == "vtpm")            return XenObjectType::VTPM;
+    if (n == "blob")            return XenObjectType::Blob;
+    if (n == "pool_patch")      return XenObjectType::PoolPatch;
+    if (n == "pool_update")     return XenObjectType::PoolUpdate;
+    if (n == "vmpp")            return XenObjectType::VMPP;
+    if (n == "vmss")            return XenObjectType::VMSS;
+    return XenObjectType::Null;
+}
+
 #endif // XENOBJECTTYPE_H

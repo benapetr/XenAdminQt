@@ -16,9 +16,14 @@ set(XENLIB_SOURCES
     operations/parallelaction.cpp
     operations/producerconsumerqueue.cpp
     otherconfig/otherconfigandtagswatcher.cpp
+    ovf/ovfpackage.cpp
+    ovf/ovfwriter.cpp
+    utils/decompressgzaction.cpp
+    utils/downloadfileaction.cpp
     utils/encryption.cpp
     utils/misc.cpp
     vmhelpers.cpp
+    xva/xvaverifier.cpp
     xen/actions/delegatedasyncoperation.cpp
     xen/actions/general/enabledatasourceaction.cpp
     xen/actions/general/generaleditpageaction.cpp
@@ -99,9 +104,12 @@ set(XENLIB_SOURCES
     xen/actions/vm/createcddriveaction.cpp
     xen/actions/vm/createvmaction.cpp
     xen/actions/vm/createvmfastaction.cpp
+    xen/actions/vm/exportapplianceaction.cpp
     xen/actions/vm/exportvmaction.cpp
     xen/actions/vm/gpuassignaction.cpp
     xen/actions/vm/hvmbootaction.cpp
+    xen/actions/vm/importapplianceaction.cpp
+    xen/actions/vm/importimageaction.cpp
     xen/actions/vm/importvmaction.cpp
     xen/actions/vm/resumeandstartvmsaction.cpp
     xen/actions/vm/setvmotherconfigaction.cpp
@@ -113,6 +121,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/vmcrosspoolmigrateaction.cpp
     xen/actions/vm/vmdestroyaction.cpp
     xen/actions/vm/vmenlightenmentaction.cpp
+    xen/actions/vm/vmimportactionbase.cpp
     xen/actions/vm/vmmigrateaction.cpp
     xen/actions/vm/vmmoveaction.cpp
     xen/actions/vm/vmpauseaction.cpp
@@ -233,6 +242,7 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_VIF.cpp
     xen/xenapi/xenapi_VLAN.cpp
     xen/xenapi/xenapi_VM.cpp
+    xen/xenapi/xenapi_VTPM.cpp
     xen/xenobject.cpp
     # Header-only Q_OBJECT classes: listed explicitly so AUTOMOC processes them
     collections/observablelist.h
@@ -258,6 +268,12 @@ target_link_libraries(xenlib
         Qt6::Network
         Qt6::Xml
 )
+
+if(NOT XENADMIN_NO_ZLIB)
+    target_link_libraries(xenlib PUBLIC ZLIB::ZLIB)
+else()
+    target_compile_definitions(xenlib PUBLIC XENADMIN_NO_ZLIB)
+endif()
 
 option(XENADMIN_NO_CRYPTO "Disable crypto/OpenSSL support" OFF)
 if(NOT XENADMIN_NO_CRYPTO)

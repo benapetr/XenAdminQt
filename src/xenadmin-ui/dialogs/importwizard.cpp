@@ -26,318 +26,382 @@
  */
 
 #include "importwizard.h"
+#include "ui_importwizard.h"
+#include "../settingsmanager.h"
+#include "ovfvalidationdialog.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/ovf/ovfpackage.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vif.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/utils/decompressgzaction.h"
+#include "xenlib/utils/downloadfileaction.h"
+#include "xenlib/xen/actions/sr/srrefreshaction.h"
+#include "dialogs/actionprogressdialog.h"
 #include <QDebug>
 #include <QtWidgets>
+#include <QDomDocument>
+#include <QHeaderView>
+#include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QSet>
+#include <QStandardPaths>
+#include <QUrl>
 
 ImportWizard::ImportWizard(QWidget* parent)
-    : QWizard(parent), m_importType(ImportType_XVA), m_verifyManifest(true), m_startVMsAutomatically(false)
+    : ImportWizard(nullptr, parent)
 {
-    this->setWindowTitle(tr("Import Virtual Machine"));
-    this->setWindowIcon(QIcon(":/icons/vm-import-32.png"));
-    this->setWizardStyle(QWizard::ModernStyle);
-    this->setOption(QWizard::HaveHelpButton, true);
-    this->setOption(QWizard::HelpButtonOnRight, false);
+}
+
+ImportWizard::ImportWizard(XenConnection* connection, QWidget* parent)
+    : ImportWizard(connection, QString(), parent)
+{
+}
+
+ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFilePath, QWidget* parent)
+    : QWizard(parent)
+    , m_connection(connection)
+    , m_importType(ImportType_XVA)
+    , m_verifyManifest(true)
+    , m_verifySignature(false)
+    , m_ignoreAffinitySet(false)
+    , m_startVMsAutomatically(false)
+    , m_runFixups(false)
+    , m_ovfOnlyMode(false)
+    , m_ovfHasManifest(false)
+    , m_ovfHasSignature(false)
+    , m_ovfAllowsNetworkSriov(true)
+    , m_xvaTotalDiskSizeBytes(0)
+    , m_diskImageCapacityBytes(0)
+    , m_xvaVifCount(0)
+    , m_vcpuCount(1)
+    , m_memoryMb(512)
+    , m_bootMode(BootMode_Bios)
+    , m_assignVtpm(false)
+    , ui(new Ui::ImportWizard)
+{
+    this->ui->setupUi(this);
 
     this->setupWizardPages();
 
-    // Connect signals
     connect(this, &QWizard::currentIdChanged, this, &ImportWizard::onCurrentIdChanged);
+
+    // Pre-populate file path if one was provided (e.g. from a file association or CLI)
+    if (!initialFilePath.isEmpty())
+        this->ui->filePathEdit->setText(initialFilePath);
 
     qDebug() << "ImportWizard: Created Import Wizard";
 }
 
 void ImportWizard::setupWizardPages()
 {
-    // Add wizard pages
-    this->setPage(Page_Source, this->createSourcePage());
-    this->setPage(Page_Host, this->createHostPage());
-    this->setPage(Page_Storage, this->createStoragePage());
-    this->setPage(Page_Network, this->createNetworkPage());
-    this->setPage(Page_Options, this->createOptionsPage());
-    this->setPage(Page_Finish, this->createFinishPage());
+    QWizardPage* rbacPage = new QWizardPage(this);
+    rbacPage->setTitle(tr("Security Permissions"));
+    rbacPage->setSubTitle(tr("Review permissions required for this import."));
+    QVBoxLayout* rbacLayout = new QVBoxLayout;
+    QLabel* rbacLabel = new QLabel(rbacPage);
+    rbacLabel->setObjectName("rbacWarningLabel");
+    rbacLabel->setWordWrap(true);
+    rbacLayout->addWidget(rbacLabel);
+    rbacLayout->addStretch();
+    rbacPage->setLayout(rbacLayout);
 
-    // Set the starting page
+    this->setPage(Page_Source,      this->ui->pageSource);
+    this->setPage(Page_VmConfig,    this->ui->pageVmConfig);
+    this->setPage(Page_Eula,        this->ui->pageEula);
+    this->setPage(Page_Host,        this->ui->pageHost);
+    this->setPage(Page_Rbac,        rbacPage);
+    this->setPage(Page_Storage,     this->ui->pageStorage);
+    this->setPage(Page_Network,     this->ui->pageNetwork);
+    this->setPage(Page_Security,    this->ui->pageSecurity);
+    this->setPage(Page_Options,     this->ui->pageOptions);
+    this->setPage(Page_BootOptions, this->ui->pageBootOptions);
+    this->setPage(Page_Finish,      this->ui->pageFinish);
+
     this->setStartId(Page_Source);
+
+    // Signal connections that were previously inside the create*Page() factories
+    connect(this->ui->browseButton, &QPushButton::clicked, this, &ImportWizard::onBrowseClicked);
+    connect(this->ui->storageRescanButton, &QPushButton::clicked, this, &ImportWizard::onRescanStorageClicked);
+    connect(this->ui->runFixups, &QCheckBox::toggled, this->ui->fixupSrLabel, &QLabel::setEnabled);
+    connect(this->ui->runFixups, &QCheckBox::toggled, this->ui->fixupSrCombo, &QComboBox::setEnabled);
 }
 
-QWizardPage* ImportWizard::createSourcePage()
+ImportWizard::~ImportWizard()
 {
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Import Source"));
-    page->setSubTitle(tr("Select the file to import."));
-
-    // File selection group
-    QGroupBox* fileGroup = new QGroupBox(tr("Source File"));
-
-    QLineEdit* filePathEdit = new QLineEdit;
-    filePathEdit->setObjectName("filePathEdit");
-    filePathEdit->setPlaceholderText(tr("Select a file to import..."));
-
-    QPushButton* browseButton = new QPushButton(tr("Browse..."));
-    browseButton->setObjectName("browseButton");
-    connect(browseButton, &QPushButton::clicked, this, &ImportWizard::onBrowseClicked);
-
-    QHBoxLayout* fileLayout = new QHBoxLayout;
-    fileLayout->addWidget(filePathEdit);
-    fileLayout->addWidget(browseButton);
-    fileGroup->setLayout(fileLayout);
-
-    // Import type display
-    QGroupBox* typeGroup = new QGroupBox(tr("Import Type"));
-    QLabel* typeLabel = new QLabel(tr("Type will be detected automatically"));
-    typeLabel->setObjectName("typeLabel");
-    typeLabel->setStyleSheet("QLabel { color: #666; font-style: italic; }");
-
-    QVBoxLayout* typeLayout = new QVBoxLayout;
-    typeLayout->addWidget(typeLabel);
-    typeGroup->setLayout(typeLayout);
-
-    // File info
-    QGroupBox* infoGroup = new QGroupBox(tr("Supported Formats"));
-    QLabel* infoLabel = new QLabel(tr("• XVA files (.xva, .xva.gz) - XenServer native format\n"
-                                      "• OVF files (.ovf, .ova) - Open Virtualization Format\n"
-                                      "• VHD files (.vhd, .vmdk) - Virtual disk images"));
-    infoLabel->setWordWrap(true);
-
-    QVBoxLayout* infoLayout = new QVBoxLayout;
-    infoLayout->addWidget(infoLabel);
-    infoGroup->setLayout(infoLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(fileGroup);
-    mainLayout->addWidget(typeGroup);
-    mainLayout->addWidget(infoGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
+    delete this->ui;
 }
 
-QWizardPage* ImportWizard::createHostPage()
+int ImportWizard::nextId() const
 {
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Select Destination"));
-    page->setSubTitle(tr("Choose where to import the virtual machine."));
-
-    QLabel* hostLabel = new QLabel(tr("Target Server:"));
-    QComboBox* hostCombo = new QComboBox;
-    hostCombo->setObjectName("hostCombo");
-
-    // Add example hosts
-    hostCombo->addItem(tr("Local XenServer (xen-host-1)"), "host1");
-    hostCombo->addItem(tr("Remote XenServer (xen-host-2)"), "host2");
-    hostCombo->addItem(tr("XenServer Pool (production-pool)"), "pool1");
-
-    QLabel* storageLabel = new QLabel(tr("Default Storage:"));
-    QComboBox* storageCombo = new QComboBox;
-    storageCombo->setObjectName("defaultStorageCombo");
-    storageCombo->addItem(tr("Local storage"), "local");
-    storageCombo->addItem(tr("Shared NFS storage"), "nfs");
-    storageCombo->addItem(tr("iSCSI storage"), "iscsi");
-
-    QLabel* infoLabel = new QLabel(tr("The virtual machine will be imported to the selected server. "
-                                      "You can configure specific storage and network settings on the next pages."));
-    infoLabel->setWordWrap(true);
-    infoLabel->setStyleSheet("QLabel { color: #666; font-style: italic; }");
-
-    QFormLayout* layout = new QFormLayout;
-    layout->addRow(hostLabel, hostCombo);
-    layout->addRow(storageLabel, storageCombo);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addLayout(layout);
-    mainLayout->addWidget(infoLabel);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
+    switch (this->currentId())
+    {
+        case Page_Source:
+            if (this->m_importType == ImportType_VHD)
+                return Page_VmConfig;
+            if (this->m_importType == ImportType_OVF && this->HasOvfEulas())
+                return Page_Eula;
+            return Page_Host;
+        case Page_Eula:
+        case Page_VmConfig:
+            return Page_Host;
+        case Page_Host:
+            if (!this->m_blockingRbacMissing.isEmpty() || !this->m_affinityRbacMissing.isEmpty())
+                return Page_Rbac;
+            return Page_Storage;
+        case Page_Rbac:
+            return Page_Storage;
+        case Page_Storage:
+            if (this->m_importType == ImportType_XVA)
+                return -1;
+            return Page_Network;
+        case Page_Network:
+            if (this->m_importType == ImportType_XVA)
+                return Page_Finish;
+            if (this->m_importType == ImportType_OVF && this->OvfHasSecurity())
+                return Page_Security;
+            return Page_Options;
+        case Page_Security:
+            return Page_Options;
+        case Page_Options:
+            if (this->m_importType == ImportType_VHD)
+                return Page_BootOptions;
+            return Page_Finish;
+        case Page_BootOptions:
+            return Page_Finish;
+        default:
+            return -1;
+    }
 }
 
-QWizardPage* ImportWizard::createStoragePage()
-{
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Storage Configuration"));
-    page->setSubTitle(tr("Configure storage settings for the imported VM."));
-
-    QLabel* srLabel = new QLabel(tr("Storage Repository:"));
-    QComboBox* srCombo = new QComboBox;
-    srCombo->setObjectName("storageCombo");
-    srCombo->addItem(tr("Local storage"), "local");
-    srCombo->addItem(tr("Shared NFS storage - /export/vms"), "nfs");
-    srCombo->addItem(tr("iSCSI storage - 10.0.1.100"), "iscsi");
-
-    QCheckBox* thinProvision = new QCheckBox(tr("Use thin provisioning (if supported)"));
-    thinProvision->setObjectName("thinProvision");
-    thinProvision->setChecked(true);
-
-    QCheckBox* preserveMAC = new QCheckBox(tr("Preserve original MAC addresses"));
-    preserveMAC->setObjectName("preserveMAC");
-
-    // Storage mapping (simplified)
-    QGroupBox* mappingGroup = new QGroupBox(tr("Storage Mapping"));
-    QTextEdit* mappingText = new QTextEdit;
-    mappingText->setObjectName("storageMappingText");
-    mappingText->setMaximumHeight(100);
-    mappingText->setPlainText(tr("Virtual disks will be imported to the selected storage repository."));
-    mappingText->setReadOnly(true);
-
-    QVBoxLayout* mappingLayout = new QVBoxLayout;
-    mappingLayout->addWidget(mappingText);
-    mappingGroup->setLayout(mappingLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-
-    QFormLayout* optionsLayout = new QFormLayout;
-    optionsLayout->addRow(srLabel, srCombo);
-    optionsLayout->addRow("", thinProvision);
-    optionsLayout->addRow("", preserveMAC);
-
-    mainLayout->addLayout(optionsLayout);
-    mainLayout->addWidget(mappingGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createNetworkPage()
-{
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Network Configuration"));
-    page->setSubTitle(tr("Configure network settings for the imported VM."));
-
-    QLabel* networkLabel = new QLabel(tr("Target Network:"));
-    QComboBox* networkCombo = new QComboBox;
-    networkCombo->setObjectName("networkCombo");
-    networkCombo->addItem(tr("Pool-wide network associated with eth0"), "pool-network");
-    networkCombo->addItem(tr("Host internal management network"), "host-network");
-    networkCombo->addItem(tr("VLAN 100 (production)"), "vlan100");
-
-    // Network mapping (simplified)
-    QGroupBox* mappingGroup = new QGroupBox(tr("Network Interface Mapping"));
-    QTextEdit* mappingText = new QTextEdit;
-    mappingText->setObjectName("networkMappingText");
-    mappingText->setMaximumHeight(100);
-    mappingText->setPlainText(tr("Network interfaces will be mapped to the selected target network."));
-    mappingText->setReadOnly(true);
-
-    QVBoxLayout* mappingLayout = new QVBoxLayout;
-    mappingLayout->addWidget(mappingText);
-    mappingGroup->setLayout(mappingLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-
-    QFormLayout* networkLayout = new QFormLayout;
-    networkLayout->addRow(networkLabel, networkCombo);
-
-    mainLayout->addLayout(networkLayout);
-    mainLayout->addWidget(mappingGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createOptionsPage()
-{
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Import Options"));
-    page->setSubTitle(tr("Configure additional import options."));
-
-    // Security options (for OVF)
-    QGroupBox* securityGroup = new QGroupBox(tr("Security Options"));
-
-    QCheckBox* verifyManifest = new QCheckBox(tr("Verify digital signature and manifest"));
-    verifyManifest->setObjectName("verifyManifest");
-    verifyManifest->setChecked(true);
-
-    QLineEdit* passwordEdit = new QLineEdit;
-    passwordEdit->setObjectName("passwordEdit");
-    passwordEdit->setPlaceholderText(tr("Password (if required)"));
-    passwordEdit->setEchoMode(QLineEdit::Password);
-
-    QVBoxLayout* securityLayout = new QVBoxLayout;
-    securityLayout->addWidget(verifyManifest);
-    securityLayout->addWidget(passwordEdit);
-    securityGroup->setLayout(securityLayout);
-
-    // Import options
-    QGroupBox* importGroup = new QGroupBox(tr("Import Options"));
-
-    QCheckBox* runFixups = new QCheckBox(tr("Run operating system fixups"));
-    runFixups->setObjectName("runFixups");
-    runFixups->setChecked(true);
-
-    QCheckBox* startAfterImport = new QCheckBox(tr("Start VMs automatically after import"));
-    startAfterImport->setObjectName("startAfterImport");
-
-    QVBoxLayout* importLayout = new QVBoxLayout;
-    importLayout->addWidget(runFixups);
-    importLayout->addWidget(startAfterImport);
-    importGroup->setLayout(importLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(securityGroup);
-    mainLayout->addWidget(importGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
-
-QWizardPage* ImportWizard::createFinishPage()
-{
-    QWizardPage* page = new QWizardPage;
-    page->setTitle(tr("Ready to Import"));
-    page->setSubTitle(tr("Review the import settings and start the import process."));
-
-    QLabel* summaryLabel = new QLabel(tr("Import Summary:"));
-    QTextEdit* summaryText = new QTextEdit;
-    summaryText->setObjectName("summaryText");
-    summaryText->setReadOnly(true);
-    summaryText->setMaximumHeight(200);
-
-    // Progress section
-    QGroupBox* progressGroup = new QGroupBox(tr("Import Progress"));
-    QProgressBar* progressBar = new QProgressBar;
-    progressBar->setObjectName("progressBar");
-    progressBar->setVisible(false);
-
-    QLabel* statusLabel = new QLabel(tr("Click Finish to start the import process."));
-    statusLabel->setObjectName("statusLabel");
-
-    QVBoxLayout* progressLayout = new QVBoxLayout;
-    progressLayout->addWidget(statusLabel);
-    progressLayout->addWidget(progressBar);
-    progressGroup->setLayout(progressLayout);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout;
-    mainLayout->addWidget(summaryLabel);
-    mainLayout->addWidget(summaryText);
-    mainLayout->addWidget(progressGroup);
-    mainLayout->addStretch();
-
-    page->setLayout(mainLayout);
-    return page;
-}
 
 void ImportWizard::initializePage(int id)
 {
-    if (id == Page_Finish)
+    if (id == Page_Source)
     {
-        // Update summary on finish page
-        QTextEdit* summaryText = findChild<QTextEdit*>("summaryText");
+        if (this->m_ovfOnlyMode)
+            this->ui->pageSource->setSubTitle(tr(
+                "Select an OVF or OVA appliance file to import. "
+                "Only OVF/OVA packages are supported in this mode."));
+        else
+            this->ui->pageSource->setSubTitle(tr(
+                "Select the virtual machine or appliance file you want to import."));
+    }
+    else if (id == Page_Host)
+    {
+        this->populateHostCombo();
+        if (this->targetHasDesktopFeatures())
+        {
+            QMessageBox::information(this, tr("Import VM"),
+                                     tr("This pool or server has XenApp/XenDesktop features enabled. "
+                                        "Imported VMs may require additional configuration before use with those features."));
+        }
+    }
+    else if (id == Page_Rbac)
+        this->updateRbacPage();
+    else if (id == Page_VmConfig)
+    {
+        // Pre-fill VM name from the source file's base name
+        QLineEdit* nameEdit = this->ui->vmNameEdit;
+        if (nameEdit && nameEdit->text().isEmpty())
+        {
+            const QString baseName = QFileInfo(this->m_sourceFilePath).completeBaseName();
+            nameEdit->setText(baseName);
+        }
+
+        QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+        if (additionalDiskSpaceSpin)
+        {
+            // Keep value when navigating back/forward; only initialize once.
+            if (!additionalDiskSpaceSpin->property("initialized").toBool())
+            {
+                additionalDiskSpaceSpin->setValue(0);
+                additionalDiskSpaceSpin->setProperty("initialized", true);
+            }
+
+            // Show the currently detected base disk capacity as a hint.
+            if (this->m_diskImageCapacityBytes > 0)
+            {
+                constexpr qint64 GiB = 1024LL * 1024LL * 1024LL;
+                const qint64 baseGb = (this->m_diskImageCapacityBytes + GiB - 1) / GiB;
+                additionalDiskSpaceSpin->setToolTip(
+                    tr("Detected disk image capacity is approximately %1 GB. "
+                       "Additional space is added on top of this value.")
+                        .arg(baseGb));
+            }
+            else
+            {
+                additionalDiskSpaceSpin->setToolTip(
+                    tr("Additional space is added on top of the detected disk image capacity."));
+            }
+        }
+    }
+    else if (id == Page_Storage)
+    {
+        // Capture the host selection so populateStorageCombo can filter by PBD
+        QComboBox* hostCombo = this->ui->hostCombo;
+        if (hostCombo)
+        {
+            this->m_selectedHost = this->m_connection
+                ? this->m_connection->GetCache()->ResolveObject<Host>(hostCombo->currentData().toString())
+                : nullptr;
+        }
+        this->populateStorageCombo();
+        this->populateDiskSrTable();
+    }
+    else if (id == Page_Network)
+    {
+        // Snapshot selected host so populateNetworkComboBox can filter by PIF
+        QComboBox* hostCombo = this->ui->hostCombo;
+        if (hostCombo)
+        {
+            this->m_selectedHost = this->m_connection
+                ? this->m_connection->GetCache()->ResolveObject<Host>(hostCombo->currentData().toString())
+                : nullptr;
+        }
+        this->populateNetworkCombo();
+    }
+    else if (id == Page_Options)
+        this->populateFixupIsoCombo();
+    else if (id == Page_BootOptions)
+    {
+        // Restore the previously selected boot mode so navigating back/forward
+        // doesn't reset the user's choice.
+        QRadioButton* biosRadio       = this->ui->bootBiosRadio;
+        QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
+        QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
+        if (biosRadio && uefiRadio && uefiSecureRadio)
+        {
+            biosRadio->setChecked(this->m_bootMode == BootMode_Bios);
+            uefiRadio->setChecked(this->m_bootMode == BootMode_Uefi);
+            uefiSecureRadio->setChecked(this->m_bootMode == BootMode_UefiSecure);
+        }
+        QCheckBox* vtpmCheck = this->ui->vtpmCheck;
+        if (vtpmCheck)
+            vtpmCheck->setChecked(this->m_assignVtpm);
+    }
+    else if (id == Page_Eula)
+    {
+        // Populate tab widget with EULA texts — one tab per EULA document
+        QTabWidget* tabWidget = this->ui->eulaTabWidget;
+        if (tabWidget)
+        {
+            tabWidget->clear();
+            for (int i = 0; i < this->m_ovfEulas.size(); i++)
+            {
+                QTextEdit* textEdit = new QTextEdit;
+                textEdit->setReadOnly(true);
+                textEdit->setPlainText(this->m_ovfEulas.at(i));
+                const QString tabTitle = (this->m_ovfEulas.size() == 1)
+                    ? tr("License Agreement")
+                    : tr("License %1").arg(i + 1);
+                tabWidget->addTab(textEdit, tabTitle);
+            }
+        }
+        // Reset checkbox so user must explicitly accept on each visit
+        QCheckBox* acceptCheck = this->ui->eulaAcceptCheck;
+        if (acceptCheck)
+            acceptCheck->setChecked(false);
+    }
+    else if (id == Page_Security)
+    {
+        // Update info label and verify checkbox based on whether this package has
+        // a producer signature or just a manifest.  Matches C# ImportSecurityPage.
+        QLabel* infoLabel = this->ui->securityInfoLabel;
+        QCheckBox* verifyCheck = this->ui->securityVerifyCheck;
+        if (infoLabel)
+        {
+            if (this->m_ovfHasSignature)
+            {
+                infoLabel->setText(
+                    tr("This package contains a digital signature.\n\n"
+                       "Producer signature verification is not supported yet in this version. "
+                       "The manifest can still be verified to confirm that package contents "
+                       "have not been corrupted or tampered with."));
+            } else
+            {
+                infoLabel->setText(
+                    tr("This package contains a manifest file.\n\n"
+                       "Verifying the manifest confirms that the package contents "
+                       "have not been corrupted or tampered with."));
+            }
+        }
+        if (verifyCheck)
+        {
+            verifyCheck->setText(tr("Verify manifest content"));
+            verifyCheck->setChecked(this->m_ovfHasManifest && this->m_verifyManifest);
+            verifyCheck->setEnabled(this->m_ovfHasManifest);
+        }
+    }
+    else if (id == Page_Finish)
+    {
+        QTextEdit* summaryText = this->ui->summaryText;
         if (summaryText)
         {
-            QLineEdit* filePathEdit = findChild<QLineEdit*>("filePathEdit");
-            QString filePath = filePathEdit ? filePathEdit->text() : tr("No file selected");
+            QComboBox* hostCombo = this->ui->hostCombo;
+            QComboBox* srCombo = this->ui->storageCombo;
+            QComboBox* netCombo = this->ui->networkCombo;
+
+            QString hostText = hostCombo ? hostCombo->currentText() : tr("(none)");
+            QString srText = srCombo ? srCombo->currentText() : tr("(none)");
+            QString netText = netCombo ? netCombo->currentText() : tr("(none)");
+
+            QString typeStr;
+            switch (this->m_importType)
+            {
+                case ImportType_XVA: typeStr = tr("XVA"); break;
+                case ImportType_OVF: typeStr = tr("OVF/OVA"); break;
+                case ImportType_VHD: typeStr = tr("VHD"); break;
+            }
+
             QString summary;
-            summary += tr("Source File: %1\n").arg(filePath);
-            summary += tr("Import Type: %1\n").arg(m_importType == ImportType_XVA ? tr("XVA") : m_importType == ImportType_OVF ? tr("OVF")
-                                                                                                                               : tr("VHD"));
-            summary += tr("Target: %1\n").arg("Selected Server");
-            summary += tr("Storage: %1\n").arg("Selected Storage Repository");
-            summary += tr("Network: %1\n").arg("Selected Network");
+            summary += tr("Source File: %1\n").arg(this->m_sourceFilePath.isEmpty() ? tr("No file selected") : this->m_sourceFilePath);
+            summary += tr("Import Type: %1\n").arg(typeStr);
+            summary += tr("Target: %1\n").arg(hostText);
+            summary += tr("Storage: %1\n").arg(srText);
+            summary += tr("Network: %1\n").arg(netText);
+
+            if (this->m_importType == ImportType_VHD)
+            {
+                // VM config
+                QLineEdit* vmNameEdit = this->ui->vmNameEdit;
+                QSpinBox*  vcpuSpin  = this->ui->vcpuSpin;
+                QSpinBox*  memSpin   = this->ui->memorySpin;
+                if (vmNameEdit && !vmNameEdit->text().trimmed().isEmpty())
+                    summary += tr("VM Name: %1\n").arg(vmNameEdit->text().trimmed());
+                if (vcpuSpin)
+                    summary += tr("vCPUs: %1\n").arg(vcpuSpin->value());
+                if (memSpin)
+                    summary += tr("Memory: %1 MB\n").arg(memSpin->value());
+
+                // Boot mode (read live from the radio buttons so the summary stays in sync
+                // even if the user navigated back and changed the selection)
+                QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
+                QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
+                QString bootModeStr;
+                if (uefiSecureRadio && uefiSecureRadio->isChecked())
+                    bootModeStr = tr("UEFI Secure Boot");
+                else if (uefiRadio && uefiRadio->isChecked())
+                    bootModeStr = tr("UEFI");
+                else
+                    bootModeStr = tr("BIOS (Legacy)");
+                summary += tr("Boot Firmware: %1\n").arg(bootModeStr);
+
+                QCheckBox* vtpmCheck = this->ui->vtpmCheck;
+                if (vtpmCheck && vtpmCheck->isChecked())
+                    summary += tr("vTPM: Yes\n");
+            }
+
+            QCheckBox* startAfter = this->ui->startAfterImport;
+            if (startAfter && startAfter->isChecked())
+                summary += tr("Start automatically: Yes\n");
+            else
+                summary += tr("Start automatically: No\n");
 
             summaryText->setPlainText(summary);
         }
@@ -346,19 +410,1043 @@ void ImportWizard::initializePage(int id)
     QWizard::initializePage(id);
 }
 
+void ImportWizard::populateHostCombo()
+{
+    QComboBox* hostCombo = this->ui->hostCombo;
+    if (!hostCombo)
+        return;
+
+    hostCombo->clear();
+    hostCombo->addItem(tr("(no affinity — import to pool)"), QString());
+
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host || !host->IsValid())
+            continue;
+        QString label = host->GetName();
+        QString addr = host->GetAddress();
+        if (!addr.isEmpty())
+            label += QString(" (%1)").arg(addr);
+        hostCombo->addItem(label, host->OpaqueRef());
+    }
+}
+
+void ImportWizard::populateStorageCombo()
+{
+    QComboBox* srCombo = this->ui->storageCombo;
+    if (!srCombo)
+        return;
+
+    srCombo->clear();
+
+    if (!this->m_connection)
+    {
+        srCombo->addItem(tr("(no connection)"), QString());
+        return;
+    }
+
+    XenCache* cache = this->m_connection->GetCache();
+
+    QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+    const bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (!sr || !sr->IsValid())
+            continue;
+        if (sr->IsToolsSR())
+            continue;
+        if (sr->IsISOLibrary())
+            continue;
+        if (!sr->AllowedOperations().contains("vdi_create"))
+            continue;
+
+        // When no host affinity is set, only offer shared SRs — a local SR won't be
+        // accessible from all hosts in the pool. Matches C# StoragePickerPage behaviour.
+        if (!hasHostAffinity && !sr->IsShared())
+            continue;
+
+        // If a specific host is selected, only include SRs that have
+        // an attached (currently_attached == true) PBD for that host.
+        if (hasHostAffinity)
+        {
+            const QString hostRef = this->m_selectedHost->OpaqueRef();
+            bool attachedToHost = false;
+            const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+            for (const QSharedPointer<PBD>& pbd : pbds)
+            {
+                if (!pbd || !pbd->IsValid())
+                    continue;
+                if (pbd->GetHostRef() == hostRef && pbd->IsCurrentlyAttached())
+                {
+                    attachedToHost = true;
+                    break;
+                }
+            }
+            if (!attachedToHost)
+                continue;
+        }
+
+        srCombo->addItem(sr->GetName(), sr->OpaqueRef());
+    }
+
+    if (srCombo->count() == 0)
+        srCombo->addItem(tr("(no suitable storage repositories found)"), QString());
+}
+
+void ImportWizard::fillSrCombo(QComboBox* combo)
+{
+    if (!combo)
+        return;
+
+    combo->clear();
+
+    if (!this->m_connection)
+    {
+        combo->addItem(tr("(no connection)"), QString());
+        return;
+    }
+
+    // Mirror populateStorageCombo() filtering logic
+    XenCache* cache = this->m_connection->GetCache();
+    const bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
+    const QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (!sr || !sr->IsValid())
+            continue;
+        if (sr->IsToolsSR() || sr->IsISOLibrary())
+            continue;
+        if (!sr->AllowedOperations().contains("vdi_create"))
+            continue;
+        if (!hasHostAffinity && !sr->IsShared())
+            continue;
+        if (hasHostAffinity)
+        {
+            const QString hostRef = this->m_selectedHost->OpaqueRef();
+            bool attachedToHost = false;
+            const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+            for (const QSharedPointer<PBD>& pbd : pbds)
+            {
+                if (pbd && pbd->IsValid() && pbd->GetHostRef() == hostRef && pbd->IsCurrentlyAttached())
+                {
+                    attachedToHost = true;
+                    break;
+                }
+            }
+            if (!attachedToHost)
+                continue;
+        }
+        combo->addItem(sr->GetName(), sr->OpaqueRef());
+    }
+
+    if (combo->count() == 0)
+        combo->addItem(tr("(no suitable storage repositories found)"), QString());
+}
+
+void ImportWizard::populateDiskSrTable()
+{
+    QTableWidget* table  = this->ui->diskSrTable;
+    QLabel*       label  = this->ui->diskSrLabel;
+    if (!table || !label)
+        return;
+
+    // Only show for OVF imports with known disk hrefs
+    if (this->m_importType != ImportType_OVF || this->m_ovfDiskHrefs.isEmpty())
+    {
+        table->setVisible(false);
+        label->setVisible(false);
+        return;
+    }
+
+    label->setVisible(true);
+    table->setVisible(true);
+    table->setRowCount(0);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+
+    // Snapshot the default SR so each per-disk combo can default to it
+    const QString defaultSrRef = this->ui->storageCombo
+        ? this->ui->storageCombo->currentData().toString()
+        : QString();
+
+    for (const QString& href : this->m_ovfDiskHrefs)
+    {
+        const int row = table->rowCount();
+        table->insertRow(row);
+
+        // Column 0: disk file name (display only)
+        QTableWidgetItem* nameItem = new QTableWidgetItem(QFileInfo(href).fileName());
+        nameItem->setFlags(Qt::ItemIsEnabled);
+        nameItem->setData(Qt::UserRole, href);   // store full href for lookup
+        table->setItem(row, 0, nameItem);
+
+        // Column 1: SR combo with same entries as storageCombo
+        QComboBox* srCombo = new QComboBox(table);
+        this->fillSrCombo(srCombo);
+
+        // Select the default SR when present
+        const int defaultIdx = srCombo->findData(defaultSrRef);
+        if (defaultIdx >= 0)
+            srCombo->setCurrentIndex(defaultIdx);
+
+        table->setCellWidget(row, 1, srCombo);
+    }
+}
+
+void ImportWizard::populateNetworkComboBox(QComboBox* combo)
+{
+    if (!combo)
+        return;
+
+    combo->clear();
+    combo->addItem(tr("(do not attach)"), QString());
+
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+
+    // When a specific host is selected, record its PIF refs for filtering.
+    // When no host is selected (no affinity), we build a per-host PIF map so that we
+    // can include only networks that are visible on ALL hosts in the pool.
+    QSet<QString> selectedHostPifRefs;
+    QMap<QString, QSet<QString>> pifRefsByHost; // hostRef → set of PIF refs that host carries
+    bool hasHostAffinity = (this->m_selectedHost && this->m_selectedHost->IsValid());
+
+    if (hasHostAffinity)
+    {
+        const QStringList refs = this->m_selectedHost->GetPIFRefs();
+        selectedHostPifRefs = QSet<QString>(refs.begin(), refs.end());
+    }
+    else
+    {
+        // No affinity — collect PIF sets for every host so we can intersect later
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (!host || !host->IsValid())
+                continue;
+            const QStringList refs = host->GetPIFRefs();
+            pifRefsByHost[host->OpaqueRef()] = QSet<QString>(refs.begin(), refs.end());
+        }
+    }
+
+    QList<QSharedPointer<Network>> networks = cache->GetAll<Network>();
+    for (const QSharedPointer<Network>& net : networks)
+    {
+        if (!net || !net->IsValid())
+            continue;
+
+        // Use Network::Show() — covers guest-installer, member, hidden-from-xencenter checks
+        if (!net->Show(false))
+            continue;
+
+        // When OVF recommendations prohibit SR-IOV (allow-network-sriov == 0), hide SR-IOV
+        // backed networks.  Matches C# ImportSelectNetworkPage.AllowSriovNetwork() logic.
+        if (!this->m_ovfAllowsNetworkSriov && net->IsSriov())
+            continue;
+
+        const QStringList netPifRefs = net->GetPIFRefs();
+        const bool isInternal = netPifRefs.isEmpty();
+
+        if (hasHostAffinity)
+        {
+            // Include only networks with a PIF on the selected host, or internal networks
+            if (!isInternal)
+            {
+                const QSet<QString> netPifSet(netPifRefs.begin(), netPifRefs.end());
+                if ((selectedHostPifRefs & netPifSet).isEmpty())
+                    continue;
+            }
+        }
+        else if (!pifRefsByHost.isEmpty())
+        {
+            // No affinity: include only networks visible to ALL hosts (or internal)
+            if (!isInternal)
+            {
+                const QSet<QString> netPifSet(netPifRefs.begin(), netPifRefs.end());
+                bool visibleOnAllHosts = true;
+                for (auto it = pifRefsByHost.constBegin(); it != pifRefsByHost.constEnd(); ++it)
+                {
+                    if ((it.value() & netPifSet).isEmpty())
+                    {
+                        visibleOnAllHosts = false;
+                        break;
+                    }
+                }
+                if (!visibleOnAllHosts)
+                    continue;
+            }
+        }
+
+        combo->addItem(net->GetName(), net->OpaqueRef());
+    }
+}
+
+// ─── MAC helpers ─────────────────────────────────────────────────────────────
+
+bool ImportWizard::isValidMac(const QString& mac)
+{
+    if (mac.isEmpty())
+        return true;    // empty = auto-generate, always valid
+    static const QRegularExpression re("^([0-9A-Fa-f]{2}[:\\-]){5}[0-9A-Fa-f]{2}$");
+    return re.match(mac).hasMatch();
+}
+
+QString ImportWizard::generateMac()
+{
+    // Locally-administered, unicast prefix: 02:xx:xx:xx:xx:xx
+    QRandomGenerator* rng = QRandomGenerator::global();
+    return QString("02:%1:%2:%3:%4:%5")
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'))
+        .arg(rng->bounded(256), 2, 16, QChar('0'));
+}
+
+bool ImportWizard::isSourceUri(const QString& text) const
+{
+    const QUrl url(text);
+    if (!url.isValid() || url.scheme().isEmpty())
+        return false;
+    const QString scheme = url.scheme().toLower();
+    return scheme == "http" || scheme == "https";
+}
+
+bool ImportWizard::downloadUrlToFile(const QUrl& url, const QString& destPath, bool optional)
+{
+    if (QFile::exists(destPath))
+        QFile::remove(destPath);
+
+    DownloadFileAction* op = new DownloadFileAction(url, destPath, this);
+    ActionProgressDialog dlg(op, this);
+    dlg.setShowCancel(true);
+    dlg.exec();
+
+    const bool ok = !op->IsCancelled() && !op->IsFailed() && QFile::exists(destPath);
+    if (!ok)
+    {
+        QFile::remove(destPath);
+        if (!optional && op->IsFailed())
+        {
+            QMessageBox::warning(this, tr("Download Failed"),
+                                 tr("Could not download %1:\n%2")
+                                 .arg(url.toString(), op->GetErrorMessage()));
+        }
+    }
+
+    return ok;
+}
+
+bool ImportWizard::downloadSourceUri(QString& filePath)
+{
+    const QUrl sourceUrl(filePath);
+    if (!sourceUrl.isValid() || sourceUrl.fileName().isEmpty())
+    {
+        QMessageBox::warning(this, tr("Invalid URI"),
+                             tr("The import URI is invalid or does not include a file name."));
+        return false;
+    }
+
+    QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (downloadDir.isEmpty())
+        downloadDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QDir().mkpath(downloadDir);
+
+    const QString localPath = QDir(downloadDir).filePath(sourceUrl.fileName());
+    if (QFile::exists(localPath))
+    {
+        const QMessageBox::StandardButton reply = QMessageBox::question(
+            this, tr("Overwrite Download"),
+            tr("The downloaded file already exists:\n%1\n\nOverwrite it?").arg(localPath),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes)
+            return false;
+    }
+
+    if (!this->downloadUrlToFile(sourceUrl, localPath))
+        return false;
+
+    filePath = localPath;
+
+    if (localPath.endsWith(".ovf", Qt::CaseInsensitive) && !this->downloadRelatedOvfFiles(localPath, sourceUrl))
+        return false;
+
+    return true;
+}
+
+bool ImportWizard::downloadRelatedOvfFiles(const QString& ovfPath, const QUrl& sourceUrl)
+{
+    OvfPackage pkg(ovfPath);
+    if (!pkg.IsValid())
+        return true;
+
+    QFileInfo ovfInfo(ovfPath);
+    QUrl baseUrl = sourceUrl;
+    baseUrl.setPath(sourceUrl.path().left(sourceUrl.path().lastIndexOf('/') + 1));
+    QDir localDir = ovfInfo.absoluteDir();
+    const QString localBasePath = localDir.absolutePath();
+
+    const QStringList diskRefs = pkg.DiskFileRefs();
+    for (const QString& href : diskRefs)
+    {
+        if (href.isEmpty())
+            continue;
+
+        const QString localPath = QDir::cleanPath(localDir.filePath(href));
+        if (!localPath.startsWith(localBasePath + QDir::separator()) && localPath != localBasePath)
+        {
+            QMessageBox::warning(this, tr("Invalid OVF Reference"),
+                                 tr("The OVF package references a file outside the download directory:\n%1").arg(href));
+            return false;
+        }
+
+        if (QFile::exists(localPath))
+            continue;
+
+        QDir().mkpath(QFileInfo(localPath).absolutePath());
+        const QUrl relUrl = baseUrl.resolved(QUrl(href));
+        if (!this->downloadUrlToFile(relUrl, localPath))
+            return false;
+    }
+
+    const QString baseName = ovfInfo.completeBaseName();
+    const QStringList optionalRefs = QStringList() << (baseName + ".mf") << (baseName + ".cert");
+    for (const QString& href : optionalRefs)
+    {
+        const QString localPath = localDir.filePath(QFileInfo(href).fileName());
+        if (QFile::exists(localPath))
+            continue;
+        const QUrl relUrl = baseUrl.resolved(QUrl(href));
+        this->downloadUrlToFile(relUrl, localPath, true);
+    }
+
+    return true;
+}
+
+bool ImportWizard::hasApiPermissions(const QStringList& methods, QStringList* missing) const
+{
+    if (missing)
+        missing->clear();
+    if (!this->m_connection || !this->m_connection->GetSession())
+        return true;
+
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (session->IsLocalSuperuser())
+        return true;
+
+    const QStringList permissions = session->GetPermissions();
+    if (permissions.isEmpty())
+        return true;
+
+    QSet<QString> permissionSet;
+    for (const QString& permission : permissions)
+        permissionSet.insert(permission.toLower());
+
+    QStringList missingMethods;
+    for (const QString& method : methods)
+    {
+        if (!permissionSet.contains(method.toLower()))
+            missingMethods << method;
+    }
+
+    if (missing)
+        *missing = missingMethods;
+    return missingMethods.isEmpty();
+}
+
+bool ImportWizard::targetHasDesktopFeatures() const
+{
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return false;
+
+    const QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host || !host->IsValid())
+            continue;
+        const QString edition = host->Edition().toLower();
+        if (edition == "desktop" || edition == "desktopplus" || edition == "desktop_cloud" || edition == "desktopcloud")
+            return true;
+    }
+
+    return false;
+}
+
+void ImportWizard::updateRbacPage()
+{
+    QLabel* label = this->page(Page_Rbac)->findChild<QLabel*>("rbacWarningLabel");
+    if (!label)
+        return;
+
+    QStringList lines;
+    if (!this->m_blockingRbacMissing.isEmpty())
+    {
+        lines << tr("Your current role is missing permissions required to import this package:");
+        for (const QString& method : this->m_blockingRbacMissing)
+            lines << tr("- %1").arg(method);
+        lines << QString();
+        lines << tr("The import cannot continue with the current role.");
+    }
+    else if (!this->m_affinityRbacMissing.isEmpty())
+    {
+        lines << tr("Your current role cannot set VM home-server affinity.");
+        lines << tr("The VM will be imported without host affinity.");
+    }
+
+    label->setText(lines.join("\n"));
+}
+
+void ImportWizard::populateNetworkCombo()
+{
+    QGroupBox* xvaNetGroup = this->ui->xvaNetGroup;
+    QGroupBox* ovfMappingGroup = this->ui->ovfMappingGroup;
+    QWidget* ovfMappingContainer = this->ui->ovfMappingContainer;
+
+    // ── Helper: rebuild the ovfMappingContainer layout ────────────────────────
+    auto clearMappingContainer = [](QWidget* container)
+    {
+        QLayout* old = container->layout();
+        if (old)
+        {
+            QLayoutItem* item = nullptr;
+            while ((item = old->takeAt(0)) != nullptr)
+            {
+                if (item->widget())
+                    item->widget()->deleteLater();
+                delete item;
+            }
+            delete old;
+        }
+    };
+
+    if (this->m_importType == ImportType_OVF && !this->m_ovfNetworkNames.isEmpty())
+    {
+        // OVF path: show per-network mapping rows with network combo + MAC field + Generate button
+        if (xvaNetGroup)
+            xvaNetGroup->setVisible(false);
+
+        if (ovfMappingContainer)
+        {
+            clearMappingContainer(ovfMappingContainer);
+
+            QFormLayout* form = new QFormLayout;
+            for (int i = 0; i < this->m_ovfNetworkNames.size(); i++)
+            {
+                // Network combo
+                QComboBox* combo = new QComboBox;
+                combo->setObjectName("ovfNetCombo_" + QString::number(i));
+                this->populateNetworkComboBox(combo);
+
+                // MAC address field
+                QLineEdit* macEdit = new QLineEdit;
+                macEdit->setObjectName("ovfMacEdit_" + QString::number(i));
+                macEdit->setPlaceholderText(tr("Leave empty to auto-generate"));
+                macEdit->setMaximumWidth(145);
+                macEdit->setInputMask("HH:HH:HH:HH:HH:HH;_");
+
+                // Generate button
+                QPushButton* genBtn = new QPushButton(tr("Generate"));
+                genBtn->setObjectName("ovfMacGenBtn_" + QString::number(i));
+                genBtn->setFixedWidth(80);
+                connect(genBtn, &QPushButton::clicked, macEdit, [macEdit]()
+                {
+                    macEdit->setText(ImportWizard::generateMac());
+                });
+
+                // Row widget: [combo] [MAC edit] [Generate]
+                QHBoxLayout* rowLayout = new QHBoxLayout;
+                rowLayout->setContentsMargins(0, 0, 0, 0);
+                rowLayout->addWidget(combo, 1);
+                rowLayout->addWidget(macEdit);
+                rowLayout->addWidget(genBtn);
+                QWidget* rowWidget = new QWidget;
+                rowWidget->setLayout(rowLayout);
+
+                form->addRow(this->m_ovfNetworkNames.at(i), rowWidget);
+            }
+            ovfMappingContainer->setLayout(form);
+        }
+
+        if (ovfMappingGroup)
+            ovfMappingGroup->setVisible(true);
+    }
+    else if (this->m_importType == ImportType_XVA && this->m_xvaImportedVm && this->m_connection)
+    {
+        // XVA path with discovered VM: build one row per VIF using cached VIF objects
+        XenCache* cache = this->m_connection->GetCache();
+        const QString vmRef = this->m_xvaImportedVm->OpaqueRef();
+
+        // Collect VIFs belonging to this VM, sort by device number
+        QList<QSharedPointer<VIF>> vifs;
+        if (cache)
+        {
+            const auto allVifs = cache->GetAll<VIF>();
+            for (const auto& vif : allVifs)
+            {
+                if (vif && vif->IsValid() && vif->GetVMRef() == vmRef)
+                    vifs << vif;
+            }
+            std::sort(vifs.begin(), vifs.end(), [](const QSharedPointer<VIF>& a, const QSharedPointer<VIF>& b)
+            {
+                return a->GetDevice().toInt() < b->GetDevice().toInt();
+            });
+        }
+
+        this->m_xvaVifCount = vifs.size();
+
+        if (!vifs.isEmpty())
+        {
+            // Show per-VIF rows in ovfMappingGroup (repurposed for XVA VIF rows)
+            if (xvaNetGroup)
+                xvaNetGroup->setVisible(false);
+
+            if (ovfMappingContainer)
+            {
+                clearMappingContainer(ovfMappingContainer);
+
+                QVBoxLayout* containerLayout = new QVBoxLayout;
+                containerLayout->setContentsMargins(0, 0, 0, 0);
+
+                QHBoxLayout* controlsLayout = new QHBoxLayout;
+                controlsLayout->addStretch();
+                QPushButton* addVifButton = new QPushButton(tr("+ Add VIF"));
+                addVifButton->setObjectName("xvaAddVifButton");
+                controlsLayout->addWidget(addVifButton);
+                containerLayout->addLayout(controlsLayout);
+
+                QFormLayout* form = new QFormLayout;
+                containerLayout->addLayout(form);
+
+                auto refreshXvaRows = [this, form]()
+                {
+                    const int rowCount = form->rowCount();
+                    this->m_xvaVifCount = rowCount;
+
+                    for (int row = 0; row < rowCount; ++row)
+                    {
+                        QLayoutItem* labelItem = form->itemAt(row, QFormLayout::LabelRole);
+                        QLabel* rowLabel = qobject_cast<QLabel*>(labelItem ? labelItem->widget() : nullptr);
+                        if (rowLabel)
+                            rowLabel->setText(tr("eth%1 (VIF %1)").arg(row));
+
+                        QLayoutItem* fieldItem = form->itemAt(row, QFormLayout::FieldRole);
+                        QWidget* rowWidget = fieldItem ? fieldItem->widget() : nullptr;
+                        if (!rowWidget)
+                            continue;
+
+                        QComboBox* combo = rowWidget->findChild<QComboBox*>();
+                        if (combo)
+                        {
+                            combo->setObjectName("xvaVifCombo_" + QString::number(row));
+                            combo->setProperty("xvaVifIndex", row);
+                        }
+                    }
+                };
+
+                auto addXvaRow = [this, form, refreshXvaRows](const QString& preselectNetRef)
+                {
+                    QWidget* rowWidget = new QWidget;
+                    QHBoxLayout* rowLayout = new QHBoxLayout;
+                    rowLayout->setContentsMargins(0, 0, 0, 0);
+
+                    QComboBox* combo = new QComboBox;
+                    this->populateNetworkComboBox(combo);
+                    if (!preselectNetRef.isEmpty())
+                    {
+                        const int idx = combo->findData(preselectNetRef);
+                        if (idx >= 0)
+                            combo->setCurrentIndex(idx);
+                    }
+
+                    QPushButton* removeButton = new QPushButton(tr("-") );
+                    removeButton->setObjectName("xvaRemoveVifButton");
+                    removeButton->setToolTip(tr("Remove this VIF mapping"));
+                    removeButton->setFixedWidth(28);
+
+                    rowLayout->addWidget(combo, 1);
+                    rowLayout->addWidget(removeButton);
+                    rowWidget->setLayout(rowLayout);
+
+                    form->addRow(QString(), rowWidget);
+
+                    connect(removeButton, &QPushButton::clicked, rowWidget,
+                        [form, rowWidget, refreshXvaRows]()
+                        {
+                            if (form->rowCount() <= 1)
+                                return;
+
+                            form->removeRow(rowWidget);
+                            rowWidget->deleteLater();
+                            refreshXvaRows();
+                        });
+
+                    refreshXvaRows();
+                };
+
+                for (const auto& vif : vifs)
+                    addXvaRow(vif->GetNetworkRef());
+
+                connect(addVifButton, &QPushButton::clicked, ovfMappingContainer,
+                    [addXvaRow]()
+                    {
+                        addXvaRow(QString());
+                    });
+
+                ovfMappingContainer->setLayout(containerLayout);
+            }
+
+            if (ovfMappingGroup)
+            {
+                ovfMappingGroup->setTitle(tr("Network Interfaces"));
+                ovfMappingGroup->setVisible(true);
+            }
+        }
+        else
+        {
+            // No VIFs in cache yet — fall back to single combo
+            this->m_xvaVifCount = 0;
+            if (ovfMappingGroup)
+                ovfMappingGroup->setVisible(false);
+
+            QComboBox* networkCombo = this->ui->networkCombo;
+            this->populateNetworkComboBox(networkCombo);
+
+            if (xvaNetGroup)
+                xvaNetGroup->setVisible(true);
+        }
+    }
+    else
+    {
+        // XVA (pre-discovery) / VHD / VMDK: use the single networkCombo
+        this->m_xvaVifCount = 0;
+        if (ovfMappingGroup)
+            ovfMappingGroup->setVisible(false);
+
+        QComboBox* networkCombo = this->ui->networkCombo;
+        this->populateNetworkComboBox(networkCombo);
+
+        if (xvaNetGroup)
+            xvaNetGroup->setVisible(true);
+    }
+}
+
+void ImportWizard::populateFixupIsoCombo()
+{
+    QComboBox* fixupSrCombo = this->ui->fixupSrCombo;
+    if (!fixupSrCombo)
+        return;
+
+    fixupSrCombo->clear();
+    fixupSrCombo->addItem(tr("(none)"), QString());
+
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    // Fixup ISO SR must be an ISO library (type == "iso") with at least one VDI
+    QList<QSharedPointer<SR>> srs = cache->GetAll<SR>();
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (!sr || !sr->IsValid())
+            continue;
+        if (!sr->IsISOLibrary())
+            continue;
+        if (sr->IsToolsSR())
+            continue;
+        fixupSrCombo->addItem(sr->GetName(), sr->OpaqueRef());
+    }
+}
+
+void ImportWizard::updateOvfMetadataDisplay()
+{
+    QGroupBox* group = this->ui->ovfMetaGroup;
+    QLabel* label = this->ui->ovfMetaLabel;
+    if (!group || !label)
+        return;
+
+    if (this->m_importType != ImportType_OVF || this->m_ovfVirtualSystemNames.isEmpty())
+    {
+        group->setVisible(false);
+        return;
+    }
+
+    QStringList lines;
+
+    if (!this->m_ovfPackageName.isEmpty())
+        lines << tr("<b>Package:</b> %1").arg(this->m_ovfPackageName.toHtmlEscaped());
+
+    const int vmCount = this->m_ovfVirtualSystemNames.size();
+    if (vmCount == 1)
+        lines << tr("<b>Virtual machine:</b> %1").arg(this->m_ovfVirtualSystemNames.first().toHtmlEscaped());
+    else if (vmCount > 1)
+        lines << tr("<b>Virtual machines (%1):</b> %2").arg(vmCount)
+                                                       .arg(this->m_ovfVirtualSystemNames.join(", ").toHtmlEscaped());
+
+    if (!this->m_ovfNetworkNames.isEmpty())
+        lines << tr("<b>Networks:</b> %1").arg(this->m_ovfNetworkNames.join(", ").toHtmlEscaped());
+
+    if (!this->m_ovfEulas.isEmpty())
+        lines << tr("<b>EULA:</b> This package contains a license agreement that you must accept.");
+
+    if (this->m_ovfHasManifest)
+        lines << tr("<b>Manifest:</b> Present");
+
+    if (this->m_ovfHasSignature)
+        lines << tr("<b>Signature:</b> Present");
+
+    label->setText(lines.join("<br>"));
+    group->setVisible(true);
+}
+
+void ImportWizard::updateXvaMetadataDisplay()
+{
+    QGroupBox* group = this->ui->xvaMetaGroup;
+    QLabel* label = this->ui->xvaMetaLabel;
+    if (!group || !label)
+        return;
+
+    if (this->m_importType != ImportType_XVA || this->m_xvaVmNames.isEmpty())
+    {
+        group->setVisible(false);
+        return;
+    }
+
+    QStringList lines;
+
+    const int vmCount = this->m_xvaVmNames.size();
+    if (vmCount == 1)
+        lines << tr("<b>Virtual machine:</b> %1").arg(this->m_xvaVmNames.first().toHtmlEscaped());
+    else if (vmCount > 1)
+        lines << tr("<b>Virtual machines (%1):</b> %2").arg(vmCount)
+                                                       .arg(this->m_xvaVmNames.join(", ").toHtmlEscaped());
+
+    if (this->m_xvaTotalDiskSizeBytes > 0)
+    {
+        double gb = static_cast<double>(this->m_xvaTotalDiskSizeBytes) / (1024.0 * 1024.0 * 1024.0);
+        lines << tr("<b>Total disk size:</b> %1 GB").arg(gb, 0, 'f', 1);
+    }
+
+    label->setText(lines.join("<br>"));
+    group->setVisible(true);
+}
+
+bool ImportWizard::inspectXvaTar(const QString& filePath)
+{
+    QFile f(filePath);
+    if (!f.open(QIODevice::ReadOnly))
+        return false;
+
+    // Read first TAR header block (512 bytes)
+    QByteArray headerBlock = f.read(512);
+    if (headerBlock.size() < 512)
+    {
+        f.close();
+        return false;
+    }
+
+    // Parse filename — NUL-terminated in bytes 0..99
+    const QByteArray nameField = headerBlock.left(100);
+    const int nulPos = nameField.indexOf('\0');
+    const QString entryName = (nulPos > 0) ? QString::fromLatin1(nameField.left(nulPos))
+                                            : QString::fromLatin1(nameField);
+
+    if (entryName != "ova.xml")
+    {
+        f.close();
+        return false;
+    }
+
+    // Parse file size from octal field at bytes 124..135
+    bool ok = false;
+    const QByteArray sizeField = headerBlock.mid(124, 12);
+    qint64 fileSize = sizeField.trimmed().toLongLong(&ok, 8);
+    if (!ok || fileSize <= 0 || fileSize > 10 * 1024 * 1024)
+    {
+        f.close();
+        return false;
+    }
+
+    // Read ova.xml content (skip TAR checksum/type fields — data starts right after header)
+    const QByteArray ovaXmlData = f.read(fileSize);
+    f.close();
+
+    if (ovaXmlData.size() != fileSize)
+        return false;
+
+    // Parse ova.xml
+    // XVA ova.xml structure:
+    //   <appliance> <vm handle="0"> ... <name>label</name> ... </vm>
+    //               <vdi handle="1"> ... <virtual_size>bytes</virtual_size> ... </vdi>
+    //   </appliance>
+    QDomDocument doc;
+    QString parseError;
+    if (!doc.setContent(ovaXmlData, &parseError))
+    {
+        qDebug() << "ImportWizard: failed to parse ova.xml:" << parseError;
+        return false;
+    }
+
+    const QDomElement root = doc.documentElement();
+
+    // Collect VM names
+    const QDomNodeList vmNodes = root.elementsByTagName("vm");
+    for (int i = 0; i < vmNodes.count(); i++)
+    {
+        const QDomElement vmEl = vmNodes.at(i).toElement();
+        const QDomNodeList nameNodes = vmEl.elementsByTagName("name");
+        if (nameNodes.count() > 0)
+        {
+            const QString name = nameNodes.at(0).toElement().text().trimmed();
+            if (!name.isEmpty())
+                this->m_xvaVmNames << name;
+        }
+    }
+
+    // Collect total virtual disk size
+    const QDomNodeList vdiNodes = root.elementsByTagName("vdi");
+    for (int i = 0; i < vdiNodes.count(); i++)
+    {
+        const QDomElement vdiEl = vdiNodes.at(i).toElement();
+        const QDomNodeList sizeNodes = vdiEl.elementsByTagName("virtual_size");
+        if (sizeNodes.count() > 0)
+        {
+            bool szOk = false;
+            const qint64 sz = sizeNodes.at(0).toElement().text().trimmed().toLongLong(&szOk);
+            if (szOk && sz > 0)
+                this->m_xvaTotalDiskSizeBytes += sz;
+        }
+    }
+
+    return !this->m_xvaVmNames.isEmpty();
+}
+
+bool ImportWizard::inspectDiskImage(const QString& filePath)
+{
+    this->m_diskImageCapacityBytes = 0;
+    this->m_diskImageFormatName.clear();
+
+    QFile f(filePath);
+    if (!f.open(QIODevice::ReadOnly))
+        return false;
+
+    // VHD: last 512 bytes are the footer.
+    // Cookie at footer offset 0 is "conectix" (8 bytes).
+    // Original size (virtual disk capacity) is at footer offset 40, big-endian uint64.
+    const qint64 fileSize = f.size();
+    if (fileSize >= 512)
+    {
+        // Read the first 512 bytes to detect magic inline with detectImportType(),
+        // but for capacity we need the footer (last 512 bytes).
+        if (f.seek(fileSize - 512))
+        {
+            const QByteArray footer = f.read(512);
+            if (footer.size() == 512 && footer.startsWith("conectix"))
+            {
+                // VHD footer: bytes 40-47 = original size (big-endian uint64)
+                quint64 capacity = 0;
+                for (int i = 0; i < 8; i++)
+                    capacity = (capacity << 8) | static_cast<quint8>(footer.at(40 + i));
+                if (capacity > 0)
+                {
+                    this->m_diskImageCapacityBytes = static_cast<qint64>(capacity);
+                    this->m_diskImageFormatName = "VHD";
+                    f.close();
+                    return true;
+                }
+            }
+        }
+    }
+
+    // VMDK: sparse extent has a 4-byte little-endian magic 0x564D444B at offset 0.
+    // Capacity is a uint64 at offset 8 in the header (sector count; multiply by 512 for bytes).
+    if (f.seek(0))
+    {
+        const QByteArray header = f.read(16);
+        if (header.size() >= 16)
+        {
+            const quint32 magic =
+                static_cast<quint32>(static_cast<quint8>(header.at(0)))        |
+                (static_cast<quint32>(static_cast<quint8>(header.at(1))) << 8)  |
+                (static_cast<quint32>(static_cast<quint8>(header.at(2))) << 16) |
+                (static_cast<quint32>(static_cast<quint8>(header.at(3))) << 24);
+
+            if (magic == 0x564D444B) // "KDMV" little-endian
+            {
+                quint64 sectors = 0;
+                for (int i = 0; i < 8; i++)
+                    sectors |= (static_cast<quint64>(static_cast<quint8>(header.at(8 + i))) << (8 * i));
+                if (sectors > 0)
+                {
+                    this->m_diskImageCapacityBytes = static_cast<qint64>(sectors) * 512;
+                    this->m_diskImageFormatName = "VMDK";
+                    f.close();
+                    return true;
+                }
+            }
+        }
+    }
+
+    f.close();
+    return false;
+}
+
+void ImportWizard::updateDiskImageDisplay()
+{
+    QGroupBox* group = this->ui->diskMetaGroup;
+    QLabel* label = this->ui->diskMetaLabel;
+    if (!group || !label)
+        return;
+
+    if ((this->m_importType != ImportType_VHD) || this->m_diskImageCapacityBytes <= 0)
+    {
+        group->setVisible(false);
+        return;
+    }
+
+    QStringList lines;
+    lines << tr("<b>Format:</b> %1").arg(this->m_diskImageFormatName.toHtmlEscaped());
+    const double gb = static_cast<double>(this->m_diskImageCapacityBytes) / (1024.0 * 1024.0 * 1024.0);
+    lines << tr("<b>Virtual disk capacity:</b> %1 GB").arg(gb, 0, 'f', 1);
+
+    label->setText(lines.join("<br>"));
+    group->setVisible(true);
+}
+
 bool ImportWizard::validateCurrentPage()
 {
     int currentId = this->currentId();
 
     if (currentId == Page_Source)
     {
-        QLineEdit* filePathEdit = findChild<QLineEdit*>("filePathEdit");
+        QLineEdit* filePathEdit = this->ui->filePathEdit;
         QString filePath = filePathEdit ? filePathEdit->text().trimmed() : QString();
         if (filePath.isEmpty())
         {
             QMessageBox::warning(this, tr("Invalid Input"),
                                  tr("Please select a file to import."));
             return false;
+        }
+
+        if (this->isSourceUri(filePath))
+        {
+            if (!this->downloadSourceUri(filePath))
+                return false;
+            if (filePathEdit)
+                filePathEdit->setText(filePath);
         }
 
         if (!QFile::exists(filePath))
@@ -368,8 +1456,52 @@ bool ImportWizard::validateCurrentPage()
             return false;
         }
 
-        // Detect and validate import type
-        QString detectedType = detectImportType(filePath);
+        // ── Decompress .gz files before any further processing ────────────
+        // C# equivalent: ImportSourcePage.Uncompress() / _unzipWorker_DoWork()
+        // We decompress to a sibling file (same dir, without the .gz suffix).
+        // The decompressed file is what the rest of the wizard and the action use.
+        if (filePath.endsWith(".gz", Qt::CaseInsensitive))
+        {
+#ifdef XENADMIN_NO_ZLIB
+            QMessageBox::warning(this, tr("Unsupported File"),
+                                 tr("Gzip-compressed imports are not available in this build. "
+                                    "Please decompress the file first and select the uncompressed file."));
+            return false;
+#else
+            // Compute output path: strip .gz suffix
+            const QString decompPath = filePath.left(filePath.length() - 3);
+
+            if (QFile::exists(decompPath))
+            {
+                const auto reply = QMessageBox::question(
+                    this, tr("File Already Exists"),
+                    tr("The decompressed file already exists:\n%1\n\nOverwrite it?").arg(decompPath),
+                    QMessageBox::Yes | QMessageBox::No);
+                if (reply != QMessageBox::Yes)
+                    return false;
+                QFile::remove(decompPath);
+            }
+
+            DecompressGzAction* op = new DecompressGzAction(filePath, decompPath, this);
+            ActionProgressDialog dlg(op, this);
+            dlg.setShowCancel(true);
+            dlg.exec();  // starts the op via showEvent, blocks until done or closed
+
+            if (op->IsCancelled() || op->IsFailed())
+            {
+                QFile::remove(decompPath);  // clean up partial output if any
+                return false;
+            }
+
+            // Update file path and the UI line edit to the decompressed file
+            filePath = decompPath;
+            if (filePathEdit)
+                filePathEdit->setText(filePath);
+#endif
+        }
+
+        // Detect and validate import type; caches result in m_importType
+        QString detectedType = this->detectImportType(filePath);
         if (detectedType.isEmpty())
         {
             QMessageBox::warning(this, tr("Unsupported File"),
@@ -377,12 +1509,249 @@ bool ImportWizard::validateCurrentPage()
             return false;
         }
 
-        // Update UI with detected type
-        QLabel* typeLabel = findChild<QLabel*>("typeLabel");
-        if (typeLabel)
+        if (this->m_ovfOnlyMode && this->m_importType != ImportType_OVF)
         {
-            typeLabel->setText(tr("Detected: %1").arg(detectedType));
+            QMessageBox::warning(this, tr("Unsupported File"), tr("This import mode supports OVF/OVA files only."));
+            return false;
         }
+
+        if (this->m_importType == ImportType_VHD && filePath.endsWith(".vmdk", Qt::CaseInsensitive))
+        {
+            QMessageBox::warning(this, tr("Unsupported Disk Image"),
+                                 tr("VMDK disk-image import is not supported yet. "
+                                    "Convert the disk to VHD and import the VHD file."));
+            return false;
+        }
+
+        this->m_sourceFilePath = filePath;
+        SettingsManager::instance().SetDefaultImportPath(QFileInfo(filePath).absolutePath());
+
+        QLabel* typeLabel = this->ui->typeLabel;
+        if (typeLabel)
+            typeLabel->setText(tr("Detected: %1").arg(detectedType));
+
+        // For OVF/OVA packages: parse metadata and block if encrypted
+        if (this->m_importType == ImportType_OVF)
+        {
+            OvfPackage pkg(filePath);
+            if (!pkg.IsValid())
+            {
+                QMessageBox::warning(this, tr("Invalid OVF Package"),
+                                     tr("The OVF/OVA file could not be read:\n%1").arg(pkg.ParseError()));
+                return false;
+            }
+            if (pkg.HasEncryption())
+            {
+                QMessageBox::warning(this, tr("Encrypted OVF Not Supported"),
+                                     tr("This OVF/OVA package is encrypted. "
+                                        "Encrypted OVF packages cannot be imported."));
+                return false;
+            }
+
+            // Show validation warnings unless the user has opted out
+            // C# equivalent: ImportSourcePage.LoadAppliance() → OvfValidationDialog
+            if (!SettingsManager::instance().GetIgnoreOvfValidationWarnings())
+            {
+                QStringList warnings;
+                if (!pkg.Validate(warnings))
+                {
+                    // Structural failure — cannot continue
+                    QMessageBox::warning(this, tr("Invalid OVF Package"),
+                                         tr("OVF package validation failed:\n%1").arg(warnings.join("\n")));
+                    return false;
+                }
+                if (!warnings.isEmpty())
+                {
+                    OvfValidationDialog dlg(warnings, this);
+                    if (dlg.exec() != QDialog::Accepted)
+                        return false;
+                }
+            }
+
+            // Cache metadata for downstream pages and metadata display
+            this->m_ovfPackageName          = pkg.PackageName();
+            this->m_ovfVirtualSystemNames   = pkg.VirtualSystemNames();
+            this->m_ovfNetworkNames         = pkg.NetworkNames();
+            this->m_ovfDiskHrefs            = pkg.DiskFileRefs();
+            this->m_ovfDiskHrefsBySystem    = pkg.DiskFileRefsBySystem();
+            this->m_ovfEulas                = pkg.Eulas();
+            this->m_ovfHasManifest          = pkg.HasManifest();
+            this->m_ovfHasSignature         = pkg.HasSignature();
+            this->m_ovfAllowsNetworkSriov   = pkg.AllowsNetworkSriov();
+            this->updateOvfMetadataDisplay();
+        }
+        else
+        {
+            // Clear any stale OVF metadata when switching file types
+            this->m_ovfPackageName.clear();
+            this->m_ovfVirtualSystemNames.clear();
+            this->m_ovfNetworkNames.clear();
+            this->m_ovfDiskHrefs.clear();
+            this->m_ovfDiskHrefsBySystem.clear();
+            this->m_ovfEulas.clear();
+            this->m_ovfHasManifest = false;
+            this->m_ovfHasSignature = false;
+            this->m_ovfAllowsNetworkSriov = true;
+            this->updateOvfMetadataDisplay();
+
+            // Try to read XVA metadata for display
+            this->m_xvaVmNames.clear();
+            this->m_xvaTotalDiskSizeBytes = 0;
+            this->m_diskImageCapacityBytes = 0;
+            this->m_diskImageFormatName.clear();
+            if (this->m_importType == ImportType_XVA)
+            {
+                this->inspectXvaTar(filePath);  // Non-fatal if it fails
+
+                // Fall back to file size if metadata couldn't supply disk capacity
+                if (this->m_xvaTotalDiskSizeBytes == 0)
+                    this->m_xvaTotalDiskSizeBytes = QFileInfo(filePath).size();
+            }
+            else if (this->m_importType == ImportType_VHD)
+            {
+                if (!this->inspectDiskImage(filePath))
+                {
+                    // Could not parse disk image header — fall back to file size for capacity.
+                    // Warn the user; they can still continue if the format is otherwise valid.
+                    const qint64 fileBytes = QFileInfo(filePath).size();
+                    this->m_diskImageCapacityBytes = fileBytes;
+                    this->m_diskImageFormatName = tr("Unknown");
+                    QMessageBox::warning(this, tr("Disk Image Format"),
+                        tr("The disk image format could not be determined from the file header. "
+                           "The file size (%1 bytes) will be used as the virtual disk capacity.\n\n"
+                           "If the file is a valid VHD, you can continue. "
+                           "Otherwise the import may fail.").arg(fileBytes));
+                }
+            }
+            this->updateXvaMetadataDisplay();
+            this->updateDiskImageDisplay();
+        }
+    }
+    else if (currentId == Page_VmConfig)
+    {
+        QLineEdit* nameEdit = this->ui->vmNameEdit;
+        if (!nameEdit || nameEdit->text().trimmed().isEmpty())
+        {
+            QMessageBox::warning(this, tr("Invalid Input"),
+                                 tr("Please enter a name for the virtual machine."));
+            return false;
+        }
+    }
+    else if (currentId == Page_Eula)
+    {
+        // The user must explicitly accept all EULAs to continue.
+        // Matches C# ImportEulaPage.EnableNext() gated on m_checkBoxAccept.
+        QCheckBox* acceptCheck = this->ui->eulaAcceptCheck;
+        if (!acceptCheck || !acceptCheck->isChecked())
+        {
+            QMessageBox::warning(this, tr("License Agreement Required"),
+                                 tr("You must accept the End User License Agreement(s) to continue."));
+            return false;
+        }
+    }
+    else if (currentId == Page_Host)
+    {
+        QComboBox* hostCombo = this->ui->hostCombo;
+        this->m_selectedHost = (hostCombo && this->m_connection)
+            ? this->m_connection->GetCache()->ResolveObject<Host>(hostCombo->currentData().toString())
+            : nullptr;
+
+        this->m_blockingRbacMissing.clear();
+        this->m_affinityRbacMissing.clear();
+        this->m_ignoreAffinitySet = false;
+
+        QStringList required;
+        if (this->m_importType == ImportType_XVA)
+        {
+            required << "vm.set_name_label"
+                     << "http/put_import"
+                     << "sr.scan";
+            this->hasApiPermissions(required, &this->m_blockingRbacMissing);
+
+            if (this->m_selectedHost && this->m_selectedHost->IsValid())
+            {
+                this->hasApiPermissions(QStringList() << "vm.set_affinity", &this->m_affinityRbacMissing);
+                if (!this->m_affinityRbacMissing.isEmpty())
+                {
+                    this->m_ignoreAffinitySet = true;
+                    this->m_selectedHost.clear();
+                    if (hostCombo)
+                        hostCombo->setCurrentIndex(0);
+                }
+            }
+        }
+        else
+        {
+            required << "VM.create"
+                     << "VM.destroy"
+                     << "VM.start"
+                     << "VM.set_affinity"
+                     << "VM.set_HVM_boot_params"
+                     << "VM_appliance.create"
+                     << "VM_appliance.start"
+                     << "VDI.create"
+                     << "VDI.destroy"
+                     << "VBD.create"
+                     << "VIF.create"
+                     << "http/import_raw_vdi";
+            this->hasApiPermissions(required, &this->m_blockingRbacMissing);
+        }
+    }
+    else if (currentId == Page_Rbac)
+    {
+        if (!this->m_blockingRbacMissing.isEmpty())
+            return false;
+    }
+    else if (currentId == Page_Storage)
+    {
+        QComboBox* srCombo = this->ui->storageCombo;
+        const QString srRef = srCombo ? srCombo->currentData().toString() : QString();
+        if (srRef.isEmpty())
+        {
+            QMessageBox::warning(this, tr("No Storage Selected"),
+                                 tr("Please select a storage repository."));
+            return false;
+        }
+
+        // Resolve and cache the selected SR for use later (avoids repeated lookups)
+        this->m_selectedSR = this->m_connection
+            ? this->m_connection->GetCache()->ResolveObject<SR>(srRef)
+            : nullptr;
+
+        // Capacity check: warn (non-blocking) if the SR's free space is smaller
+        // than the estimated import size. Matches C# non-blocking behavior.
+        if (this->m_selectedSR && this->m_selectedSR->IsValid())
+        {
+            const qint64 freeBytes = this->m_selectedSR->FreeSpace();
+            qint64 requiredBytes = 0;
+            if (this->m_importType == ImportType_XVA)
+                requiredBytes = this->m_xvaTotalDiskSizeBytes;
+            else if (this->m_importType == ImportType_VHD)
+            {
+                requiredBytes = this->m_diskImageCapacityBytes;
+
+                QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+                const qint64 additionalDiskSpaceGb = additionalDiskSpaceSpin
+                    ? static_cast<qint64>(additionalDiskSpaceSpin->value())
+                    : 0;
+                requiredBytes += additionalDiskSpaceGb * 1024LL * 1024LL * 1024LL;
+            }
+
+            if (freeBytes > 0 && requiredBytes > 0 && freeBytes < requiredBytes)
+            {
+                const double freeGb = static_cast<double>(freeBytes)    / (1024.0 * 1024.0 * 1024.0);
+                const double reqGb  = static_cast<double>(requiredBytes) / (1024.0 * 1024.0 * 1024.0);
+                const QString msg = tr("The selected storage repository may not have enough free space.\n\n"
+                                       "Available: %1 GB\n"
+                                       "Required:  %2 GB\n\n"
+                                       "You can still proceed, but the import may fail if the SR is full.")
+                                    .arg(freeGb, 0, 'f', 1)
+                                    .arg(reqGb,  0, 'f', 1);
+                QMessageBox::warning(this, tr("Low Storage Space"), msg);
+                // Non-blocking — fall through to QWizard::validateCurrentPage()
+            }
+        }
+
     }
 
     return QWizard::validateCurrentPage();
@@ -390,61 +1759,253 @@ bool ImportWizard::validateCurrentPage()
 
 void ImportWizard::accept()
 {
-    // Collect all the configuration data
-    QLineEdit* filePathEdit = findChild<QLineEdit*>("filePathEdit");
-    m_sourceFilePath = filePathEdit ? filePathEdit->text() : QString();
-    m_verifyManifest = findChild<QCheckBox*>("verifyManifest")->isChecked();
-    m_startVMsAutomatically = findChild<QCheckBox*>("startAfterImport")->isChecked();
+    // Collect all configuration choices into result members before closing
+    QLineEdit* filePathEdit = this->ui->filePathEdit;
+    if (filePathEdit)
+        this->m_sourceFilePath = filePathEdit->text();
 
-    qDebug() << "ImportWizard: Starting import of:" << m_sourceFilePath
-             << "Type:" << m_importType << "Start VMs:" << m_startVMsAutomatically;
+    QComboBox* hostCombo = this->ui->hostCombo;
+    if (hostCombo && !this->m_selectedHost)
+    {
+        // Fallback: wizard was accepted without going through Page_Storage/Network
+        // (e.g. direct finish) — resolve host now.
+        this->m_selectedHost = this->m_connection
+            ? this->m_connection->GetCache()->ResolveObject<Host>(hostCombo->currentData().toString())
+            : nullptr;
+    }
 
-    performImport();
+    // VHD/VMDK VM config
+    QLineEdit* vmNameEdit = this->ui->vmNameEdit;
+    if (vmNameEdit)
+        this->m_vmName = vmNameEdit->text().trimmed();
+    QSpinBox* vcpuSpin = this->ui->vcpuSpin;
+    if (vcpuSpin)
+        this->m_vcpuCount = vcpuSpin->value();
+    QSpinBox* memorySpin = this->ui->memorySpin;
+    if (memorySpin)
+        this->m_memoryMb = memorySpin->value();
+
+    // VHD/VMDK additional capacity override (requested total = detected + additional)
+    if (this->m_importType == ImportType_VHD)
+    {
+        QSpinBox* additionalDiskSpaceSpin = this->ui->additionalDiskSpaceSpin;
+        const qint64 additionalDiskSpaceGb = additionalDiskSpaceSpin
+            ? static_cast<qint64>(additionalDiskSpaceSpin->value())
+            : 0;
+
+        if (additionalDiskSpaceGb > 0)
+            this->m_diskImageCapacityBytes += additionalDiskSpaceGb * 1024LL * 1024LL * 1024LL;
+    }
+
+    QComboBox* networkCombo = this->ui->networkCombo;
+    if (networkCombo)
+    {
+        this->m_selectedNetwork = this->m_connection
+            ? this->m_connection->GetCache()->ResolveObject<Network>(networkCombo->currentData().toString())
+            : nullptr;
+    }
+
+    // Collect OVF per-network mappings and MAC addresses (index-based combos created by populateNetworkCombo)
+    this->m_ovfNetworkMappings.clear();
+    this->m_ovfMacMappings.clear();
+    for (int i = 0; i < this->m_ovfNetworkNames.size(); i++)
+    {
+        QComboBox* combo = this->ui->ovfMappingContainer->findChild<QComboBox*>("ovfNetCombo_" + QString::number(i));
+        if (combo)
+            this->m_ovfNetworkMappings[this->m_ovfNetworkNames.at(i)] = combo->currentData().toString();
+
+        QLineEdit* macEdit = this->ui->ovfMappingContainer->findChild<QLineEdit*>("ovfMacEdit_" + QString::number(i));
+        if (macEdit && !macEdit->text().isEmpty())
+            this->m_ovfMacMappings[this->m_ovfNetworkNames.at(i)] = macEdit->text();
+    }
+
+    // Collect per-disk SR overrides from diskSrTable (OVF only)
+    this->m_ovfDiskSrMappings.clear();
+    if (this->m_importType == ImportType_OVF)
+    {
+        QTableWidget* diskTable = this->ui->diskSrTable;
+        if (diskTable && diskTable->isVisible())
+        {
+            for (int row = 0; row < diskTable->rowCount(); ++row)
+            {
+                QTableWidgetItem* nameItem = diskTable->item(row, 0);
+                QComboBox* srCombo = qobject_cast<QComboBox*>(diskTable->cellWidget(row, 1));
+                if (nameItem && srCombo)
+                {
+                    const QString href  = nameItem->data(Qt::UserRole).toString();
+                    const QString srRef = srCombo->currentData().toString();
+                    if (!href.isEmpty() && !srRef.isEmpty())
+                        this->m_ovfDiskSrMappings[href] = srRef;
+                }
+            }
+        }
+    }
+
+    // For OVF with manifest/signature the Security page verify checkbox is
+    // authoritative; for all other paths verification is not applicable.
+    this->m_verifyManifest = true;
+    this->m_verifySignature = false;
+    if (this->m_importType == ImportType_OVF && (this->m_ovfHasManifest || this->m_ovfHasSignature))
+    {
+        QCheckBox* securityVerify = this->ui->securityVerifyCheck;
+        if (securityVerify)
+        {
+            this->m_verifyManifest = this->m_ovfHasManifest && securityVerify->isChecked();
+            this->m_verifySignature = false;
+        }
+    }
+
+    QCheckBox* runFixupsBox = this->ui->runFixups;
+    this->m_runFixups = runFixupsBox ? runFixupsBox->isChecked() : false;
+
+    QComboBox* fixupSrCombo = this->ui->fixupSrCombo;
+    this->m_fixupIsoSrRef = (fixupSrCombo && this->m_runFixups) ? fixupSrCombo->currentData().toString() : QString();
+
+    QCheckBox* startAfter = this->ui->startAfterImport;
+    this->m_startVMsAutomatically = startAfter ? startAfter->isChecked() : false;
+
+    // Boot options (VHD/VMDK only — collected from Page_BootOptions)
+    this->m_bootMode  = BootMode_Bios;
+    this->m_assignVtpm = false;
+    if (this->m_importType == ImportType_VHD)
+    {
+        QRadioButton* uefiSecureRadio = this->ui->bootUefiSecureRadio;
+        QRadioButton* uefiRadio       = this->ui->bootUefiRadio;
+        if (uefiSecureRadio && uefiSecureRadio->isChecked())
+            this->m_bootMode = BootMode_UefiSecure;
+        else if (uefiRadio && uefiRadio->isChecked())
+            this->m_bootMode = BootMode_Uefi;
+
+        QCheckBox* vtpmCheck = this->ui->vtpmCheck;
+        this->m_assignVtpm = vtpmCheck ? vtpmCheck->isChecked() : false;
+    }
+
+    qDebug() << "ImportWizard: Accept — file:" << this->m_sourceFilePath
+             << "host:" << (this->m_selectedHost ? this->m_selectedHost->OpaqueRef() : "(none)")
+             << "sr:" << (this->m_selectedSR ? this->m_selectedSR->OpaqueRef() : "(none)")
+             << "network:" << (this->m_selectedNetwork ? this->m_selectedNetwork->OpaqueRef() : "(none)")
+             << "start:" << this->m_startVMsAutomatically;
+
     QWizard::accept();
 }
 
-void ImportWizard::performImport()
+void ImportWizard::reject()
 {
-    // Show progress
-    QProgressBar* progressBar = findChild<QProgressBar*>("progressBar");
-    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
-
-    if (progressBar && statusLabel)
-    {
-        progressBar->setVisible(true);
-        progressBar->setRange(0, 0); // Indeterminate progress
-        statusLabel->setText(tr("Importing virtual machine..."));
-    }
-
-    // TODO: Integrate with XenLib to actually perform the import
-    // For now, just show a confirmation message
-
-    QString message = tr("Import of '%1' started successfully.").arg(QFileInfo(m_sourceFilePath).fileName());
-
-    if (m_startVMsAutomatically)
-    {
-        message += tr("\n\nVMs will be started automatically after import completes.");
-    }
-
-    QMessageBox::information(this, tr("Import Started"), message);
+    QWizard::reject();
 }
 
 QString ImportWizard::detectImportType(const QString& filePath)
 {
-    QString suffix = QFileInfo(filePath).suffix().toLower();
+    const QString lower = filePath.toLower();
 
-    if (suffix == "xva" || filePath.endsWith(".xva.gz", Qt::CaseInsensitive))
+    // ── Content-based detection ──────────────────────────────────────────
+    // Read the first 512 bytes to determine actual file format, regardless of extension.
+    QFile f(filePath);
+    QByteArray header;
+    if (f.open(QIODevice::ReadOnly))
     {
-        m_importType = ImportType_XVA;
+        header = f.read(512);
+        f.close();
+    }
+
+    // GZip magic: 0x1F 0x8B
+    const bool isGzip = (header.size() >= 2) &&
+                        (static_cast<unsigned char>(header[0]) == 0x1F) &&
+                        (static_cast<unsigned char>(header[1]) == 0x8B);
+
+    // POSIX/GNU TAR magic: "ustar" at offset 257 (in a 512-byte TAR header block)
+    const bool isTar = (header.size() >= 262) &&
+                       (header.mid(257, 5) == QByteArrayLiteral("ustar"));
+
+    // Old-format TAR: no magic, but NUL-padded 100-byte filename field at offset 0.
+    // XVA files created by XenServer use this format. Heuristic: first char printable,
+    // rest of name field contains at least some printable ASCII before the NUL.
+    const bool isOldTar = !isTar && (header.size() >= 512) &&
+                          (static_cast<unsigned char>(header[0]) >= 0x20) &&
+                          (static_cast<unsigned char>(header[0]) < 0x7F) &&
+                          (header.indexOf('\0', 0) > 0) &&    // NUL-terminated name
+                          (header.indexOf('\0', 0) < 100);    // within 100-byte name field
+
+    // OVF XML: starts with "<?xml" or "<Envelope"
+    const bool isOvfXml = header.startsWith("<?xml") || header.startsWith("<Envelope") ||
+                          header.startsWith("\xEF\xBB\xBF<?xml");  // BOM-prefixed XML
+
+    // ── Map content to import type ────────────────────────────────────────
+
+    // XVA.GZ: gzip-compressed TAR (the GZ wraps a TAR)
+    if (isGzip && (lower.endsWith(".xva.gz") || lower.endsWith(".xva")))
+    {
+        this->m_importType = ImportType_XVA;
+        return tr("XenServer Virtual Appliance (XVA, compressed)");
+    }
+
+    // OVA.GZ: gzip-compressed OVA
+    if (isGzip && (lower.endsWith(".ova.gz") || lower.endsWith(".ova")))
+    {
+        this->m_importType = ImportType_OVF;
+        return tr("Open Virtualization Format (OVA, compressed)");
+    }
+
+    // Plain GZ without a recognised inner extension — reject
+    if (isGzip)
+    {
+        // Fall through to extension-based check for unusual naming
+    }
+
+    // TAR/XVA: a TAR that isn't OVA-named
+    if ((isTar || isOldTar) && !lower.endsWith(".ova"))
+    {
+        this->m_importType = ImportType_XVA;
         return tr("XenServer Virtual Appliance (XVA)");
-    } else if (suffix == "ovf" || suffix == "ova")
+    }
+
+    // OVA: a TAR with .ova extension
+    if ((isTar || isOldTar) && lower.endsWith(".ova"))
     {
-        m_importType = ImportType_OVF;
+        this->m_importType = ImportType_OVF;
+        return tr("Open Virtualization Format (OVA)");
+    }
+
+    // OVF XML descriptor
+    if (isOvfXml || lower.endsWith(".ovf"))
+    {
+        this->m_importType = ImportType_OVF;
         return tr("Open Virtualization Format (OVF)");
-    } else if (suffix == "vhd" || suffix == "vmdk")
+    }
+
+    // VHD: starts with "conectix" cookie at offset 0 (VHD footer) or offset 512 (VHD with header)
+    if (header.startsWith("conectix") || (header.size() >= 520 && header.mid(512, 8).startsWith("conectix")))
     {
-        m_importType = ImportType_VHD;
+        this->m_importType = ImportType_VHD;
         return tr("Virtual Hard Disk (VHD)");
+    }
+
+    // VMDK: sparse extent header magic 0x44 0x4D 0x44 0x4B ("KDMV" little-endian)
+    if (header.size() >= 4 &&
+        static_cast<unsigned char>(header[0]) == 0x4B &&
+        static_cast<unsigned char>(header[1]) == 0x44 &&
+        static_cast<unsigned char>(header[2]) == 0x4D &&
+        static_cast<unsigned char>(header[3]) == 0x56)
+    {
+        this->m_importType = ImportType_VHD;
+        return tr("Virtual Hard Disk (VMDK)");
+    }
+
+    // ── Extension-only fallback (file too small / empty / no content read) ────
+    if (lower.endsWith(".xva") || lower.endsWith(".xva.gz"))
+    {
+        this->m_importType = ImportType_XVA;
+        return tr("XenServer Virtual Appliance (XVA)");
+    }
+    if (lower.endsWith(".ovf") || lower.endsWith(".ova") || lower.endsWith(".ova.gz"))
+    {
+        this->m_importType = ImportType_OVF;
+        return tr("Open Virtualization Format (OVF/OVA)");
+    }
+    if (lower.endsWith(".vhd") || lower.endsWith(".vmdk"))
+    {
+        this->m_importType = ImportType_VHD;
+        return tr("Virtual Hard Disk (VHD/VMDK)");
     }
 
     return QString(); // Unsupported type
@@ -453,45 +2014,64 @@ QString ImportWizard::detectImportType(const QString& filePath)
 void ImportWizard::onCurrentIdChanged(int id)
 {
     Q_UNUSED(id)
-    // Handle page changes if needed
 }
 
-void ImportWizard::onSourceTypeChanged()
+void ImportWizard::onRescanStorageClicked()
 {
-    // Handle import type changes if needed
-    updateWizardForImportType();
+    if (!this->m_connection)
+        return;
+
+    QComboBox* srCombo = this->ui->storageCombo;
+    const QString srRef = srCombo ? srCombo->currentData().toString() : QString();
+    if (srRef.isEmpty())
+        return;
+
+    QPushButton* rescanButton = this->ui->storageRescanButton;
+    if (rescanButton)
+        rescanButton->setEnabled(false);
+
+    // C# equivalent: SrRefreshAction(sr).RunAsync() from SrPicker.ScanSRs()
+    SrRefreshAction* action = new SrRefreshAction(this->m_connection, srRef, this);
+    connect(action, &AsyncOperation::completed, this, [this, rescanButton]()
+    {
+        // Re-populate the combo so updated free-space figures are visible
+        this->populateStorageCombo();
+        if (rescanButton)
+            rescanButton->setEnabled(true);
+    });
+    action->RunAsync();
 }
 
 void ImportWizard::onBrowseClicked()
 {
-    QString filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.vhd *.vmdk);;"
-                        "XVA Files (*.xva *.xva.gz);;"
-                        "OVF Files (*.ovf *.ova);;"
-                        "VHD Files (*.vhd *.vmdk);;"
-                        "All Files (*)");
+    QString filter;
+    if (this->m_ovfOnlyMode)
+    {
+        filter = tr("OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
+                    "All Files (*)");
+    }
+    else
+    {
+        filter = tr("All Supported Files (*.xva *.xva.gz *.ovf *.ova *.ova.gz *.vhd);;"
+                    "XVA Files (*.xva *.xva.gz);;"
+                    "OVF/OVA Files (*.ovf *.ova *.ova.gz);;"
+                    "VHD Files (*.vhd);;"
+                    "All Files (*)");
+    }
+
+    QString startDir = SettingsManager::instance().GetDefaultImportPath();
 
     QString filePath = QFileDialog::getOpenFileName(this,
                                                     tr("Select File to Import"),
-                                                    QString(),
+                                                    startDir,
                                                     filter);
 
     if (!filePath.isEmpty())
     {
-        QLineEdit* filePathEdit = findChild<QLineEdit*>("filePathEdit");
+        QLineEdit* filePathEdit = this->ui->filePathEdit;
         if (filePathEdit)
-        {
             filePathEdit->setText(filePath);
-        }
+
+        SettingsManager::instance().SetDefaultImportPath(QFileInfo(filePath).absolutePath());
     }
-}
-
-void ImportWizard::updateWizardForImportType()
-{
-    // This method could be used to show/hide different pages based on import type
-    // For now, we keep it simple and show all pages for all types
-}
-
-void ImportWizard::onImportStarted()
-{
-    // Handle import start
 }

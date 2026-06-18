@@ -1594,6 +1594,26 @@ bool VM::IsRealVM() const
     return !this->IsTemplate() && !this->IsSnapshot() && !this->IsControlDomain();
 }
 
+bool VM::IsXvaExportable() const
+{
+    // Matches C# ExportVMCommand.IsVMExportable() filter: must be a real VM
+    // with "export" in allowed_operations.
+    if (this->IsTemplate() || this->IsSnapshot() || this->IsControlDomain())
+        return false;
+    return this->GetAllowedOperations().contains("export");
+}
+
+bool VM::IsOvfExportable() const
+{
+    // OVF/OVA appliance export additionally requires the VM to be halted or
+    // suspended — running VMs cannot be captured into an OVF appliance.
+    // Matches C# ExportAppliancePage VM list filter (IsVmExportable check).
+    if (!this->IsXvaExportable())
+        return false;
+    const QString ps = this->GetPowerState();
+    return ps == "Halted" || ps == "Suspended";
+}
+
 QString VM::GetOSName() const
 {
     // C# equivalent: VM.GetOSName()

@@ -64,10 +64,10 @@ jobs:
           set -e
           if command -v sudo >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
+            sudo apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0 libssl-dev zlib1g-dev
           else
             apt-get update
-            apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
+            apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0 libssl-dev zlib1g-dev
           fi
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -106,7 +106,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config \
             qt6-base-dev qt6-charts-dev \
-            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev \
+            libssl-dev zlib1g-dev
       - name: Show qmake version
         run: qmake6 -v
       - name: Configure project
@@ -135,7 +136,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config \
             qt6-base-dev qt6-charts-dev \
-            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+            libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev \
+            libssl-dev zlib1g-dev
       - name: Show qmake version
         run: qmake6 -v
       - name: Configure project
@@ -182,6 +184,7 @@ jobs:
             qt6-base-dev:riscv64 \
             qt6-charts-dev:riscv64 \
             libssl-dev:riscv64 \
+            zlib1g-dev:riscv64 \
             libxkbcommon-dev:riscv64
           # Assemble sysroot from multiarch installation paths.
           # lib must sit under usr/lib/ so cmake paths resolve correctly.

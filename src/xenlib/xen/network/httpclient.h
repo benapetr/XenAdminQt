@@ -54,6 +54,9 @@ class XENLIB_EXPORT HttpClient : public QObject
 
         static const int BUFFER_SIZE = 32 * 1024;
         static const int HTTP_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+        static const qint64 WRITE_HIGH_WATER_MARK = 1024 * 1024;
+        static const qint64 WRITE_LOW_WATER_MARK = 256 * 1024;
+        static const int WRITE_WAIT_SLICE_MS = 250;
 
         explicit HttpClient(QObject* parent = nullptr);
         ~HttpClient();
@@ -69,11 +72,11 @@ class XENLIB_EXPORT HttpClient : public QObject
         * @return true on success
         */
         bool putFile(const QString& localFilePath,
-                    const QString& hostname,
-                    const QString& remotePath,
-                    const QMap<QString, QString>& queryParams,
-                    ProgressCallback progressCallback = nullptr,
-                    CancelCallback cancelCallback = nullptr);
+                     const QString& hostname,
+                     const QString& remotePath,
+                     const QMap<QString, QString>& queryParams,
+                     ProgressCallback progressCallback = nullptr,
+                     CancelCallback cancelCallback = nullptr);
 
         /**
         * @brief Download a file via HTTP GET
@@ -86,23 +89,27 @@ class XENLIB_EXPORT HttpClient : public QObject
         * @return true on success
         */
         bool getFile(const QString& hostname,
-                    const QString& remotePath,
-                    const QMap<QString, QString>& queryParams,
-                    const QString& localFilePath,
-                    DataCopiedCallback dataCopiedCallback = nullptr,
-                    CancelCallback cancelCallback = nullptr);
+                     const QString& remotePath,
+                     const QMap<QString, QString>& queryParams,
+                     const QString& localFilePath,
+                     DataCopiedCallback dataCopiedCallback = nullptr,
+                     CancelCallback cancelCallback = nullptr);
 
         /**
         * @brief Build URI from hostname, path, and query parameters
         */
-        static QUrl buildUri(const QString& hostname,
-                            const QString& path,
-                            const QMap<QString, QString>& queryParams);
+        static QUrl buildUri(const QString& hostname, const QString& path, const QMap<QString, QString>& queryParams);
 
         /**
         * @brief Get last error message
         */
         QString lastError() const { return this->lastError_; }
+
+        /**
+        * @brief Returns true if the last getFile() failure was caused by a full destination disk.
+        * Matches C# IOException check with ERROR_DISK_FULL.
+        */
+        bool IsDiskFull() const { return this->isDiskFull_; }
 
     signals:
         void error(const QString& message);
@@ -111,13 +118,15 @@ class XENLIB_EXPORT HttpClient : public QObject
         bool connectToHost(const QUrl& url, QSslSocket*& socket);
         bool sendHttpHeaders(QSslSocket* socket, const QStringList& headers);
         bool readHttpResponse(QSslSocket* socket);
+        bool waitForWriteBuffer(QAbstractSocket* socket, qint64 targetBytes, CancelCallback cancelCallback);
         qint64 copyStream(QIODevice* source, QIODevice* dest,
-                        qint64 totalSize,
-                        ProgressCallback progressCallback,
-                        DataCopiedCallback dataCopiedCallback,
-                        CancelCallback cancelCallback);
+                          qint64 totalSize,
+                          ProgressCallback progressCallback,
+                          DataCopiedCallback dataCopiedCallback,
+                          CancelCallback cancelCallback);
 
         QString lastError_;
+        bool isDiskFull_ = false;
 };
 
 #endif // HTTPCLIENT_H

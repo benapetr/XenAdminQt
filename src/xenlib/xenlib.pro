@@ -25,6 +25,13 @@ contains(CONFIG, no_crypto) {
 # This allows us to use absolute include path instead of hard-to-read relative paths
 INCLUDEPATH += ..
 
+# zlib — used by gzip import/export compression support
+contains(CONFIG, no_zlib) {
+    DEFINES += XENADMIN_NO_ZLIB
+} else {
+    LIBS += -lz
+}
+
 greaterThan(QT_MAJOR_VERSION, 5) {
     DEFINES += QT_NO_DEPRECATED_WARNINGS
 }
@@ -51,6 +58,8 @@ HEADERS += \
     operations/multipleactionlauncher.h \
     operations/parallelaction.h \
     utils/misc.h \
+    utils/decompressgzaction.h \
+    utils/downloadfileaction.h \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
@@ -128,6 +137,7 @@ HEADERS += \
     xen/task.h \
     xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
+    xen/xenapi/xenapi_VTPM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
     xen/xenapi/xenapi_Host.h \
@@ -143,7 +153,11 @@ HEADERS += \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/createcddriveaction.h \
     xen/actions/vm/importvmaction.h \
+    xen/actions/vm/vmimportactionbase.h \
+    xen/actions/vm/importapplianceaction.h \
+    xen/actions/vm/importimageaction.h \
     xen/actions/vm/exportvmaction.h \
+    xen/actions/vm/exportapplianceaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/hvmbootaction.h \
@@ -281,7 +295,10 @@ HEADERS += \
     xen/user.h \
     xen/vbdmetrics.h \
     otherconfig/otherconfigandtagswatcher.h \
-    folders/foldersmanager.h
+    folders/foldersmanager.h \
+    ovf/ovfpackage.h \
+    ovf/ovfwriter.h \
+    xva/xvaverifier.h
 
 # Source files
 SOURCES += \
@@ -296,6 +313,8 @@ SOURCES += \
     operations/multipleactionlauncher.cpp \
     operations/parallelaction.cpp \
     utils/misc.cpp \
+    utils/decompressgzaction.cpp \
+    utils/downloadfileaction.cpp \
     vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
     xen/actions/wlb/wlbretrievevmrecommendationsaction.cpp \
@@ -369,6 +388,7 @@ SOURCES += \
     xen/tunnel.cpp \
     xen/task.cpp \
     xen/xenapi/xenapi_VM.cpp \
+    xen/xenapi/xenapi_VTPM.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
     xen/xenapi/xenapi_Host.cpp \
@@ -381,7 +401,11 @@ SOURCES += \
     xen/actions/vm/changevmisoaction.cpp \
     xen/actions/vm/createcddriveaction.cpp \
     xen/actions/vm/importvmaction.cpp \
+    xen/actions/vm/vmimportactionbase.cpp \
+    xen/actions/vm/importapplianceaction.cpp \
+    xen/actions/vm/importimageaction.cpp \
     xen/actions/vm/exportvmaction.cpp \
+    xen/actions/vm/exportapplianceaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
@@ -519,7 +543,10 @@ SOURCES += \
     xen/vmguestmetrics.cpp \
     xen/vmmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp \
-    folders/foldersmanager.cpp
+    folders/foldersmanager.cpp \
+    ovf/ovfpackage.cpp \
+    ovf/ovfwriter.cpp \
+    xva/xvaverifier.cpp
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

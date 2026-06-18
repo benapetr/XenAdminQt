@@ -30,8 +30,6 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/xenapi_VIF.h"
-#include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Task.h"
 #include "../../../xencache.h"
 #include "../../sr.h"
@@ -50,11 +48,9 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
     , hostRef_(hostRef)
     , filename_(filename)
     , srRef_(srRef)
-    , wizardDone_(false)
-    , startAutomatically_(false)
-    , httpClient_(nullptr)
 {
     this->SetSafeToExit(false);
+    this->SetCanCancel(true);
     
     QFileInfo fileInfo(filename);
     QString poolName = "XenServer"; // Default
@@ -70,27 +66,10 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
 
     // RBAC dependencies (matches C# ImportVmAction)
     this->AddApiMethodToRoleCheck("vm.set_name_label");
-    this->AddApiMethodToRoleCheck("network.destroy");
-    this->AddApiMethodToRoleCheck("vif.create");
-    this->AddApiMethodToRoleCheck("vif.destroy");
     this->AddApiMethodToRoleCheck("http/put_import");
+    this->AddApiMethodToRoleCheck("sr.scan");
     if (!this->hostRef_.isEmpty())
         this->AddApiMethodToRoleCheck("vm.set_affinity");
-}
-
-ImportVmAction::~ImportVmAction()
-{
-    if (this->httpClient_)
-        delete this->httpClient_;
-}
-
-void ImportVmAction::endWizard(bool startAutomatically, const QStringList& vifRefs)
-{
-    QMutexLocker locker(&this->mutex_);
-    this->startAutomatically_ = startAutomatically;
-    this->vifRefs_ = vifRefs;
-    this->wizardDone_ = true;
-    this->waitCondition_.wakeAll();
 }
 
 int ImportVmAction::vmsWithName(const QString& name)
@@ -194,12 +173,13 @@ QString ImportVmAction::uploadFile()
     params["restore"] = "false";
     params["force"] = "false";
 
-    // Create HTTP client
-    this->httpClient_ = new HttpClient(this);
+    // The upload runs on the AsyncOperation worker thread, so keep the HTTP client
+    // local to that thread rather than parenting it to this UI-affine QObject.
+    HttpClient httpClient;
 
     // Upload file with progress tracking
     QFileInfo fileInfo(this->filename_);
-    bool success = this->httpClient_->putFile(
+    bool success = httpClient.putFile(
         this->filename_,
         targetHost,
         "/import",
@@ -219,9 +199,28 @@ QString ImportVmAction::uploadFile()
 
     if (!success)
     {
-        this->setError(this->httpClient_->lastError());
-        this->pollToCompletion(this->importTaskRef_);
-        return QString();
+        const QString httpError = httpClient.lastError();
+
+        // XenServer may close the upload connection without returning a final HTTP
+        // response even though the import task continues and completes successfully.
+        // Treat the XenAPI task as authoritative before reporting the transport error.
+        try
+        {
+            this->pollToCompletion(this->importTaskRef_);
+        }
+        catch (const std::exception& e)
+        {
+            this->setError(QString("%1: %2").arg(httpError, e.what()));
+            return QString();
+        }
+
+        if (this->IsFailed() || this->IsCancelled())
+            return QString();
+
+        const QString result = this->GetResult();
+        qWarning() << "ImportVmAction: HTTP upload response was unavailable, but the import task succeeded:"
+                   << httpError;
+        return result;
     }
 
     // Poll task to completion
@@ -239,44 +238,72 @@ QString ImportVmAction::uploadFile()
     }
 }
 
-void ImportVmAction::updateNetworks(const QString& vmRef, const QString& importTaskRef)
-{
-    if (this->vifRefs_.isEmpty())
-        return;
-
-    this->SetDescription(tr("Updating network configuration..."));
-
-    // TODO: Implement network VIF updates once XenAPI::VM::get_VIFs, XenAPI::VIF, and XenAPI::Network methods are fully implemented
-    // This requires: VM::get_VIFs, VIF::get_network, VIF::destroy, VIF::create, Network::get_record, Network::destroy
-    qDebug() << "ImportVmAction: Network updates deferred (VIF XenAPI methods not yet implemented)";
-}
-
 void ImportVmAction::run()
 {
     this->SetSafeToExit(false);
     this->SetDescription(tr("Preparing import..."));
 
-    // Upload file
+    // Upload file; the returned string is the task result (VM OpaqueRef or empty)
     QString vmRef = this->uploadFile();
-    if (vmRef.isEmpty())
+    if (this->IsCancelled())
     {
-        this->setState(OperationState::Failed);
+        this->setState(OperationState::Cancelled);
         return;
     }
+    if (vmRef.isEmpty() && this->IsFailed())
+        return; // uploadFile already called setState(Failed)
 
-    // Wait for VM object to appear in cache
+    // ── Discover VM from cache ────────────────────────────────────────────
+    // Primary: task result is the OpaqueRef — wait for it to land in cache.
+    // Fallback: scan all VMs for other_config["import_task"] == task_ref
+    //           (matches C# ImportVmAction vm-scan pattern).
     this->SetDescription(tr("Waiting for VM to be created..."));
-    int attempts = 0;
-    while (attempts < 100 && !this->IsCancelled())
+
+    const QString taskRef = this->importTaskRef_; // preserved before pollToCompletion destroys the task
+
+    auto findVmByTaskRef = [this, &taskRef]() -> QString
     {
-        QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
-        if (vm && vm->IsValid())
+        if (taskRef.isEmpty() || !this->GetConnection() || !this->GetConnection()->GetCache())
+            return QString();
+        const auto allObjs = this->GetConnection()->GetCache()->GetAll(XenObjectType::VM);
+        for (const auto& obj : allObjs)
         {
-            this->vmRef_ = vmRef;
+            if (auto vm = qSharedPointerDynamicCast<VM>(obj))
+            {
+                if (!vm->IsValid())
+                    continue;
+                const QVariantMap oc = vm->GetOtherConfig();
+                if (oc.value(ImportVmAction::IMPORT_TASK).toString() == taskRef)
+                    return vm->OpaqueRef();
+            }
+        }
+        return QString();
+    };
+
+    // Poll up to 10 seconds for VM to materialise in cache
+    for (int attempts = 0; attempts < 100 && !this->IsCancelled(); ++attempts)
+    {
+        // Try the direct ref first
+        if (!vmRef.isEmpty() && this->GetConnection() && this->GetConnection()->GetCache())
+        {
+            QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
+            if (vm && vm->IsValid())
+            {
+                this->vmRef_ = vmRef;
+                break;
+            }
+        }
+
+        // Fallback: scan by import_task other_config key
+        const QString foundRef = findVmByTaskRef();
+        if (!foundRef.isEmpty())
+        {
+            qDebug() << "ImportVmAction: found VM by import_task scan:" << foundRef;
+            this->vmRef_ = foundRef;
             break;
         }
+
         QThread::msleep(100);
-        attempts++;
     }
 
     if (this->IsCancelled())
@@ -298,6 +325,54 @@ void ImportVmAction::run()
         QVariantMap vmRecord = XenAPI::VM::get_record(this->GetSession(), this->vmRef_);
         bool isTemplate = vmRecord.value("is_a_template").toBool();
 
+        // Falcon+: if a default template with this name already exists (import_task mismatch),
+        // the import landed on an existing template — fail early (matches C# ImportVmAction.Run)
+        if (isTemplate && vmRecord.value("is_default_template").toBool())
+        {
+            // Compare platform_version against Falcon threshold (2.2.50)
+            bool isFalconOrGreater = true; // assume true if we can't determine
+            const auto allHosts = this->GetConnection()->GetCache()->GetAll(XenObjectType::Host);
+            for (const auto& obj : allHosts)
+            {
+                if (auto host = qSharedPointerDynamicCast<Host>(obj))
+                {
+                    if (host->IsValid())
+                    {
+                        const QString pv = host->PlatformVersion();
+                        if (!pv.isEmpty())
+                        {
+                            // Simple major.minor.patch comparison
+                            const QStringList pvParts = pv.split('.');
+                            const QStringList minParts = QString("2.2.50").split('.');
+                            int cmp = 0;
+                            for (int pi = 0; pi < qMax(pvParts.size(), minParts.size()) && cmp == 0; ++pi)
+                            {
+                                int pa = pi < pvParts.size() ? pvParts.at(pi).toInt() : 0;
+                                int pb = pi < minParts.size() ? minParts.at(pi).toInt() : 0;
+                                if (pa < pb) cmp = -1;
+                                else if (pa > pb) cmp = 1;
+                            }
+                            isFalconOrGreater = (cmp >= 0);
+                        }
+                        break; // only need one host in the pool
+                    }
+                }
+            }
+
+            if (isFalconOrGreater)
+            {
+                QVariantMap otherConfig = vmRecord.value("other_config").toMap();
+                const QString taskInRecord = otherConfig.value(ImportVmAction::IMPORT_TASK).toString();
+                if (taskInRecord.isEmpty() || taskInRecord != this->importTaskRef_)
+                {
+                    this->setError(tr("A default template with the same name already exists. "
+                                      "The import cannot continue."));
+                    this->setState(OperationState::Failed);
+                    return;
+                }
+            }
+        }
+
         // Update VM name to avoid conflicts
         QString currentName = vmRecord.value("name_label").toString();
         QString newName = this->defaultVMName(currentName);
@@ -309,35 +384,10 @@ void ImportVmAction::run()
             XenAPI::VM::set_affinity(this->GetSession(), this->vmRef_, this->hostRef_);
         }
 
-        // Wait for wizard to finish
-        this->SetDescription(isTemplate ? tr("Waiting for template configuration...")
-                                        : tr("Waiting for VM configuration..."));
-        
-        QMutexLocker locker(&this->mutex_);
-        while (!this->wizardDone_ && !this->IsCancelled())
-        {
-            this->waitCondition_.wait(&this->mutex_, 1000);
-        }
-        locker.unlock();
-
-        if (this->IsCancelled())
-        {
-            this->setState(OperationState::Cancelled);
-            return;
-        }
-
-        // Update networks
-        if (!this->vifRefs_.isEmpty())
-        {
-            this->updateNetworks(this->vmRef_, this->importTaskRef_);
-        }
-
+        // Preserve the VM, VIF and network configuration created by XenServer.
+        // Further customization can be performed after the background import completes.
         this->SetDescription(isTemplate ? tr("Template import complete")
                                         : tr("VM import complete"));
-
-        // TODO: If startAutomatically_ is true and VM is not a template, start the VM
-        // This requires implementing VMStartAction first
-
         this->setState(OperationState::Completed);
     }
     catch (const std::exception& e)

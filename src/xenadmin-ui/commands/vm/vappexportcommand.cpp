@@ -29,10 +29,10 @@
 #include "../../dialogs/exportwizard.h"
 #include "../../mainwindow.h"
 #include "xenlib/xen/vmappliance.h"
-#include <QDir>
-#include <QMessageBox>
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
 
-VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_exportWizard(nullptr)
+VappExportCommand::VappExportCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -60,46 +60,32 @@ void VappExportCommand::Run()
     if (!this->CanRun())
         return;
 
-    if (!this->m_exportWizard)
+    QSharedPointer<VMAppliance> appliance = this->getSelectedAppliance();
+    if (!appliance)
+        return;
+
+    XenConnection* conn = appliance->GetConnection();
+
+    // Resolve member VMs from the cache
+    QList<QSharedPointer<VM>> memberVms;
+    if (conn)
     {
-        this->m_exportWizard = new ExportWizard(MainWindow::instance());
-        connect(this->m_exportWizard, QOverload<int>::of(&QWizard::finished), this, &VappExportCommand::onWizardFinished);
-    }
-
-    this->m_exportWizard->show();
-    this->m_exportWizard->raise();
-    this->m_exportWizard->activateWindow();
-}
-
-void VappExportCommand::onWizardFinished(int result)
-{
-    if (result == QDialog::Accepted && this->m_exportWizard)
-    {
-        const QString directory = this->m_exportWizard->exportDirectory();
-        const QString fileName = this->m_exportWizard->exportFileName();
-        const bool isXVA = this->m_exportWizard->exportAsXVA();
-
-        if (directory.isEmpty() || fileName.isEmpty())
+        XenCache* cache = conn->GetCache();
+        for (const QString& vmRef : appliance->VMRefs())
         {
-            QMessageBox::warning(MainWindow::instance(), tr("Export vApp"), tr("Invalid export settings. Please check directory and filename."));
-            return;
+            QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
+            if (vm && vm->IsValid())
+                memberVms << vm;
         }
-
-        QString fullPath = QDir(directory).filePath(fileName);
-        if (isXVA && !fullPath.toLower().endsWith(".xva"))
-            fullPath += ".xva";
-        else if (!isXVA && !fullPath.toLower().endsWith(".ovf"))
-            fullPath += ".ovf";
-
-        QMessageBox::information(MainWindow::instance(), tr("Export Started"), tr("vApp export operation has been started.\nDestination: %1").arg(fullPath));
-        MainWindow::instance()->ShowStatusMessage(tr("vApp export started"), 3000);
     }
 
-    if (this->m_exportWizard)
-    {
-        this->m_exportWizard->deleteLater();
-        this->m_exportWizard = nullptr;
-    }
+    ExportWizard* wizard = new ExportWizard(conn, MainWindow::instance());
+    wizard->SetPreselectedVMs(memberVms);
+    wizard->SetOvfModeOnly();
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    wizard->show();
+    wizard->raise();
+    wizard->activateWindow();
 }
 
 QString VappExportCommand::MenuText() const

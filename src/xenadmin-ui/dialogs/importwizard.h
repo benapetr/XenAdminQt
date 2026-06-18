@@ -29,21 +29,21 @@
 #define IMPORTWIZARD_H
 
 #include <QWizard>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QRadioButton>
-#include <QLineEdit>
-#include <QFileDialog>
 #include <QComboBox>
-#include <QTextEdit>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QGroupBox>
-#include <QProgressBar>
+#include <QMap>
+#include <QSharedPointer>
+#include <QStringList>
+#include <QUrl>
+
+namespace Ui { class ImportWizard; }
 
 class QWizardPage;
+class XenConnection;
+class OvfPackage;
+class Host;
+class SR;
+class Network;
+class VM;
 
 class ImportWizard : public QWizard
 {
@@ -55,7 +55,7 @@ class ImportWizard : public QWizard
         {
             ImportType_XVA, // XenServer native format (.xva)
             ImportType_OVF, // Open Virtualization Format (.ovf, .ova)
-            ImportType_VHD  // Virtual Hard Disk (.vhd, .vmdk)
+            ImportType_VHD  // Virtual Hard Disk (.vhd)
         };
 
         // Wizard page IDs
@@ -66,44 +66,164 @@ class ImportWizard : public QWizard
             Page_Storage = 2,
             Page_Network = 3,
             Page_Options = 4,
-            Page_Finish = 5
+            Page_Finish = 5,
+            Page_VmConfig = 6,  // VHD only: VM name, vCPU, memory
+            Page_Eula = 7,      // OVF only: EULA acceptance (shown when EULAs are present)
+            Page_Security = 8,  // OVF only: manifest/signature review
+            Page_BootOptions = 9, // VHD only: firmware (BIOS/UEFI) and vTPM
+            Page_Rbac = 10
+        };
+
+        /// Boot firmware mode — mirrors ImportImageAction::BootMode
+        enum BootMode
+        {
+            BootMode_Bios,       ///< Legacy BIOS (HVM "BIOS order")
+            BootMode_Uefi,       ///< UEFI firmware
+            BootMode_UefiSecure  ///< UEFI Secure Boot
         };
 
         explicit ImportWizard(QWidget* parent = nullptr);
+        explicit ImportWizard(XenConnection* connection, QWidget* parent = nullptr);
+        explicit ImportWizard(XenConnection* connection, const QString& initialFilePath, QWidget* parent = nullptr);
+        ~ImportWizard();
+
+        // Result accessors — valid after exec() returns Accepted
+        QString GetSourceFilePath() const { return this->m_sourceFilePath; }
+        ImportType GetImportType() const { return this->m_importType; }
+        QSharedPointer<Host> GetSelectedHost() const { return this->m_selectedHost; }
+        QSharedPointer<SR> GetSelectedSR() const { return this->m_selectedSR; }
+        QSharedPointer<Network> GetSelectedNetwork() const { return this->m_selectedNetwork; }
+        QMap<QString, QString> GetOvfNetworkMappings() const { return this->m_ovfNetworkMappings; }
+        QMap<QString, QString> GetOvfMacMappings() const { return this->m_ovfMacMappings; }
+        QString GetVmName() const { return this->m_vmName; }
+        int GetVcpuCount() const { return this->m_vcpuCount; }
+        qint64 GetMemoryMb() const { return this->m_memoryMb; }
+        qint64 GetDiskImageCapacityBytes() const { return this->m_diskImageCapacityBytes; }
+        bool GetStartAutomatically() const { return this->m_startVMsAutomatically; }
+        bool GetRunFixups() const { return this->m_runFixups; }
+        QString GetFixupIsoSrRef() const { return this->m_fixupIsoSrRef; }
+        void SetOvfOnlyMode(bool ovfOnly) { this->m_ovfOnlyMode = ovfOnly; }
+        bool IsOvfOnlyMode() const { return this->m_ovfOnlyMode; }
+        BootMode GetBootMode() const { return this->m_bootMode; }
+        bool GetAssignVtpm() const { return this->m_assignVtpm; }
+        bool GetVerifyManifest() const { return this->m_verifyManifest; }
+        bool GetVerifySignature() const { return this->m_verifySignature; }
+        XenConnection* GetSelectedConnection() const { return this->m_connection; }
+        QStringList GetOvfVirtualSystemNames() const { return this->m_ovfVirtualSystemNames; }
+        QStringList GetOvfNetworkNames() const { return this->m_ovfNetworkNames; }
+        QStringList GetOvfDiskHrefs() const { return this->m_ovfDiskHrefs; }
+        QMap<QString, QStringList> GetOvfDiskHrefsBySystem() const { return this->m_ovfDiskHrefsBySystem; }
+        QMap<QString, QString> GetOvfDiskSrMappings() const { return this->m_ovfDiskSrMappings; }
+
+        // OVF routing helpers — queried by anonymous-namespace page subclasses in nextId()
+        bool HasOvfEulas() const { return !this->m_ovfEulas.isEmpty(); }
+        bool OvfHasSecurity() const { return this->m_ovfHasManifest || this->m_ovfHasSignature; }
 
     protected:
         void initializePage(int id) override;
         bool validateCurrentPage() override;
+        int nextId() const override;
         void accept() override;
+        void reject() override;
 
     private slots:
         void onCurrentIdChanged(int id);
-        void onSourceTypeChanged();
         void onBrowseClicked();
-        void onImportStarted();
+        void onRescanStorageClicked();
 
     private:
         void setupWizardPages();
-        void updateWizardForImportType();
-        void performImport();
+        void populateHostCombo();
+        void populateStorageCombo();
+        void populateNetworkCombo();
+        void populateFixupIsoCombo();
         QString detectImportType(const QString& filePath);
+        bool isSourceUri(const QString& text) const;
+        bool downloadSourceUri(QString& filePath);
+        bool downloadUrlToFile(const QUrl& url, const QString& destPath, bool optional = false);
+        bool downloadRelatedOvfFiles(const QString& ovfPath, const QUrl& sourceUrl);
+        void updateRbacPage();
+        bool hasApiPermissions(const QStringList& methods, QStringList* missing = nullptr) const;
+        bool targetHasDesktopFeatures() const;
 
-        // Helper functions for creating pages
-        QWizardPage* createSourcePage();
-        QWizardPage* createHostPage();
-        QWizardPage* createStoragePage();
-        QWizardPage* createNetworkPage();
-        QWizardPage* createOptionsPage();
-        QWizardPage* createFinishPage();
+        // MAC address helpers
+        static bool isValidMac(const QString& mac);
+        static QString generateMac();
 
-        // Store wizard data
+        void updateOvfMetadataDisplay();
+        bool inspectXvaTar(const QString& filePath);
+        void updateXvaMetadataDisplay();
+        bool inspectDiskImage(const QString& filePath);
+        void updateDiskImageDisplay();
+        void populateNetworkComboBox(QComboBox* combo);
+        void populateDiskSrTable();
+        void fillSrCombo(QComboBox* combo);
+
+        // Connection context (may be null when no server is connected)
+        XenConnection* m_connection;
+
+        // Collected wizard result data
         ImportType m_importType;
         QString m_sourceFilePath;
-        QString m_selectedHost;
-        QString m_selectedStorage;
-        QString m_selectedNetwork;
+        QSharedPointer<Host> m_selectedHost;
+        QSharedPointer<SR> m_selectedSR;
+        QSharedPointer<Network> m_selectedNetwork;
         bool m_verifyManifest;
+        bool m_verifySignature;
+        bool m_ignoreAffinitySet;
+        QStringList m_blockingRbacMissing;
+        QStringList m_affinityRbacMissing;
         bool m_startVMsAutomatically;
+        bool m_runFixups;
+        QString m_fixupIsoSrRef;
+        bool m_ovfOnlyMode;
+
+        // OVF metadata populated after source-page validation
+        QString m_ovfPackageName;
+        QStringList m_ovfVirtualSystemNames;
+        QStringList m_ovfNetworkNames;
+        QStringList m_ovfEulas;
+        bool m_ovfHasManifest;
+        bool m_ovfHasSignature;
+        bool m_ovfAllowsNetworkSriov; ///< false when OVF recommendations prohibit SR-IOV
+
+        // XVA metadata populated after source-page validation
+        QStringList m_xvaVmNames;
+        qint64 m_xvaTotalDiskSizeBytes;
+
+        // VHD metadata populated after source-page validation
+        qint64 m_diskImageCapacityBytes;
+        QString m_diskImageFormatName;
+
+        // OVF per-network mappings: OVF network name → target XenServer network OpaqueRef
+        QMap<QString, QString> m_ovfNetworkMappings;
+
+        // OVF per-network MAC addresses: OVF network name → MAC (empty = auto-generate)
+        QMap<QString, QString> m_ovfMacMappings;
+
+        // OVF disk file hrefs from References/File (populated after source-page validation)
+        QStringList m_ovfDiskHrefs;
+        QMap<QString, QStringList> m_ovfDiskHrefsBySystem;
+
+        // OVF per-disk SR overrides: disk href → target SR OpaqueRef
+        // Empty means "use defaultSrRef for all disks".
+        QMap<QString, QString> m_ovfDiskSrMappings;
+
+        // Number of XVA VIF rows shown on the network page (0 = single-combo fallback)
+        int m_xvaVifCount;
+
+        // VHD VM config (collected from Page_VmConfig)
+        QString m_vmName;
+        int     m_vcpuCount;
+        qint64  m_memoryMb;
+
+        // VHD boot options (collected from Page_BootOptions)
+        BootMode m_bootMode;
+        bool     m_assignVtpm;
+
+        QSharedPointer<VM>     m_xvaImportedVm;
+
+        Ui::ImportWizard* ui;
 };
 
 #endif // IMPORTWIZARD_H

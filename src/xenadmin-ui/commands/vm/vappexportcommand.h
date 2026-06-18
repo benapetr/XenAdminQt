@@ -44,12 +44,8 @@ class VappExportCommand : public Command
         void Run() override;
         QString MenuText() const override;
 
-    private slots:
-        void onWizardFinished(int result);
-
     private:
         QSharedPointer<VMAppliance> getSelectedAppliance() const;
-        ExportWizard* m_exportWizard;
 };
 
 #endif // VAPPEXPORTCOMMAND_H

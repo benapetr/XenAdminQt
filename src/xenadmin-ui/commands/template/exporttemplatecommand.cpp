@@ -28,7 +28,6 @@
 #include "exporttemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
-#include "xen/api.h"
 #include "xenlib/xen/vm.h"
 
 ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* parent) : TemplateCommand(mainWindow, parent)
@@ -46,25 +45,14 @@ bool ExportTemplateCommand::CanRun() const
 
 void ExportTemplateCommand::Run()
 {
-    QString templateRef = this->getSelectedTemplateRef();
-    QString templateName = this->getSelectedTemplateName();
-
-    if (templateRef.isEmpty() || templateName.isEmpty())
+    QSharedPointer<VM> tmplVm = this->getTemplate();
+    if (!tmplVm)
         return;
 
-    // Launch the export wizard
-    // Note: The wizard will allow the user to select which templates/VMs to export
-    // The currently selected template will be the default choice
-    ExportWizard wizard(MainWindow::instance());
-
-    if (wizard.exec() == QDialog::Accepted)
-    {
-        // TODO: Launch ExportVmAction with wizard parameters
-        // For now, show a message that action will be implemented
-        MainWindow::instance()->ShowStatusMessage(
-            QString("Export template '%1' - action pending HTTP infrastructure integration").arg(templateName), 
-            5000);
-    }
+    XenConnection* conn = tmplVm->GetConnection();
+    ExportWizard wizard(conn, MainWindow::instance());
+    wizard.SetPreselectedVMs({tmplVm});
+    wizard.exec();
 }
 
 QString ExportTemplateCommand::MenuText() const

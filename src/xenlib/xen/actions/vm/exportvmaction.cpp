@@ -35,7 +35,9 @@
 #include "../../vm.h"
 #include "../../pool.h"
 #include "../../host.h"
+#include "../../failure.h"
 #include "../../../xencache.h"
+#include "../../../xva/xvaverifier.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
@@ -50,7 +52,6 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
     , m_host(host)
     , filename_(filename)
     , verify_(verify)
-    , httpClient_(nullptr)
     , progressThread_(nullptr)
 {
     if (!vm)
@@ -69,9 +70,6 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
 
 ExportVmAction::~ExportVmAction()
 {
-    if (this->httpClient_)
-        delete this->httpClient_;
-        
     if (this->progressThread_)
     {
         this->progressThread_->quit();
@@ -84,8 +82,8 @@ void ExportVmAction::progressPoll()
 {
     try
     {
-        // Poll task progress
-        this->pollToCompletion(0, this->verify_ ? 50 : 95);
+        // Poll task progress — mirrors C# ProgressPoll() which calls PollToCompletion()
+        this->pollToCompletion(this->GetRelatedTaskRef(), 0, this->verify_ ? 50 : 95);
     }
     catch (const std::exception& e)
     {
@@ -159,13 +157,11 @@ void ExportVmAction::run()
     params["session_id"] = this->GetSession()->GetSessionID();
     params["uuid"] = vmUuid;
 
-    // Create HTTP client
-    this->httpClient_ = new HttpClient(this);
-
     // Download file with progress tracking
     QString tmpFile = this->filename_ + ".tmp";
-    
-    bool success = this->httpClient_->getFile(
+
+    HttpClient httpClient;
+    bool success = httpClient.getFile(
         targetHost,
         "/export",
         params,
@@ -190,12 +186,31 @@ void ExportVmAction::run()
     if (!success)
     {
         QFile::remove(tmpFile);
-        
-        if (!this->exception_.isEmpty())
+
+        // Diagnose failure type in priority order, matching C# ExportVmAction failure descriptions.
+        // 1. VDI_IN_USE comes from the XenServer task — set by pollTask() via setError().
+        // 2. Disk full is detected at write-time by HttpClient.
+        // 3. Any explicit exception from the progress-poll thread.
+        // 4. Fall back to the raw HTTP/socket error.
+        const QString taskError = this->GetErrorMessage();
+        if (!taskError.isEmpty() && taskError.contains(QString::fromLatin1(Failure::VDI_IN_USE)))
+        {
+            this->SetDescription(tr("Export failed: a virtual disk is in use by another operation"));
+            // Keep the task error already set by pollTask()
+        } else if (httpClient.IsDiskFull())
+        {
+            this->SetDescription(tr("Export failed: the target disk is full"));
+            this->setError(tr("The target disk is full."));
+        } else if (!this->exception_.isEmpty())
+        {
+            this->SetDescription(tr("Export failed"));
             this->setError(this->exception_);
-        else
-            this->setError(this->httpClient_->lastError());
-        
+        } else
+        {
+            this->SetDescription(tr("Export failed"));
+            this->setError(httpClient.lastError());
+        }
+
         this->setState(OperationState::Failed);
         return;
     }
@@ -207,23 +222,58 @@ void ExportVmAction::run()
         return;
     }
 
-    // Verify file if requested
+    // Verify file if requested (ports Export.verify() from C# CommandLib/export.cs)
     if (this->verify_)
     {
         this->SetDescription(tr("Verifying export..."));
         this->SetPercentComplete(50);
-        
-        // TODO: Implement TAR verification (requires archive library)
-        // For now, just check file exists and has size > 0
-        QFileInfo fileInfo(tmpFile);
-        if (!fileInfo.exists() || fileInfo.size() == 0)
+
+        const QFileInfo tmpInfo(tmpFile);
+        if (!tmpInfo.exists() || tmpInfo.size() == 0)
         {
             QFile::remove(tmpFile);
-            this->setError("Export verification failed: file is empty or missing");
+            this->setError(tr("Export verification failed: file is empty or missing"));
             this->setState(OperationState::Failed);
             return;
         }
-        
+
+        const XvaVerifyResult result = XvaVerifier::Verify(
+            tmpFile,
+            [this]() -> bool { return this->IsCancelled(); },
+            [this, &tmpInfo](qint64 bytesVerified) {
+                // Estimate progress from 50% to 95% proportional to bytes
+                const qint64 total = tmpInfo.size();
+                if (total > 0)
+                {
+                    const int pct = 50 + static_cast<int>(45.0 * bytesVerified / total);
+                    this->SetPercentComplete(qMin(pct, 95));
+                }
+            });
+
+        if (result.errorType == XvaVerifyResult::ErrorType::Cancelled)
+        {
+            QFile::remove(tmpFile);
+            this->setState(OperationState::Cancelled);
+            return;
+        }
+
+        if (!result.success)
+        {
+            QFile::remove(tmpFile);
+
+            // Match C# failure descriptions from ExportVmAction.cs
+            if (result.errorType == XvaVerifyResult::ErrorType::HeaderChecksum)
+                this->SetDescription(tr("Export verification failed: header checksum error"));
+            else if (result.errorType == XvaVerifyResult::ErrorType::BlockChecksum)
+                this->SetDescription(tr("Export verification failed: block checksum error"));
+            else
+                this->SetDescription(tr("Export verification failed"));
+
+            this->setError(result.errorMessage);
+            this->setState(OperationState::Failed);
+            return;
+        }
+
         this->SetPercentComplete(95);
     }
 
