@@ -124,34 +124,13 @@ bool HttpClient::sendHttpHeaders(QSslSocket* socket, const QStringList& headers)
     }
 
     socket->flush();
-
-    if (!socket->waitForBytesWritten(30000))
-    {
-        qWarning() << "HttpClient: Timed out sending HTTP headers"
-                   << "state" << socket->state()
-                   << "encrypted" << socket->isEncrypted()
-                   << "socketError" << socket->error()
-                   << "errorString" << socket->errorString()
-                   << "bytesToWrite" << socket->bytesToWrite();
-
-        if (socket->state() == QAbstractSocket::ConnectedState &&
-            socket->error() == QAbstractSocket::UnknownSocketError &&
-            socket->bytesToWrite() == 0)
-        {
-            qWarning() << "HttpClient: HTTP headers have no pending bytes; continuing to read response";
-            return true;
-        }
-
-        return false;
-    }
-
     return true;
 }
 
 bool HttpClient::readHttpResponse(QSslSocket* socket)
 {
     // Wait for response
-    if (!socket->waitForReadyRead(30000))
+    if (!socket->waitForReadyRead(HTTP_TIMEOUT_MS))
     {
         this->lastError_ = "Timeout waiting for HTTP response";
         return false;
