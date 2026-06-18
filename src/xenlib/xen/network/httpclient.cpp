@@ -33,6 +33,7 @@
 #include <QEventLoop>
 #include <QTimer>
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QDebug>
 #include <QNetworkProxy>
 #include <cerrno>
@@ -189,6 +190,58 @@ bool HttpClient::readHttpResponse(QSslSocket* socket)
     return true;
 }
 
+bool HttpClient::waitForWriteBuffer(QAbstractSocket* socket,
+                                    qint64 targetBytes,
+                                    CancelCallback cancelCallback)
+{
+    QElapsedTimer stalledTimer;
+    stalledTimer.start();
+    qint64 previousBytesToWrite = socket->bytesToWrite();
+
+    while (socket->bytesToWrite() > targetBytes)
+    {
+        if (cancelCallback && cancelCallback())
+        {
+            this->lastError_ = "Operation cancelled by user";
+            return false;
+        }
+
+        if (socket->state() != QAbstractSocket::ConnectedState)
+        {
+            this->lastError_ = QString("Connection closed while sending data: %1")
+                                   .arg(socket->errorString());
+            return false;
+        }
+
+        const bool wroteBytes = socket->waitForBytesWritten(WRITE_WAIT_SLICE_MS);
+        if (!wroteBytes &&
+            socket->error() != QAbstractSocket::UnknownSocketError &&
+            socket->error() != QAbstractSocket::SocketTimeoutError &&
+            socket->error() != QAbstractSocket::TemporaryError)
+        {
+            this->lastError_ = QString("Failed while sending data: %1")
+                                   .arg(socket->errorString());
+            return false;
+        }
+
+        const qint64 bytesToWrite = socket->bytesToWrite();
+        if (bytesToWrite < previousBytesToWrite)
+        {
+            previousBytesToWrite = bytesToWrite;
+            stalledTimer.restart();
+            continue;
+        }
+
+        if (stalledTimer.elapsed() >= HTTP_TIMEOUT_MS)
+        {
+            this->lastError_ = QString("Timeout sending data: %1").arg(socket->errorString());
+            return false;
+        }
+    }
+
+    return true;
+}
+
 qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
                               qint64 totalSize,
                               ProgressCallback progressCallback,
@@ -198,6 +251,7 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
     qint64 bytesTransferred = 0;
     QByteArray buffer(BUFFER_SIZE, Qt::Uninitialized);
     QDateTime lastUpdate = QDateTime::currentDateTime();
+    QAbstractSocket* destSocket = qobject_cast<QAbstractSocket*>(dest);
 
     auto reportProgress = [&]() {
         if (progressCallback && totalSize > 0)
@@ -211,34 +265,65 @@ qint64 HttpClient::copyStream(QIODevice* source, QIODevice* dest,
     };
 
     auto writeBytes = [&](qint64 bytesRead) -> bool {
-        qint64 bytesWritten = dest->write(buffer.constData(), bytesRead);
-        if (bytesWritten != bytesRead)
+        qint64 offset = 0;
+        while (offset < bytesRead)
         {
-            // Detect disk-full on POSIX systems (mirrors C# ERROR_DISK_FULL check)
-#ifdef Q_OS_UNIX
-            if (errno == ENOSPC)
+            if (cancelCallback && cancelCallback())
             {
-                this->isDiskFull_ = true;
-                this->lastError_ = "The target disk is full.";
+                this->lastError_ = "Operation cancelled by user";
                 return false;
             }
+
+            const qint64 bytesWritten = dest->write(buffer.constData() + offset,
+                                                    bytesRead - offset);
+            if (bytesWritten < 0)
+            {
+                // Detect disk-full on POSIX systems (mirrors C# ERROR_DISK_FULL check)
+#ifdef Q_OS_UNIX
+                if (errno == ENOSPC)
+                {
+                    this->isDiskFull_ = true;
+                    this->lastError_ = "The target disk is full.";
+                    return false;
+                }
 #endif
-            // Generic write error — include the file's error string where available
-            QFile* destFile = qobject_cast<QFile*>(dest);
-            this->lastError_ = destFile
-                ? QString("Failed to write data: %1").arg(destFile->errorString())
-                : QString("Failed to write data");
-            return false;
-        }
+                // Generic write error — include the destination error where available
+                QFile* destFile = qobject_cast<QFile*>(dest);
+                this->lastError_ = destFile
+                    ? QString("Failed to write data: %1").arg(destFile->errorString())
+                    : destSocket
+                        ? QString("Failed to write data: %1").arg(destSocket->errorString())
+                        : QString("Failed to write data");
+                return false;
+            }
 
-        bytesTransferred += bytesWritten;
+            if (bytesWritten == 0)
+            {
+                this->lastError_ = destSocket
+                    ? QString("Socket accepted no data: %1").arg(destSocket->errorString())
+                    : QString("Destination accepted no data");
+                return false;
+            }
 
-        // Update progress every 500ms
-        QDateTime now = QDateTime::currentDateTime();
-        if (lastUpdate.msecsTo(now) > 500)
-        {
-            reportProgress();
-            lastUpdate = now;
+            offset += bytesWritten;
+            bytesTransferred += bytesWritten;
+
+            if (destSocket &&
+                destSocket->bytesToWrite() >= WRITE_HIGH_WATER_MARK &&
+                !this->waitForWriteBuffer(destSocket,
+                                          WRITE_LOW_WATER_MARK,
+                                          cancelCallback))
+            {
+                return false;
+            }
+
+            // Update progress every 500ms
+            QDateTime now = QDateTime::currentDateTime();
+            if (lastUpdate.msecsTo(now) > 500)
+            {
+                reportProgress();
+                lastUpdate = now;
+            }
         }
 
         return true;
@@ -378,7 +463,12 @@ bool HttpClient::putFile(const QString& localFilePath,
     }
 
     socket->flush();
-    socket->waitForBytesWritten(30000);
+    if (!this->waitForWriteBuffer(socket, 0, cancelCallback))
+    {
+        emit this->error(this->lastError_);
+        delete socket;
+        return false;
+    }
 
     // Read response
     bool success = this->readHttpResponse(socket);
