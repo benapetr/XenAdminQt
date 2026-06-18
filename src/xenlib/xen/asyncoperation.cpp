@@ -487,11 +487,9 @@ void AsyncOperation::SetSafeToExit(bool safe)
 }
 
 // Execution control
-void AsyncOperation::RunAsync(bool auto_delete)
+void AsyncOperation::RunAsync()
 {
     QMutexLocker locker(&this->m_mutex);
-
-    this->m_autoDelete = auto_delete;
 
     if (this->m_state != NotStarted)
     {
@@ -517,6 +515,16 @@ void AsyncOperation::RunAsync(bool auto_delete)
     QThreadPool::globalInstance()->start([this]() {
         this->runOnWorkerThread();
     });
+}
+
+void AsyncOperation::RunAsync(bool autoDelete)
+{
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_autoDelete = autoDelete;
+    }
+
+    this->RunAsync();
 }
 
 void AsyncOperation::runOnWorkerThread()

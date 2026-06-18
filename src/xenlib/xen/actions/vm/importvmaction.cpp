@@ -30,11 +30,8 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/xenapi_VIF.h"
-#include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Task.h"
 #include "../../../xencache.h"
-#include "../../failure.h"
 #include "../../sr.h"
 #include "../../host.h"
 #include "../../pool.h"
@@ -51,12 +48,9 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
     , hostRef_(hostRef)
     , filename_(filename)
     , srRef_(srRef)
-    , wizardDone_(false)
-    , startAutomatically_(false)
-    , httpClient_(nullptr)
 {
     this->SetSafeToExit(false);
-    this->SetCanCancel(false); // upload is in progress; cancel enabled only once wizard has finished
+    this->SetCanCancel(true);
     
     QFileInfo fileInfo(filename);
     QString poolName = "XenServer"; // Default
@@ -72,29 +66,10 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
 
     // RBAC dependencies (matches C# ImportVmAction)
     this->AddApiMethodToRoleCheck("vm.set_name_label");
-    this->AddApiMethodToRoleCheck("network.destroy");
-    this->AddApiMethodToRoleCheck("vif.create");
-    this->AddApiMethodToRoleCheck("vif.destroy");
     this->AddApiMethodToRoleCheck("http/put_import");
     this->AddApiMethodToRoleCheck("sr.scan");
     if (!this->hostRef_.isEmpty())
         this->AddApiMethodToRoleCheck("vm.set_affinity");
-}
-
-ImportVmAction::~ImportVmAction()
-{
-    if (this->httpClient_)
-        delete this->httpClient_;
-}
-
-void ImportVmAction::endWizard(bool startAutomatically, const QStringList& vifRefs)
-{
-    QMutexLocker locker(&this->mutex_);
-    this->startAutomatically_ = startAutomatically;
-    this->vifRefs_ = vifRefs;
-    this->wizardDone_ = true;
-    this->SetCanCancel(true); // safe to cancel once wizard configuration is complete
-    this->waitCondition_.wakeAll();
 }
 
 int ImportVmAction::vmsWithName(const QString& name)
@@ -198,12 +173,13 @@ QString ImportVmAction::uploadFile()
     params["restore"] = "false";
     params["force"] = "false";
 
-    // Create HTTP client
-    this->httpClient_ = new HttpClient(this);
+    // The upload runs on the AsyncOperation worker thread, so keep the HTTP client
+    // local to that thread rather than parenting it to this UI-affine QObject.
+    HttpClient httpClient;
 
     // Upload file with progress tracking
     QFileInfo fileInfo(this->filename_);
-    bool success = this->httpClient_->putFile(
+    bool success = httpClient.putFile(
         this->filename_,
         targetHost,
         "/import",
@@ -223,7 +199,7 @@ QString ImportVmAction::uploadFile()
 
     if (!success)
     {
-        this->setError(this->httpClient_->lastError());
+        this->setError(httpClient.lastError());
         this->pollToCompletion(this->importTaskRef_);
         return QString();
     }
@@ -240,161 +216,6 @@ QString ImportVmAction::uploadFile()
     {
         this->setError(QString("Import failed: %1").arg(e.what()));
         return QString();
-    }
-}
-
-void ImportVmAction::updateNetworks(const QString& vmRef, const QString& importTaskRef)
-{
-    if (this->vifRefs_.isEmpty())
-        return;
-
-    this->SetDescription(tr("Updating network configuration..."));
-
-    XenAPI::Session* session = this->GetSession();
-
-    // Get the list of VIFs on the imported VM
-    QStringList vifList;
-    try
-    {
-        vifList = XenAPI::VM::get_VIFs(session, vmRef);
-    }
-    catch (const std::exception& e)
-    {
-        qWarning() << "ImportVmAction: Failed to get VIFs:" << e.what();
-        return;
-    }
-
-    if (vifList.isEmpty())
-        return;
-
-    // Collect the original network for each VIF before any remapping, so we can clean up
-    // temporary import networks at the end (matches C# ImportVmAction pattern).
-    QList<QPair<QString, QVariantMap>> vifOriginals; // (vifRef, record)
-    QStringList originalNetworks;
-    for (const QString& vifRef : vifList)
-    {
-        try
-        {
-            const QString netRef = XenAPI::VIF::get_network(session, vifRef);
-            const QVariantMap rec = XenAPI::VIF::get_record(session, vifRef);
-            vifOriginals.append({vifRef, rec});
-            if (!netRef.isEmpty() && !originalNetworks.contains(netRef))
-                originalNetworks << netRef;
-        }
-        catch (const std::exception& e)
-        {
-            qWarning() << "ImportVmAction: Could not read VIF" << vifRef << ":" << e.what();
-            vifOriginals.append({vifRef, QVariantMap()});
-        }
-    }
-
-    // Remap VIFs to the target networks.
-    // vifRefs_ holds target network refs: one per VIF (matched by device field when available,
-    // otherwise by index), or a single entry applied to all VIFs.
-    for (int i = 0; i < vifOriginals.size(); ++i)
-    {
-        const QString& vifRef = vifOriginals.at(i).first;
-        const QVariantMap& vifRecord = vifOriginals.at(i).second;
-        if (vifRecord.isEmpty())
-            continue;
-
-        // Match target network by device number first, then fall back to positional index.
-        const QString deviceStr = vifRecord.value("device").toString();
-        QString targetNetwork;
-        for (const QString& candidate : this->vifRefs_)
-        {
-            // vifRefs_ may later carry device:network pairs; for now treat as plain network refs
-            Q_UNUSED(candidate);
-        }
-        // Plain network-refs list: use index if available, else first
-        if (i < this->vifRefs_.size())
-            targetNetwork = this->vifRefs_.at(i);
-        else if (!this->vifRefs_.isEmpty())
-            targetNetwork = this->vifRefs_.first();
-
-        if (targetNetwork.isEmpty())
-            continue;
-
-        const QString currentNetwork = XenAPI::VIF::get_network(session, vifRef);
-        if (currentNetwork == targetNetwork)
-        {
-            qDebug() << "ImportVmAction: VIF" << deviceStr << "already on target network, skipping";
-            continue;
-        }
-
-        this->SetDescription(tr("Remapping network interface %1...").arg(deviceStr.isEmpty() ? QString::number(i + 1) : deviceStr));
-
-        // Try VIF.move first (available from XenServer Ely / 7.2+, platform_version >= 2.1.1)
-        bool moved = false;
-        try
-        {
-            QString moveTask = XenAPI::VIF::async_move(session, vifRef, targetNetwork);
-            this->pollToCompletion(moveTask);
-            moved = true;
-            qDebug() << "ImportVmAction: Moved VIF device" << deviceStr << "via VIF.move";
-        }
-        catch (const std::exception& e)
-        {
-            qDebug() << "ImportVmAction: VIF.move not available, falling back to destroy+recreate:" << e.what();
-        }
-
-        if (!moved)
-        {
-            // Fall back: destroy old VIF, create new one on target network
-            try
-            {
-                XenAPI::VIF::destroy(session, vifRef);
-
-                QVariantMap newRecord = vifRecord;
-                newRecord["network"] = targetNetwork;
-                newRecord.remove("uuid");
-                newRecord.remove("ref");
-                newRecord.remove("current_operations");
-                newRecord.remove("allowed_operations");
-                newRecord.remove("status_code");
-                newRecord.remove("status_detail");
-                newRecord.remove("runtime_properties");
-                if (newRecord.value("MAC_autogenerated").toBool())
-                    newRecord["MAC"] = QString(); // let server autogenerate
-
-                XenAPI::VIF::create(session, newRecord);
-                qDebug() << "ImportVmAction: Recreated VIF device" << deviceStr << "on target network";
-            }
-            catch (const std::exception& e)
-            {
-                qWarning() << "ImportVmAction: Failed to recreate VIF device" << deviceStr << ":" << e.what();
-            }
-        }
-    }
-
-    // Destroy any temporary networks created by this import task that no longer have VIFs or PIFs
-    // (matches C# ImportVmAction network cleanup)
-    if (!importTaskRef.isEmpty())
-    {
-        for (const QString& netRef : originalNetworks)
-        {
-            try
-            {
-                QVariantMap netRecord = XenAPI::Network::get_record(session, netRef);
-                const QVariantMap otherConfig = netRecord.value("other_config").toMap();
-                if (otherConfig.value(IMPORT_TASK).toString() != importTaskRef)
-                    continue;
-
-                // Only destroy if no VIFs and no PIFs remain
-                if (!netRecord.value("VIFs").toList().isEmpty() || !netRecord.value("PIFs").toList().isEmpty())
-                {
-                    qDebug() << "ImportVmAction: Temp network" << netRef << "still has VIFs/PIFs, keeping";
-                    continue;
-                }
-
-                qDebug() << "ImportVmAction: Destroying empty temporary import network" << netRef;
-                XenAPI::Network::destroy(session, netRef);
-            }
-            catch (const std::exception& e)
-            {
-                qDebug() << "ImportVmAction: Temp network cleanup skipped for" << netRef << ":" << e.what();
-            }
-        }
     }
 }
 
@@ -544,102 +365,10 @@ void ImportVmAction::run()
             XenAPI::VM::set_affinity(this->GetSession(), this->vmRef_, this->hostRef_);
         }
 
-        // Notify the wizard that the VM has been created on the server.
-        // The wizard will close the upload progress dialog and advance to
-        // the network configuration page.  The signal is emitted from the
-        // worker thread; the wizard connects with Qt::QueuedConnection so
-        // the slot runs on the UI thread.
-        emit this->vmDiscovered(this->vmRef_);
-
-        // Wait for wizard to finish
-        this->SetDescription(isTemplate ? tr("Waiting for template configuration...")
-                                        : tr("Waiting for VM configuration..."));
-
-        QMutexLocker locker(&this->mutex_);
-        while (!this->wizardDone_ && !this->IsCancelled())
-        {
-            this->waitCondition_.wait(&this->mutex_, 1000);
-        }
-        locker.unlock();
-
-        if (this->IsCancelled())
-        {
-            this->setState(OperationState::Cancelled);
-            return;
-        }
-
-        // Update networks
-        if (!this->vifRefs_.isEmpty())
-        {
-            this->updateNetworks(this->vmRef_, this->importTaskRef_);
-        }
-
+        // Preserve the VM, VIF and network configuration created by XenServer.
+        // Further customization can be performed after the background import completes.
         this->SetDescription(isTemplate ? tr("Template import complete")
                                         : tr("VM import complete"));
-
-        // Start the VM automatically if requested and it is not a template
-        if (this->startAutomatically_ && !isTemplate && !this->IsCancelled())
-        {
-            this->SetDescription(tr("Starting imported VM..."));
-            try
-            {
-                // Check power state — use resume for suspended VMs, start for halted
-                QString powerState = XenAPI::VM::get_power_state(this->GetSession(), this->vmRef_);
-                QString startTaskRef;
-                if (powerState.compare("Suspended", Qt::CaseInsensitive) == 0)
-                {
-                    startTaskRef = XenAPI::VM::async_resume(this->GetSession(), this->vmRef_, false, false);
-                }
-                else
-                {
-                    startTaskRef = XenAPI::VM::async_start(this->GetSession(), this->vmRef_, false, false);
-                }
-                this->pollToCompletion(startTaskRef);
-                this->SetDescription(tr("VM started"));
-            }
-            catch (const Failure& f)
-            {
-                // Collect per-host boot reasons for NO_HOSTS_AVAILABLE
-                // (mirrors C# VMOperationCommand::StartDiagnosisForm)
-                QMap<QString, QString> hostReasons;
-                if (f.errorCode() == QLatin1String(Failure::NO_HOSTS_AVAILABLE))
-                {
-                    auto* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
-                    if (cache)
-                    {
-                        for (const auto& obj : cache->GetAll(XenObjectType::Host))
-                        {
-                            if (auto host = qSharedPointerDynamicCast<Host>(obj))
-                            {
-                                try
-                                {
-                                    XenAPI::VM::assert_can_boot_here(this->GetSession(),
-                                                                     this->vmRef_,
-                                                                     host->OpaqueRef());
-                                }
-                                catch (const Failure& hf)
-                                {
-                                    hostReasons[host->GetName()] = hf.message();
-                                }
-                                catch (const std::exception& he)
-                                {
-                                    hostReasons[host->GetName()] = QString::fromUtf8(he.what());
-                                }
-                            }
-                        }
-                    }
-                }
-                emit this->vmStartFailed(this->vmRef_, f.errorCode(), hostReasons);
-                qWarning() << "ImportVmAction: Failed to auto-start VM:" << f.message();
-            }
-            catch (const std::exception& e)
-            {
-                // Non-fatal: report but don't fail the whole import
-                emit this->vmStartFailed(this->vmRef_, QString(), {});
-                qWarning() << "ImportVmAction: Failed to auto-start VM:" << e.what();
-            }
-        }
-
         this->setState(OperationState::Completed);
     }
     catch (const std::exception& e)

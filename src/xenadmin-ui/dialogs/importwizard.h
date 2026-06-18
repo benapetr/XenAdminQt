@@ -44,7 +44,6 @@ class Host;
 class SR;
 class Network;
 class VM;
-class ImportVmAction;
 
 class ImportWizard : public QWizard
 {
@@ -222,9 +221,6 @@ class ImportWizard : public QWizard
         BootMode m_bootMode;
         bool     m_assignVtpm;
 
-        // XVA upload action — created on storage-page leave and owned by the wizard.
-        // Matches C# StoragePickerPage.ImportXvaAction lifecycle.
-        ImportVmAction*        m_xvaAction;
         QSharedPointer<VM>     m_xvaImportedVm;
 
         Ui::ImportWizard* ui;

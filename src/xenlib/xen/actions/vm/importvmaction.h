@@ -30,12 +30,6 @@
 
 #include "../../asyncoperation.h"
 #include <QString>
-#include <QStringList>
-#include <QMap>
-#include <QMutex>
-#include <QWaitCondition>
-
-class HttpClient;
 
 /**
  * @brief Import a VM from an XVA file
@@ -65,74 +59,26 @@ class ImportVmAction : public AsyncOperation
                                 const QString& srRef,
                                 QObject* parent = nullptr);
 
-        ~ImportVmAction() override;
-
-        /**
-        * @brief Called by wizard when it finishes configuration
-        * @param startAutomatically Whether to start VM after import
-        * @param vifRefs List of VIF references to create
-        */
-        void endWizard(bool startAutomatically, const QStringList& vifRefs);
+        ~ImportVmAction() override = default;
 
         /**
         * @brief Get imported VM reference (available after completion)
         */
         QString vmRef() const { return this->vmRef_; }
 
-    signals:
-        /**
-        * @brief Emitted when the uploaded VM has been discovered in the cache,
-        *        just before the action enters the wizard-wait phase.
-        *        The wizard connects to this to close the upload progress dialog
-        *        and advance to the network configuration page.
-        * @param vmRef OpaqueRef of the discovered VM
-        */
-        void vmDiscovered(const QString& vmRef);
-
-        /**
-        * @brief Emitted when the auto-start step fails (non-fatal — import itself succeeded).
-        *
-        * Mirrors the C# \c _failureDiagnosisDelegate pattern from ImportVmAction.
-        * The UI layer connects to this to show a diagnostic dialog.
-        *
-        * @param vmRef      OpaqueRef of the VM that failed to start
-        * @param errorCode  XenAPI error code (e.g. \c Failure::NO_HOSTS_AVAILABLE).
-        *                   Empty string when the failure is not a XenAPI \c Failure.
-        * @param hostReasons Per-host \c assert_can_boot_here failure messages.
-        *                   Populated only for \c NO_HOSTS_AVAILABLE; empty otherwise.
-        */
-        void vmStartFailed(const QString& vmRef, const QString& errorCode,
-                           const QMap<QString, QString>& hostReasons);
-
     protected:
         void run() override;
-
-        /// Wake the wizard-wait condition so cancel exits the wait loop immediately.
-        void onCancel() override
-        {
-            this->waitCondition_.wakeAll();
-        }
 
     private:
         QString uploadFile();
         QString defaultVMName(const QString& vmName);
         int vmsWithName(const QString& name);
-        void updateNetworks(const QString& vmRef, const QString& importTaskRef);
 
         QString hostRef_;
         QString filename_;
         QString srRef_;
         QString vmRef_;
         QString importTaskRef_;
-        
-        bool wizardDone_;
-        bool startAutomatically_;
-        QStringList vifRefs_;
-        
-        QMutex mutex_;
-        QWaitCondition waitCondition_;
-        
-        HttpClient* httpClient_;
 };
 
 #endif // IMPORTVMACTION_H

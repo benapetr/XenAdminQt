@@ -38,6 +38,7 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/vm/importapplianceaction.h"
 #include "xenlib/xen/actions/vm/importimageaction.h"
+#include "xenlib/xen/actions/vm/importvmaction.h"
 #include <QtWidgets>
 
 ImportVMCommand::ImportVMCommand(QObject* parent) : Command(nullptr, parent)
@@ -118,7 +119,6 @@ void ImportVMCommand::showImportWizard()
     qDebug() << "ImportVMCommand: Import Wizard accepted, dispatching action";
     XenConnection* targetConnection = wizard.GetSelectedConnection() ? wizard.GetSelectedConnection() : connection;
 
-    // XVA: upload was already started by the wizard; OVF/VHD start new actions below.
     if (wizard.GetImportType() == ImportWizard::ImportType_OVF)
     {
         if (!targetConnection)
@@ -278,9 +278,40 @@ void ImportVMCommand::showImportWizard()
         return;
     }
 
-    // XVA: the upload was started by the wizard on the Storage page and endWizard()
-    // was called in ImportWizard::accept().  The action's VIF-remapping and optional
-    // VM-start phase now runs in the background — no further dialog is needed here.
-    // This mirrors the C# ImportWizard.FinishWizard() pattern where no second
-    // blocking dialog is shown after the wizard closes.
+    if (!targetConnection)
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("No Connection"),
+                             tr("No connected server found. Please connect to a server first."));
+        return;
+    }
+
+    const auto selectedSR = wizard.GetSelectedSR();
+    const QString srRef = selectedSR ? selectedSR->OpaqueRef() : QString();
+    if (srRef.isEmpty())
+    {
+        QMessageBox::warning(MainWindow::instance(), tr("No Storage Selected"),
+                             tr("No storage repository was selected. Cannot start import."));
+        return;
+    }
+
+    const auto selectedHost = wizard.GetSelectedHost();
+    const QString hostRef = selectedHost ? selectedHost->OpaqueRef() : QString();
+    ImportVmAction* action = new ImportVmAction(
+        targetConnection,
+        hostRef,
+        wizard.GetSourceFilePath(),
+        srRef,
+        nullptr);
+
+    MainWindow* mainWindow = MainWindow::instance();
+    if (mainWindow)
+    {
+        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow]()
+        {
+            mainWindow->ShowStatusMessage(QObject::tr("Import completed"), 3000);
+        });
+        mainWindow->ShowStatusMessage(tr("Import started in the background"), 3000);
+    }
+
+    action->RunAsync(true);
 }

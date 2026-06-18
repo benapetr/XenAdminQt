@@ -42,8 +42,6 @@
 #include "xenlib/utils/decompressgzaction.h"
 #include "xenlib/utils/downloadfileaction.h"
 #include "xenlib/xen/actions/sr/srrefreshaction.h"
-#include "xenlib/xen/actions/vm/importvmaction.h"
-#include "xenlib/xen/failure.h"
 #include "dialogs/actionprogressdialog.h"
 #include <QDebug>
 #include <QtWidgets>
@@ -85,7 +83,6 @@ ImportWizard::ImportWizard(XenConnection* connection, const QString& initialFile
     , m_memoryMb(512)
     , m_bootMode(BootMode_Bios)
     , m_assignVtpm(false)
-    , m_xvaAction(nullptr)
     , ui(new Ui::ImportWizard)
 {
     this->ui->setupUi(this);
@@ -160,6 +157,8 @@ int ImportWizard::nextId() const
         case Page_Rbac:
             return Page_Storage;
         case Page_Storage:
+            if (this->m_importType == ImportType_XVA)
+                return -1;
             return Page_Network;
         case Page_Network:
             if (this->m_importType == ImportType_XVA)
@@ -1665,9 +1664,6 @@ bool ImportWizard::validateCurrentPage()
         if (this->m_importType == ImportType_XVA)
         {
             required << "vm.set_name_label"
-                     << "network.destroy"
-                     << "vif.create"
-                     << "vif.destroy"
                      << "http/put_import"
                      << "sr.scan";
             this->hasApiPermissions(required, &this->m_blockingRbacMissing);
@@ -1756,118 +1752,6 @@ bool ImportWizard::validateCurrentPage()
             }
         }
 
-        // ── XVA: start the upload now, exactly as C# StoragePickerPage.PageLeaveCore ──
-        // For OVF and VHD the upload is handled by separate actions started after the wizard.
-        if (this->m_importType == ImportType_XVA)
-        {
-            // If we already have the imported VM (e.g. user navigated back and forward
-            // again), there is nothing to do — the action is already running.
-            if (this->m_xvaImportedVm && this->m_xvaImportedVm->IsValid())
-                return true;
-
-            // Clean up a previous failed/cancelled attempt so the user can retry.
-            if (this->m_xvaAction)
-            {
-                if (!this->m_xvaAction->IsFailed() && !this->m_xvaAction->IsCancelled())
-                {
-                    // Upload is in progress — wizard shouldn't have reached here, but guard.
-                    return false;
-                }
-                this->m_xvaAction->deleteLater();
-                this->m_xvaAction = nullptr;
-                this->m_xvaImportedVm.clear();
-            }
-
-            const QString hostRef = this->m_selectedHost ? this->m_selectedHost->OpaqueRef() : QString();
-            const QString srRef2  = this->m_selectedSR   ? this->m_selectedSR->OpaqueRef()   : QString();
-
-            this->m_xvaAction = new ImportVmAction(
-                this->m_connection, hostRef, this->m_sourceFilePath, srRef2, this);
-
-            // Show upload progress.  The dialog calls RunAsync() in showEvent.
-            // We close it early — when the VM is discovered — rather than waiting
-            // for the full action to finish (wizard-wait phase follows).
-            ActionProgressDialog* uploadDlg = new ActionProgressDialog(this->m_xvaAction, this);
-            uploadDlg->setShowCancel(true);
-
-            // When VM is found in the XAPI cache the action emits vmDiscovered (from the
-            // worker thread).  Qt::QueuedConnection ensures the slot runs on the UI thread.
-            connect(this->m_xvaAction, &ImportVmAction::vmDiscovered, this,
-                [this, uploadDlg](const QString& discoveredRef)
-                {
-                    // Resolve the VM object from cache and keep it for the network page.
-                    if (this->m_connection && this->m_connection->GetCache())
-                    {
-                        this->m_xvaImportedVm = this->m_connection->GetCache()
-                            ->ResolveObject<VM>(XenObjectType::VM, discoveredRef);
-                    }
-                    // Close the upload dialog — exec() will return Accepted.
-                    if (uploadDlg)
-                        uploadDlg->accept();
-                }, Qt::QueuedConnection);
-
-            // Surface auto-start failures with a diagnostic dialog.
-            // This signal is emitted after the import completes (non-fatal), so the
-            // wizard is long gone — use nullptr as parent (top-level warning dialog).
-            // Mirrors C# VMOperationCommand::StartDiagnosisForm delegate pattern.
-            connect(this->m_xvaAction, &ImportVmAction::vmStartFailed,
-                this, [](const QString& /*vmRef*/, const QString& errorCode,
-                          const QMap<QString, QString>& hostReasons)
-                {
-                    const QString title = tr("Could Not Start Imported VM");
-                    if (errorCode == QLatin1String(Failure::NO_HOSTS_AVAILABLE) && !hostReasons.isEmpty())
-                    {
-                        // Build per-host reason list (mirrors C# CommandErrorDialog)
-                        QString details;
-                        for (auto it = hostReasons.cbegin(); it != hostReasons.cend(); ++it)
-                        {
-                            const QString reason = it.value().isEmpty()
-                                                   ? tr("Can boot here")
-                                                   : it.value();
-                            details += QString("\n  %1: %2").arg(it.key(), reason);
-                        }
-                        QMessageBox::warning(nullptr, title,
-                            tr("The imported VM could not be started — no host is able to run it.%1")
-                            .arg(details));
-                    }
-                    else if (errorCode == QLatin1String(Failure::HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN))
-                    {
-                        QMessageBox::warning(nullptr, title,
-                            tr("The imported VM could not be started because doing so would "
-                               "violate the configured HA failover plan.\n\n"
-                               "You may be able to start it by reducing the HA failover "
-                               "tolerance in the pool settings."));
-                    }
-                    else
-                    {
-                        QMessageBox::warning(nullptr, title,
-                            tr("The imported VM could not be started automatically. "
-                               "Please start it manually from the VM list."));
-                    }
-                }, Qt::QueuedConnection);
-
-            // If the action fails or is cancelled before the VM is found, the upload
-            // dialog's own onOperationCompleted() will call switchToErrorState() and
-            // the user closes it manually (exec returns Rejected).
-
-            const int dlgResult = uploadDlg->exec();
-            uploadDlg->deleteLater();
-
-            if (dlgResult != QDialog::Accepted || !this->m_xvaImportedVm || !this->m_xvaImportedVm->IsValid())
-            {
-                // Upload failed, was cancelled, or VM not found — clean up and stay on page.
-                if (this->m_xvaAction)
-                {
-                    this->m_xvaAction->deleteLater();
-                    this->m_xvaAction = nullptr;
-                }
-                this->m_xvaImportedVm.clear();
-                return false;
-            }
-
-            // Upload succeeded and VM is in cache — advance to Page_Network.
-            return true;
-        }
     }
 
     return QWizard::validateCurrentPage();
@@ -2002,52 +1886,11 @@ void ImportWizard::accept()
              << "network:" << (this->m_selectedNetwork ? this->m_selectedNetwork->OpaqueRef() : "(none)")
              << "start:" << this->m_startVMsAutomatically;
 
-    // XVA: call endWizard() to unblock the action's wizard-wait phase.
-    // The action will then do VIF remapping and optional VM start in the background.
-    // This mirrors C# ImportWizard.FinishWizard() → action.EndWizard(...).
-    if (this->m_importType == ImportType_XVA && this->m_xvaAction)
-    {
-        QStringList vifTargetNetworks;
-
-        // If we have per-VIF rows, collect them in index order.
-        QList<QComboBox*> xvaCombos = this->ui->ovfMappingContainer
-            ? this->ui->ovfMappingContainer->findChildren<QComboBox*>(QRegularExpression("^xvaVifCombo_"))
-            : QList<QComboBox*>();
-
-        std::sort(xvaCombos.begin(), xvaCombos.end(), [](QComboBox* a, QComboBox* b)
-        {
-            return a->property("xvaVifIndex").toInt() < b->property("xvaVifIndex").toInt();
-        });
-
-        for (QComboBox* combo : xvaCombos)
-            vifTargetNetworks << (combo ? combo->currentData().toString() : QString());
-
-        this->m_xvaVifCount = vifTargetNetworks.size();
-
-        if (vifTargetNetworks.isEmpty() && this->m_selectedNetwork)
-        {
-            // Fallback: single-network mode
-            vifTargetNetworks << this->m_selectedNetwork->OpaqueRef();
-        }
-
-        this->m_xvaAction->endWizard(this->m_startVMsAutomatically, vifTargetNetworks);
-    }
-
     QWizard::accept();
 }
 
 void ImportWizard::reject()
 {
-    // XVA: cancel the running upload/wait action, matching C# ImportWizard.OnCancel().
-    // EndWizard(false, {}) wakes the wizard-wait condition; Cancel() stops any further work.
-    if (this->m_importType == ImportType_XVA && this->m_xvaAction)
-    {
-        if (!this->m_xvaAction->IsFailed() && !this->m_xvaAction->IsCancelled())
-        {
-            this->m_xvaAction->endWizard(false, QStringList());
-            this->m_xvaAction->Cancel();
-        }
-    }
     QWizard::reject();
 }
 
