@@ -199,9 +199,28 @@ QString ImportVmAction::uploadFile()
 
     if (!success)
     {
-        this->setError(httpClient.lastError());
-        this->pollToCompletion(this->importTaskRef_);
-        return QString();
+        const QString httpError = httpClient.lastError();
+
+        // XenServer may close the upload connection without returning a final HTTP
+        // response even though the import task continues and completes successfully.
+        // Treat the XenAPI task as authoritative before reporting the transport error.
+        try
+        {
+            this->pollToCompletion(this->importTaskRef_);
+        }
+        catch (const std::exception& e)
+        {
+            this->setError(QString("%1: %2").arg(httpError, e.what()));
+            return QString();
+        }
+
+        if (this->IsFailed() || this->IsCancelled())
+            return QString();
+
+        const QString result = this->GetResult();
+        qWarning() << "ImportVmAction: HTTP upload response was unavailable, but the import task succeeded:"
+                   << httpError;
+        return result;
     }
 
     // Poll task to completion
