@@ -72,6 +72,8 @@ NewVMWizard::NewVMWizard(XenConnection* connection, const QString& defaultTempla
     connect(this->ui->vcpusMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onVcpusMaxChanged);
     connect(this->ui->memoryStaticMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryStaticMaxChanged);
     connect(this->ui->memoryDynamicMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryDynamicMaxChanged);
+    connect(this->m_advancedOptionsCheckBox, &QCheckBox::toggled, this, &NewVMWizard::onAdvancedOptionsToggled);
+    connect(this->m_memoryUnitCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewVMWizard::onMemoryUnitChanged);
     connect(this->ui->coresPerSocketCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewVMWizard::onCoresPerSocketChanged);
     connect(this->ui->isoRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onIsoRadioToggled);
     connect(this->ui->urlRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onUrlRadioToggled);
@@ -94,6 +96,7 @@ NewVMWizard::NewVMWizard(XenConnection* connection, const QString& defaultTempla
 
     this->updateIsoControls();
     this->updateHomeServerControls(false);
+    this->updateAdvancedOptions();
     this->onDisklessToggled(this->ui->disklessCheckBox->isChecked());
 
     this->loadStorageRepositories();
@@ -150,6 +153,15 @@ void NewVMWizard::setupUiPages()
         this->ui->networkTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
         this->ui->networkTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     }
+
+    this->m_advancedOptionsCheckBox = new QCheckBox(tr("Advanced options"), this->ui->pageCpuMemory);
+    this->m_advancedOptionsCheckBox->setChecked(SettingsManager::instance().GetNewVMWizardAdvancedOptions());
+    this->ui->cpuMemLayout->insertWidget(0, this->m_advancedOptionsCheckBox);
+
+    this->m_memoryUnitCombo = new QComboBox(this->ui->memoryGroupBox);
+    this->m_memoryUnitCombo->addItem(tr("MB"), 1);
+    this->m_memoryUnitCombo->addItem(tr("GB"), 1024);
+    this->ui->memoryLayout->addWidget(this->m_memoryUnitCombo, 0, 2, 1, 1);
 
     this->ui->coresPerSocketCombo->clear();
     for (int cores : {1, 2, 4, 8, 16})
@@ -323,11 +335,11 @@ void NewVMWizard::handleTemplateSelectionChanged()
         this->ui->vcpusStartupSpin->setMaximum(int(vcpusMax));
         this->ui->vcpusStartupSpin->setValue(int(vcpusStartup));
 
-        this->ui->memoryStaticMaxSpin->setValue(int(memStaticMax));
-        this->ui->memoryDynamicMaxSpin->setMaximum(int(memStaticMax));
-        this->ui->memoryDynamicMaxSpin->setValue(int(memDynMax));
-        this->ui->memoryDynamicMinSpin->setMaximum(int(memDynMax));
-        this->ui->memoryDynamicMinSpin->setValue(int(memDynMin));
+        this->setMemorySpinValueMiB(this->ui->memoryStaticMaxSpin, int(memStaticMax));
+        this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMaxSpin, int(memStaticMax));
+        this->setMemorySpinValueMiB(this->ui->memoryDynamicMaxSpin, int(memDynMax));
+        this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMinSpin, int(memDynMax));
+        this->setMemorySpinValueMiB(this->ui->memoryDynamicMinSpin, int(memDynMin));
 
         int coresIndex = this->ui->coresPerSocketCombo->findData(int(coresPerSocket));
         if (coresIndex == -1)
@@ -347,6 +359,7 @@ void NewVMWizard::handleTemplateSelectionChanged()
         this->m_coresPerSocket = int(coresPerSocket);
         this->m_originalVcpuAtStartup = int(vcpusStartup);
         this->m_originalCoresPerSocket = int(coresPerSocket);
+        this->updateAdvancedOptions();
     }
 
     this->loadTemplateDevices();
@@ -732,18 +745,31 @@ void NewVMWizard::updateSummaryPage()
     QStringList lines;
     lines << tr("Template: %1").arg(templateName.isEmpty() ? tr("None selected") : templateName);
     lines << tr("Name: %1").arg(this->ui->vmNameEdit->text().trimmed());
-    if (this->m_supportsVcpuHotplug)
+    const bool advanced = this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked();
+    if (advanced && this->m_supportsVcpuHotplug)
     {
         lines << tr("vCPUs: %1 (max %2)").arg(this->ui->vcpusStartupSpin->value()).arg(this->ui->vcpusMaxSpin->value());
     } else
     {
         lines << tr("vCPUs: %1").arg(this->ui->vcpusMaxSpin->value());
     }
-    lines << tr("Topology: %1").arg(this->ui->coresPerSocketCombo->currentText());
-    lines << tr("Memory: %1 MiB (dynamic %2-%3)")
-                 .arg(this->ui->memoryStaticMaxSpin->value())
-                 .arg(this->ui->memoryDynamicMinSpin->value())
-                 .arg(this->ui->memoryDynamicMaxSpin->value());
+    if (advanced)
+        lines << tr("Topology: %1").arg(this->ui->coresPerSocketCombo->currentText());
+
+    const QString memoryUnit = this->m_memoryUnitCombo ? this->m_memoryUnitCombo->currentText() : tr("MB");
+    if (advanced)
+    {
+        lines << tr("Memory: %1 %2 (dynamic %3-%4 %2)")
+                     .arg(this->ui->memoryStaticMaxSpin->value())
+                     .arg(memoryUnit)
+                     .arg(this->ui->memoryDynamicMinSpin->value())
+                     .arg(this->ui->memoryDynamicMaxSpin->value());
+    } else
+    {
+        lines << tr("Memory: %1 %2")
+                     .arg(this->ui->memoryStaticMaxSpin->value())
+                     .arg(memoryUnit);
+    }
     if (this->m_gpuPageEnabled && this->ui->gpuEditPage)
         lines << tr("vGPUs: %1").arg(this->ui->gpuEditPage->GetVGpuData().size());
     lines << tr("Disks: %1").arg(this->m_disks.size());
@@ -791,12 +817,6 @@ void NewVMWizard::updateVcpuControls()
     this->m_maxVcpusAllowed = qMax(this->m_minVcpus, templateVm->MaxVCPUsAllowed());
     this->m_maxCoresPerSocket = qMax(1, int(templateVm->MaxCoresPerSocket()));
 
-    this->ui->vcpusStartupLabel->setVisible(this->m_supportsVcpuHotplug);
-    this->ui->vcpusStartupSpin->setVisible(this->m_supportsVcpuHotplug);
-    this->ui->vcpusMaxLabel->setText(this->m_supportsVcpuHotplug
-        ? tr("Maximum vCPUs:")
-        : tr("vCPUs:"));
-
     this->ui->vcpusMaxSpin->setMinimum(this->m_minVcpus);
     this->ui->vcpusMaxSpin->setMaximum(this->m_maxVcpusAllowed);
     this->ui->vcpusStartupSpin->setMinimum(this->m_minVcpus);
@@ -804,6 +824,77 @@ void NewVMWizard::updateVcpuControls()
 
     this->updateTopologyOptions(this->ui->vcpusMaxSpin->value());
     this->enforceVcpuTopology();
+    this->updateAdvancedOptions();
+}
+
+void NewVMWizard::updateAdvancedOptions()
+{
+    const bool advanced = this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked();
+
+    this->ui->vcpusMaxLabel->setText(advanced && this->m_supportsVcpuHotplug
+        ? tr("Maximum vCPUs:")
+        : tr("vCPUs:"));
+    this->ui->vcpusStartupLabel->setVisible(advanced && this->m_supportsVcpuHotplug);
+    this->ui->vcpusStartupSpin->setVisible(advanced && this->m_supportsVcpuHotplug);
+    this->ui->coresPerSocketLabel->setVisible(advanced);
+    this->ui->coresPerSocketCombo->setVisible(advanced);
+
+    this->ui->memoryGroupBox->setTitle(tr("Memory"));
+    this->ui->memoryStaticMaxLabel->setText(advanced ? tr("Static max:") : tr("Memory:"));
+    this->ui->memoryDynamicMaxLabel->setVisible(advanced);
+    this->ui->memoryDynamicMaxSpin->setVisible(advanced);
+    this->ui->memoryDynamicMinLabel->setVisible(advanced);
+    this->ui->memoryDynamicMinSpin->setVisible(advanced);
+
+    if (!advanced)
+        this->syncSimpleCpuMemoryValues();
+}
+
+int NewVMWizard::memoryUnitMultiplier() const
+{
+    if (!this->m_memoryUnitCombo)
+        return 1;
+
+    const int multiplier = this->m_memoryUnitCombo->currentData().toInt();
+    return multiplier > 0 ? multiplier : 1;
+}
+
+int NewVMWizard::memorySpinValueMiB(const QSpinBox* spin) const
+{
+    if (!spin)
+        return 0;
+    return spin->value() * this->memoryUnitMultiplier();
+}
+
+void NewVMWizard::setMemorySpinValueMiB(QSpinBox* spin, int valueMiB)
+{
+    if (!spin)
+        return;
+
+    const int multiplier = this->memoryUnitMultiplier();
+    const int displayValue = qMax(1, (valueMiB + multiplier - 1) / multiplier);
+    spin->setValue(displayValue);
+}
+
+void NewVMWizard::setMemorySpinMaximumMiB(QSpinBox* spin, int maximumMiB)
+{
+    if (!spin)
+        return;
+
+    const int multiplier = this->memoryUnitMultiplier();
+    const int displayMaximum = qMax(1, maximumMiB / multiplier);
+    spin->setMaximum(displayMaximum);
+}
+
+void NewVMWizard::syncSimpleCpuMemoryValues()
+{
+    this->ui->vcpusStartupSpin->setValue(this->ui->vcpusMaxSpin->value());
+
+    const int staticMaxMiB = this->memorySpinValueMiB(this->ui->memoryStaticMaxSpin);
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMaxSpin, staticMaxMiB);
+    this->setMemorySpinValueMiB(this->ui->memoryDynamicMaxSpin, staticMaxMiB);
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMinSpin, staticMaxMiB);
+    this->setMemorySpinValueMiB(this->ui->memoryDynamicMinSpin, staticMaxMiB);
 }
 
 void NewVMWizard::enforceVcpuTopology()
@@ -1040,9 +1131,12 @@ bool NewVMWizard::validateCurrentPage()
                 return false;
             }
 
-            int dynMin = this->ui->memoryDynamicMinSpin->value();
-            int dynMax = this->ui->memoryDynamicMaxSpin->value();
-            int staticMax = this->ui->memoryStaticMaxSpin->value();
+            if (!(this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked()))
+                this->syncSimpleCpuMemoryValues();
+
+            int dynMin = this->memorySpinValueMiB(this->ui->memoryDynamicMinSpin);
+            int dynMax = this->memorySpinValueMiB(this->ui->memoryDynamicMaxSpin);
+            int staticMax = this->memorySpinValueMiB(this->ui->memoryStaticMaxSpin);
             if (!(dynMin <= dynMax && dynMax <= staticMax))
             {
                 QMessageBox::warning(this, tr("Memory Configuration"),
@@ -1094,14 +1188,18 @@ void NewVMWizard::accept()
 {
     this->m_vmName = this->ui->vmNameEdit->text().trimmed();
     this->m_vmDescription = this->ui->vmDescriptionEdit->toPlainText().trimmed();
-    this->m_vcpuCount = this->m_supportsVcpuHotplug
+    const bool advanced = this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked();
+    if (!advanced)
+        this->syncSimpleCpuMemoryValues();
+
+    this->m_vcpuCount = advanced && this->m_supportsVcpuHotplug
         ? this->ui->vcpusStartupSpin->value()
         : this->ui->vcpusMaxSpin->value();
     this->m_vcpuMax = this->ui->vcpusMaxSpin->value();
     this->m_coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
-    this->m_memoryDynamicMin = this->ui->memoryDynamicMinSpin->value();
-    this->m_memoryDynamicMax = this->ui->memoryDynamicMaxSpin->value();
-    this->m_memoryStaticMax = this->ui->memoryStaticMaxSpin->value();
+    this->m_memoryDynamicMin = this->memorySpinValueMiB(this->ui->memoryDynamicMinSpin);
+    this->m_memoryDynamicMax = this->memorySpinValueMiB(this->ui->memoryDynamicMaxSpin);
+    this->m_memoryStaticMax = this->memorySpinValueMiB(this->ui->memoryStaticMaxSpin);
     this->m_memorySize = this->m_memoryStaticMax;
     this->m_assignVtpm = this->ui->assignVtpmCheckBox->isChecked();
     this->m_installUrl = this->ui->urlRadioButton->isChecked() ? this->ui->urlLineEdit->text().trimmed() : QString();
@@ -1297,7 +1395,8 @@ void NewVMWizard::onCopyBiosStringsToggled(bool checked)
 
 void NewVMWizard::onVcpusMaxChanged(int value)
 {
-    if (this->m_supportsVcpuHotplug)
+    const bool advanced = this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked();
+    if (advanced && this->m_supportsVcpuHotplug)
     {
         this->ui->vcpusStartupSpin->setMaximum(value);
         if (this->ui->vcpusStartupSpin->value() > value)
@@ -1320,16 +1419,67 @@ void NewVMWizard::onCoresPerSocketChanged(int index)
 
 void NewVMWizard::onMemoryStaticMaxChanged(int value)
 {
-    this->ui->memoryDynamicMaxSpin->setMaximum(value);
-    if (this->ui->memoryDynamicMaxSpin->value() > value)
-        this->ui->memoryDynamicMaxSpin->setValue(value);
+    if (this->m_updatingMemoryControls)
+        return;
+
+    const int valueMiB = value * this->memoryUnitMultiplier();
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMaxSpin, valueMiB);
+    if (this->memorySpinValueMiB(this->ui->memoryDynamicMaxSpin) > valueMiB)
+        this->setMemorySpinValueMiB(this->ui->memoryDynamicMaxSpin, valueMiB);
+
+    if (!(this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked()))
+        this->syncSimpleCpuMemoryValues();
 }
 
 void NewVMWizard::onMemoryDynamicMaxChanged(int value)
 {
-    this->ui->memoryDynamicMinSpin->setMaximum(value);
-    if (this->ui->memoryDynamicMinSpin->value() > value)
-        this->ui->memoryDynamicMinSpin->setValue(value);
+    if (this->m_updatingMemoryControls)
+        return;
+
+    const int valueMiB = value * this->memoryUnitMultiplier();
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMinSpin, valueMiB);
+    if (this->memorySpinValueMiB(this->ui->memoryDynamicMinSpin) > valueMiB)
+        this->setMemorySpinValueMiB(this->ui->memoryDynamicMinSpin, valueMiB);
+}
+
+void NewVMWizard::onAdvancedOptionsToggled(bool checked)
+{
+    SettingsManager::instance().SetNewVMWizardAdvancedOptions(checked);
+    this->updateAdvancedOptions();
+}
+
+void NewVMWizard::onMemoryUnitChanged(int index)
+{
+    Q_UNUSED(index);
+    if (this->m_updatingMemoryControls)
+        return;
+
+    const int staticMaxMiB = this->ui->memoryStaticMaxSpin->value() * this->m_memoryUnitMultiplier;
+    const int dynamicMaxMiB = this->ui->memoryDynamicMaxSpin->value() * this->m_memoryUnitMultiplier;
+    const int dynamicMinMiB = this->ui->memoryDynamicMinSpin->value() * this->m_memoryUnitMultiplier;
+
+    this->m_memoryUnitMultiplier = this->memoryUnitMultiplier();
+    QSignalBlocker staticBlocker(this->ui->memoryStaticMaxSpin);
+    QSignalBlocker dynamicMaxBlocker(this->ui->memoryDynamicMaxSpin);
+    QSignalBlocker dynamicMinBlocker(this->ui->memoryDynamicMinSpin);
+
+    this->m_updatingMemoryControls = true;
+    const int minimumDisplay = qMax(1, (128 + this->m_memoryUnitMultiplier - 1) / this->m_memoryUnitMultiplier);
+    this->ui->memoryStaticMaxSpin->setMinimum(minimumDisplay);
+    this->ui->memoryDynamicMaxSpin->setMinimum(minimumDisplay);
+    this->ui->memoryDynamicMinSpin->setMinimum(minimumDisplay);
+    this->setMemorySpinMaximumMiB(this->ui->memoryStaticMaxSpin, 1048576);
+    this->setMemorySpinValueMiB(this->ui->memoryStaticMaxSpin, staticMaxMiB);
+    const int actualStaticMaxMiB = this->ui->memoryStaticMaxSpin->value() * this->m_memoryUnitMultiplier;
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMaxSpin, actualStaticMaxMiB);
+    this->setMemorySpinValueMiB(this->ui->memoryDynamicMaxSpin, qMin(dynamicMaxMiB, actualStaticMaxMiB));
+    const int actualDynamicMaxMiB = this->ui->memoryDynamicMaxSpin->value() * this->m_memoryUnitMultiplier;
+    this->setMemorySpinMaximumMiB(this->ui->memoryDynamicMinSpin, qMin(actualDynamicMaxMiB, actualStaticMaxMiB));
+    this->setMemorySpinValueMiB(this->ui->memoryDynamicMinSpin, qMin(dynamicMinMiB, qMin(actualDynamicMaxMiB, actualStaticMaxMiB)));
+    this->m_updatingMemoryControls = false;
+
+    if (!(this->m_advancedOptionsCheckBox && this->m_advancedOptionsCheckBox->isChecked()))
+        this->syncSimpleCpuMemoryValues();
 }
 
 void NewVMWizard::onIsoRadioToggled(bool checked)

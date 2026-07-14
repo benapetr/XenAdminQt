@@ -98,6 +98,7 @@ void SettingsManager::Load()
     this->m_defaultTemplatesVisible = this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
     this->m_userTemplatesVisible = this->m_settings->value("View/userTemplatesVisible", true).toBool();
     this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
+    this->m_newVMWizardAdvancedOptions = this->m_settings->value("NewVMWizard/advancedOptions", false).toBool();
     this->m_showAllServerEvents = this->m_settings->value("View/showAllServerEvents", false).toBool();
     this->m_consoleRefreshInterval = this->m_settings->value("Console/refreshInterval", 5).toInt();
     this->m_consoleFullScreenShortcutKey = this->m_settings->value("Console/FullScreenShortcutKey", 0).toInt();
@@ -167,6 +168,7 @@ void SettingsManager::Save()
     this->m_settings->setValue("View/defaultTemplatesVisible", this->m_defaultTemplatesVisible);
     this->m_settings->setValue("View/userTemplatesVisible", this->m_userTemplatesVisible);
     this->m_settings->setValue("View/localSRsVisible", this->m_localSRsVisible);
+    this->m_settings->setValue("NewVMWizard/advancedOptions", this->m_newVMWizardAdvancedOptions);
     this->m_settings->setValue("View/showAllServerEvents", this->m_showAllServerEvents);
     this->m_settings->setValue("Console/refreshInterval", this->m_consoleRefreshInterval);
     this->m_settings->setValue("Console/FullScreenShortcutKey", this->m_consoleFullScreenShortcutKey);
@@ -576,6 +578,17 @@ void SettingsManager::SetLocalSRsVisible(bool visible)
 {
     this->m_localSRsVisible = visible;
     emit settingsChanged("View/localSRsVisible");
+}
+
+bool SettingsManager::GetNewVMWizardAdvancedOptions() const
+{
+    return this->m_newVMWizardAdvancedOptions;
+}
+
+void SettingsManager::SetNewVMWizardAdvancedOptions(bool advanced)
+{
+    this->m_newVMWizardAdvancedOptions = advanced;
+    emit settingsChanged("NewVMWizard/advancedOptions");
 }
 
 bool SettingsManager::GetShowAllServerEvents() const

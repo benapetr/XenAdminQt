@@ -38,6 +38,9 @@ class QWizardPage;
 class XenConnection;
 class XenCache;
 class QTreeWidgetItem;
+class QCheckBox;
+class QComboBox;
+class QSpinBox;
 class WizardNavigationPane;
 
 namespace Ui
@@ -82,6 +85,8 @@ class NewVMWizard : public QWizard
         void onVcpusMaxChanged(int value);
         void onMemoryStaticMaxChanged(int value);
         void onMemoryDynamicMaxChanged(int value);
+        void onAdvancedOptionsToggled(bool checked);
+        void onMemoryUnitChanged(int index);
         void onIsoRadioToggled(bool checked);
         void onUrlRadioToggled(bool checked);
         void onDefaultSrChanged(int index);
@@ -117,6 +122,12 @@ class NewVMWizard : public QWizard
         void updateHomeServerControls(bool enableSelection);
         void updateIsoControls();
         void updateVcpuControls();
+        void updateAdvancedOptions();
+        int memoryUnitMultiplier() const;
+        int memorySpinValueMiB(const QSpinBox* spin) const;
+        void setMemorySpinValueMiB(QSpinBox* spin, int valueMiB);
+        void setMemorySpinMaximumMiB(QSpinBox* spin, int maximumMiB);
+        void syncSimpleCpuMemoryValues();
         void updateTopologyOptions(int vcpusMax);
         bool isValidVcpu(int vcpus) const;
         void enforceVcpuTopology();
@@ -189,6 +200,10 @@ class NewVMWizard : public QWizard
         QString m_pvArgs;
         WizardNavigationPane* m_navigationPane = nullptr;
         bool m_gpuPageEnabled = false;
+        QCheckBox* m_advancedOptionsCheckBox = nullptr;
+        QComboBox* m_memoryUnitCombo = nullptr;
+        int m_memoryUnitMultiplier = 1;
+        bool m_updatingMemoryControls = false;
 
         // Storage configuration: list of (VDI ref, SR ref, size, device)
         // This is just a temporary disk descriptor that actual VDB / VDI

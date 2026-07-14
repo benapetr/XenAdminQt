@@ -118,6 +118,10 @@ class SettingsManager : public QObject
 
         bool GetLocalSRsVisible() const;
         void SetLocalSRsVisible(bool visible);
+
+        bool GetNewVMWizardAdvancedOptions() const;
+        void SetNewVMWizardAdvancedOptions(bool advanced);
+
         bool GetShowAllServerEvents() const;
         void SetShowAllServerEvents(bool show);
 
@@ -288,6 +292,7 @@ class SettingsManager : public QObject
         bool m_defaultTemplatesVisible;
         bool m_userTemplatesVisible;
         bool m_localSRsVisible;
+        bool m_newVMWizardAdvancedOptions;
         bool m_showAllServerEvents;
         int m_consoleRefreshInterval;
         int m_consoleFullScreenShortcutKey;
