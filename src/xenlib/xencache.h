@@ -116,13 +116,6 @@ class XenCache : public QObject
             return this->ResolveObject<T>(XenObjectTraits<T>::kType, ref);
         }
 
-        /**
-         * @brief Canonicalize a type string so all callers share the same mapping logic
-         * @param type Object type
-         * @return Lowercase canonical form used internally (e.g. "VMs" -> "vm")
-         */
-        QString CanonicalType(const QString& type) const;
-        static XenObjectType TypeFromString(const QString& type);
         static QString TypeToCacheString(XenObjectType type);
 
         /**
@@ -345,8 +338,6 @@ class XenCache : public QObject
         QMap<XenObjectType, QMap<QString, QSharedPointer<XenObject>>> m_objects;
         QPointer<XenConnection> m_connection;
 
-        XenObjectType normalizeType(const QString& type) const;
-        QString typeToCacheString(XenObjectType type) const;
         QSharedPointer<XenObject> createObjectForType(XenObjectType type, const QString& ref);
         void refreshObject(XenObjectType type, const QString& ref);
         void evictObject(XenObjectType type, const QString& ref);

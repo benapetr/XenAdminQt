@@ -37,6 +37,125 @@ bool XenObject::ValueIsNULL(const QString &value)
     return value.isEmpty() || value == XENOBJECT_NULL;
 }
 
+XenObjectType XenObject::TypeFromString(const QString &name)
+{
+    const QString n = name.trimmed().toLower();
+
+    if (n == "blob" || n == "blobs") return XenObjectType::Blob;
+    if (n == "bond" || n == "bonds") return XenObjectType::Bond;
+    if (n == "certificate" || n == "certificates") return XenObjectType::Certificate;
+    if (n == "cluster" || n == "clusters") return XenObjectType::Cluster;
+    if (n == "cluster_host" || n == "cluster_hosts") return XenObjectType::ClusterHost;
+    if (n == "console" || n == "consoles") return XenObjectType::Console;
+    if (n == "disconnected_host" || n == "disconnected_hosts") return XenObjectType::DisconnectedHost;
+    if (n == "dockercontainer" || n == "dockercontainers" || n == "docker_container" || n == "docker_containers") return XenObjectType::DockerContainer;
+    if (n == "event" || n == "events") return XenObjectType::Event;
+    if (n == "feature" || n == "features") return XenObjectType::Feature;
+    if (n == "folder" || n == "folders") return XenObjectType::Folder;
+    if (n == "gpu_group" || n == "gpu_groups" || n == "gpugroup" || n == "gpugroups") return XenObjectType::GPUGroup;
+    if (n == "host" || n == "hosts") return XenObjectType::Host;
+    if (n == "host_cpu" || n == "host_cpus") return XenObjectType::HostCPU;
+    if (n == "host_crashdump" || n == "host_crashdumps") return XenObjectType::HostCrashdump;
+    if (n == "host_metrics") return XenObjectType::HostMetrics;
+    if (n == "host_patch" || n == "host_patches") return XenObjectType::HostPatch;
+    if (n == "message" || n == "messages") return XenObjectType::Message;
+    if (n == "network" || n == "networks") return XenObjectType::Network;
+    if (n == "network_sriov" || n == "network_sriovs") return XenObjectType::NetworkSriov;
+    if (n == "pbd" || n == "pbds") return XenObjectType::PBD;
+    if (n == "pci" || n == "pcis") return XenObjectType::PCI;
+    if (n == "pif" || n == "pifs") return XenObjectType::PIF;
+    if (n == "pif_metrics") return XenObjectType::PIFMetrics;
+    if (n == "pgpu" || n == "pgpus") return XenObjectType::PGPU;
+    if (n == "pool" || n == "pools") return XenObjectType::Pool;
+    if (n == "pool_patch" || n == "pool_patches") return XenObjectType::PoolPatch;
+    if (n == "pool_update" || n == "pool_updates") return XenObjectType::PoolUpdate;
+    if (n == "role" || n == "roles") return XenObjectType::Role;
+    if (n == "sm" || n == "sms") return XenObjectType::SM;
+    if (n == "sr" || n == "srs") return XenObjectType::SR;
+    if (n == "task" || n == "tasks") return XenObjectType::Task;
+    if (n == "tunnel" || n == "tunnels") return XenObjectType::Tunnel;
+    if (n == "usb_group" || n == "usb_groups" || n == "usbgroup" || n == "usbgroups") return XenObjectType::USBGroup;
+    if (n == "user" || n == "users") return XenObjectType::User;
+    if (n == "vbd" || n == "vbds") return XenObjectType::VBD;
+    if (n == "vbd_metrics") return XenObjectType::VBDMetrics;
+    if (n == "vdi" || n == "vdis") return XenObjectType::VDI;
+    if (n == "vgpu" || n == "vgpus") return XenObjectType::VGPU;
+    if (n == "vgpu_type" || n == "vgpu_types" || n == "vgputype" || n == "vgputypes") return XenObjectType::VGPUType;
+    if (n == "vif" || n == "vifs") return XenObjectType::VIF;
+    if (n == "vlan" || n == "vlans") return XenObjectType::VLAN;
+    if (n == "vm" || n == "vms") return XenObjectType::VM;
+    if (n == "vm_appliance" || n == "vm_appliances" || n == "vmappliance" || n == "vmappliances" || n == "vm appliance" || n == "vm appliances") return XenObjectType::VMAppliance;
+    if (n == "vm_guest_metrics") return XenObjectType::VMGuestMetrics;
+    if (n == "vm_metrics") return XenObjectType::VMMetrics;
+    if (n == "vmpp") return XenObjectType::VMPP;
+    if (n == "vmss") return XenObjectType::VMSS;
+    if (n == "vtpm" || n == "vtpms") return XenObjectType::VTPM;
+    if (n == "vusb" || n == "vusbs") return XenObjectType::VUSB;
+    if (n == "pusb" || n == "pusbs") return XenObjectType::PUSB;
+
+    return XenObjectType::Null;
+}
+
+QString XenObject::TypeToString(XenObjectType type)
+{
+    switch (type)
+    {
+    case XenObjectType::Null: return "null";
+    case XenObjectType::Blob: return "blob";
+    case XenObjectType::Bond: return "bond";
+    case XenObjectType::Certificate: return "certificate";
+    case XenObjectType::Cluster: return "cluster";
+    case XenObjectType::ClusterHost: return "cluster_host";
+    case XenObjectType::Console: return "console";
+    case XenObjectType::DockerContainer: return "docker_container";
+    case XenObjectType::Event: return "event";
+    case XenObjectType::Feature: return "feature";
+    case XenObjectType::Folder: return "folder";
+    case XenObjectType::GPUGroup: return "GPU_group";
+    case XenObjectType::Host: return "host";
+    case XenObjectType::DisconnectedHost: return "host";
+    case XenObjectType::HostCPU: return "host_cpu";
+    case XenObjectType::HostCrashdump: return "host_crashdump";
+    case XenObjectType::HostMetrics: return "host_metrics";
+    case XenObjectType::HostPatch: return "host_patch";
+    case XenObjectType::Message: return "message";
+    case XenObjectType::Network: return "network";
+    case XenObjectType::NetworkSriov: return "network_sriov";
+    case XenObjectType::PBD: return "pbd";
+    case XenObjectType::PCI: return "pci";
+    case XenObjectType::PIF: return "pif";
+    case XenObjectType::PIFMetrics: return "pif_metrics";
+    case XenObjectType::PGPU: return "pgpu";
+    case XenObjectType::Pool: return "pool";
+    case XenObjectType::PoolPatch: return "pool_patch";
+    case XenObjectType::PoolUpdate: return "pool_update";
+    case XenObjectType::Role: return "role";
+    case XenObjectType::SM: return "SM";
+    case XenObjectType::SR: return "sr";
+    case XenObjectType::Task: return "task";
+    case XenObjectType::Tunnel: return "tunnel";
+    case XenObjectType::USBGroup: return "USB_group";
+    case XenObjectType::User: return "user";
+    case XenObjectType::VBD: return "vbd";
+    case XenObjectType::VBDMetrics: return "vbd_metrics";
+    case XenObjectType::VDI: return "vdi";
+    case XenObjectType::VGPU: return "vgpu";
+    case XenObjectType::VGPUType: return "vgpu_type";
+    case XenObjectType::VIF: return "vif";
+    case XenObjectType::VLAN: return "vlan";
+    case XenObjectType::VM: return "vm";
+    case XenObjectType::VMAppliance: return "VM_appliance";
+    case XenObjectType::VMGuestMetrics: return "vm_guest_metrics";
+    case XenObjectType::VMMetrics: return "vm_metrics";
+    case XenObjectType::VMPP: return "vmpp";
+    case XenObjectType::VMSS: return "vmss";
+    case XenObjectType::VTPM: return "vtpm";
+    case XenObjectType::VUSB: return "vusb";
+    case XenObjectType::PUSB: return "PUSB";
+    }
+    return "null";
+}
+
 XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent) : QObject(parent), m_connection(connection), m_opaqueRef(opaqueRef)
 {
     XenObject::totalObjects++;
@@ -150,67 +269,8 @@ bool XenObject::IsHidden() const
         hiddenValue = otherConfig.value("hide_from_xencenter");
 
     const QString hidden = hiddenValue.toString().trimmed().toLower();
-    return hidden == "true" || hidden == "1";
-}
 
-QString XenObject::TypeToString(XenObjectType type)
-{
-    switch (type)
-    {
-        case XenObjectType::Null: return "null";
-        case XenObjectType::Blob: return "blob";
-        case XenObjectType::Bond: return "bond";
-        case XenObjectType::Certificate: return "certificate";
-        case XenObjectType::Cluster: return "cluster";
-        case XenObjectType::ClusterHost: return "cluster_host";
-        case XenObjectType::Console: return "console";
-        case XenObjectType::DockerContainer: return "docker_container";
-        case XenObjectType::Event: return "event";
-        case XenObjectType::Feature: return "feature";
-        case XenObjectType::Folder: return "folder";
-        case XenObjectType::GPUGroup: return "GPU_group";
-        case XenObjectType::Host: return "host";
-        case XenObjectType::DisconnectedHost: return "host";
-        case XenObjectType::HostCPU: return "host_cpu";
-        case XenObjectType::HostCrashdump: return "host_crashdump";
-        case XenObjectType::HostMetrics: return "host_metrics";
-        case XenObjectType::HostPatch: return "host_patch";
-        case XenObjectType::Message: return "message";
-        case XenObjectType::Network: return "network";
-        case XenObjectType::NetworkSriov: return "network_sriov";
-        case XenObjectType::PBD: return "pbd";
-        case XenObjectType::PCI: return "pci";
-        case XenObjectType::PIF: return "pif";
-        case XenObjectType::PIFMetrics: return "pif_metrics";
-        case XenObjectType::PGPU: return "pgpu";
-        case XenObjectType::Pool: return "pool";
-        case XenObjectType::PoolPatch: return "pool_patch";
-        case XenObjectType::PoolUpdate: return "pool_update";
-        case XenObjectType::Role: return "role";
-        case XenObjectType::SM: return "SM";
-        case XenObjectType::SR: return "sr";
-        case XenObjectType::Task: return "task";
-        case XenObjectType::Tunnel: return "tunnel";
-        case XenObjectType::USBGroup: return "USB_group";
-        case XenObjectType::User: return "user";
-        case XenObjectType::VBD: return "vbd";
-        case XenObjectType::VBDMetrics: return "vbd_metrics";
-        case XenObjectType::VDI: return "vdi";
-        case XenObjectType::VGPU: return "vgpu";
-        case XenObjectType::VGPUType: return "vgpu_type";
-        case XenObjectType::VIF: return "vif";
-        case XenObjectType::VLAN: return "vlan";
-        case XenObjectType::VM: return "vm";
-        case XenObjectType::VMAppliance: return "VM_appliance";
-        case XenObjectType::VMGuestMetrics: return "vm_guest_metrics";
-        case XenObjectType::VMMetrics: return "vm_metrics";
-        case XenObjectType::VMPP: return "vmpp";
-        case XenObjectType::VMSS: return "vmss";
-        case XenObjectType::VTPM: return "vtpm";
-        case XenObjectType::VUSB: return "vusb";
-        case XenObjectType::PUSB: return "PUSB";
-    }
-    return "null";
+    return hidden == "true" || hidden == "1";
 }
 
 QString XenObject::GetObjectTypeName() const

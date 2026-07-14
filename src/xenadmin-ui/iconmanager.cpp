@@ -55,32 +55,9 @@ IconManager& IconManager::instance()
     return instance;
 }
 
-namespace
-{
-    XenObjectType iconTypeFromString(const QString& objectType)
-    {
-        const QString normalized = objectType.toLower();
-        if (normalized == "vm" || normalized == "vms")
-            return XenObjectType::VM;
-        if (normalized == "host" || normalized == "hosts")
-            return XenObjectType::Host;
-        if (normalized == "pool" || normalized == "pools")
-            return XenObjectType::Pool;
-        if (normalized == "sr" || normalized == "srs")
-            return XenObjectType::SR;
-        if (normalized == "network" || normalized == "networks")
-            return XenObjectType::Network;
-        if (normalized == "vdi" || normalized == "vdis")
-            return XenObjectType::VDI;
-        if (normalized == "vm_appliance" || normalized == "vmappliance" || normalized == "vm appliance")
-            return XenObjectType::VMAppliance;
-        return XenObjectType::Null;
-    }
-}
-
 QIcon IconManager::GetIconForObject(const QString& objectType, const QVariantMap& objectData) const
 {
-    return this->GetIconForObject(iconTypeFromString(objectType), objectData);
+    return this->GetIconForObject(XenObject::TypeFromString(objectType), objectData);
 }
 
 QIcon IconManager::GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const

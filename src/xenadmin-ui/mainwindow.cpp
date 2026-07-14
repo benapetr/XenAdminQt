@@ -938,7 +938,7 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
 // C# Reference: xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 653-660
 void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const QString& objectRef)
 {
-    const XenObjectType selectedType = XenCache::TypeFromString(objectType);
+    const XenObjectType selectedType = XenObject::TypeFromString(objectType);
 
     // Find the object in the tree and select it
     // This matches C# behavior where double-clicking in search results navigates to General tab
@@ -2902,7 +2902,7 @@ void MainWindow::SelectObjectInTree(const QString& objectRef, const QString& obj
         
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj && obj->OpaqueRef() == objectRef &&
-            obj->GetObjectType() == XenCache::TypeFromString(objectType))
+            obj->GetObjectType() == XenObject::TypeFromString(objectType))
         {
             // Found the item - select it
             this->GetServerTreeWidget()->setCurrentItem(item);

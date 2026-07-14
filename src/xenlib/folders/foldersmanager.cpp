@@ -250,7 +250,7 @@ bool FoldersManager::MoveObjectToFolder(XenConnection* connection, const QString
     if (!connection || !connection->GetCache())
         return false;
 
-    const XenObjectType type = XenCache::TypeFromString(objectType);
+    const XenObjectType type = XenObject::TypeFromString(objectType);
     if (type == XenObjectType::Null)
         return false;
 
@@ -272,7 +272,7 @@ bool FoldersManager::UnfolderObject(XenConnection* connection, const QString& ob
     if (!connection || !connection->GetCache())
         return false;
 
-    const XenObjectType type = XenCache::TypeFromString(objectType);
+    const XenObjectType type = XenObject::TypeFromString(objectType);
     if (type == XenObjectType::Null)
         return false;
 
@@ -343,7 +343,7 @@ void FoldersManager::rebuildConnectionFolders(XenConnection* connection)
 
     for (const QString& type : this->searchableTypes())
     {
-        const XenObjectType objectType = XenCache::TypeFromString(type);
+        const XenObjectType objectType = XenObject::TypeFromString(type);
         const QList<QVariantMap> records = connection->GetCache()->GetAllData(objectType);
         for (const QVariantMap& record : records)
         {

@@ -23,6 +23,7 @@ set(XENLIB_SOURCES
     utils/encryption.cpp
     utils/misc.cpp
     vmhelpers.cpp
+    xenlib.h
     xva/xvaverifier.cpp
     xen/actions/delegatedasyncoperation.cpp
     xen/actions/general/enabledatasourceaction.cpp

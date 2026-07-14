@@ -35,7 +35,7 @@
 #include <QString>
 #include <QVariantMap>
 #include "../settingspanels/ieditpage.h"
-#include "xenlib/xen/xenobjecttype.h"
+#include "xenlib/xen/xenobject.h"
 
 namespace Ui
 {

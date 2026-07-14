@@ -568,7 +568,7 @@ void XenConnection::onCacheUpdateTimer()
             continue;
 
         QString cacheType = eventClass.toLower();
-        XenObjectType cacheTypeEnum = XenCache::TypeFromString(cacheType);
+        XenObjectType cacheTypeEnum = XenObject::TypeFromString(cacheType);
 
         if (cacheType == "message")
         {
@@ -1029,7 +1029,7 @@ void XenConnection::connectWorkerThread()
             QVariantMap objectData = snapshot.toMap();
             objectData["ref"] = objectRef;
             objectData["opaqueRef"] = objectRef;
-            XenObjectType objectType = XenCache::TypeFromString(objectClass);
+            XenObjectType objectType = XenObject::TypeFromString(objectClass);
             if (this->d->cache && objectType != XenObjectType::Null)
                 this->d->cache->Update(objectType, objectRef, objectData);
         }

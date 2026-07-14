@@ -78,6 +78,7 @@ HEADERS += \
     xen/xenapi/xenapi_VGPU.h \
     xen/xenapi/xenapi_VIF.h \
     xen/xenobjecttype.h \
+    xenlib.h \
     xenlib_global.h \
     xencache.h \
     metricupdater.h \

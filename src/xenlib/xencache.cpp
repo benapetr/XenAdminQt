@@ -26,6 +26,7 @@
  */
 
 #include "xencache.h"
+#include "xenlib.h"
 #include "xen/network.h"
 #include "xen/network/connection.h"
 #include "xen/bond.h"
@@ -61,6 +62,14 @@
 #include <QDebug>
 #include <QMutexLocker>
 
+namespace XenLib
+{
+    void RegisterMetaTypes()
+    {
+        qRegisterMetaType<XenObjectType>("XenObjectType");
+    }
+}
+
 XenCache *XenCache::dummyCache = nullptr;
 
 XenCache *XenCache::GetDummy()
@@ -80,132 +89,9 @@ XenCache::~XenCache()
     this->Clear();
 }
 
-XenObjectType XenCache::TypeFromString(const QString& type)
-{
-    // Normalize type names to lowercase for consistency
-    // C# uses capitalized names, we'll use lowercase internally
-    // Types are sorted alphabetically for easier maintenance
-    const QString normalized = type.toLower();
-
-    // Handle variations (alphabetically sorted)
-    if (normalized == "blob" || normalized == "blobs")
-        return XenObjectType::Blob;
-    if (normalized == "bond" || normalized == "bonds")
-        return XenObjectType::Bond;
-    if (normalized == "certificate" || normalized == "certificates")
-        return XenObjectType::Certificate;
-    if (normalized == "cluster" || normalized == "clusters")
-        return XenObjectType::Cluster;
-    if (normalized == "cluster_host" || normalized == "cluster_hosts")
-        return XenObjectType::ClusterHost;
-    if (normalized == "console" || normalized == "consoles")
-        return XenObjectType::Console;
-    if (normalized == "dockercontainer" || normalized == "dockercontainers"
-        || normalized == "docker_container" || normalized == "docker_containers")
-        return XenObjectType::DockerContainer;
-    if (normalized == "event" || normalized == "events")
-        return XenObjectType::Event;
-    if (normalized == "feature" || normalized == "features")
-        return XenObjectType::Feature;
-    if (normalized == "folder" || normalized == "folders")
-        return XenObjectType::Folder;
-    if (normalized == "gpu_group" || normalized == "gpu_groups" || normalized == "gpugroup" || normalized == "gpugroups")
-        return XenObjectType::GPUGroup;
-    if (normalized == "host" || normalized == "hosts")
-        return XenObjectType::Host;
-    if (normalized == "host_cpu" || normalized == "host_cpus")
-        return XenObjectType::HostCPU;
-    if (normalized == "host_crashdump" || normalized == "host_crashdumps")
-        return XenObjectType::HostCrashdump;
-    if (normalized == "host_metrics")
-        return XenObjectType::HostMetrics;
-    if (normalized == "host_patch" || normalized == "host_patches")
-        return XenObjectType::HostPatch;
-    if (normalized == "message" || normalized == "messages")
-        return XenObjectType::Message;
-    if (normalized == "network" || normalized == "networks")
-        return XenObjectType::Network;
-    if (normalized == "network_sriov" || normalized == "network_sriovs")
-        return XenObjectType::NetworkSriov;
-    if (normalized == "pbd" || normalized == "pbds")
-        return XenObjectType::PBD;
-    if (normalized == "pci" || normalized == "pcis")
-        return XenObjectType::PCI;
-    if (normalized == "pif" || normalized == "pifs")
-        return XenObjectType::PIF;
-    if (normalized == "pif_metrics")
-        return XenObjectType::PIFMetrics;
-    if (normalized == "pgpu" || normalized == "pgpus")
-        return XenObjectType::PGPU;
-    if (normalized == "pool" || normalized == "pools")
-        return XenObjectType::Pool;
-    if (normalized == "pool_patch" || normalized == "pool_patches")
-        return XenObjectType::PoolPatch;
-    if (normalized == "pool_update" || normalized == "pool_updates")
-        return XenObjectType::PoolUpdate;
-    if (normalized == "role" || normalized == "roles")
-        return XenObjectType::Role;
-    if (normalized == "sm" || normalized == "sms")
-        return XenObjectType::SM;
-    if (normalized == "sr" || normalized == "srs")
-        return XenObjectType::SR;
-    if (normalized == "task" || normalized == "tasks")
-        return XenObjectType::Task;
-    if (normalized == "tunnel" || normalized == "tunnels")
-        return XenObjectType::Tunnel;
-    if (normalized == "usb_group" || normalized == "usb_groups" || normalized == "usbgroup" || normalized == "usbgroups")
-        return XenObjectType::USBGroup;
-    if (normalized == "user" || normalized == "users")
-        return XenObjectType::User;
-    if (normalized == "vbd" || normalized == "vbds")
-        return XenObjectType::VBD;
-    if (normalized == "vbd_metrics")
-        return XenObjectType::VBDMetrics;
-    if (normalized == "vdi" || normalized == "vdis")
-        return XenObjectType::VDI;
-    if (normalized == "vgpu" || normalized == "vgpus")
-        return XenObjectType::VGPU;
-    if (normalized == "vgpu_type" || normalized == "vgpu_types" || normalized == "vgputype" || normalized == "vgputypes")
-        return XenObjectType::VGPUType;
-    if (normalized == "vif" || normalized == "vifs")
-        return XenObjectType::VIF;
-    if (normalized == "vlan" || normalized == "vlans")
-        return XenObjectType::VLAN;
-    if (normalized == "vm" || normalized == "vms")
-        return XenObjectType::VM;
-    if (normalized == "vm_appliance" || normalized == "vm_appliances")
-        return XenObjectType::VMAppliance;
-    if (normalized == "vm_guest_metrics")
-        return XenObjectType::VMGuestMetrics;
-    if (normalized == "vm_metrics")
-        return XenObjectType::VMMetrics;
-    if (normalized == "vmpp")
-        return XenObjectType::VMPP;
-    if (normalized == "vmss")
-        return XenObjectType::VMSS;
-    if (normalized == "vtpm" || normalized == "vtpms")
-        return XenObjectType::VTPM;
-    if (normalized == "vusb" || normalized == "vusbs")
-        return XenObjectType::VUSB;
-    if (normalized == "pusb" || normalized == "pusbs")
-        return XenObjectType::PUSB;
-
-    return XenObjectType::Null;
-}
-
 QString XenCache::TypeToCacheString(XenObjectType type)
 {
     return XenObject::TypeToString(type).toLower();
-}
-
-XenObjectType XenCache::normalizeType(const QString& type) const
-{
-    return XenCache::TypeFromString(type);
-}
-
-QString XenCache::typeToCacheString(XenObjectType type) const
-{
-    return XenCache::TypeToCacheString(type);
 }
 
 QVariantMap XenCache::ResolveObjectData(const QString& type, const QString& ref) const
@@ -217,7 +103,7 @@ QVariantMap XenCache::ResolveObjectData(const QString& type, const QString& ref)
 
     QMutexLocker locker(&this->m_mutex);
 
-    XenObjectType normalizedType = normalizeType(type);
+    XenObjectType normalizedType = XenObject::TypeFromString(type);
     if (normalizedType == XenObjectType::Null)
         return QVariantMap();
 
@@ -257,7 +143,7 @@ QSharedPointer<XenObject> XenCache::ResolveObject(const QString& type, const QSt
     if (ref.isEmpty())
         return QSharedPointer<XenObject>();
 
-    XenObjectType normalizedType = this->normalizeType(type);
+    XenObjectType normalizedType = XenObject::TypeFromString(type);
     if (normalizedType == XenObjectType::Null)
         return QSharedPointer<XenObject>();
 
@@ -315,11 +201,6 @@ QSharedPointer<XenObject> XenCache::ResolveObject(XenObjectType type, const QStr
     return created;
 }
 
-QString XenCache::CanonicalType(const QString& type) const
-{
-    return this->typeToCacheString(this->normalizeType(type));
-}
-
 // Note: don't work with m_objects in this because m_objects is dynamic cache of stuff
 // that was looked up explicitly, while m_cache contains everything
 bool XenCache::Contains(XenObjectType type, const QString &ref) const
@@ -340,7 +221,7 @@ bool XenCache::Contains(XenObjectType type, const QString &ref) const
 
 QList<QVariantMap> XenCache::GetAllData(const QString& type) const
 {
-    return this->GetAllData(this->normalizeType(type));
+    return this->GetAllData(XenObject::TypeFromString(type));
 }
 
 QList<QVariantMap> XenCache::GetAllData(XenObjectType type) const
@@ -358,7 +239,7 @@ QList<QVariantMap> XenCache::GetAllData(XenObjectType type) const
 
 QList<QSharedPointer<XenObject>> XenCache::GetAll(const QString& type)
 {
-    return this->GetAll(this->normalizeType(type));
+    return this->GetAll(XenObject::TypeFromString(type));
 }
 
 QList<QSharedPointer<XenObject> > XenCache::GetAll(XenObjectType type)
@@ -566,7 +447,7 @@ void XenCache::ClearType(XenObjectType type)
 
     if (count > 0)
     {
-        qDebug() << "XenCache: Cleared" << count << this->typeToCacheString(type) << "objects from cache";
+        qDebug() << "XenCache: Cleared" << count << XenCache::TypeToCacheString(type) << "objects from cache";
         emit cacheCleared(); // Could add a typeCleared signal if needed
     }
 }
@@ -616,37 +497,37 @@ QStringList XenCache::GetKnownTypes() const
     // Return all types that createObjectForType() can instantiate
     // Keep alphabetically sorted to match createObjectForType() and normalizeType()
     return QStringList{
-        this->typeToCacheString(XenObjectType::Bond),
-        this->typeToCacheString(XenObjectType::Certificate),
-        this->typeToCacheString(XenObjectType::Console),
-        this->typeToCacheString(XenObjectType::Folder),
-        this->typeToCacheString(XenObjectType::GPUGroup),
-        this->typeToCacheString(XenObjectType::Host),
-        this->typeToCacheString(XenObjectType::HostCPU),
-        this->typeToCacheString(XenObjectType::HostMetrics),
-        this->typeToCacheString(XenObjectType::Message),
-        this->typeToCacheString(XenObjectType::Network),
-        this->typeToCacheString(XenObjectType::NetworkSriov),
-        this->typeToCacheString(XenObjectType::PBD),
-        this->typeToCacheString(XenObjectType::PCI),
-        this->typeToCacheString(XenObjectType::PGPU),
-        this->typeToCacheString(XenObjectType::PIF),
-        this->typeToCacheString(XenObjectType::PIFMetrics),
-        this->typeToCacheString(XenObjectType::Pool),
-        this->typeToCacheString(XenObjectType::Role),
-        this->typeToCacheString(XenObjectType::SR),
-        this->typeToCacheString(XenObjectType::Task),
-        this->typeToCacheString(XenObjectType::Tunnel),
-        this->typeToCacheString(XenObjectType::VBD),
-        this->typeToCacheString(XenObjectType::VBDMetrics),
-        this->typeToCacheString(XenObjectType::VDI),
-        this->typeToCacheString(XenObjectType::VGPU),
-        this->typeToCacheString(XenObjectType::VGPUType),
-        this->typeToCacheString(XenObjectType::VIF),
-        this->typeToCacheString(XenObjectType::VLAN),
-        this->typeToCacheString(XenObjectType::VM),
-        this->typeToCacheString(XenObjectType::VMGuestMetrics),
-        this->typeToCacheString(XenObjectType::VMMetrics)
+        XenCache::TypeToCacheString(XenObjectType::Bond),
+        XenCache::TypeToCacheString(XenObjectType::Certificate),
+        XenCache::TypeToCacheString(XenObjectType::Console),
+        XenCache::TypeToCacheString(XenObjectType::Folder),
+        XenCache::TypeToCacheString(XenObjectType::GPUGroup),
+        XenCache::TypeToCacheString(XenObjectType::Host),
+        XenCache::TypeToCacheString(XenObjectType::HostCPU),
+        XenCache::TypeToCacheString(XenObjectType::HostMetrics),
+        XenCache::TypeToCacheString(XenObjectType::Message),
+        XenCache::TypeToCacheString(XenObjectType::Network),
+        XenCache::TypeToCacheString(XenObjectType::NetworkSriov),
+        XenCache::TypeToCacheString(XenObjectType::PBD),
+        XenCache::TypeToCacheString(XenObjectType::PCI),
+        XenCache::TypeToCacheString(XenObjectType::PGPU),
+        XenCache::TypeToCacheString(XenObjectType::PIF),
+        XenCache::TypeToCacheString(XenObjectType::PIFMetrics),
+        XenCache::TypeToCacheString(XenObjectType::Pool),
+        XenCache::TypeToCacheString(XenObjectType::Role),
+        XenCache::TypeToCacheString(XenObjectType::SR),
+        XenCache::TypeToCacheString(XenObjectType::Task),
+        XenCache::TypeToCacheString(XenObjectType::Tunnel),
+        XenCache::TypeToCacheString(XenObjectType::VBD),
+        XenCache::TypeToCacheString(XenObjectType::VBDMetrics),
+        XenCache::TypeToCacheString(XenObjectType::VDI),
+        XenCache::TypeToCacheString(XenObjectType::VGPU),
+        XenCache::TypeToCacheString(XenObjectType::VGPUType),
+        XenCache::TypeToCacheString(XenObjectType::VIF),
+        XenCache::TypeToCacheString(XenObjectType::VLAN),
+        XenCache::TypeToCacheString(XenObjectType::VM),
+        XenCache::TypeToCacheString(XenObjectType::VMGuestMetrics),
+        XenCache::TypeToCacheString(XenObjectType::VMMetrics)
     };
 }
 
@@ -766,13 +647,10 @@ void XenCache::evictObject(XenObjectType type, const QString& ref)
 QString XenCache::GetPoolRef() const
 {
     QMutexLocker locker(&this->m_mutex);
-    
-    // Get pool type (normalized)
-    XenObjectType poolType = this->normalizeType("pool");
-    
+
     // Get all pool refs (there should be exactly one)
-    if (this->m_cache.contains(poolType) && !this->m_cache[poolType].isEmpty())
-        return this->m_cache[poolType].firstKey();
+    if (this->m_cache.contains(XenObjectType::Pool) && !this->m_cache[XenObjectType::Pool].isEmpty())
+        return this->m_cache[XenObjectType::Pool].firstKey();
     
     return QString();
 }

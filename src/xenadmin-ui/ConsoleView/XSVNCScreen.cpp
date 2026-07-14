@@ -619,7 +619,7 @@ void XSVNCScreen::onGuestMetricsPropertyChanged(const QString& propertyName)
  */
 void XSVNCScreen::onObjectDataReceived(const QString& objectType, const QString& objectRef, const QVariantMap& data)
 {
-    const XenObjectType type = XenCache::TypeFromString(objectType);
+    const XenObjectType type = XenObject::TypeFromString(objectType);
 
     if (type == XenObjectType::VM && objectRef == this->_sourceRef)
     {

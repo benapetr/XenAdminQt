@@ -33,9 +33,10 @@
 #include <QSharedPointer>
 #include <QVariantMap>
 #include <QPointer>
+#include <QMetaType>
 #include "../xenlib_global.h"
-#include "xenobjecttype.h"
 #include "network/connection.h"
+#include "xenobjecttype.h"
 
 #define XENOBJECT_NULL "OpaqueRef:NULL"
 
@@ -62,6 +63,7 @@ class XENLIB_EXPORT XenObject : public QObject
 
     public:
         static bool ValueIsNULL(const QString &value);
+        static XenObjectType TypeFromString(const QString &name);
         //! @brief Convert object type to canonical type string for cache lookups
         static QString TypeToString(XenObjectType type);
         static int GetTotalObjectsCount() { return XenObject::totalObjects; }

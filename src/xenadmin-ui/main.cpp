@@ -36,7 +36,7 @@
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include "xenlib/customfields/customfieldsmanager.h"
 #include "xenlib/folders/foldersmanager.h"
-#include "xenlib/xen/xenobjecttype.h"
+#include "xenlib/xenlib.h"
 
 int main(int argc, char* argv[])
 {
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     }
 
     QApplication app(argc, argv);
-    qRegisterMetaType<XenObjectType>("XenObjectType");
+    XenLib::RegisterMetaTypes();
 
     // Set application properties
     app.setApplicationName(XENADMIN_BRANDING_APP_NAME);
