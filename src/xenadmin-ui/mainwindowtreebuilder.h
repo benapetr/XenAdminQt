@@ -102,11 +102,11 @@ class MainWindowTreeBuilder : public QObject
     private:
         struct PersistenceInfo
         {
-            QStringList path;
-            QStringList pathToMaximalSubTree;
-            QObject* tag;
+            QList<QVariant> path;
+            QList<QVariant> pathToMaximalSubTree;
+            QVariant tag;
 
-            PersistenceInfo() : tag(nullptr) {}
+            PersistenceInfo() = default;
         };
 
         void persistExpandedNodes(const QString& searchText);
@@ -114,6 +114,15 @@ class MainWindowTreeBuilder : public QObject
         void expandSelection();
         QList<PersistenceInfo>& assignList(NavigationMode mode);
         MainWindowTreeNodeGroupAcceptor* createGroupAcceptor(QTreeWidgetItem* parent);
+        QList<QTreeWidgetItem*> allNodes() const;
+        QVariant nodeTag(QTreeWidgetItem* node) const;
+        bool tagsEqual(const QVariant& left, const QVariant& right) const;
+        QList<QVariant> tagPath(QTreeWidgetItem* node) const;
+        QTreeWidgetItem* maximalSubTree(QTreeWidgetItem* node, const QVariant& tag) const;
+        bool tagExistsUnder(QTreeWidgetItem* parent, const QVariant& tag) const;
+        PersistenceInfo persistenceInfo(QTreeWidgetItem* node) const;
+        int tryExactMatch(const QList<QVariant>& path, QTreeWidgetItem** match) const;
+        QTreeWidgetItem* findNodeIn(QTreeWidgetItem* parent, const QVariant& tag) const;
 
         QTreeWidget* treeView_;
         QColor treeViewForeColor_;

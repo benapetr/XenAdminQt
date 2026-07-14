@@ -331,7 +331,7 @@ void NetworkTabPage::populateVIFsForVM()
         QSharedPointer<Network> iconNetwork = vif->GetNetwork();
         QTableWidgetItem* iconItem = new QTableWidgetItem();
         if (iconNetwork && iconNetwork->IsValid())
-            iconItem->setIcon(IconManager::instance().GetIconForNetwork(iconNetwork->GetData()));
+            iconItem->setIcon(IconManager::instance().GetIconForNetwork(iconNetwork.data()));
         else
             iconItem->setIcon(IconManager::instance().GetIconForNetwork(QVariantMap()));
         iconItem->setData(Qt::UserRole, vifRef); // Store ref as hidden data
@@ -587,7 +587,7 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
 
     // Column 0: Icon
     QTableWidgetItem* iconItem = new QTableWidgetItem();
-    iconItem->setIcon(IconManager::instance().GetIconForNetwork(network->GetData()));
+    iconItem->setIcon(IconManager::instance().GetIconForNetwork(network.data()));
     iconItem->setData(Qt::UserRole, network->OpaqueRef()); // Store network ref for later use
     this->ui->networksTable->setItem(row, 0, iconItem);
 

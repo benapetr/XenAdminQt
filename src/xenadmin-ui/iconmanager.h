@@ -38,7 +38,12 @@
 class XenObject;
 class XenConnection;
 class Host;
+class VM;
 class PIF;
+class Pool;
+class SR;
+class Network;
+class VDI;
 
 /**
  * @brief Manages icons for different object types and states
@@ -64,16 +69,19 @@ class IconManager
         static IconManager& instance();
 
         // Icon retrieval methods
-        QIcon GetIconForObject(const QString& objectType, const QVariantMap& objectData) const;
-        QIcon GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const;
+        QIcon GetIconForObject(XenConnection* connection, XenObjectType objectType, const QString& objectRef) const;
         QIcon GetIconForObject(const XenObject* object) const;
         QIcon GetIconForObject(QSharedPointer<XenObject> object) const;
-        QIcon GetIconForVM(const QVariantMap& vmData) const;
+        QIcon GetIconForVM(const VM* vm) const;
         QIcon GetIconForHost(const Host *host) const;
+        QIcon GetIconForPool(const Pool* pool) const;
         QIcon GetIconForPool(const QVariantMap& poolData) const;
+        QIcon GetIconForSR(const SR* sr) const;
         QIcon GetIconForSR(const QVariantMap& srData) const;
         QIcon GetIconForSR(const QVariantMap& srData, XenConnection* connection) const;
+        QIcon GetIconForNetwork(const Network* network) const;
         QIcon GetIconForNetwork(const QVariantMap& networkData) const;
+        QIcon GetIconForVDI(const VDI* vdi) const;
         QIcon GetIconForPIF(const PIF* pif);
 
         // Static icon getters
@@ -96,8 +104,6 @@ class IconManager
         // Helper methods
         QIcon createStatusIcon(const QColor& color, const QString& symbol = QString()) const;
         QIcon createTextIcon(const QString& text, const QColor& bgColor) const;
-        QString getVMPowerState(const QVariantMap& vmData) const;
-        bool isVMOperationInProgress(const QVariantMap& vmData) const;
 
         // Icon cache
         mutable QMap<QString, QIcon> m_iconCache;

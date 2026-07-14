@@ -213,7 +213,7 @@ void PhysicalStorageTabPage::populateHostStorage()
 
         // Column 0: Icon (C# uses SR icon based on type/state)
         QTableWidgetItem* iconItem = new QTableWidgetItem();
-        iconItem->setIcon(IconManager::instance().GetIconForSR(sr->GetData(), this->m_connection));
+        iconItem->setIcon(IconManager::instance().GetIconForSR(sr.data()));
         iconItem->setData(Qt::UserRole, srRef); // Store SR ref for context menu
         this->ui->storageTable->setItem(row, 0, iconItem);
 
@@ -321,7 +321,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
 
         // Column 0: Icon (C# uses SR icon based on type/state)
         QTableWidgetItem* iconItem = new QTableWidgetItem();
-        iconItem->setIcon(IconManager::instance().GetIconForSR(sr->GetData(), this->m_connection));
+        iconItem->setIcon(IconManager::instance().GetIconForSR(sr.data()));
         iconItem->setData(Qt::UserRole, srRef); // Store SR ref for context menu
         this->ui->storageTable->setItem(row, 0, iconItem);
 

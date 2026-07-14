@@ -437,7 +437,7 @@ bool HAWizard::performHeartbeatSRScan()
             this->m_srTable->insertRow(row);
 
             QTableWidgetItem* iconItem = new QTableWidgetItem();
-            iconItem->setIcon(IconManager::instance().GetIconForObject(wrapper.sr.data()));
+            iconItem->setIcon(IconManager::instance().GetIconForObject(wrapper.sr));
             iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
             this->m_srTable->setItem(row, 0, iconItem);
 
@@ -566,7 +566,7 @@ void HAWizard::populateVMTable()
         this->m_vmTable->insertRow(row);
 
         auto* iconItem = new QTableWidgetItem();
-        iconItem->setIcon(IconManager::instance().GetIconForObject(vm.data()));
+        iconItem->setIcon(IconManager::instance().GetIconForObject(vm));
         iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
         this->m_vmTable->setItem(row, ColIcon, iconItem);
 

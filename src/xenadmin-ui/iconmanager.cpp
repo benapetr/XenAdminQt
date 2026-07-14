@@ -29,9 +29,12 @@
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
 #include "xenlib/xen/pif.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/network.h"
 #include "xenlib/xencache.h"
 #include <QPainter>
 #include <QDebug>
@@ -55,30 +58,29 @@ IconManager& IconManager::instance()
     return instance;
 }
 
-QIcon IconManager::GetIconForObject(const QString& objectType, const QVariantMap& objectData) const
+QIcon IconManager::GetIconForObject(XenConnection* connection, XenObjectType objectType, const QString& objectRef) const
 {
-    return this->GetIconForObject(XenObject::TypeFromString(objectType), objectData);
-}
+    if (connection && connection->GetCache() && !objectRef.isEmpty())
+    {
+        QSharedPointer<XenObject> object = connection->GetCache()->ResolveObject(objectType, objectRef);
+        if (object)
+            return this->GetIconForObject(object);
+    }
 
-QIcon IconManager::GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const
-{
     switch (objectType)
     {
         case XenObjectType::VM:
-            return this->GetIconForVM(objectData);
+            return QIcon(":/tree-icons/vm_generic.png");
         case XenObjectType::Host:
             return QIcon();
-            //return this->GetIconForHost(objectData);
         case XenObjectType::Pool:
-            return this->GetIconForPool(objectData);
+            return this->GetIconForPool(static_cast<const Pool*>(nullptr));
         case XenObjectType::SR:
-            return this->GetIconForSR(objectData);
+            return QIcon(":/tree-icons/storage.png");
         case XenObjectType::Network:
-            return this->GetIconForNetwork(objectData);
+            return this->GetIconForNetwork(static_cast<const Network*>(nullptr));
         case XenObjectType::VDI:
-            return objectData.value("is_a_snapshot", false).toBool()
-                ? QIcon(":/tree-icons/snapshot.png")
-                : QIcon(":/tree-icons/storage.png");
+            return QIcon(":/tree-icons/storage.png");
         case XenObjectType::VMAppliance:
             return QIcon(":/tree-icons/vm_generic.png");
         default:
@@ -93,19 +95,22 @@ QIcon IconManager::GetIconForObject(const XenObject* object) const
     if (!object)
         return QIcon();
 
-    XenObjectType objectType = object->GetObjectType();
-    QVariantMap objectData = object->GetData();
-
-    if (objectType == XenObjectType::Host)
-    {
-        const Host *host = dynamic_cast<const Host*>(object);
+    if (const VM* vm = dynamic_cast<const VM*>(object))
+        return this->GetIconForVM(vm);
+    if (const Host* host = dynamic_cast<const Host*>(object))
         return this->GetIconForHost(host);
-    }
+    if (const Pool* pool = dynamic_cast<const Pool*>(object))
+        return this->GetIconForPool(pool);
+    if (const SR* sr = dynamic_cast<const SR*>(object))
+        return this->GetIconForSR(sr);
+    if (const Network* network = dynamic_cast<const Network*>(object))
+        return this->GetIconForNetwork(network);
+    if (const VDI* vdi = dynamic_cast<const VDI*>(object))
+        return this->GetIconForVDI(vdi);
+    if (object->GetObjectType() == XenObjectType::VMAppliance)
+        return QIcon(":/tree-icons/vm_generic.png");
 
-    if (objectType == XenObjectType::SR)
-        return this->GetIconForSR(objectData, object->GetConnection());
-
-    return this->GetIconForObject(objectType, objectData);
+    return this->GetIconForObject(object->GetConnection(), object->GetObjectType(), object->OpaqueRef());
 }
 
 QIcon IconManager::GetIconForObject(QSharedPointer<XenObject> object) const
@@ -113,71 +118,56 @@ QIcon IconManager::GetIconForObject(QSharedPointer<XenObject> object) const
     return this->GetIconForObject(object.data());
 }
 
-QIcon IconManager::GetIconForVM(const QVariantMap& vmData) const
+QIcon IconManager::GetIconForVM(const VM* vm) const
 {
-    QString powerState = getVMPowerState(vmData);
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-    bool operationInProgress = isVMOperationInProgress(vmData);
+    if (!vm)
+        return QIcon();
 
-    // Create cache key
+    const QString powerState = vm->GetPowerState();
+    const bool isTemplate = vm->IsTemplate();
+    const bool isSnapshot = vm->IsSnapshot();
+    const bool operationInProgress = !vm->CurrentOperations().isEmpty();
+
     QString cacheKey = QString("vm_%1_%2_%3_%4")
                            .arg(powerState)
                            .arg(isTemplate ? "template" : "vm")
                            .arg(isSnapshot ? "snapshot" : "normal")
                            .arg(operationInProgress ? "busy" : "idle");
 
-    // Check cache
     if (this->m_iconCache.contains(cacheKey))
-    {
         return this->m_iconCache.value(cacheKey);
-    }
 
     QIcon icon;
 
-    // Templates (matching C# Icons.Template, Icons.TemplateUser)
     if (isTemplate)
     {
-        bool isUserTemplate = !vmData.value("other_config").toMap().value("default_template", false).toBool();
-        if (isUserTemplate)
-        {
-            icon = QIcon(":/tree-icons/template_user.png");
-        } else
-        {
-            icon = QIcon(":/tree-icons/template.png");
-        }
-    }
-    // Snapshots (matching C# Icons.SnapshotDisksOnly, Icons.SnapshotWithMem)
-    else if (isSnapshot)
+        icon = vm->IsDefaultTemplate()
+            ? QIcon(":/tree-icons/template.png")
+            : QIcon(":/tree-icons/template_user.png");
+    } else if (isSnapshot)
     {
         icon = QIcon(":/tree-icons/snapshot.png");
-    }
-    // VMs with operations in progress (matching C# Icons.VmStarting)
-    else if (operationInProgress)
+    } else if (operationInProgress)
     {
         icon = QIcon(":/tree-icons/vm_starting.png");
-    }
-    // VMs by power state (matching C# Icons.VmRunning, VmStopped, VmSuspended)
-    else if (powerState == "Running")
+    } else if (vm->IsRunning())
     {
-        icon = QIcon(":/tree-icons/vm_running.png"); // Running VM (green)
-    } else if (powerState == "Halted")
+        icon = QIcon(":/tree-icons/vm_running.png");
+    } else if (vm->IsHalted())
     {
-        icon = QIcon(":/tree-icons/vm_stopped.png"); // Stopped VM (red)
-    } else if (powerState == "Suspended")
+        icon = QIcon(":/tree-icons/vm_stopped.png");
+    } else if (vm->IsSuspended())
     {
-        icon = QIcon(":/tree-icons/vm_suspended.png"); // Suspended VM (orange)
-    } else if (powerState == "Paused")
+        icon = QIcon(":/tree-icons/vm_suspended.png");
+    } else if (vm->IsPaused())
     {
-        icon = QIcon(":/tree-icons/vm_paused.png"); // Paused VM (yellow)
+        icon = QIcon(":/tree-icons/vm_paused.png");
     } else
     {
-        icon = QIcon(":/tree-icons/vm_generic.png"); // Generic VM
+        icon = QIcon(":/tree-icons/vm_generic.png");
     }
 
-    // Cache the icon
-    m_iconCache.insert(cacheKey, icon);
-
+    this->m_iconCache.insert(cacheKey, icon);
     return icon;
 }
 
@@ -241,13 +231,13 @@ QIcon IconManager::GetIconForHost(const Host *host) const
         icon = QIcon(":/tree-icons/host_disconnected.png");
     }
 
-    m_iconCache.insert(cacheKey, icon);
+    this->m_iconCache.insert(cacheKey, icon);
     return icon;
 }
 
-QIcon IconManager::GetIconForPool(const QVariantMap& poolData) const
+QIcon IconManager::GetIconForPool(const Pool* pool) const
 {
-    Q_UNUSED(poolData);
+    Q_UNUSED(pool);
 
     QString cacheKey = "pool_connected";
 
@@ -258,6 +248,56 @@ QIcon IconManager::GetIconForPool(const QVariantMap& poolData) const
 
     // Matching C# Icons.PoolConnected
     QIcon icon = QIcon(":/tree-icons/pool_connected.png");
+    this->m_iconCache.insert(cacheKey, icon);
+    return icon;
+}
+
+QIcon IconManager::GetIconForPool(const QVariantMap& poolData) const
+{
+    Q_UNUSED(poolData);
+    return this->GetIconForPool(static_cast<const Pool*>(nullptr));
+}
+
+QIcon IconManager::GetIconForSR(const SR* sr) const
+{
+    if (!sr)
+        return QIcon();
+
+    const QString type = sr->GetType();
+    const bool shared = sr->IsShared();
+    const bool hasPbds = sr->HasPBDs();
+    const bool isHidden = sr->IsHidden();
+    const bool isBroken = sr->IsDetached() || sr->IsBroken() || !sr->MultipathAOK();
+
+    bool isDefault = false;
+    XenConnection* connection = sr->GetConnection();
+    if (connection && connection->GetCache())
+    {
+        QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
+        if (pool && !pool->GetDefaultSRRef().isEmpty() && pool->GetDefaultSRRef() == sr->OpaqueRef())
+            isDefault = true;
+    }
+
+    QString cacheKey = QString("sr_%1_%2_%3_%4_%5")
+                           .arg(type)
+                           .arg(shared ? "shared" : "local")
+                           .arg(isDefault ? "default" : "regular")
+                           .arg(hasPbds ? "attached" : "detached")
+                           .arg(isBroken ? "broken" : "ok");
+
+    if (this->m_iconCache.contains(cacheKey))
+        return this->m_iconCache.value(cacheKey);
+
+    QIcon icon;
+    if (!hasPbds || isHidden)
+        icon = QIcon(":/tree-icons/storage_disabled.png");
+    else if (isBroken)
+        icon = QIcon(":/tree-icons/storage_broken.png");
+    else if (isDefault)
+        icon = QIcon(":/tree-icons/storage_default.png");
+    else
+        icon = QIcon(":/tree-icons/storage.png");
+
     this->m_iconCache.insert(cacheKey, icon);
     return icon;
 }
@@ -340,22 +380,38 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connec
 QIcon IconManager::GetIconForNetwork(const QVariantMap& networkData) const
 {
     Q_UNUSED(networkData);
+    return this->GetIconForNetwork(static_cast<const Network*>(nullptr));
+}
+
+QIcon IconManager::GetIconForNetwork(const Network* network) const
+{
+    Q_UNUSED(network);
 
     QString cacheKey = "network_default";
 
-    if (m_iconCache.contains(cacheKey))
+    if (this->m_iconCache.contains(cacheKey))
     {
-        return m_iconCache.value(cacheKey);
+        return this->m_iconCache.value(cacheKey);
     }
 
     QIcon icon = QIcon(":/icons/network-16.png");
     if (icon.isNull())
     {
-        icon = createTextIcon("N", QColor(50, 100, 200)); // Blue for network
+        icon = this->createTextIcon("N", QColor(50, 100, 200)); // Blue for network
     }
 
-    m_iconCache.insert(cacheKey, icon);
+    this->m_iconCache.insert(cacheKey, icon);
     return icon;
+}
+
+QIcon IconManager::GetIconForVDI(const VDI* vdi) const
+{
+    if (!vdi)
+        return QIcon();
+
+    return vdi->IsSnapshot()
+        ? QIcon(":/tree-icons/snapshot.png")
+        : QIcon(":/tree-icons/storage.png");
 }
 
 QIcon IconManager::GetIconForPIF(const PIF* pif)
@@ -366,14 +422,14 @@ QIcon IconManager::GetIconForPIF(const PIF* pif)
     bool isPrimary = pif->IsPrimaryManagementInterface();
     QString cacheKey = isPrimary ? "pif_primary" : "pif_secondary";
 
-    if (m_iconCache.contains(cacheKey))
-        return m_iconCache.value(cacheKey);
+    if (this->m_iconCache.contains(cacheKey))
+        return this->m_iconCache.value(cacheKey);
 
     QIcon icon = QIcon(":/icons/management-interface-16.png");
     if (icon.isNull())
-        icon = createTextIcon("M", QColor(70, 110, 160));
+        icon = this->createTextIcon("M", QColor(70, 110, 160));
 
-    m_iconCache.insert(cacheKey, icon);
+    this->m_iconCache.insert(cacheKey, icon);
     return icon;
 }
 
@@ -492,16 +548,4 @@ QIcon IconManager::createTextIcon(const QString& text, const QColor& bgColor) co
     painter.drawText(pixmap.rect(), Qt::AlignCenter, text);
 
     return QIcon(pixmap);
-}
-
-QString IconManager::getVMPowerState(const QVariantMap& vmData) const
-{
-    return vmData.value("power_state", "unknown").toString();
-}
-
-bool IconManager::isVMOperationInProgress(const QVariantMap& vmData) const
-{
-    // Check for current_operations
-    QVariantMap operations = vmData.value("current_operations", QVariantMap()).toMap();
-    return !operations.isEmpty();
 }

@@ -151,8 +151,8 @@ void NavigationView::RequestRefreshTreeView()
     const int savedVertical = verticalBar ? verticalBar->value() : 0;
     const int savedHorizontal = horizontalBar ? horizontalBar->value() : 0;
 
-    // Persist current selection and expanded nodes BEFORE rebuild (matches C# PersistExpandedNodes)
-    this->persistSelectionAndExpansion();
+    // Persist current selection before rebuild. Expansion state is handled by MainWindowTreeBuilder.
+    this->persistSelection();
 
     // Rebuild tree based on navigation mode
     switch (this->m_navigationMode)
@@ -174,10 +174,10 @@ void NavigationView::RequestRefreshTreeView()
             break;
     }
 
-    // Restore selection and expanded nodes AFTER rebuild (matches C# RestoreExpandedNodes)
+    // Restore selection after rebuild. Expansion state is handled by MainWindowTreeBuilder.
     const bool selectionRestored = !this->m_savedSelectionKeys.isEmpty()
         || (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty());
-    this->restoreSelectionAndExpansion();
+    this->restoreSelection();
 
     this->ui->treeWidget->setUpdatesEnabled(true); // Resume painting
     if (verticalBar)
@@ -581,71 +581,7 @@ void NavigationView::buildOrganizationTree()
     delete baseSearch;
 }
 
-// ========== Tree State Preservation Methods (matches C# MainWindowTreeBuilder) ==========
-
-QString NavigationView::getItemPath(QTreeWidgetItem* item) const
-{
-    if (!item)
-        return QString();
-
-    QStringList pathParts;
-    QTreeWidgetItem* current = item;
-
-    // Build path from item to root (excluding root)
-    while (current)
-    {
-        QVariant data = current->data(0, Qt::UserRole);
-        QString type;
-        QString ref;
-        
-        // Extract type and ref from QSharedPointer<XenObject>
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj)
-        {
-            type = obj->GetObjectTypeName();
-            ref = obj->OpaqueRef();
-        }
-
-        // Use type:ref or just text if no type/ref available
-        if (!type.isEmpty() && !ref.isEmpty())
-        {
-            pathParts.prepend(type + ":" + ref);
-        } else
-        {
-            pathParts.prepend(current->text(0));
-        }
-
-        current = current->parent();
-    }
-
-    return pathParts.join("/");
-}
-
-void NavigationView::collectExpandedItems(QTreeWidgetItem* parent, QStringList& expandedPaths) const
-{
-    if (!parent)
-        return;
-
-    int count = parent->childCount();
-    for (int i = 0; i < count; ++i)
-    {
-        QTreeWidgetItem* child = parent->child(i);
-        if (child->isExpanded())
-        {
-            QString path = this->getItemPath(child);
-            if (!path.isEmpty())
-            {
-                expandedPaths.append(path);
-            }
-        }
-
-        // Recurse for children
-        if (child->childCount() > 0)
-        {
-            this->collectExpandedItems(child, expandedPaths);
-        }
-    }
-}
+// ========== Tree State Preservation Methods ==========
 
 QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const QString& ref, QTreeWidgetItem* parent) const
 {
@@ -681,7 +617,7 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
     return nullptr;
 }
 
-void NavigationView::persistSelectionAndExpansion()
+void NavigationView::persistSelection()
 {
     // Save all selected XenObject items (multi-selection persistence).
     this->m_savedSelectionKeys.clear();
@@ -732,155 +668,12 @@ void NavigationView::persistSelectionAndExpansion()
         this->m_savedSelectionRef.clear();
     }
 
-    // Save expanded nodes (matches C# PersistExpandedNodes)
-    this->m_savedExpandedPaths.clear();
-
-    // Check if root nodes are expanded
-    int topLevelCount = this->ui->treeWidget->topLevelItemCount();
-    for (int i = 0; i < topLevelCount; ++i)
-    {
-        QTreeWidgetItem* rootItem = this->ui->treeWidget->topLevelItem(i);
-        if (rootItem->isExpanded())
-        {
-            QString path = this->getItemPath(rootItem);
-            if (!path.isEmpty())
-            {
-                this->m_savedExpandedPaths.append(path);
-            }
-        }
-
-        // Collect expanded children
-        this->collectExpandedItems(rootItem, this->m_savedExpandedPaths);
-    }
 }
 
-void NavigationView::restoreSelectionAndExpansion()
+void NavigationView::restoreSelection()
 {
     // Block selection signals during restore
     this->m_suppressSelectionSignals = true;
-
-    // Restore expanded nodes (matches C# RestoreExpandedNodes)
-    for (const QString& path : this->m_savedExpandedPaths)
-    {
-        // Try to find item by path
-        QStringList pathParts = path.split("/", Qt::SkipEmptyParts);
-        QTreeWidgetItem* current = nullptr;
-
-        // Navigate through path
-        for (const QString& part : pathParts)
-        {
-            // Parse type:ref from part
-            QStringList typeRef = part.split(":");
-            if (typeRef.size() >= 2)
-            {
-                QString type = typeRef[0];
-                QString ref = typeRef.mid(1).join(":"); // Handle refs with colons
-
-                if (!current)
-                {
-                    // Search top-level items
-                    int topCount = ui->treeWidget->topLevelItemCount();
-                    for (int i = 0; i < topCount; ++i)
-                    {
-                        QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
-                        QVariant data = item->data(0, Qt::UserRole);
-                        
-                        QString itemType;
-                        QString itemRef;
-                        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-                        if (obj)
-                        {
-                            itemType = obj->GetObjectTypeName();
-                            itemRef = obj->OpaqueRef();
-                        }
-
-                        if (itemType == type && itemRef == ref)
-                        {
-                            current = item;
-                            break;
-                        } else if (item->text(0) == part)
-                        {
-                            current = item;
-                            break;
-                        }
-                    }
-                } else
-                {
-                    // Search children of current
-                    int childCount = current->childCount();
-                    QTreeWidgetItem* found = nullptr;
-                    for (int i = 0; i < childCount; ++i)
-                    {
-                        QTreeWidgetItem* child = current->child(i);
-                        QVariant data = child->data(0, Qt::UserRole);
-                        
-                        QString itemType;
-                        QString itemRef;
-                        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-                        if (obj)
-                        {
-                            itemType = obj->GetObjectTypeName();
-                            itemRef = obj->OpaqueRef();
-                        }
-
-                        if (itemType == type && itemRef == ref)
-                        {
-                            found = child;
-                            break;
-                        } else if (child->text(0) == part)
-                        {
-                            found = child;
-                            break;
-                        }
-                    }
-                    current = found;
-                }
-            } else
-            {
-                // Plain text part (for group nodes like "Virtual Machines")
-                if (!current)
-                {
-                    // Search top-level items
-                    int topCount = this->ui->treeWidget->topLevelItemCount();
-                    for (int i = 0; i < topCount; ++i)
-                    {
-                        QTreeWidgetItem* item = this->ui->treeWidget->topLevelItem(i);
-                        if (item->text(0) == part)
-                        {
-                            current = item;
-                            break;
-                        }
-                    }
-                } else
-                {
-                    // Search children
-                    int childCount = current->childCount();
-                    QTreeWidgetItem* found = nullptr;
-                    for (int i = 0; i < childCount; ++i)
-                    {
-                        QTreeWidgetItem* child = current->child(i);
-                        if (child->text(0) == part)
-                        {
-                            found = child;
-                            break;
-                        }
-                    }
-                    current = found;
-                }
-            }
-
-            if (!current)
-            {
-                break; // Path not found, stop searching
-            }
-        }
-
-        // Expand the item if found
-        if (current)
-        {
-            current->setExpanded(true);
-        }
-    }
 
     // Restore full selection first.
     this->ui->treeWidget->clearSelection();

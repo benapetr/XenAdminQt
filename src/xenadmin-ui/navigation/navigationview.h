@@ -155,12 +155,10 @@ class NavigationView : public QWidget
         XenConnection* primaryConnection() const;
         QueryScope* buildTreeSearchScope() const;
 
-        // Selection and expansion preservation (matches C# MainWindowTreeBuilder)
-        void persistSelectionAndExpansion();
-        void restoreSelectionAndExpansion();
+        // Selection preservation. Expansion state is owned by MainWindowTreeBuilder.
+        void persistSelection();
+        void restoreSelection();
         QTreeWidgetItem* findItemByTypeAndRef(const QString& type, const QString& ref, QTreeWidgetItem* parent = nullptr) const;
-        void collectExpandedItems(QTreeWidgetItem* item, QStringList& expandedPaths) const;
-        QString getItemPath(QTreeWidgetItem* item) const;
 
         Ui::NavigationView* ui;
         bool m_inSearchMode = false;
@@ -175,11 +173,10 @@ class NavigationView : public QWidget
         MainWindowTreeBuilder* m_treeBuilder = nullptr;
         Search* m_objectsSearch = nullptr;
 
-        // State preservation for tree refresh (matches C# PersistExpandedNodes/RestoreExpandedNodes)
+        // State preservation for tree refresh
         QString m_savedSelectionType;
         QString m_savedSelectionRef;
         QStringList m_savedSelectionKeys;
-        QStringList m_savedExpandedPaths;
         bool m_suppressSelectionSignals = false; // Block itemSelectionChanged during rebuild
 };
 

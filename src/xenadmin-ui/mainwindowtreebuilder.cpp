@@ -221,6 +221,183 @@ QList<MainWindowTreeBuilder::PersistenceInfo>& MainWindowTreeBuilder::assignList
     }
 }
 
+QList<QTreeWidgetItem*> MainWindowTreeBuilder::allNodes() const
+{
+    QList<QTreeWidgetItem*> nodes;
+    QList<QTreeWidgetItem*> pending;
+
+    for (int i = 0; i < this->treeView_->topLevelItemCount(); ++i)
+        pending.append(this->treeView_->topLevelItem(i));
+
+    while (!pending.isEmpty())
+    {
+        QTreeWidgetItem* node = pending.takeFirst();
+        if (!node)
+            continue;
+
+        nodes.append(node);
+        for (int i = 0; i < node->childCount(); ++i)
+            pending.append(node->child(i));
+    }
+
+    return nodes;
+}
+
+QVariant MainWindowTreeBuilder::nodeTag(QTreeWidgetItem* node) const
+{
+    if (!node)
+        return QVariant();
+
+    const QVariant groupingTag = node->data(0, Qt::UserRole + 3);
+    if (groupingTag.canConvert<GroupingTag*>() && groupingTag.value<GroupingTag*>())
+        return groupingTag;
+
+    const QVariant objectTag = node->data(0, Qt::UserRole);
+    if (objectTag.canConvert<QSharedPointer<XenObject>>() && objectTag.value<QSharedPointer<XenObject>>())
+        return objectTag;
+
+    return QVariant();
+}
+
+bool MainWindowTreeBuilder::tagsEqual(const QVariant& left, const QVariant& right) const
+{
+    if (!left.isValid() || !right.isValid())
+        return !left.isValid() && !right.isValid();
+
+    if (left.canConvert<QSharedPointer<XenObject>>() && right.canConvert<QSharedPointer<XenObject>>())
+    {
+        const QSharedPointer<XenObject> leftObject = left.value<QSharedPointer<XenObject>>();
+        const QSharedPointer<XenObject> rightObject = right.value<QSharedPointer<XenObject>>();
+        return leftObject && rightObject &&
+               leftObject->GetObjectType() == rightObject->GetObjectType() &&
+               leftObject->OpaqueRef() == rightObject->OpaqueRef();
+    }
+
+    if (left.canConvert<GroupingTag*>() && right.canConvert<GroupingTag*>())
+    {
+        GroupingTag* leftTag = left.value<GroupingTag*>();
+        GroupingTag* rightTag = right.value<GroupingTag*>();
+        return leftTag && rightTag && *leftTag == *rightTag;
+    }
+
+    return left == right;
+}
+
+QList<QVariant> MainWindowTreeBuilder::tagPath(QTreeWidgetItem* node) const
+{
+    QList<QVariant> path;
+
+    for (QTreeWidgetItem* current = node; current && current->parent(); current = current->parent())
+    {
+        const QVariant tag = this->nodeTag(current);
+        if (tag.isValid())
+            path.prepend(tag);
+    }
+
+    return path;
+}
+
+bool MainWindowTreeBuilder::tagExistsUnder(QTreeWidgetItem* parent, const QVariant& tag) const
+{
+    if (!parent)
+        return false;
+
+    if (this->tagsEqual(this->nodeTag(parent), tag))
+        return true;
+
+    for (int i = 0; i < parent->childCount(); ++i)
+    {
+        if (this->tagExistsUnder(parent->child(i), tag))
+            return true;
+    }
+
+    return false;
+}
+
+QTreeWidgetItem* MainWindowTreeBuilder::maximalSubTree(QTreeWidgetItem* node, const QVariant& tag) const
+{
+    if (!node || !node->parent())
+        return node;
+
+    QTreeWidgetItem* parent = node->parent();
+    for (int i = 0; i < parent->childCount(); ++i)
+    {
+        QTreeWidgetItem* sibling = parent->child(i);
+        if (sibling == node)
+            continue;
+
+        if (this->tagExistsUnder(sibling, tag))
+            return node;
+    }
+
+    return this->maximalSubTree(parent, tag);
+}
+
+MainWindowTreeBuilder::PersistenceInfo MainWindowTreeBuilder::persistenceInfo(QTreeWidgetItem* node) const
+{
+    PersistenceInfo info;
+    info.tag = this->nodeTag(node);
+    info.path = this->tagPath(node);
+
+    QTreeWidgetItem* maxSubTree = this->maximalSubTree(node, info.tag);
+    if (maxSubTree)
+        info.pathToMaximalSubTree = this->tagPath(maxSubTree);
+
+    return info;
+}
+
+int MainWindowTreeBuilder::tryExactMatch(const QList<QVariant>& path, QTreeWidgetItem** match) const
+{
+    if (match)
+        *match = nullptr;
+
+    if (!match || this->treeView_->topLevelItemCount() == 0)
+        return 0;
+
+    int index = 0;
+    *match = this->treeView_->topLevelItem(0);
+
+    while (index < path.count())
+    {
+        bool found = false;
+        for (int i = 0; i < (*match)->childCount(); ++i)
+        {
+            QTreeWidgetItem* child = (*match)->child(i);
+            const QVariant tag = this->nodeTag(child);
+            if (tag.isValid() && this->tagsEqual(tag, path.at(index)))
+            {
+                *match = child;
+                found = true;
+                ++index;
+                break;
+            }
+        }
+
+        if (!found)
+            break;
+    }
+
+    return index;
+}
+
+QTreeWidgetItem* MainWindowTreeBuilder::findNodeIn(QTreeWidgetItem* parent, const QVariant& tag) const
+{
+    if (!parent)
+        return nullptr;
+
+    if (this->tagsEqual(this->nodeTag(parent), tag))
+        return parent;
+
+    for (int i = 0; i < parent->childCount(); ++i)
+    {
+        QTreeWidgetItem* result = this->findNodeIn(parent->child(i), tag);
+        if (result)
+            return result;
+    }
+
+    return nullptr;
+}
+
 void MainWindowTreeBuilder::persistExpandedNodes(const QString& searchText)
 {
     if (this->treeView_->topLevelItemCount() == 0)
@@ -230,15 +407,16 @@ void MainWindowTreeBuilder::persistExpandedNodes(const QString& searchText)
     // If there's a search then we're just going to expand everything later
     // Also check _lastSearchText and _lastSearchMode to restore nodes to original state
     
-    if (searchText.isEmpty() && 
-        this->lastSearchText_.isEmpty() && 
-        this->lastSearchMode_ != NavigationMode::SavedSearch)
+    if (searchText.isEmpty() && this->lastSearchText_.isEmpty() && this->lastSearchMode_ != NavigationMode::SavedSearch)
     {
         QList<PersistenceInfo>& list = this->assignList(this->lastSearchMode_);
         list.clear();
-        
-        // TODO: Iterate through all nodes and save expanded state
-        // For now, this is a stub
+
+        for (QTreeWidgetItem* node : this->allNodes())
+        {
+            if (node && node->parent() && node->isExpanded() && this->nodeTag(node).isValid())
+                list.append(this->persistenceInfo(node));
+        }
     }
     
     // Persist root node expansion state separately
@@ -260,12 +438,39 @@ void MainWindowTreeBuilder::restoreExpandedNodes(const QString& searchText, Navi
     
     if (searchText.isEmpty() && searchMode != NavigationMode::SavedSearch)
     {
-        // If there isn't a search, persist the user's expanded nodes
-        Q_UNUSED(this->assignList(searchMode));  // TODO: Use for restoration
-        
-        // TODO: Restore expansion state from list
-        // This requires implementing path matching logic
-        
+        QList<PersistenceInfo>& list = this->assignList(searchMode);
+        QList<QTreeWidgetItem*> unexpandedNodes = this->allNodes();
+
+        for (const PersistenceInfo& info : list)
+        {
+            QTreeWidgetItem* match = nullptr;
+
+            if (this->tryExactMatch(info.path, &match) >= info.path.count())
+            {
+                if (match && !match->isExpanded())
+                    match->setExpanded(true);
+                unexpandedNodes.removeAll(match);
+                continue;
+            }
+
+            if (this->tryExactMatch(info.pathToMaximalSubTree, &match) >= info.pathToMaximalSubTree.count())
+            {
+                match = this->findNodeIn(match, info.tag);
+                if (match)
+                {
+                    if (!match->isExpanded())
+                        match->setExpanded(true);
+                    unexpandedNodes.removeAll(match);
+                }
+            }
+        }
+
+        for (QTreeWidgetItem* node : unexpandedNodes)
+        {
+            if (node && node->parent() && node->isExpanded() && this->nodeTag(node).isValid())
+                node->setExpanded(false);
+        }
+
         // Special case for root node
         if (this->rootExpanded_ && this->treeView_->topLevelItemCount() > 0)
         {
@@ -349,17 +554,15 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
                 QIcon icon = IconManager::instance().GetIconForObject(obj);
                 node = this->addNode(name, icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(obj));
             }
-        }
-        else
+        } else
         {
             QString name = objectData.value("name_label").toString();
             if (name.isEmpty())
                 name = objectData.value("uuid").toString();
-            QIcon icon = IconManager::instance().GetIconForObject(objectType.toLower(), objectData);
+            QIcon icon = IconManager::instance().GetIconForObject(conn, XenObject::TypeFromString(objectType), ref);
             node = this->addNode(name, icon, false, QVariant());
         }
-    }
-    else
+    } else
     {
         // This is a group header node
         if (this->parent_)
@@ -396,12 +599,7 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
     }
     
     if (node)
-    {
-        return new MainWindowTreeNodeGroupAcceptor(this->highlightedDragTarget_,
-                                                   this->treeViewForeColor_,
-                                                   this->treeViewBackColor_,
-                                                   node);
-    }
+        return new MainWindowTreeNodeGroupAcceptor(this->highlightedDragTarget_, this->treeViewForeColor_, this->treeViewBackColor_, node);
     
     return nullptr;
 }
@@ -430,7 +628,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addPoolNode(const QSharedPoint
 {
     if (!pool)
         return nullptr;
-    QIcon icon = IconManager::instance().GetIconForObject(pool.data());
+    QIcon icon = IconManager::instance().GetIconForObject(pool);
     return this->addNode(pool->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(pool));
 }
 
@@ -438,7 +636,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
 {
     if (!host)
         return nullptr;
-    QIcon icon = IconManager::instance().GetIconForObject(host.data());
+    QIcon icon = IconManager::instance().GetIconForObject(host);
 
     XenConnection* connection = host->GetConnection();
     QString name = host->GetName();
@@ -471,7 +669,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVMNode(const QSharedPointer
     // TODO: Check for vTPM restriction and template status
     bool hidden = vm->IsHidden();
     QString name = hidden ? QString("(%1)").arg(vm->GetName()) : vm->GetName();
-    QIcon icon = IconManager::instance().GetIconForObject(vm.data());
+    QIcon icon = IconManager::instance().GetIconForObject(vm);
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(vm));
 }
 
@@ -479,7 +677,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVmApplianceNode(const QShar
 {
     if (!appliance)
         return nullptr;
-    QIcon icon = IconManager::instance().GetIconForObject(appliance.data());
+    QIcon icon = IconManager::instance().GetIconForObject(appliance);
     return this->addNode(appliance->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(appliance));
 }
 
@@ -487,7 +685,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addSRNode(const QSharedPointer
 {
     bool hidden = sr->IsHidden();
     QString name = hidden ? QString("(%1)").arg(sr->GetName()) : sr->GetName();
-    QIcon icon = IconManager::instance().GetIconForObject(sr.data());
+    QIcon icon = IconManager::instance().GetIconForObject(sr);
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(sr));
 }
 
@@ -498,14 +696,14 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNetworkNode(const QSharedPo
     QString rawName = network->GetName();
     QString name = supporter ? QString("NIC Bonded Member: %1").arg(rawName) :
                    hidden ? QString("(%1)").arg(rawName) : rawName;
-    QIcon icon = IconManager::instance().GetIconForObject(network.data());
+    QIcon icon = IconManager::instance().GetIconForObject(network);
     return this->addNode(name, icon, supporter || hidden, QVariant::fromValue<QSharedPointer<XenObject>>(network));
 }
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVDINode(const QSharedPointer<VDI>& vdi)
 {
     QString name = vdi->GetName().isEmpty() ? QObject::tr("(No name)") : vdi->GetName();
-    QIcon icon = IconManager::instance().GetIconForObject(vdi.data());
+    QIcon icon = IconManager::instance().GetIconForObject(vdi);
     return this->addNode(name, icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(vdi));
 }
 
@@ -513,14 +711,11 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addFolderNode(const QSharedPoi
 {
     if (!folder)
         return nullptr;
-    QIcon icon = IconManager::instance().GetIconForObject(folder.data());
+    QIcon icon = IconManager::instance().GetIconForObject(folder);
     return this->addNode(folder->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(folder));
 }
 
-QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNode(const QString& name,
-                                                          const QIcon& icon,
-                                                          bool grayed,
-                                                          const QVariant& tagData)
+QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNode(const QString& name, const QIcon& icon, bool grayed, const QVariant& tagData)
 {
     // Ellipsize name if too long (1000 chars in C#)
     QString displayName = name.length() > 1000 ? name.left(997) + "..." : name;
@@ -534,8 +729,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNode(const QString& name,
         if (tagData.canConvert<GroupingTag*>())
         {
             result->setData(0, Qt::UserRole + 3, tagData);
-        }
-        else if (tagData.canConvert<QSharedPointer<XenObject>>())
+        } else if (tagData.canConvert<QSharedPointer<XenObject>>())
         {
             result->setData(0, Qt::UserRole, tagData);
         }
@@ -556,13 +750,11 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNode(const QString& name,
     {
         result->setBackground(0, QApplication::palette().brush(QPalette::Highlight));
         result->setForeground(0, QApplication::palette().brush(QPalette::HighlightedText));
-    }
-    else if (grayed)
+    } else if (grayed)
     {
         result->setBackground(0, QBrush(this->treeViewBackColor_));
         result->setForeground(0, QBrush(Qt::gray));
-    }
-    else
+    } else
     {
         result->setBackground(0, QBrush(this->treeViewBackColor_));
         result->setForeground(0, QBrush(this->treeViewForeColor_));
