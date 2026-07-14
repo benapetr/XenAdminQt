@@ -65,6 +65,8 @@ XenCacheExplorer::XenCacheExplorer(QWidget* parent) : QDialog(parent), ui(new Ui
     this->ui->propertiesTree->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->propertiesTree, &QTreeWidget::customContextMenuRequested,
             this, &XenCacheExplorer::onPropertiesTreeContextMenu);
+    connect(this->ui->propertiesTree, &QTreeWidget::itemDoubleClicked,
+            this, &XenCacheExplorer::onPropertiesTreeItemDoubleClicked);
 
     this->ui->cacheTree->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->cacheTree, &QTreeWidget::customContextMenuRequested,
@@ -229,10 +231,12 @@ void XenCacheExplorer::displayConnectionInfo(XenConnection* connection)
     if (!connection)
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         return;
     }
 
     this->ui->propertiesTree->clear();
+    this->m_propertiesConnection = nullptr;
 
     QList<QPair<QString, QString>> info;
     info << qMakePair(tr("Hostname"), connection->GetHostname());
@@ -274,6 +278,7 @@ void XenCacheExplorer::displayCategoryInfo(XenConnection* connection, const QStr
     if (!connection || type.isEmpty())
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         return;
     }
 
@@ -281,10 +286,12 @@ void XenCacheExplorer::displayCategoryInfo(XenConnection* connection, const QStr
     if (!cache)
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         return;
     }
 
     QList<QVariantMap> objects = cache->GetAllData(type);
+    this->m_propertiesConnection = nullptr;
     
     this->addPropertyItem(nullptr, tr("Object Type"), type, tr("Category Info"));
     this->addPropertyItem(nullptr, tr("Object Count"), QString::number(objects.size()), tr("Category Info"));
@@ -296,6 +303,7 @@ void XenCacheExplorer::displayObjectProperties(XenConnection* connection, const 
     if (!connection || type.isEmpty() || opaqueRef.isEmpty())
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         return;
     }
 
@@ -303,6 +311,7 @@ void XenCacheExplorer::displayObjectProperties(XenConnection* connection, const 
     if (!cache)
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         return;
     }
 
@@ -310,6 +319,7 @@ void XenCacheExplorer::displayObjectProperties(XenConnection* connection, const 
     if (objectData.isEmpty())
     {
         this->ui->propertiesTree->clear();
+        this->m_propertiesConnection = nullptr;
         this->addPropertyItem(nullptr, tr("Object not found in cache"), "", "");
         return;
     }
@@ -319,6 +329,7 @@ void XenCacheExplorer::displayObjectProperties(XenConnection* connection, const 
     keys.sort();
 
     this->ui->propertiesTree->clear();
+    this->m_propertiesConnection = connection;
 
     for (const QString& key : keys)
     {
@@ -327,6 +338,7 @@ void XenCacheExplorer::displayObjectProperties(XenConnection* connection, const 
                                                       key,
                                                       this->formatVariantValue(value),
                                                       this->getVariantTypeName(value));
+        this->annotateReferenceItem(item, value);
 
         if (key == "ref" || key == "opaque_ref" || key == "uuid")
         {
@@ -371,6 +383,7 @@ void XenCacheExplorer::appendVariantChildren(QTreeWidgetItem* parent, const QVar
                                                     key,
                                                     formatVariantValue(childValue),
                                                     getVariantTypeName(childValue));
+            annotateReferenceItem(item, childValue);
             appendVariantChildren(item, childValue);
         }
         return;
@@ -386,6 +399,7 @@ void XenCacheExplorer::appendVariantChildren(QTreeWidgetItem* parent, const QVar
                                                     QString("[%1]").arg(i),
                                                     formatVariantValue(childValue),
                                                     getVariantTypeName(childValue));
+            annotateReferenceItem(item, childValue);
             appendVariantChildren(item, childValue);
         }
         return;
@@ -396,9 +410,105 @@ void XenCacheExplorer::appendVariantChildren(QTreeWidgetItem* parent, const QVar
         QStringList list = value.toStringList();
         for (int i = 0; i < list.size(); ++i)
         {
-            addPropertyItem(parent, QString("[%1]").arg(i), list[i], tr("String"));
+            QTreeWidgetItem* item = addPropertyItem(parent, QString("[%1]").arg(i), list[i], tr("String"));
+            annotateReferenceItem(item, list[i]);
         }
     }
+}
+
+void XenCacheExplorer::annotateReferenceItem(QTreeWidgetItem* item, const QVariant& value)
+{
+    if (!item)
+        return;
+
+    if (value.userType() != QMetaType::QString)
+        return;
+
+    QString type;
+    QString ref;
+    if (!this->resolveReference(value.toString(), &type, &ref))
+        return;
+
+    item->setData(0, PropertyRoleReferenceType, type);
+    item->setData(0, PropertyRoleReferenceRef, ref);
+    item->setForeground(1, Qt::blue);
+    item->setToolTip(1, tr("Double-click or use Open to follow this reference"));
+}
+
+bool XenCacheExplorer::resolveReference(const QString& ref, QString* type, QString* objectRef) const
+{
+    if (!this->m_propertiesConnection || ref.isEmpty() || ref == "OpaqueRef:NULL" || ref == "<not in database>")
+        return false;
+
+    XenCache* cache = this->m_propertiesConnection->GetCache();
+    if (!cache)
+        return false;
+
+    const QStringList types = cache->GetKnownTypes();
+    for (const QString& candidateType : types)
+    {
+        if (!cache->ResolveObjectData(candidateType, ref).isEmpty())
+        {
+            if (type)
+                *type = candidateType;
+            if (objectRef)
+                *objectRef = ref;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QTreeWidgetItem* XenCacheExplorer::findCacheObjectItem(XenConnection* connection, const QString& type, const QString& ref) const
+{
+    if (!connection || type.isEmpty() || ref.isEmpty())
+        return nullptr;
+
+    for (auto it = this->m_itemToRef.constBegin(); it != this->m_itemToRef.constEnd(); ++it)
+    {
+        QTreeWidgetItem* item = it.key();
+        if (!item)
+            continue;
+
+        if (this->m_itemToConnection.value(item) == connection &&
+            this->m_itemToType.value(item) == type &&
+            it.value() == ref)
+        {
+            return item;
+        }
+    }
+
+    return nullptr;
+}
+
+bool XenCacheExplorer::openReferenceFromItem(QTreeWidgetItem* item)
+{
+    if (!item)
+        return false;
+
+    const QString type = item->data(0, PropertyRoleReferenceType).toString();
+    const QString ref = item->data(0, PropertyRoleReferenceRef).toString();
+    if (type.isEmpty() || ref.isEmpty())
+        return false;
+
+    QTreeWidgetItem* objectItem = this->findCacheObjectItem(this->m_propertiesConnection, type, ref);
+    if (!objectItem)
+        return false;
+
+    QTreeWidgetItem* parent = objectItem->parent();
+    while (parent)
+    {
+        parent->setExpanded(true);
+        parent = parent->parent();
+    }
+
+    this->ui->cacheTree->clearSelection();
+    this->ui->cacheTree->setCurrentItem(objectItem);
+    this->ui->cacheTree->scrollToItem(objectItem);
+    objectItem->setSelected(true);
+
+    return true;
 }
 
 QString XenCacheExplorer::formatVariantValue(const QVariant& value) const
@@ -577,13 +687,42 @@ void XenCacheExplorer::onPropertiesTreeContextMenu(const QPoint& pos)
         return;
 
     QMenu contextMenu(this);
+    QTreeWidgetItem* selectedItem = selectedItems.first();
+    const bool hasReference = selectedItem &&
+                              !selectedItem->data(0, PropertyRoleReferenceType).toString().isEmpty() &&
+                              !selectedItem->data(0, PropertyRoleReferenceRef).toString().isEmpty();
+
+    QAction* openAction = nullptr;
+    if (hasReference)
+    {
+        openAction = contextMenu.addAction(tr("Open"));
+        contextMenu.addSeparator();
+    }
+
     QAction* copyValueAction = contextMenu.addAction(tr("Copy Selected Value"));
     QAction* copyRowsAction = contextMenu.addAction(tr("Copy Selected Row(s)"));
     
+    if (openAction)
+        connect(openAction, &QAction::triggered, this, &XenCacheExplorer::onOpenSelectedReference);
     connect(copyValueAction, &QAction::triggered, this, &XenCacheExplorer::onCopySelectedValue);
     connect(copyRowsAction, &QAction::triggered, this, &XenCacheExplorer::onCopySelectedRows);
     
     contextMenu.exec(this->ui->propertiesTree->mapToGlobal(pos));
+}
+
+void XenCacheExplorer::onOpenSelectedReference()
+{
+    QList<QTreeWidgetItem*> selectedItems = this->ui->propertiesTree->selectedItems();
+    if (selectedItems.isEmpty())
+        return;
+
+    this->openReferenceFromItem(selectedItems.first());
+}
+
+void XenCacheExplorer::onPropertiesTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
+{
+    Q_UNUSED(column);
+    this->openReferenceFromItem(item);
 }
 
 void XenCacheExplorer::onCopySelectedValue()

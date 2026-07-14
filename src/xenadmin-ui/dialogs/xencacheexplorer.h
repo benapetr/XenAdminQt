@@ -56,6 +56,8 @@ class XenCacheExplorer : public QDialog
         void onPropertiesTreeContextMenu(const QPoint& pos);
         void onCopySelectedValue();
         void onCopySelectedRows();
+        void onOpenSelectedReference();
+        void onPropertiesTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
 
     private:
         void populateTree();
@@ -67,6 +69,10 @@ class XenCacheExplorer : public QDialog
         QString getVariantTypeName(const QVariant& value) const;
         QTreeWidgetItem* addPropertyItem(QTreeWidgetItem* parent, const QString& name, const QString& value, const QString& type);
         void appendVariantChildren(QTreeWidgetItem* parent, const QVariant& value);
+        void annotateReferenceItem(QTreeWidgetItem* item, const QVariant& value);
+        bool resolveReference(const QString& ref, QString* type, QString* objectRef) const;
+        bool openReferenceFromItem(QTreeWidgetItem* item);
+        QTreeWidgetItem* findCacheObjectItem(XenConnection* connection, const QString& type, const QString& ref) const;
 
         enum ItemType
         {
@@ -75,10 +81,17 @@ class XenCacheExplorer : public QDialog
             Type_Object
         };
 
+        enum PropertyDataRole
+        {
+            PropertyRoleReferenceType = Qt::UserRole + 1,
+            PropertyRoleReferenceRef = Qt::UserRole + 2
+        };
+
         Ui::XenCacheExplorer* ui;
         QMap<QTreeWidgetItem*, XenConnection*> m_itemToConnection;
         QMap<QTreeWidgetItem*, QString> m_itemToType;
         QMap<QTreeWidgetItem*, QString> m_itemToRef;
+        XenConnection* m_propertiesConnection = nullptr;
 };
 
 #endif // XENCACHEEXPLORER_H
