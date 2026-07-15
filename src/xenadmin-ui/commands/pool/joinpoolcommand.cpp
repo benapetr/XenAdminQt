@@ -89,8 +89,12 @@ bool JoinPoolCommand::CanRun() const
     if (!host || !host->GetConnection() || !host->GetConnection()->IsConnected())
         return false;
 
-    // A standalone host can always attempt to join a pool
-    // The actual join operation will validate pool membership
+    if (host->GetPool())
+        return false;
+
+    if (host->RestrictPooling())
+        return false;
+
     return true;
 }
 
