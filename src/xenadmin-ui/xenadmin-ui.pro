@@ -741,6 +741,8 @@ win32:DEFINES += XENLIB_STATIC
 win32 {
     CONFIG += static
     QMAKE_LFLAGS += -static -static-libstdc++ -static-libgcc
+    LIBS += -lopengl32
+    LIBS_PRIVATE += -lopengl32
     CONFIG(debug, debug|release) {
         LIBS += -L$$OUT_PWD/../xenlib/debug -lxenlib
         PRE_TARGETDEPS += $$OUT_PWD/../xenlib/debug/libxenlib.a
