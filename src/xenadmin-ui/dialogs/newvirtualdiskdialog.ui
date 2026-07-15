@@ -18,16 +18,16 @@
     <number>6</number>
    </property>
    <property name="leftMargin">
-    <number>12</number>
+    <number>2</number>
    </property>
    <property name="topMargin">
-    <number>12</number>
+    <number>2</number>
    </property>
    <property name="rightMargin">
-    <number>12</number>
+    <number>2</number>
    </property>
    <property name="bottomMargin">
-    <number>12</number>
+    <number>2</number>
    </property>
    <item>
     <widget class="QLabel" name="infoLabel">
@@ -45,10 +45,10 @@
    <item>
     <spacer name="topSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
+      <enum>QSizePolicy::Policy::Fixed</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -61,10 +61,10 @@
    <item>
     <layout class="QFormLayout" name="formLayout">
      <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::ExpandingFieldsGrow</enum>
+      <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
      </property>
      <property name="labelAlignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
      <property name="verticalSpacing">
       <number>9</number>
@@ -88,7 +88,7 @@
         <string>&amp;Description:</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignTrailing</set>
        </property>
        <property name="buddy">
         <cstring>descriptionTextEdit</cstring>
@@ -130,29 +130,29 @@
         <number>2</number>
        </property>
        <property name="minimum">
-        <double>0.01</double>
+        <double>0.010000000000000</double>
        </property>
        <property name="maximum">
-        <double>16384.00</double>
+        <double>16384.000000000000000</double>
        </property>
        <property name="value">
-        <double>8.00</double>
+        <double>8.000000000000000</double>
        </property>
       </widget>
      </item>
      <item row="3" column="0">
-     <widget class="QLabel" name="srLabel">
-      <property name="text">
-       <string>&amp;Location:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
-      </property>
-      <property name="buddy">
-       <cstring>srPicker</cstring>
-      </property>
-     </widget>
-    </item>
+      <widget class="QLabel" name="srLabel">
+       <property name="text">
+        <string>&amp;Location:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignTrailing</set>
+       </property>
+       <property name="buddy">
+        <cstring>srPicker</cstring>
+       </property>
+      </widget>
+     </item>
      <item row="3" column="1">
       <widget class="SrPicker" name="srPicker">
        <property name="minimumSize">
@@ -167,21 +167,21 @@
    </item>
    <item>
     <widget class="QLabel" name="warningLabel">
+     <property name="styleSheet">
+      <string notr="true">color: red;</string>
+     </property>
      <property name="text">
       <string/>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>
-     <property name="styleSheet">
-      <string notr="true">color: red;</string>
-     </property>
     </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -203,7 +203,7 @@
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -234,6 +234,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SrPicker</class>
+   <extends>QTreeView</extends>
+   <header>controls/srpicker.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>nameLineEdit</tabstop>
   <tabstop>descriptionTextEdit</tabstop>
@@ -243,14 +251,6 @@
   <tabstop>addButton</tabstop>
   <tabstop>cancelButton</tabstop>
  </tabstops>
- <customwidgets>
-  <customwidget>
-   <class>SrPicker</class>
-   <extends>QWidget</extends>
-   <header>controls/srpicker.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections>
   <connection>

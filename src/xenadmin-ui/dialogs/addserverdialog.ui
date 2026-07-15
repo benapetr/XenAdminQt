@@ -2,10 +2,30 @@
 <ui version="4.0">
  <class>AddServerDialog</class>
  <widget class="QDialog" name="AddServerDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>331</width>
+    <height>281</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Add New Server</string>
   </property>
   <layout class="QGridLayout" name="tableLayoutPanelType">
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>2</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>2</number>
+   </property>
    <item row="0" column="0" colspan="2">
     <widget class="QLabel" name="labelInstructions">
      <property name="text">
@@ -65,7 +85,7 @@
       <item row="1" column="1" colspan="2">
        <widget class="QLineEdit" name="PasswordTextBox">
         <property name="echoMode">
-         <enum>QLineEdit::Password</enum>
+         <enum>QLineEdit::EchoMode::Password</enum>
         </property>
        </widget>
       </item>
@@ -103,7 +123,7 @@
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>

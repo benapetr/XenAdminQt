@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>520</height>
+    <height>550</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,6 +17,18 @@
    <bool>true</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>2</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>2</number>
+   </property>
    <item>
     <widget class="QLabel" name="labelName">
      <property name="text">
@@ -41,11 +53,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QTextEdit" name="descriptionTextBox">
-     <property name="maximumHeight">
-      <number>80</number>
-     </property>
-    </widget>
+    <widget class="QTextEdit" name="descriptionTextBox"/>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBox">
@@ -129,19 +137,15 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="SrPicker" name="srPicker">
-             <property name="minimumHeight">
-              <number>150</number>
-             </property>
-            </widget>
+            <widget class="SrPicker" name="srPicker"/>
            </item>
            <item>
             <widget class="QPushButton" name="buttonRescan">
-             <property name="text">
-              <string>Re&amp;scan</string>
-             </property>
              <property name="enabled">
               <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Re&amp;scan</string>
              </property>
             </widget>
            </item>
@@ -156,7 +160,7 @@
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -169,10 +173,10 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
     </widget>
    </item>

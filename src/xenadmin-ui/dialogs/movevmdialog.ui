@@ -14,6 +14,18 @@
    <string>Move VM</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>2</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>2</number>
+   </property>
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
@@ -25,7 +37,7 @@
     </widget>
    </item>
    <item>
-    <widget class="SrPicker" name="srPicker" native="true">
+    <widget class="SrPicker" name="srPicker">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -46,7 +58,7 @@
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -57,9 +69,9 @@
       </spacer>
      </item>
      <item>
-      <widget name="buttonBox" class="QDialogButtonBox">
+      <widget class="QDialogButtonBox" name="buttonBox">
        <property name="standardButtons">
-        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+        <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
        </property>
       </widget>
      </item>
@@ -70,7 +82,7 @@
  <customwidgets>
   <customwidget>
    <class>SrPicker</class>
-   <extends>QWidget</extends>
+   <extends>QTreeView</extends>
    <header>controls/srpicker.h</header>
    <container>1</container>
   </customwidget>

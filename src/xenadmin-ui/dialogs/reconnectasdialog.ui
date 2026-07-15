@@ -2,10 +2,30 @@
 <ui version="4.0">
  <class>ReconnectAsDialog</class>
  <widget class="QDialog" name="ReconnectAsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>325</width>
+    <height>114</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Reconnect As...</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>2</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>2</number>
+   </property>
    <item row="0" column="0" rowspan="3">
     <widget class="QLabel" name="pictureLabel">
      <property name="minimumSize">
@@ -15,7 +35,7 @@
       </size>
      </property>
      <property name="alignment">
-      <set>Qt::AlignTop|Qt::AlignHCenter</set>
+      <set>Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignTop</set>
      </property>
     </widget>
    </item>
@@ -46,14 +66,14 @@
    <item row="2" column="2">
     <widget class="QLineEdit" name="textBoxPassword">
      <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
+      <enum>QLineEdit::EchoMode::Password</enum>
      </property>
     </widget>
    </item>
    <item row="3" column="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
     </widget>
    </item>

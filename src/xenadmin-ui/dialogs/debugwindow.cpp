@@ -188,13 +188,17 @@ void DebugWindow::setupFontControls()
     if (!zoomInKeys.contains(zoomInEquals))
         zoomInKeys.append(zoomInEquals);
 
-    QShortcut* zoomInShortcut = new QShortcut(this);
-    zoomInShortcut->setKeys(zoomInKeys);
-    connect(zoomInShortcut, &QShortcut::activated, this, &DebugWindow::increaseFontSize);
+    for (const QKeySequence& keySequence : zoomInKeys)
+    {
+        QShortcut* zoomInShortcut = new QShortcut(keySequence, this);
+        connect(zoomInShortcut, &QShortcut::activated, this, &DebugWindow::increaseFontSize);
+    }
 
-    QShortcut* zoomOutShortcut = new QShortcut(this);
-    zoomOutShortcut->setKeys(QKeySequence::keyBindings(QKeySequence::ZoomOut));
-    connect(zoomOutShortcut, &QShortcut::activated, this, &DebugWindow::decreaseFontSize);
+    for (const QKeySequence& keySequence : QKeySequence::keyBindings(QKeySequence::ZoomOut))
+    {
+        QShortcut* zoomOutShortcut = new QShortcut(keySequence, this);
+        connect(zoomOutShortcut, &QShortcut::activated, this, &DebugWindow::decreaseFontSize);
+    }
 }
 
 void DebugWindow::applyLogFontSize(int pointSize)
