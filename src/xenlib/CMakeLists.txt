@@ -42,6 +42,7 @@ set(XENLIB_SOURCES
     xen/actions/host/enablehostaction.cpp
     xen/actions/host/evacuatehostaction.cpp
     xen/actions/host/hostpoweronaction.cpp
+    xen/actions/host/installservercertificateaction.cpp
     xen/actions/host/reboothostaction.cpp
     xen/actions/host/restarttoolstackaction.cpp
     xen/actions/host/savepoweronsettingsaction.cpp
@@ -220,6 +221,7 @@ set(XENLIB_SOURCES
     xen/xenapi/vm_appliance.cpp
     xen/xenapi/xenapi_Blob.cpp
     xen/xenapi/xenapi_Bond.cpp
+    xen/xenapi/xenapi_Certificate.cpp
     xen/xenapi/xenapi_Cluster_host.cpp
     xen/xenapi/xenapi_GPU_group.cpp
     xen/xenapi/xenapi_Helper.cpp

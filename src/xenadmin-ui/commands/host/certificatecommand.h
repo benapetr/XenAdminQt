@@ -67,7 +67,7 @@ class CertificateCommand : public Command
         /**
          * @brief Check if version supports certificates (Stockholm or greater)
          */
-        bool isVersionSupported(XenConnection* connection) const;
+        bool isVersionSupported(const QSharedPointer<Host>& host) const;
 
     private:
 };
@@ -110,7 +110,7 @@ class ResetCertificateCommand : public CertificateCommand
         QString MenuText() const override { return "Reset Certificate..."; }
 
     private:
-        bool isResetVersionSupported(XenConnection* connection) const;
+        bool isResetVersionSupported(const QSharedPointer<Host>& host) const;
 };
 
 #endif // CERTIFICATECOMMAND_H

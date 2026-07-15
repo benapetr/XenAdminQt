@@ -63,6 +63,7 @@ HEADERS += \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
+    xen/xenapi/xenapi_Certificate.h \
     xen/xenapi/xenapi_Cluster_host.h \
     xen/xenapi/xenapi_Network.h \
     xen/xenapi/xenapi_VLAN.h \
@@ -182,6 +183,7 @@ HEADERS += \
     xen/actions/host/disablehostaction.h \
     xen/actions/host/evacuatehostaction.h \
     xen/actions/host/destroyhostaction.h \
+    xen/actions/host/installservercertificateaction.h \
     xen/actions/host/changehostautostartaction.h \
     xen/actions/host/changehostpasswordaction.h \
     xen/actions/host/changecontroldomainmemoryaction.h \
@@ -323,6 +325,7 @@ SOURCES += \
     xen/actions/wlb/wlbrecommendations.cpp \
     xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
+    xen/xenapi/xenapi_Certificate.cpp \
     xen/xenapi/xenapi_Cluster_host.cpp \
     xen/xenapi/xenapi_Network.cpp \
     xen/xenapi/xenapi_VLAN.cpp \
@@ -431,6 +434,7 @@ SOURCES += \
     xen/actions/host/disablehostaction.cpp \
     xen/actions/host/evacuatehostaction.cpp \
     xen/actions/host/destroyhostaction.cpp \
+    xen/actions/host/installservercertificateaction.cpp \
     xen/actions/host/changehostautostartaction.cpp \
     xen/actions/host/changehostpasswordaction.cpp \
     xen/actions/host/changecontroldomainmemoryaction.cpp \

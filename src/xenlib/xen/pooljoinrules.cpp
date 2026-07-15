@@ -40,68 +40,26 @@
 #include "xenobject.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "../utils/misc.h"
 
 #include <QCoreApplication>
 #include <QDebug>
-#include <QStringList>
 #include <QtGlobal>
 
 namespace
 {
-    int compareProductVersion(const QString& left, const QString& right)
-    {
-        if (left == right)
-            return 0;
-
-        const QStringList leftParts = left.split('.', Qt::SkipEmptyParts);
-        const QStringList rightParts = right.split('.', Qt::SkipEmptyParts);
-        const int maxParts = std::max(leftParts.size(), rightParts.size());
-
-        for (int i = 0; i < maxParts; ++i)
-        {
-            bool leftOk = false;
-            bool rightOk = false;
-            const int leftVal = (i < leftParts.size()) ? leftParts.at(i).toInt(&leftOk) : 0;
-            const int rightVal = (i < rightParts.size()) ? rightParts.at(i).toInt(&rightOk) : 0;
-
-            if (!leftOk || !rightOk)
-            {
-                const QString leftStr = (i < leftParts.size()) ? leftParts.at(i) : QString();
-                const QString rightStr = (i < rightParts.size()) ? rightParts.at(i) : QString();
-                const int stringCompare = QString::compare(leftStr, rightStr, Qt::CaseInsensitive);
-                if (stringCompare != 0)
-                    return stringCompare;
-                continue;
-            }
-
-            if (leftVal < rightVal)
-                return -1;
-            if (leftVal > rightVal)
-                return 1;
-        }
-
-        return 0;
-    }
-
-    bool isVersionAtLeast(const QString& version, const QString& minimum)
-    {
-        if (version.isEmpty())
-            return false;
-        return compareProductVersion(version, minimum) >= 0;
-    }
-
     bool elyOrGreater(const QSharedPointer<Host>& host)
     {
         if (!host)
             return true;
-        return isVersionAtLeast(host->PlatformVersion(), "2.1.1");
+        return Misc::ProductVersionAtLeast(host->PlatformVersion(), QStringLiteral("2.1.1"));
     }
 
     bool falconOrGreater(const QSharedPointer<Host>& host)
     {
         if (!host)
             return true;
-        return isVersionAtLeast(host->PlatformVersion(), "2.2.50");
+        return Misc::ProductVersionAtLeast(host->PlatformVersion(), QStringLiteral("2.2.50"));
     }
 }
 

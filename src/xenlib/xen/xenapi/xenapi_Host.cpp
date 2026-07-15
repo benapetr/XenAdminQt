@@ -76,14 +76,18 @@ namespace XenAPI
             {
                 QJsonObject errorObj = root.value("error").toObject();
                 QStringList errors;
-                QString message = errorObj.value("message").toString();
-                errors << message;
                 QJsonValue dataVal = errorObj.value("data");
                 if (dataVal.isArray())
                 {
                     QJsonArray dataArray = dataVal.toArray();
                     for (const QJsonValue& val : dataArray)
                         errors << val.toString();
+                }
+                if (errors.isEmpty())
+                {
+                    QString message = errorObj.value("message").toString();
+                    if (!message.isEmpty())
+                        errors << message;
                 }
                 if (!errors.isEmpty())
                     throw Failure(errors);
@@ -417,6 +421,45 @@ namespace XenAPI
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("host.power_on", params);
         QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
+    }
+
+    bool Host::install_server_certificate(Session* session,
+                                          const QString& host,
+                                          const QString& certificate,
+                                          const QString& privateKey,
+                                          const QString& certificateChain)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host << certificate << privateKey << certificateChain;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.install_server_certificate", params);
+        QByteArray response = session->SendApiRequest(request);
+        if (response.isEmpty())
+            return false;
+        maybeThrowFailureFromResponse(response);
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
+        return true;
+    }
+
+    void Host::reset_server_certificate(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.reset_server_certificate", params);
+        QByteArray response = session->SendApiRequest(request);
+        if (response.isEmpty())
+            return;
+        maybeThrowFailureFromResponse(response);
         api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 

@@ -109,6 +109,44 @@ int Misc::NaturalCompare(const QString& s1, const QString& s2)
     return len1 - len2;
 }
 
+int Misc::ProductVersionCompare(const QString& left, const QString& right)
+{
+    if (left == right)
+        return 0;
+
+    const QStringList leftParts = left.split('.', Qt::SkipEmptyParts);
+    const QStringList rightParts = right.split('.', Qt::SkipEmptyParts);
+    const int maxParts = qMax(leftParts.size(), rightParts.size());
+
+    for (int i = 0; i < maxParts; ++i)
+    {
+        bool leftOk = false;
+        bool rightOk = false;
+        const int leftValue = i < leftParts.size() ? leftParts.at(i).toInt(&leftOk) : 0;
+        const int rightValue = i < rightParts.size() ? rightParts.at(i).toInt(&rightOk) : 0;
+
+        if (!leftOk || !rightOk)
+        {
+            const QString leftPart = i < leftParts.size() ? leftParts.at(i) : QString();
+            const QString rightPart = i < rightParts.size() ? rightParts.at(i) : QString();
+            const int stringCompare = QString::compare(leftPart, rightPart, Qt::CaseInsensitive);
+            if (stringCompare != 0)
+                return stringCompare;
+            continue;
+        }
+
+        if (leftValue != rightValue)
+            return leftValue < rightValue ? -1 : 1;
+    }
+
+    return 0;
+}
+
+bool Misc::ProductVersionAtLeast(const QString& version, const QString& minimum)
+{
+    return !version.isEmpty() && ProductVersionCompare(version, minimum) >= 0;
+}
+
 QString Misc::FormatSize(qint64 bytes)
 {
     const qint64 KB = 1024;

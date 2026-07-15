@@ -223,6 +223,8 @@ set(XENADMIN_SOURCES
     dialogs/hawizard.ui
     dialogs/hostpropertiesdialog.cpp
     dialogs/importwizard.cpp
+    dialogs/installcertificatedialog.cpp
+    dialogs/installcertificatedialog.ui
     dialogs/migratevirtualdiskdialog.cpp
     dialogs/movevirtualdiskdialog.cpp
     dialogs/movevirtualdiskdialog.ui

@@ -51,6 +51,21 @@ class Misc
          */
         static int NaturalCompare(const QString& s1, const QString& s2);
 
+        /**
+         * @brief Compare dotted product/build versions.
+         *
+         * Numeric components are compared numerically and missing trailing
+         * components are treated as zero, so "1.2" equals "1.2.0".
+         *
+         * @return Negative if left < right, 0 if equal, positive if left > right
+         */
+        static int ProductVersionCompare(const QString& left, const QString& right);
+
+        /**
+         * @brief Return true if version is greater than or equal to minimum.
+         */
+        static bool ProductVersionAtLeast(const QString& version, const QString& minimum);
+
         static QString FormatSize(qint64 bytes);
 
         static QString FormatUptime(qint64 seconds);

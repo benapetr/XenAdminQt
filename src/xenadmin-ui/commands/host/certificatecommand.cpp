@@ -27,18 +27,34 @@
 
 #include "certificatecommand.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/actionprogressdialog.h"
+#include "../../dialogs/installcertificatedialog.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
 #include "xenlib/xencache.h"
+#include "xenlib/utils/misc.h"
 #include <QMessageBox>
+#include <stdexcept>
 
-// TODO: Uncomment when dialogs are ported
-// #include "../../dialogs/installcertificatedialog.h"
-// #include "../../dialogs/warningdialogs/warningdialog.h"
+namespace
+{
+    QString hostXapiVersion(const QSharedPointer<Host>& host)
+    {
+        if (!host)
+            return QString();
 
-// TODO: Uncomment when Helpers class is ported
-// #include "../../../xenlib/utils/helpers.h"
+        const QVariantMap softwareVersion = host->SoftwareVersion();
+        QString version = softwareVersion.value(QStringLiteral("xapi_build")).toString();
+        if (version.isEmpty())
+            version = softwareVersion.value(QStringLiteral("xapi")).toString();
+        return version;
+    }
+
+}
 
 // =============================================================================
 // CertificateCommand (Base Class)
@@ -64,10 +80,8 @@ bool CertificateCommand::CanRun() const
     if (!connection)
         return false;
     
-    // Must be Stockholm or greater
-    // TODO: Uncomment when Helpers::StockholmOrGreater is ported
-    // if (!Helpers::StockholmOrGreater(connection))
-    //     return false;
+    if (!this->isVersionSupported(host))
+        return false;
     
     // Host must be standalone or pool coordinator
     QSharedPointer<Pool> pool = host->GetPoolOfOne();
@@ -106,12 +120,10 @@ QList<QSharedPointer<Host>> CertificateCommand::getHosts() const
     return {};
 }
 
-bool CertificateCommand::isVersionSupported(XenConnection* connection) const
+bool CertificateCommand::isVersionSupported(const QSharedPointer<Host>& host) const
 {
-    // TODO: Implement when Helpers::StockholmOrGreater is ported
-    // return Helpers::StockholmOrGreater(connection);
-    Q_UNUSED(connection);
-    return true;  // Placeholder
+    return host && !host->PlatformVersion().isEmpty() &&
+           Misc::ProductVersionCompare(host->PlatformVersion(), QStringLiteral("3.1.50")) >= 0;
 }
 
 // =============================================================================
@@ -141,12 +153,8 @@ void InstallCertificateCommand::Run()
         return;
     }
     
-    // TODO: Show InstallCertificateDialog when ported
-    // InstallCertificateDialog* dialog = new InstallCertificateDialog(host, MainWindow::instance());
-    // dialog->exec();
-    // dialog->deleteLater();
-    
-    QMessageBox::information(MainWindow::instance(), "Install Certificate", "TODO: Show InstallCertificateDialog (not yet ported)");
+    InstallCertificateDialog dialog(host, MainWindow::instance());
+    dialog.exec();
 }
 
 // =============================================================================
@@ -167,12 +175,7 @@ bool ResetCertificateCommand::CanRun() const
     if (hosts.isEmpty())
         return false;
     
-    XenConnection* connection = hosts.first()->GetConnection();
-    if (!connection)
-        return false;
-    
-    // Reset requires Cloud or greater (API 1.290.0+)
-    return this->isResetVersionSupported(connection);
+    return this->isResetVersionSupported(hosts.first());
 }
 
 void ResetCertificateCommand::Run()
@@ -193,8 +196,6 @@ void ResetCertificateCommand::Run()
         return;
     }
     
-    // Show warning dialog
-    // TODO: Use WarningDialog when ported
     QMessageBox::StandardButton result = QMessageBox::warning(
         MainWindow::instance(),
         "Reset Server Certificate",
@@ -206,16 +207,48 @@ void ResetCertificateCommand::Run()
     
     if (result != QMessageBox::Yes)
         return;
-    
-    // TODO: Create and run DelegatedAsyncAction for Host::reset_server_certificate
-    // For now, show placeholder
-    QMessageBox::information(MainWindow::instance(), "Reset Certificate", "TODO: Run Host.reset_server_certificate async action (not yet implemented)");
+
+    XenConnection* connection = host->GetConnection();
+    const QString hostRef = host->OpaqueRef();
+    const QString hostName = host->GetName();
+    DelegatedAsyncOperation* operation = new DelegatedAsyncOperation(
+        connection,
+        tr("Resetting server certificate on %1").arg(hostName),
+        tr("Resetting server certificate..."),
+        [connection, hostRef](DelegatedAsyncOperation* self)
+        {
+            XenAPI::Session* session = self->GetSession();
+            if (!connection || !session)
+                throw std::runtime_error(QObject::tr("No active XenAPI session is available.").toLocal8Bit().constData());
+
+            const bool previousExpectDisruption = connection->GetExpectDisruption();
+            connection->SetExpectDisruption(true);
+            try
+            {
+                XenAPI::Host::reset_server_certificate(session, hostRef);
+            } catch (...)
+            {
+                connection->SetExpectDisruption(previousExpectDisruption);
+                throw;
+            }
+
+            connection->SetExpectDisruption(previousExpectDisruption);
+            self->SetPercentComplete(100);
+            self->SetDescription(QObject::tr("Server certificate reset."));
+        });
+    operation->SetHost(host);
+
+    ActionProgressDialog progress(operation, MainWindow::instance());
+    progress.setShowCancel(false);
+    progress.exec();
+    operation->deleteLater();
 }
 
-bool ResetCertificateCommand::isResetVersionSupported(XenConnection* connection) const
+bool ResetCertificateCommand::isResetVersionSupported(const QSharedPointer<Host>& host) const
 {
-    // TODO: Implement when Helpers::CloudOrGreater and Helpers::XapiEqualOrGreater_1_290_0 are ported
-    // return Helpers::CloudOrGreater(connection) && Helpers::XapiEqualOrGreater_1_290_0(connection);
-    Q_UNUSED(connection);
-    return true;  // Placeholder
+    return host &&
+           !host->PlatformVersion().isEmpty() &&
+           !hostXapiVersion(host).isEmpty() &&
+           Misc::ProductVersionCompare(host->PlatformVersion(), QStringLiteral("3.2.50")) >= 0 &&
+           Misc::ProductVersionCompare(hostXapiVersion(host), QStringLiteral("1.290.0")) >= 0;
 }

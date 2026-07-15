@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>InstallCertificateDialog</class>
+ <widget class="QDialog" name="InstallCertificateDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>720</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Install Server Certificate</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="blurbLabel">
+     <property name="text">
+      <string>Select the private key, server certificate, and optional intermediate certificates to install on this server.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="fileGridLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="keyLabel">
+       <property name="text">
+        <string>Private key:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="keyLineEdit"/>
+     </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="browseKeyButton">
+       <property name="text">
+        <string>Browse...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1" colspan="2">
+      <widget class="QLabel" name="keyErrorLabel">
+       <property name="styleSheet">
+        <string notr="true">color: red</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="certificateLabel">
+       <property name="text">
+        <string>Certificate:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="certificateLineEdit"/>
+     </item>
+     <item row="2" column="2">
+      <widget class="QPushButton" name="browseCertificateButton">
+       <property name="text">
+        <string>Browse...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1" colspan="2">
+      <widget class="QLabel" name="certificateErrorLabel">
+       <property name="styleSheet">
+        <string notr="true">color: red</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="chainGroupBox">
+     <property name="title">
+      <string>Certificate chain</string>
+     </property>
+     <layout class="QHBoxLayout" name="chainLayout">
+      <item>
+       <widget class="QListWidget" name="chainListWidget"/>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="chainButtonLayout">
+        <item>
+         <widget class="QPushButton" name="addChainButton">
+          <property name="text">
+           <string>Add...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="removeChainButton">
+          <property name="text">
+           <string>Remove</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="chainButtonSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="chainErrorLabel">
+     <property name="styleSheet">
+      <string notr="true">color: red</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="statusLabel">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox"/>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -248,6 +248,33 @@ namespace XenAPI
             static void power_on(Session* session, const QString& host);
 
             /**
+             * @brief Install a server certificate on a host
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @param certificate PEM encoded certificate
+             * @param privateKey PEM encoded private key
+             * @param certificateChain PEM encoded certificate chain
+             *
+             * @return true if the server returned a response; false if the connection dropped before a response
+             *
+             * Matches C# Host.install_server_certificate()
+             */
+            static bool install_server_certificate(Session* session,
+                                                   const QString& host,
+                                                   const QString& certificate,
+                                                   const QString& privateKey,
+                                                   const QString& certificateChain);
+
+            /**
+             * @brief Reset server certificate on a host
+             * @param session XenServer session
+             * @param host Host opaque reference
+             *
+             * Matches C# Host.reset_server_certificate()
+             */
+            static void reset_server_certificate(Session* session, const QString& host);
+
+            /**
              * @brief Retrieve WLB evacuate recommendations
              * @param session XenServer session
              * @param host Host opaque reference

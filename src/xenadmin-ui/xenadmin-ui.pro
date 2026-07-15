@@ -28,6 +28,7 @@ SOURCES += \
     dialogs/controldomainmemorydialog.cpp \
     dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
+    dialogs/installcertificatedialog.cpp \
     dialogs/xencacheexplorer.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -336,6 +337,7 @@ HEADERS += \
     dialogs/controldomainmemorydialog.h \
     dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
+    dialogs/installcertificatedialog.h \
     dialogs/xencacheexplorer.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -641,6 +643,7 @@ FORMS += \
     dialogs/controldomainmemorydialog.ui \
     dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
+    dialogs/installcertificatedialog.ui \
     dialogs/xencacheexplorer.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
