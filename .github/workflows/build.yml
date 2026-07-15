@@ -44,15 +44,10 @@ jobs:
             host: linux
             qt_version: "6.6.2"
             qt_arch: gcc_64
-          - name: macOS / Qt 5.15.2
+          - name: macOS / Qt 6.9.2
             runs_on: macos-latest
             host: mac
-            qt_version: "5.15.2"
-            qt_arch: clang_64
-          - name: macOS / Qt 6.6.2
-            runs_on: macos-latest
-            host: mac
-            qt_version: "6.6.2"
+            qt_version: "6.9.2"
             qt_arch: clang_64
 
     steps:
