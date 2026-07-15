@@ -132,6 +132,7 @@ void SettingsManager::Load()
     this->m_expandedTreeItems = this->m_settings->value("TreeView/expandedItems").toStringList();
     this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
     this->m_logLevel = this->m_settings->value("Debug/logLevel", 2).toInt();
+    this->m_debugConsoleFontSize = this->m_settings->value("Debug/fontSize", 9).toInt();
     // Backward-compatible mirrors of proxy settings.
     this->m_proxyServer = this->m_connectionProxyAddress;
     this->m_proxyPort = this->m_connectionProxyPort;
@@ -202,6 +203,7 @@ void SettingsManager::Save()
     this->m_settings->setValue("TreeView/expandedItems", this->m_expandedTreeItems);
     this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
     this->m_settings->setValue("Debug/logLevel", this->m_logLevel);
+    this->m_settings->setValue("Debug/fontSize", this->m_debugConsoleFontSize);
     // Backward-compatible keys.
     this->m_settings->setValue("Network/proxyServer", this->m_connectionProxyAddress);
     this->m_settings->setValue("Network/proxyPort", this->m_connectionProxyPort);
@@ -1002,6 +1004,17 @@ void SettingsManager::SetLogLevel(int level)
 {
     this->m_logLevel = level;
     emit settingsChanged("Debug/logLevel");
+}
+
+int SettingsManager::GetDebugConsoleFontSize() const
+{
+    return this->m_debugConsoleFontSize;
+}
+
+void SettingsManager::SetDebugConsoleFontSize(int pointSize)
+{
+    this->m_debugConsoleFontSize = pointSize;
+    emit settingsChanged("Debug/fontSize");
 }
 
 // Network settings

@@ -62,6 +62,8 @@ class DebugWindow : public QDialog
         void saveLog();
         void toggleAutoScroll(bool enabled);
         void setLogLevel(int level);
+        void increaseFontSize();
+        void decreaseFontSize();
 
     signals:
         void messageReceived(const QString& message);
@@ -73,12 +75,15 @@ class DebugWindow : public QDialog
         static QMutex s_mutex;
 
         QString formatMessage(QtMsgType type, const QMessageLogContext& context, const QString& msg);
+        void setupFontControls();
+        void applyLogFontSize(int pointSize);
 
         Ui::DebugWindow* ui;
 
         bool m_autoScroll = true;
         int m_messageCount = 0;
         int m_currentLogLevel = 0; // 0=Debug, 1=Info, 2=Warning, 3=Critical
+        int m_logFontSize = 9;
 };
 
 #endif // DEBUGWINDOW_H

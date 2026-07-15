@@ -27,6 +27,7 @@
 
 #include "debugwindow.h"
 #include "ui_debugwindow.h"
+#include "../settingsmanager.h"
 #include <QApplication>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -36,6 +37,9 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QTextEdit>
+#include <QPushButton>
+#include <QShortcut>
+#include <QKeySequence>
 
 // Static member definitions
 DebugWindow* DebugWindow::s_instance = nullptr;
@@ -54,13 +58,9 @@ DebugWindow::DebugWindow(QWidget* parent) : QDialog(parent), ui(new Ui::DebugWin
     // Set window icon (optional)
     this->setWindowIcon(QIcon(":/icons/debug.png"));
 
-    // Set font for log text edit
-    QFont consoleFont("Consolas", 9);
-    if (!consoleFont.exactMatch())
-    {
-        consoleFont.setFamily("Courier New");
-    }
-    this->ui->logTextEdit->setFont(consoleFont);
+    this->m_logFontSize = qBound(6, SettingsManager::instance().GetDebugConsoleFontSize(), 32);
+    this->setupFontControls();
+    this->applyLogFontSize(this->m_logFontSize);
 
     // Connect the signal to append messages (for thread safety)
     connect(this, &DebugWindow::messageReceived, this, &DebugWindow::appendMessage, Qt::QueuedConnection);
@@ -178,6 +178,37 @@ QString DebugWindow::formatMessage(QtMsgType type, const QMessageLogContext& con
     return QString("<span style=\"color: %1;\">[%2] %3%4: %5</span>").arg(color, timestamp, typeStr, location, msg.toHtmlEscaped());
 }
 
+void DebugWindow::setupFontControls()
+{
+    connect(this->ui->increaseFontButton, &QPushButton::clicked, this, &DebugWindow::increaseFontSize);
+    connect(this->ui->decreaseFontButton, &QPushButton::clicked, this, &DebugWindow::decreaseFontSize);
+
+    QList<QKeySequence> zoomInKeys = QKeySequence::keyBindings(QKeySequence::ZoomIn);
+    const QKeySequence zoomInEquals(QStringLiteral("Ctrl+="));
+    if (!zoomInKeys.contains(zoomInEquals))
+        zoomInKeys.append(zoomInEquals);
+
+    QShortcut* zoomInShortcut = new QShortcut(this);
+    zoomInShortcut->setKeys(zoomInKeys);
+    connect(zoomInShortcut, &QShortcut::activated, this, &DebugWindow::increaseFontSize);
+
+    QShortcut* zoomOutShortcut = new QShortcut(this);
+    zoomOutShortcut->setKeys(QKeySequence::keyBindings(QKeySequence::ZoomOut));
+    connect(zoomOutShortcut, &QShortcut::activated, this, &DebugWindow::decreaseFontSize);
+}
+
+void DebugWindow::applyLogFontSize(int pointSize)
+{
+    this->m_logFontSize = qBound(6, pointSize, 32);
+
+    QFont consoleFont("Consolas", this->m_logFontSize);
+    if (!consoleFont.exactMatch())
+        consoleFont.setFamily("Courier New");
+    this->ui->logTextEdit->setFont(consoleFont);
+
+    SettingsManager::instance().SetDebugConsoleFontSize(this->m_logFontSize);
+}
+
 void DebugWindow::appendMessage(const QString& message)
 {
     if (this->ui->logTextEdit)
@@ -253,4 +284,14 @@ void DebugWindow::toggleAutoScroll(bool enabled)
 void DebugWindow::setLogLevel(int level)
 {
     this->m_currentLogLevel = level;
+}
+
+void DebugWindow::increaseFontSize()
+{
+    this->applyLogFontSize(this->m_logFontSize + 1);
+}
+
+void DebugWindow::decreaseFontSize()
+{
+    this->applyLogFontSize(this->m_logFontSize - 1);
 }

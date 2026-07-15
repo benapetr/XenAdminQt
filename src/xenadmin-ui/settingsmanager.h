@@ -217,6 +217,8 @@ class SettingsManager : public QObject
 
         int GetLogLevel() const;
         void SetLogLevel(int level);
+        int GetDebugConsoleFontSize() const;
+        void SetDebugConsoleFontSize(int pointSize);
 
         // Network settings
         QString GetProxyServer() const;
@@ -326,6 +328,7 @@ class SettingsManager : public QObject
         QStringList m_expandedTreeItems;
         bool m_debugConsoleVisible;
         int m_logLevel;
+        int m_debugConsoleFontSize;
         QString m_proxyServer;
         int m_proxyPort;
         bool m_useProxy;
