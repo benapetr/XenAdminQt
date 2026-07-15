@@ -2673,6 +2673,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->menuCertificate->setEnabled(this->m_commands["Certificate"]->CanRun());
     this->ui->toolStripMenuItemInstallCertificate->setEnabled(this->m_commands["InstallCertificate"]->CanRun());
     this->ui->toolStripMenuItemResetCertificate->setEnabled(this->m_commands["ResetCertificate"]->CanRun());
+    this->ui->maintenanceModeToolStripMenuItem1->setText(this->m_commands["HostMaintenanceMode"]->MenuText());
     this->ui->maintenanceModeToolStripMenuItem1->setEnabled(this->m_commands["HostMaintenanceMode"]->CanRun());
     this->ui->controlDomainMemoryToolStripMenuItem->setEnabled(this->m_commands["ChangeControlDomainMemory"]->CanRun());
     this->ui->menuHostPassword->setEnabled(this->m_commands["HostPassword"]->CanRun());
@@ -3453,7 +3454,7 @@ void MainWindow::initializeCommands()
     this->m_commands["RebootHost"] = new RebootHostCommand(this, this);
     this->m_commands["ShutdownHost"] = new ShutdownHostCommand(this, this);
     this->m_commands["PowerOnHost"] = new PowerOnHostCommand(this, this);
-    this->m_commands["HostMaintenanceMode"] = new HostMaintenanceModeCommand(this, true, this);
+    this->m_commands["HostMaintenanceMode"] = new HostMaintenanceModeCommand(this, this);
     this->m_commands["Certificate"] = new CertificateCommand(this, this);
     this->m_commands["InstallCertificate"] = new InstallCertificateCommand(this, this);
     this->m_commands["ResetCertificate"] = new ResetCertificateCommand(this, this);

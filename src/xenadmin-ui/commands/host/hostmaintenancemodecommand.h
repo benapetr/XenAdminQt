@@ -45,9 +45,14 @@ class HostMaintenanceModeCommand : public HostCommand
 
     public:
         /**
-         * @brief Enter maintenance mode constructor
+         * @brief Dynamic enter/exit constructor
          */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+
+        /**
+         * @brief Explicit enter/exit constructor
+         */
+        HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent = nullptr);
 
         /**
          * @brief Constructor with selection
@@ -66,6 +71,7 @@ class HostMaintenanceModeCommand : public HostCommand
 
     private:
         bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        bool m_enterModeSpecified;
 };
 
 #endif // HOSTMAINTENANCEMODECOMMAND_H

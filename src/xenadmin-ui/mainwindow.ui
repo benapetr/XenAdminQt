@@ -828,11 +828,8 @@
    </property>
   </action>
   <action name="maintenanceModeToolStripMenuItem1">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="text">
-    <string>&amp;Maintenance Mode</string>
+    <string>Enter &amp;Maintenance Mode</string>
    </property>
    <property name="statusTip">
     <string>Enter or exit maintenance mode</string>

@@ -30,21 +30,38 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/pooljoinrules.h"
 #include "xenlib/xen/actions/host/evacuatehostaction.h"
 #include "xenlib/xen/actions/host/enablehostaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
-HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, QObject* parent)
+    : HostCommand(mainWindow, parent),
+      m_enterMode(true),
+      m_enterModeSpecified(false)
 {
 }
 
-HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent)
+    : HostCommand(mainWindow, parent),
+      m_enterMode(enterMode),
+      m_enterModeSpecified(true)
+{
+}
+
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode, QObject* parent)
+    : HostCommand(mainWindow, parent),
+      m_enterMode(enterMode),
+      m_enterModeSpecified(true)
 {
     Q_UNUSED(selection);
 }
 
-HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, QSharedPointer<Host> host, bool enterMode, QObject* parent)
+    : HostCommand(mainWindow, parent),
+      m_enterMode(enterMode),
+      m_enterModeSpecified(true)
 {
     if (!host)
         return;
@@ -56,22 +73,15 @@ HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, Q
 
 bool HostMaintenanceModeCommand::CanRun() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.size() != 1)
         return false;
 
-    // Check if host exists and we have a valid connection
-    if (!host->GetConnection())
+    QSharedPointer<Host> host = hosts.first();
+    if (!host || !host->GetConnection())
         return false;
 
-    // For enter mode: host must be IsEnabled
-    // For exit mode: host must be disabled (in maintenance mode)
-    bool hostEnabled = host->IsEnabled();
-
-    if (this->m_enterMode)
-        return hostEnabled; // Can only enter maintenance if host is currently enabled
-    else
-        return !hostEnabled; // Can only exit maintenance if host is currently disabled
+    return PoolJoinRules::GetCoordinator(host->GetConnection()) != nullptr;
 }
 
 void HostMaintenanceModeCommand::Run()
@@ -89,7 +99,8 @@ void HostMaintenanceModeCommand::Run()
     if (!mw)
         return;
 
-    if (this->m_enterMode)
+    const bool enterMode = this->m_enterModeSpecified ? this->m_enterMode : host->IsEnabled();
+    if (enterMode)
     {
         // Entering maintenance mode
         int ret = QMessageBox::question(mw, "Enter Maintenance Mode",
@@ -209,7 +220,10 @@ void HostMaintenanceModeCommand::Run()
 
 QString HostMaintenanceModeCommand::MenuText() const
 {
-    if (this->m_enterMode)
+    QSharedPointer<Host> host = this->getSelectedHost();
+    const bool enterMode = this->m_enterModeSpecified ? this->m_enterMode : !host || host->IsEnabled();
+
+    if (enterMode)
         return "Enter Maintenance Mode";
     else
         return "Exit Maintenance Mode";
