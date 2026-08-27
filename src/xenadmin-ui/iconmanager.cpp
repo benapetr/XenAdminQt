@@ -43,8 +43,8 @@ IconManager::IconManager()
 {
     // Load static icons from resources
     this->m_connectedIcon = QIcon(":/tree-icons/host.png");
+    this->m_connectingIcon = QIcon(":/tree-icons/host_connecting.png");
     this->m_disconnectedIcon = QIcon(":/tree-icons/host_disconnected.png");
-    this->m_connectingIcon = this->createStatusIcon(QColor(255, 165, 0)); // Orange for connecting
     this->m_successIcon = QIcon(":/icons/tick_16.png");
     this->m_errorIcon = QIcon(":/icons/error_16.png");
     this->m_cancelledIcon = QIcon(":/icons/cancelled_action_16.png");
@@ -182,12 +182,15 @@ QIcon IconManager::GetIconForHost(const Host *host) const
     // 3. Check enabled: if (host.enabled) for maintenance mode
 
     bool enabled = host->IsEnabled();
+    XenConnection* connection = host->GetConnection();
+    bool isConnecting = connection && connection->InProgress() && !connection->IsConnected();
     bool isDisconnected = !host->IsConnected();
     bool isLive = host->IsLive();
 
-    QString cacheKey = QString("host_%1_%2_%3")
+    QString cacheKey = QString("host_%1_%2_%3_%4")
                            .arg(enabled ? "enabled" : "disabled")
                            .arg(isLive ? "live" : "notlive")
+                           .arg(isConnecting ? "connecting" : "notconnecting")
                            .arg(isDisconnected ? "disconnected" : "connected");
 
     if (this->m_iconCache.contains(cacheKey))
@@ -204,9 +207,12 @@ QIcon IconManager::GetIconForHost(const Host *host) const
     // 2. If connection.InProgress && !connection.IsConnected: Icons.HostConnecting
     // 3. Else: Icons.HostDisconnected
 
-    if (isDisconnected)
+    if (isConnecting)
     {
-        icon = QIcon(":/tree-icons/host_disconnected.png");
+        icon = this->m_connectingIcon;
+    } else if (isDisconnected)
+    {
+        icon = this->m_disconnectedIcon;
     } else if (isLive)
     {
         // Host is live

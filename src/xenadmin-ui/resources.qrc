@@ -95,6 +95,7 @@
         <file alias="spinning_frame_6.png">images/SpinningFrame6.png</file>
         <file alias="spinning_frame_7.png">images/SpinningFrame7.png</file>
         <file alias="host.png">images/000_TreeConnected_h32bit_16.png</file>
+        <file alias="host_connecting.png">images/000_ServerInProgress_h32bit_16.png</file>
         <file alias="host_disconnected.png">images/000_ServerDisconnected_h32bit_16.png</file>
         <file alias="host_maintenance.png">images/000_ServerMaintenance_h32bit_16.png</file>
         <file alias="pool.png">images/000_Pool_h32bit_16.png</file>

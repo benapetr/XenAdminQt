@@ -229,6 +229,7 @@ QList<QSharedPointer<Host>> SelectionManager::SelectedHosts() const
 QList<XenConnection*> SelectionManager::SelectedConnections() const
 {
     QList<XenConnection*> connections;
+    QSet<XenConnection*> seenConnections;
     const QList<QTreeWidgetItem*> items = this->SelectedItems();
 
     for (QTreeWidgetItem* item : items)
@@ -240,8 +241,23 @@ QList<XenConnection*> SelectionManager::SelectedConnections() const
         if (data.canConvert<XenConnection*>())
         {
             XenConnection* connection = data.value<XenConnection*>();
-            if (connection)
+            if (connection && !seenConnections.contains(connection))
+            {
                 connections.append(connection);
+                seenConnections.insert(connection);
+            }
+            continue;
+        }
+
+        if (data.canConvert<QSharedPointer<XenObject>>())
+        {
+            const QSharedPointer<XenObject> object = data.value<QSharedPointer<XenObject>>();
+            XenConnection* connection = object ? object->GetConnection() : nullptr;
+            if (connection && !seenConnections.contains(connection))
+            {
+                connections.append(connection);
+                seenConnections.insert(connection);
+            }
         }
     }
 

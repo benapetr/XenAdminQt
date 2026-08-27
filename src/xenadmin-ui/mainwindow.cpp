@@ -671,6 +671,11 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
     {
         this->onConnectionStateChanged(conn, false);
     });
+    connect(connection, &XenConnection::ConnectionMessageChanged, this, [this](const QString&)
+    {
+        if (this->m_navigationPane)
+            this->m_navigationPane->RequestRefreshTreeView();
+    });
 
     connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
     connect(connection->GetCache(), &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
