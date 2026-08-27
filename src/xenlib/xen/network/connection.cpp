@@ -949,7 +949,6 @@ void XenConnection::connectWorkerThread()
 
     this->d->connectTask->Session = session;
     this->SetSession(session);
-    this->d->connectTask->Connected = true;
     this->d->expectPasswordIsCorrect = true;
     emit this->ConnectionMessageChanged(QString("Synchronizing with %1...").arg(this->d->host));
 
@@ -1074,6 +1073,12 @@ void XenConnection::connectWorkerThread()
         qWarning() << "XenLib::populateCache - Failed to fetch console records:" << exn.what();
     }
 
+    if (!this->d->connectTask || this->d->connectTask->Cancelled)
+        return;
+
+    // Match the C# connection flow: the connection is not considered connected
+    // until the initial cache contains the pool and coordinator objects.
+    this->d->connectTask->Connected = true;
     this->d->cacheIsPopulated = true;
     qDebug() << "XenConnection: Cache populated, emitting cachePopulated";
     emit this->CachePopulated();
