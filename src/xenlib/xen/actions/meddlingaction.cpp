@@ -303,7 +303,7 @@ bool MeddlingAction::isTaskSuitable(const QVariantMap& taskData, qint64 serverTi
         return false;
 
     // Apply server time offset
-    QDateTime createdLocal = created.addMSecs(serverTimeOffset);
+    QDateTime createdLocal = created.addSecs(serverTimeOffset);
     QDateTime now = QDateTime::currentDateTime();
 
     qint64 ageMs = createdLocal.msecsTo(now);

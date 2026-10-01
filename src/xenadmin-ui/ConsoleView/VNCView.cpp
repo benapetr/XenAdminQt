@@ -130,9 +130,7 @@ void VNCView::DockUnDock()
         {
             this->m_undockedForm = new QMainWindow();
             this->m_undockedForm->setWindowTitle(undockedWindowTitle());
-
-            // TODO: Set window icon
-            // C#: undockedForm.Icon = Program.MainWindow.Icon;
+            this->m_undockedForm->setWindowIcon(this->window()->windowIcon());
 
             // Connect close event to re-dock
             connect(this->m_undockedForm, &QMainWindow::destroyed, this, [this]()

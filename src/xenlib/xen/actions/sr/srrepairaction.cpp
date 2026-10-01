@@ -27,6 +27,8 @@
 
 #include "srrepairaction.h"
 #include "../../network/connection.h"
+#include "../../../xencache.h"
+#include "../../pool.h"
 #include "../../session.h"
 #include "../../sr.h"
 #include "../../xenapi/xenapi_SR.h"
@@ -136,8 +138,12 @@ void SrRepairAction::run()
         return;
     }
 
-    // TODO: Sort hosts to put coordinator first (requires Pool.get_master API)
-    // For now, process in order returned
+    XenConnection* connection = this->m_sr->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    const QString coordinatorRef = pool ? pool->GetMasterHostRef() : QString();
+    if (!coordinatorRef.isEmpty() && hostRefs.removeAll(coordinatorRef) > 0)
+        hostRefs.prepend(coordinatorRef);
 
     int max = hostRefs.count() * 2; // 2 operations per host: create PBD + plug
     int current = 0;

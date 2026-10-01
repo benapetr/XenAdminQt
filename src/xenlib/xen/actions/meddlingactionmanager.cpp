@@ -234,10 +234,5 @@ void MeddlingActionManager::categorizeTask(XenConnection* connection, const QStr
 
 qint64 MeddlingActionManager::getServerTimeOffset(XenConnection* connection) const
 {
-    Q_UNUSED(connection);
-
-    // TODO: XenConnection should expose server time offset
-    // For now, return 0 (assume clocks are synchronized)
-    // C# gets this from Connection.ServerTimeOffset
-    return 0;
+    return connection ? connection->GetServerTimeOffsetSeconds() : 0;
 }
