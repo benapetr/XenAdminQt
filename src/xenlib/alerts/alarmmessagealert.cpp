@@ -26,6 +26,9 @@
  */
 
 #include "alarmmessagealert.h"
+#include "../xencache.h"
+#include "../xen/network/connection.h"
+#include "../xen/sr.h"
 #include <QXmlStreamReader>
 #include <QDebug>
 
@@ -252,8 +255,19 @@ QString AlarmMessageAlert::formatLogFileSystemDescription() const
 
 QString AlarmMessageAlert::formatStorageDescription() const
 {
-    // TODO: Look up SR name by UUID
     QString srName = this->m_srUuid.isEmpty() ? tr("Unknown SR") : this->m_srUuid;
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    if (cache && !this->m_srUuid.isEmpty())
+    {
+        for (const QSharedPointer<SR>& sr : cache->GetAll<SR>())
+        {
+            if (sr->GetUUID().startsWith(this->m_srUuid))
+            {
+                srName = sr->GetName();
+                break;
+            }
+        }
+    }
     return tr("I/O throughput on storage %1 was %2 for %3 (trigger level %4)")
         .arg(srName)
         .arg(this->dataRateString(this->m_currentValue))

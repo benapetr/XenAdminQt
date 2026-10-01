@@ -903,7 +903,15 @@ void GeneralTabPage::populateHighAvailabilitySection()
     if (restartPriority.isEmpty())
         return;
 
-    // TODO: Map restart priority values to friendly display strings (C# Helpers.RestartPriorityI18n).
+    if (restartPriority == "always_restart_high_priority")
+        restartPriority = tr("Restart first");
+    else if (restartPriority == "always_restart" || restartPriority == "restart")
+        restartPriority = tr("Restart");
+    else if (restartPriority == "best-effort" || restartPriority == "best_effort")
+        restartPriority = tr("Restart if possible");
+    else if (restartPriority == "do_not_restart")
+        restartPriority = tr("Do not restart");
+
     this->addPropertyByKey(this->ui->pdSectionHighAvailability, "VM.ha_restart_priority", restartPriority);
 }
 

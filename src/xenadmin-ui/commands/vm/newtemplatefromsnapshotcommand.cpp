@@ -33,6 +33,7 @@
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QSet>
 
 NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -158,22 +159,24 @@ QString NewTemplateFromSnapshotCommand::MenuText() const
 
 QString NewTemplateFromSnapshotCommand::generateUniqueName(const QString& snapshotName) const
 {
-    QString baseName = tr("Template from '%1'").arg(snapshotName);
+    const QString baseName = tr("Template from '%1'").arg(snapshotName);
+    XenConnection* conn = this->m_connection;
+    if (!conn)
+    {
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    }
+    if (!conn || !conn->GetCache())
+        return baseName;
+
+    QSet<QString> takenNames;
+    for (const QSharedPointer<VM>& vm : conn->GetCache()->GetAll<VM>())
+        takenNames.insert(vm->GetName());
+
     QString name = baseName;
     int suffix = 1;
-
-    // Get all VM names from cache to check for uniqueness
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
-    if (!conn || !conn->GetCache())
-    {
-        return name;
-    }
-
-    // TODO unfinished logic
-    // Simple uniqueness check - just append numbers if needed
-    // In production, should check against all VMs in connection
-    // For now, this basic implementation should work
+    while (takenNames.contains(name))
+        name = tr("%1 (%2)").arg(baseName).arg(suffix++);
 
     return name;
 }

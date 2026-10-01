@@ -29,6 +29,7 @@
 #include "queryelement.h"
 #include "groupingcontrol.h"
 #include "../../dialogs/customsearchdialog.h"
+#include "xenlib/xen/network/connectionsmanager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollArea>
@@ -493,8 +494,7 @@ void Searcher::ToggleExpandedState(bool expand)
 
     if (this->isVisible())
     {
-        // TODO: Enable save button only if there are active connections
-        this->saveButton_->setEnabled(true);
+        this->saveButton_->setEnabled(!Xen::ConnectionsManager::instance()->GetConnectedConnections().isEmpty());
     }
 
     emit SearchPanelExpandChanged();
