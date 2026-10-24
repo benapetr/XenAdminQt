@@ -38,6 +38,8 @@
 #include "xenlib/xencache.h"
 #include <QPainter>
 #include <QDebug>
+#include <QApplication>
+#include <QStyle>
 
 IconManager::IconManager()
 {
@@ -83,6 +85,8 @@ QIcon IconManager::GetIconForObject(XenConnection* connection, XenObjectType obj
             return QIcon(":/tree-icons/storage.png");
         case XenObjectType::VMAppliance:
             return QIcon(":/tree-icons/vm_generic.png");
+        case XenObjectType::Folder:
+            return QApplication::style()->standardIcon(QStyle::SP_DirIcon);
         default:
             break;
     }
@@ -110,7 +114,9 @@ QIcon IconManager::GetIconForObject(const XenObject* object) const
     if (object->GetObjectType() == XenObjectType::VMAppliance)
         return QIcon(":/tree-icons/vm_generic.png");
 
-    return this->GetIconForObject(object->GetConnection(), object->GetObjectType(), object->OpaqueRef());
+    // The object is already resolved. Only use the static type fallback here;
+    // resolving it again would recurse for types without a specialized handler.
+    return this->GetIconForObject(nullptr, object->GetObjectType(), QString());
 }
 
 QIcon IconManager::GetIconForObject(QSharedPointer<XenObject> object) const

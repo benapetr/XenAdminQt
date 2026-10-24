@@ -5,7 +5,8 @@ QT += testlib widgets network xml
 TARGET = xenadmin-ui-tests
 
 SOURCES += \
-    test_main.cpp
+    test_main.cpp \
+    ../../src/xenadmin-ui/iconmanager.cpp
 
 INCLUDEPATH += \
     ../../src \
