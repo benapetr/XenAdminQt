@@ -48,6 +48,13 @@ VMCloneAction::VMCloneAction(QSharedPointer<VM> vm, const QString& name, const Q
     this->AddApiMethodToRoleCheck("VM.set_name_description");
 }
 
+void VMCloneAction::SetCreateTemplate(bool createTemplate)
+{
+    this->m_createTemplate = createTemplate;
+    if (createTemplate)
+        this->AddApiMethodToRoleCheck("VM.set_is_a_template");
+}
+
 void VMCloneAction::run()
 {
     try
@@ -66,6 +73,9 @@ void VMCloneAction::run()
 
         // Set the description
         XenAPI::VM::set_name_description(GetSession(), createdVmRef, m_cloneDescription);
+
+        if (this->m_createTemplate)
+            XenAPI::VM::set_is_a_template(this->GetSession(), createdVmRef, true);
 
         // Store the created VM ref as result
         SetResult(createdVmRef);

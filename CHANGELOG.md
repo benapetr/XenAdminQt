@@ -9,6 +9,10 @@ are omitted.
 
 ### Added
 
+- Added an optional snapshot exportability setting that clears `is_a_template`
+  after creation for use with `xe vm-export`. Template creation from these
+  snapshots explicitly marks the clone as a template.
+
 - Added VM and appliance import/export wizards, including XVA, OVF/OVA, gzip,
   URL-based imports, OVF validation, and the supporting upload/download flows.
 - Added host TLS certificate installation and management.

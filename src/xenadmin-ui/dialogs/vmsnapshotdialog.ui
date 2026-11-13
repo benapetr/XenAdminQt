@@ -214,6 +214,19 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="makeExportableCheckBox">
+     <property name="toolTip">
+      <string>Clears is_a_template after creation so xe vm-export can select this snapshot. It remains a snapshot. XVA imports will create a VM instead of a template.</string>
+     </property>
+     <property name="text">
+      <string>Make snapshot exportable (unset is_a_template)</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>

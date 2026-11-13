@@ -54,6 +54,11 @@ VmSnapshotDialog::~VmSnapshotDialog()
     delete this->ui;
 }
 
+bool VmSnapshotDialog::makeExportable() const
+{
+    return this->ui->makeExportableCheckBox->isChecked();
+}
+
 QString VmSnapshotDialog::snapshotName() const
 {
     return this->ui->nameLineEdit->text().trimmed();

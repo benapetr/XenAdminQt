@@ -29,6 +29,7 @@
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_Blob.h"
 #include "../../vm.h"
+#include "../../failure.h"
 #include <QtCore/QDebug>
 #include <QtCore/QBuffer>
 
@@ -48,6 +49,13 @@ VMSnapshotCreateAction::VMSnapshotCreateAction(QSharedPointer<VM> vm,
 {
     if (!m_vm || !m_vm->IsValid())
         qWarning() << "VMSnapshotCreateAction: Invalid VM object";
+}
+
+void VMSnapshotCreateAction::SetMakeExportable(bool makeExportable)
+{
+    this->m_makeExportable = makeExportable;
+    if (makeExportable)
+        this->AddApiMethodToRoleCheck("VM.set_is_a_template");
 }
 
 void VMSnapshotCreateAction::run()
@@ -136,6 +144,25 @@ void VMSnapshotCreateAction::run()
         {
             SetDescription("Saving console screenshot...");
             saveImageInBlob(m_snapshotRef, m_screenshot);
+        }
+
+        if (this->m_makeExportable)
+        {
+            this->SetDescription(tr("Making snapshot exportable..."));
+            try
+            {
+                XenAPI::VM::set_is_a_template(this->GetSession(), this->m_snapshotRef, false);
+            } catch (const Failure& e)
+            {
+                this->setError(tr("Snapshot '%1' was created, but could not be made exportable: %2")
+                                   .arg(this->m_newName, e.message()));
+                return;
+            } catch (const std::exception& e)
+            {
+                this->setError(tr("Snapshot '%1' was created, but could not be made exportable: %2")
+                                   .arg(this->m_newName, QString::fromUtf8(e.what())));
+                return;
+            }
         }
 
         SetPercentComplete(100);

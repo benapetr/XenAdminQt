@@ -58,6 +58,10 @@ class VMCloneAction : public AsyncOperation
          */
         explicit VMCloneAction(QSharedPointer<VM> vm, const QString& name, const QString& description, QObject* parent = nullptr);
 
+        /// Ensure the clone is a template, even when its source snapshot is not.
+        /// Configure before starting the action.
+        void SetCreateTemplate(bool createTemplate);
+
     protected:
         void run() override;
 
@@ -65,6 +69,7 @@ class VMCloneAction : public AsyncOperation
         QSharedPointer<VM> m_vm;
         QString m_cloneName;
         QString m_cloneDescription;
+        bool m_createTemplate = false;
 };
 
 #endif // VMCLONEACTION_H

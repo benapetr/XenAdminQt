@@ -127,6 +127,7 @@ void NewTemplateFromSnapshotCommand::Run()
 
     // Create VMCloneAction
     VMCloneAction* action = new VMCloneAction(snapshot, templateName, description, MainWindow::instance());
+    action->SetCreateTemplate(true);
 
     // Connect completion signal
     connect(action, &AsyncOperation::completed, MainWindow::instance(), [=]()

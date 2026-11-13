@@ -54,7 +54,7 @@ class TakeSnapshotCommand : public VMCommand
         // Check if VM supports snapshot operations
         bool canTakeSnapshot() const;
         void showSnapshotDialog();
-        void executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type);
+        void executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type, bool makeExportable);
 };
 
 #endif // TAKESNAPSHOTCOMMAND_H

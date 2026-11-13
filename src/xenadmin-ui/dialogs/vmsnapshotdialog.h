@@ -63,6 +63,7 @@ class VmSnapshotDialog : public QDialog
         ~VmSnapshotDialog();
 
         QString snapshotName() const;
+        bool makeExportable() const;
         QString snapshotDescription() const;
         SnapshotType snapshotType() const;
 

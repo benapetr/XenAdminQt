@@ -77,6 +77,10 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
                                const QImage& screenshot = QImage(),
                                QObject* parent = nullptr);
 
+        /// Clear is_a_template after creation for xe vm-export; retain is_a_snapshot.
+        /// Disabled by default. Configure before RunAsync().
+        void SetMakeExportable(bool makeExportable);
+
         /**
          * @brief Get the opaque_ref of the created snapshot
          * @return Snapshot VM reference (available after completion)
@@ -98,6 +102,7 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
         SnapshotType m_type;
         QString m_snapshotRef;
         QImage m_screenshot;
+        bool m_makeExportable = false;
 };
 
 #endif // VMSNAPSHOTCREATEACTION_H

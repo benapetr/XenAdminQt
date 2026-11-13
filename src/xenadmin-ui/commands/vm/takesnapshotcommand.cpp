@@ -136,11 +136,11 @@ void TakeSnapshotCommand::showSnapshotDialog()
             MainWindow::instance()->GetConsolePanel()->SetCurrentSource(vm);
         }
 
-        this->executeSnapshotOperation(name, description, type);
+        this->executeSnapshotOperation(name, description, type, dialog.makeExportable());
     }
 }
 
-void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type)
+void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type, bool makeExportable)
 {
     emit snapshotStarted();
 
@@ -217,6 +217,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
     VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, MainWindow::instance());
+    action->SetMakeExportable(makeExportable);
 
     // Connect completion signal for cleanup and status update
     QPointer<TakeSnapshotCommand> self(this);
