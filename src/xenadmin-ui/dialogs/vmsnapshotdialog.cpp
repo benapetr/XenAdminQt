@@ -85,8 +85,8 @@ void VmSnapshotDialog::setupDialog()
     // C#: VmSnapshotDialog.cs lines 42-61
 
     // Set default snapshot name with timestamp
-    QString defaultName = QString("Snapshot_%1")
-                              .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss"));
+    QString defaultName = QString("%1_%2")
+                              .arg(this->m_vm->GetName(), QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss"));
     this->ui->nameLineEdit->setText(defaultName);
 
     // Update warning messages
