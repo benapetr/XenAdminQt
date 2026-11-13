@@ -1,25 +1,40 @@
 # Status of code migration from original C#
 
-# Needs work
-* Tree view - should show Virtual Disks, Networks in objects view
-* Pool HA tab missing
-* Performance tab
-* Search tab has unfinished options panel
-* VM import / export
-* Folder and tag views
-* Network tab (host) - needs finish and test, especially wizards and properties
-* New storage wizard
-* HA tab
-* Create template from VM
-* Create VM from template
+This is an alpha port. The implementation notes below reflect the current
+source and [changelog](../CHANGELOG.md). They are not a fresh live-server test
+report. Historical testing and issue lists are retained below for follow-up;
+revalidate them before treating them as current release guarantees or defects.
 
-# Needs polish
-* Console - it works most of the time, but there are random scaling issues during boot, RDP not supported
+## Implemented; parity and integration validation still needed
+
+- Infrastructure/object trees include disks, snapshots, and networks.
+- Folder and tag organization views, including drag-and-drop, are present.
+- High Availability management and an HA tab are present.
+- Performance tab and metric-update infrastructure are present.
+- VM/appliance import and export wizards include XVA, OVF/OVA, gzip, and URL
+  import workflows.
+- Host networking tabs, network wizards/properties, and the New SR wizard are
+  present. Storage backends still need integration coverage.
+- VM-to-template conversion and creation from templates have commands and
+  workflows.
+
+Implementation presence does not establish complete C# parity. Exercise these
+features against supported server versions and retain outstanding work as
+specific reproducible gaps.
+
+## Previously reported unfinished work
+
+- Search tab options panel: review remaining parity gaps.
+- Host network wizards/properties and New SR workflows: finish any remaining
+  gaps identified during integration testing.
+
+## Previously reported polish items
+* Console - it works most of the time, but there are random scaling issues during boot, RDP behavior needs validation (an RDP client implementation is present)
 * UI - menus and toolbar buttons sometime don't refresh on events (unpause -> still shows force shutdown)
 * Menu items - some of them may still be missing, but they are mostly fine now
 * Events not showing progress bar for each item
 
-# Needs testing
+## Integration testing backlog
 * VM disk resize
 * VM disk move
 * VM cross pool migration
@@ -28,7 +43,7 @@
 * Maintenance mode
 * New SR wizard - HBA, iSCSI, NVMEoF, CIFS, NFS
 
-# Finished and tested
+## Historically reported working and tested
 * Add server
 * Connection to pool - redirect from slave to master
 * Connection persistence
@@ -53,6 +68,6 @@
 * New pool wizard
 * NIC tab - bonding
 
-# Known issues
+## Previously reported issues to reproduce
 * When quitting the app sometimes the "pending ops" window appears that's empty
 * SR in list of VDI we see "base copy" which is hidden in original version

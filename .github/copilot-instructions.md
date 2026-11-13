@@ -1,520 +1,176 @@
 # XenAdmin Qt - AI Agent Instructions
 
-This is a C++/Qt6 rewrite of XenAdmin (XenServer/XCP-ng management tool), porting from C#. The architecture follows the proven C# design while adapting to Qt patterns.
+This is a C++/Qt Widgets port of the C# XenAdmin client for XCP-ng/XenServer.
+Preserve the original naming, workflow, and error handling while adapting to Qt.
+The project is alpha software; implementation does not imply complete parity or
+validation against a live server.
 
-## Project Structure & Architecture
+## Project Structure
 
-```
-.
-├── docs/               # Architecture notes, testing, API references
-├── packaging/          # Packaging assets/scripts (macOS, icons, outputs)
-├── release/            # Pre-generated qmake build outputs (use for builds)
-├── src/                # Qt/C++ source
-│   ├── xenadmin-ui/    # Qt GUI application
-│   │   ├── actions/        # UI-facing actions (dialog flows, helpers)
-│   │   ├── alerts/         # Alert models and views
-│   │   ├── commands/       # Command pattern (vm/host/pool/network/storage/etc.)
-│   │   ├── ConsoleView/    # Console/VNC viewer widgets
-│   │   ├── controls/       # Reusable UI controls (incl. controls/xensearch)
-│   │   ├── dialogs/        # UI dialogs with .ui files
-│   │   │   ├── optionspages/
-│   │   │   └── warningdialogs/
-│   │   ├── images/         # UI image assets
-│   │   ├── navigation/     # Tree and navigation UI
-│   │   ├── network/        # Network UI + dialogs
-│   │   ├── operations/     # UI-side operations
-│   │   ├── settingspanels/ # Settings views/panels
-│   │   ├── tabpages/       # BaseTabPage subclasses
-│   │   ├── widgets/        # Custom widgets
-│   │   └── xensearch/      # Search UI
-│   ├── xenlib/         # Shared library (XenServer API abstraction)
-│   │   ├── collections/    # XenObject collection helpers
-│   │   ├── customfields/   # Custom field support
-│   │   ├── network/        # Networking helpers (non-UI)
-│   │   ├── operations/     # ParallelOperation, MultipleOperation framework
-│   │   ├── otherconfig/    # Other-config helpers
-│   │   ├── utils/          # Utility helpers
-│   │   ├── xensearch/      # Search model/services
-│   │   └── xen/            # Connection, Session, API, actions, mappings, xenapi
-│   │       ├── actions/
-│   │       ├── mappings/
-│   │       ├── network/
-│   │       └── xenapi/
-│   └── xenadminqt.pro  # qmake project
-└── xenadmin/           # Original C# XenAdmin source (reference for porting)
-```
+- `src/xenadmin-ui/`: GUI application, commands, dialogs, tab pages, navigation,
+  settings, notifications, and `ConsoleView/` console widgets.
+- `src/xenlib/`: shared business logic, typed Xen objects, cache, search, alerts,
+  import/export helpers, and operation tracking.
+- `src/xenlib/xen/actions/`: user workflows grouped by object/category.
+- `src/xenlib/xen/xenapi/`: static `XenAPI` bindings, generally named
+  `xenapi_<Class>.{h,cpp}` (for example `xenapi_VM.h`).
+- `src/xenlib/xen/network/`: connections, workers, HTTP transport, certificates,
+  heartbeat, and `ConnectionsManager`.
+- `tests/`: qmake QtTest projects for the library and UI helpers.
+- `packaging/`, `debian/`, `toolchains/`: packaging and platform builds.
+- `xenadmin/`: original C# reference source, when available locally.
 
-**Critical Insight**: XenLib contains ALL Xen API business logic. The UI is a thin layer that invokes XenLib methods and displays results.
-**API Direction**: Use `namespace XenAPI` static bindings for all XenServer API calls. `xen/api.h` (`XenRpcAPI`) is legacy, low-level plumbing only and should not be used directly in new code.
+## Architecture and API Boundaries
 
-## Action Framework Expectations
-- Prefer deriving from `AsyncOperation` (and companions under `src/xenlib/xen/actions/`) for any XenAPI workflow.
-- Launch actions from commands/wizards and surface progress through `OperationProgressDialog`; do **not** add new direct API calls in UI code.
-- When an action is missing, add a new C++ action mirroring the C# equivalent instead of inlining API logic.
+Keep Xen API business logic in `xenlib`. UI commands and dialogs collect input,
+construct library actions, and display results.
 
-## XenAPI Namespace (Static API Bindings)
+- Use static bindings such as `XenAPI::VM::async_start()` for API calls in
+  actions. `XenRpcAPI` in `src/xenlib/xen/api.{h,cpp}` is low-level JSON-RPC
+  plumbing; do not introduce direct dependencies on it in UI or actions.
+- Bindings are thin wrappers. Put multi-step workflows in `AsyncOperation`
+  subclasses and mirror the corresponding C# action when porting.
+- Sessions are `XenAPI::Session`, declared in `src/xenlib/xen/session.h`.
+  `XenLib` in `xenlib.h` is now a namespace exposing `RegisterMetaTypes()`,
+  not a connection or data-fetching facade.
 
-All XenServer API bindings live in the **`XenAPI` namespace** with **static methods** organized by object type, matching the C# XenModel/XenAPI structure exactly:
+### Connections, sessions, and threading
 
-```cpp
-// File hierarchy mirrors C#: src/xenlib/xen/xenapi/ ↔ XenModel/XenAPI/
-namespace XenAPI
-{
-    class VM
-    {  // Static-only class
-        public:
-            static QString async_start(XenSession* session, const QString& vm, bool start_paused, bool force);
-            static void clean_shutdown(XenSession* session, const QString& vm);
-            // ... ~60 more VM methods
-    };
-        
-    class Host { /* static methods */ };
-    class Pool { /* static methods */ };
-    class SR   { /* static methods */ };
-    // ... etc.
-}
-```
+`MainWindow::connectToServer()` uses `AddServerDialog`, adds a `XenConnection`
+to `Xen::ConnectionsManager`, and calls `XenConnectionUI::BeginConnect()`.
+The UI helper delegates to `XenConnection::BeginConnect()`.
 
-**Key principles:**
-- **One namespace, many classes**: All API bindings under `namespace XenAPI`, separate class per object type (VM, Host, Pool, SR, VDI, VIF, VBD, Network, Task, etc.)
-- **Static methods only**: Classes have private constructors - they exist purely for namespace organization
-- **File hierarchy matches C#**: `src/xenlib/xen/xenapi/VM.{h,cpp}` mirrors `XenModel/XenAPI/VM.cs`
-- **1:1 method parity**: Each C# method (`async_start`, `clean_shutdown`, `assert_agile`) has identical Qt signature
-- **Actions call XenAPI**: Action classes use `XenAPI::VM::async_start()` instead of building JSON-RPC inline
+`ConnectionWorker` handles transport I/O on a worker thread. Synchronous API
+calls still block their caller: keep blocking work off the UI thread. The
+legacy `XenConnection::SendRequest()` and `SendRequestAsync()` entry points are
+marked obsolete; use existing session/binding/action patterns for new code.
 
-**Why this structure?**
-- Eliminates code duplication (actions no longer build JSON-RPC manually)
-- Matches C# exactly for easier porting (1:1 mapping of method calls)
-- Extensible (add `XenAPI::Host`, `XenAPI::Pool` as needed)
-- Testable (can mock XenAPI layer separately from actions)
+Actions use `XenAPI::Session::DuplicateSession()` through the base operation
+lifecycle. A duplicate has a separate transport and shares the session token;
+its cleanup must not invalidate the original login. Event polling also uses a
+dedicated duplicate session.
 
-**Implementation pattern** (see `src/xenlib/xen/xenapi/VM.cpp`):
-```cpp
-QString VM::async_start(XenSession* session, const QString& vm, bool start_paused, bool force)
-{
-    if (!session || !session->IsLoggedIn())
-        throw std::runtime_error("Not connected to XenServer");
-    
-    QVariantList params;
-    params << session->GetSessionId() << vm << start_paused << force;
-    
-    XenRpcAPI api(session);  // Low-level JSON-RPC client
-    QByteArray request = api.buildJsonRpcCall("VM.async_start", params);
-    QByteArray response = session->sendApiRequest(request);
-    return api.parseJsonRpcResponse(response).toString();  // Returns task ref
-}
-```
+### Cache and typed objects
 
-**DO:**
-- Add new XenAPI classes as separate files (`xenapi/Host.h`, `xenapi/Pool.h`)
-- Use XenAPI methods in actions: `XenAPI::VM::async_start(sess, vmRef, false, false)`
-- Match C# signatures exactly (use C# XML doc comments for documentation, but convert them to doxygen C++ format)
-- In all C++ source files give this-> prefix to every member-variable or member-function access that currently lacks it. Do not change non-member references. This makes the code easier to read as it's instantly obvious if we are working with some local scoped variable / function or a class member.
+Each `XenConnection` owns a `XenCache`. Initial loading uses `event.from` with
+an empty token; `EventPoller` continues from the returned token, and connection
+code applies updates to the cache.
 
-**DON'T:**
-- Build JSON-RPC manually in action classes (use XenAPI methods instead)
-- Put business logic in XenAPI classes (they're thin wrappers - actions handle workflows)
-- Add new direct dependencies on `xen/api.h` in UI or actions; migrate existing ones to `XenAPI` classes
-- Mix up `XenRpcAPI` (low-level client) with `namespace XenAPI` (high-level bindings)
-
-## Architecture Patterns
-
-### 1. Worker Thread Pattern (Matches C# XenAdmin)
-
-**All network I/O runs on a background worker thread** (`ConnectionWorker`). This eliminates UI freezing and race conditions:
+Prefer typed access:
 
 ```cpp
-// Connection flow: TCP/SSL on worker thread → XenSession::login() on main thread
-ConnectionWorker::run() {
-    connectToHostSync();    // Blocks worker thread (not UI)
-    sslHandshakeSync();     // Blocks worker thread (not UI)
-    emit connectionEstablished();  // Signal main thread
-    eventPollLoop();        // Process queued API requests
-}
-
-// Main thread queues requests to worker
-XenConnection::sendRequest(xmlData) {
-    worker->queueRequest(xmlData);
-    worker->waitForResponse();  // Blocks until worker processes it
-}
-```
-
-**Key files**: 
-- `src/xenlib/xen/connectionworker.{h,cpp}` - Worker thread implementation
-- `src/xenlib/xen/connection.{h,cpp}` - Connection wrapper
-- `docs/SIGNAL_FLOW.md` - Complete connection sequence diagram
-- `docs/ASYNC_REFACTORING.md` - Why we use this pattern
-
-### 2. XenCache System (Transparent Caching)
-
-All XenServer objects (VMs, Hosts, Pools, SRs) are cached for instant access. Cache is populated on connection and kept synchronized:
-
-```cpp
-// Get cache from connection
-XenConnection* connection = /* ... */;
-XenCache* cache = connection->GetCache();
-
-// Access objects directly from cache
-QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", vmRef);
+QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(vmRef);
 if (vm && vm->IsValid())
-    qDebug() << vm->GetNameLabel();
-
-// Or get raw data
-QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    qDebug() << vm->GetName();
 ```
 
-**Prefer** `ResolveObject<T>()` for typed access. Cache automatically updates from XenServer events.
+- Use `ResolveObject<T>()` and typed object properties where possible.
+- Use `ResolveObjectData()` for raw records only when necessary.
+- `opaque_ref` is the canonical reference key in cache records.
+- Objects read current cached data; check validity/eviction before use.
+- Use typed formatting helpers rather than duplicating display logic.
+- Let cache signals refresh views. There is no `XenLib::requestObjectData()`.
 
-**Key files**: `src/xenlib/xencache.{h,cpp}`
+### Action lifecycle and progress
 
-#### XenCache Object Access (C#-style)
+Derive user mutations and long-running workflows from `AsyncOperation`.
+Its constructor automatically calls `OperationManager::RegisterOperation()`;
+UI code does not need to register it again.
 
-XenCenter (C#) works with typed XenObjects where `opaque_ref` is always present and properties are read from the cache. The Qt port now mirrors this:
+Implement `run()` using `GetSession()` and static XenAPI bindings. Use
+`SetRelatedTaskRef()` and `pollToCompletion()` for server tasks, and update
+progress/description through the base class. Start from UI code with
+`RunAsync()`; the base lifecycle creates and cleans up the duplicate session.
+Follow existing actions for cancellation, RBAC checks, and error handling.
 
-- **Preferred**: `ResolveObject(...)` / `ResolveObject<T>(...)` returns `QSharedPointer<XenObject>` (or typed subclass) that lazily reads from cache.
-- **Legacy**: `ResolveObjectData(...)` returns raw `QVariantMap` and should be used only for compatibility.
+- Base: `src/xenlib/xen/asyncoperation.{h,cpp}`
+- Tracking: `src/xenlib/operations/operationmanager.{h,cpp}`
+- Composite workflows: `multipleaction.*`, `parallelaction.*`, and
+  `multipleactionlauncher.*` in `src/xenlib/operations/`
+- History UI: `src/xenadmin-ui/tabpages/eventspage.{h,cpp,ui}`
+- Progress dialog: `src/xenadmin-ui/dialogs/actionprogressdialog.{h,cpp,ui}`
 
-```cpp
-// Preferred: typed object
-QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
-if (host && host->isValid())
-    qDebug() << host->nameLabel();
+Connection setup, initial cache loading, event polling, and heartbeat have
+separate infrastructure; they are not user mutation actions.
 
-// Legacy: raw data
-QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-```
+### Commands and tabs
 
-**Rules:**
-- Use `ResolveObject<T>()` everywhere possible. Only fall back to `ResolveObjectData()` when a typed class does not exist yet.
-- Treat `opaque_ref` as the canonical ref key in cache data. Avoid guessing alternate keys (`ref`, `opaqueRef`, etc.).
-- Objects are lazy shells: they read current data from `XenCache` on demand.
-- On cache eviction, objects are marked `evicted` (check `IsEvicted()` / `IsValid()`).
-- Prefer typed XenObject methods for display logic (e.g. `PIF::GetName()` yields `NIC 0` / `Bond 0+1`) instead of re-implementing formatting in UI code.
+Menu/toolbar operations use `Command` subclasses under
+`src/xenadmin-ui/commands/`. Check selected objects and allowed operations in
+`CanRun()`, and construct workflows in `Run()`. Follow existing commands for
+multi-selection, prompts, and progress handling.
 
-### 3. API Call Patterns: Async vs Blocking
-
-XenLib provides **two** ways to make XenAPI calls:
-
-1. **Blocking (Sync)**: `XenAPI` methods - block calling thread until worker completes request
-2. **Non-blocking (Async)**: `XenConnection::sendRequestAsync()` - returns immediately, response via signal
-
-#### Threading Model
-
-**All network I/O happens on ConnectionWorker thread**, preventing UI freezes. However:
-
-- **Sync methods** (`api->startVM()`) **block the caller** while waiting for worker response
-- **Async pattern** (`connection->sendRequestAsync()`) returns requestId immediately, delivers response via `apiResponse` signal
-
-```
-Sync:  UI thread → sendRequest() → [wait for worker] → return result
-Async: UI thread → sendRequestAsync() → return requestId → continue execution
-                                               ↓
-                    Later: apiResponse signal → handle result
-```
-
-#### Current Project Pattern: Sync API Methods
-
-The project currently uses **sync `XenAPI` methods** for most operations. This is acceptable because:
-- Network I/O still on worker thread (UI doesn't freeze from network latency)
-- Operations complete quickly (< 1 second typically)
-- Simpler code than full async pattern
-
-```cpp
-// Commands use sync pattern (see StartVMCommand, etc.)
-bool success = api->startVM(vmRef);
-if (success)
-{
-    this->mainWindow()->showStatusMessage("VM started", 5000);
-} else
-{
-    QMessageBox::warning(this, "Error", "Failed to start VM");
-}
-```
-
-#### When to Use Async Pattern
-
-Use `SendRequestAsync()` for:
-- Custom API calls not in `XenAPI` class
-- Bulk data fetching (VMs, hosts, pools) - **already used by XenLib internally**
-- Building custom high-level async wrappers
-
-```cpp
-// Example async pattern for bulk data fetching:
-QString xmlRequest = api->buildXmlRpcCall("VM.get_all_records", params);
-int requestId = connection->sendRequestAsync(xmlRequest.toUtf8());
-pendingRequests[requestId] = RequestType::GetVirtualMachines;
-
-// Handle response via signal
-connect(connection, &XenConnection::apiResponse, this, &MyClass::onApiResponse);
-
-void MyClass::onApiResponse(int requestId, const QByteArray& response)
-{
-    if (!pendingRequests.contains(requestId))
-        return;
-    
-    RequestType type = pendingRequests.take(requestId);
-    QVariant data = api->parseXmlRpcResponse(QString::fromUtf8(response));
-    
-    if (type == GetVirtualMachines)
-    {
-        emit virtualMachinesReceived(processData(data));
-    }
-}
-```
-
-#### For Long-Running Tasks: Use AsyncOperations
-
-For operations with progress tracking (migration, import/export, snapshots):
-
-```cpp
-// Get session from connection context
-XenConnection* connection = /* ... */;
-XenSession* session = connection->GetSession();
-
-AsyncOperation* op = new AsyncOperation(session, this);
-connect(op, &AsyncOperation::progress, [](int percent) { 
-    progressBar->setValue(percent); 
-});
-connect(op, &AsyncOperation::completed, [](bool success) {
-    if (success) { /* update UI */ }
-});
-op->startVirtualMachine(vmRef);
-```
-
-**Key files**: 
-- `src/xenlib/xen/connection.{h,cpp}` - sendRequest() vs sendRequestAsync()
-- `src/xenlib/xen/connectionworker.cpp` - Worker thread request processing
-- `src/xenlib/xenlib.cpp` - Async pattern examples (onConnectionApiResponse)
-- `src/xenlib/asyncoperation.{h,cpp}` - Task progress tracking
-- `src/xenlib/asyncoperations.{h,cpp}` - High-level async operations
-- `src/xenlib/paralleloperation.{h,cpp}` - Parallel execution
-- `src/xenlib/multipleoperation.{h,cpp}` - Sequential execution
-
-### 4. Command Pattern (UI Operations)
-
-All user-initiated operations (menu items, context menu, toolbar) use the Command pattern:
-
-```cpp
-class StartVMCommand : public Command
-{
-    bool CanRun() const override
-    {
-        return getSelectedObjectType() == "vm" && 
-               xenLib()->getVMPowerState(getSelectedObjectRef()) == "Halted";
-    }
-    
-    void Run() override
-    {
-        AsyncOperation* op = new AsyncOperation(xenLib()->getAPI(), this);
-        op->startVirtualMachine(getSelectedObjectRef());
-    }
-    
-    QString menuText() const override { return "Start"; }
-};
-```
-
-Commands are created by `ContextMenuBuilder::buildContextMenu()` based on selected object type.
-
-**Key files**: 
-- `src/xenadmin-ui/commands/command.h` - Base class
-- `src/xenadmin-ui/commands/contextmenubuilder.{h,cpp}` - Menu generation
-- `src/xenadmin-ui/commands/*command.{h,cpp}` - 40+ command implementations
-
-### 5. Tab Page System
-
-Object-specific tabs inherit from `BaseTabPage`. MainWindow shows applicable tabs based on selection:
-
-```cpp
-class StorageTabPage : public BaseTabPage
-{
-    bool IsApplicableForObjectType(const QString& type) const override
-    {
-        return type == "vm" || type == "host" || type == "sr";
-    }
-    
-    void SetXenObject(const QString& type, const QString& ref, const QVariantMap& data) override
-    {
-        // Update display based on object type
-    }
-};
-```
-
-**Key files**:
-- `src/xenadmin-ui/tabpages/basetabpage.{h,cpp}` - Base class
-- `src/xenadmin-ui/tabpages/*tabpage.{h,cpp}` - 6 implementations
-- `src/xenadmin-ui/mainwindow.cpp::initializeTabPages()` - Tab registration
+`SelectionManager`, `ContextMenuBuilder`, and `MainWindow` coordinate selection
+and command enablement. Tab pages derive from `BaseTabPage`, receive a typed
+object through `SetObject(QSharedPointer<XenObject>)`, and implement
+`IsApplicableForObjectType(XenObjectType)`. Use `OnPageShown()`,
+`OnPageHidden()`, and dirty-state handling for updates. Register new pages in
+`MainWindow` alongside existing pages.
 
 ## UI Conventions
 
-### All dialogs MUST use Qt Designer .ui files
+All new dialogs and layouts must use Qt Designer `.ui` files. Instantiate the
+generated UI with `setupUi(this)` and access widgets through `ui->`.
+Multi-page wizards use `QWizard` and Designer forms; follow the existing wizard
+structure. Add new source/header/form entries to the corresponding qmake and
+CMake build files.
 
-**Do NOT create UI programmatically**. Use Qt Designer:
+## Build and Testing
 
-```cpp
-// ✅ CORRECT
-class MyDialog : public QDialog {
-    Ui::MyDialog *ui;
-public:
-    MyDialog(QWidget *parent = nullptr) : QDialog(parent), ui(new Ui::MyDialog) {
-        ui->setupUi(this);  // Layout from .ui file
-        ui->nameLineEdit->setText("Example");  // Access widgets via ui->
-    }
-};
-
-// ❌ WRONG
-QVBoxLayout* layout = new QVBoxLayout(this);  // Don't do this
-QLabel* label = new QLabel("Text", this);
-layout->addWidget(label);
-```
-
-Steps to create new dialog:
-1. Create `.ui` file in `src/xenadmin-ui/dialogs/`
-2. Add to `xenadmin-ui.pro` FORMS section
-3. Build system generates `ui_mydialog.h`
-4. Access widgets via `ui->widgetName`
-
-**Key files**: `README.md` section "Creating New Dialogs"
-
-### Wizard Pattern
-
-Multi-page wizards use `QWizard` + `.ui` files for each page:
-
-```cpp
-wizard->addPage(new IntroPage());
-wizard->addPage(new ConfigPage());
-wizard->setWindowTitle("New VM Wizard");
-```
-
-**Key files**: `src/xenadmin-ui/dialogs/{newvmwizard,importwizard,exportwizard,newsrwizard,newnetworkwizard}.{h,cpp}`
-
-## Build System
-
-**CRITICAL**: Always build from `release/` folder, never from `src/`:
+Keep generated build files outside `src/`. For the existing local qmake build:
 
 ```bash
 cd release/
-make -j12 # don't use $(nproc) in scripts, these can't be pre-approved
+make -j12
 ```
 
-Why? The `release/` folder contains pre-generated qmake files with correct dependencies. Building in `src/` causes link errors.
+To configure a fresh qmake build from the repository root (use the qmake for
+your installed Qt; it may be named `qmake6`):
 
-**Testing**: Unit tests in `src/testconn/` - run with `./run_tests.sh`. See `docs/TESTING.md`.
-
-## XenServer API Patterns
-
-### XML-RPC Structure
-
-All API calls use XML-RPC with session authentication:
-
-```xml
-<methodCall>
-  <methodName>VM.start</methodName>
-  <params>
-    <param><value><string>OpaqueRef:abc123</string></value></param>  <!-- session -->
-    <param><value><string>OpaqueRef:vm-ref</string></value></param>   <!-- VM ref -->
-  </params>
-</methodCall>
+```bash
+mkdir -p build
+cd build
+qmake ../src/xenadminqt.pro
+make -j12
 ```
 
-Responses have `Status` (Success/Failure) and `Value` fields. XenLib parses these automatically.
+Qt 6 is the primary target, with Qt 5 compatibility in the qmake projects.
+CMake is also supported and requires Qt 6:
 
-### Object References
-
-All XenServer objects have opaque references: `OpaqueRef:12345678-1234-1234-1234-123456789abc`
-
-Use `XenLib::requestObjectData(type, ref)` to get full record. Cache handles deduplication.
-
-### Common Object Types
-
-- `"vm"` - Virtual machines (running or stopped)
-- `"host"` - Physical XenServer hosts
-- `"pool"` - Resource pools
-- `"sr"` - Storage repositories
-- `"network"` - Virtual networks
-- `"vbd"` - Virtual block devices (disk attachments)
-- `"vdi"` - Virtual disk images
-- `"vif"` - Virtual network interfaces
-- `"console"` - VM consoles (VNC/RDP)
-- `"task"` - Async operation tasks
-
-**Key files**: `docs/xapi.md`, `docs/xapi_list.md` - Complete API documentation
-
-## Common Pitfalls
-
-### ❌ Don't Block the UI Thread
-
-```cpp
-// ❌ WRONG
-QVariantList vms = xenLib->getVirtualMachines();  // Blocks UI
-foreach (QVariant vm, vms) { /* ... */ }
-
-// ✅ CORRECT
-xenLib->requestVirtualMachines();
-connect(xenLib, &XenLib::virtualMachinesReceived, [](QVariantList vms) {
-    foreach (QVariant vm, vms) { /* ... */ }
-});
+```bash
+cmake -S . -B build-cmake
+cmake --build build-cmake -j12
 ```
 
-### ❌ Don't Manually Check Cache
+See `packaging/README.md` for dependencies and platform packaging, and
+`.github/workflows/build.yml` for CI configurations. Keep qmake and CMake
+source lists in sync. qmake supports `CONFIG+=no_crypto` and
+`CONFIG+=no_zlib`; CMake exposes `XENADMIN_NO_ZLIB`.
 
-```cpp
-// ❌ WRONG
-if (cache->contains("vm", vmRef)) {
-    data = cache->resolve("vm", vmRef);
-} else {
-    xenLib->requestObjectData("vm", vmRef);
-}
-
-// ✅ CORRECT
-xenLib->requestObjectData("vm", vmRef);  // Automatically uses cache
-```
-
-### ❌ Don't Mix Connection Logic with XenSession
-
-`ConnectionWorker` handles TCP/SSL only. `XenSession::login()` handles authentication separately. See `docs/ARCHITECTURE_FIX.md` for why this separation matters.
-
-### ❌ Don't Create UI Programmatically
-
-Use `.ui` files for all layouts. This is enforced project-wide - dialogs without `.ui` files will be rejected.
-
-## Reference C# Codebase
-
-The `xenadmin/` folder contains the original C# implementation. When porting features:
-
-1. Find equivalent in `xenadmin/XenAdmin/` or `xenadmin/XenModel/`
-2. Understand the C# pattern (especially connection/threading model)
-3. Adapt to Qt patterns (signals/slots instead of events)
-4. Maintain same logic flow and error handling
-
-**Example**: C# `XenConnection.cs` → Qt `src/xenlib/xen/connection.{h,cpp}`
+QtTest projects live in `tests/xenlib/` and `tests/xenadmin-ui/`; see
+`docs/testing.md` for setup and current limitations. Run relevant checks for
+code changes. Live-server behavior requires integration testing.
 
 ## Development Workflow
 
-1. **Add command**: Create `MyCommand : Command` → Register in `ContextMenuBuilder`
-2. **Add dialog**: Create `.ui` file → Implement dialog class → Connect signals
-3. **Add tab page**: Create `MyTabPage : BaseTabPage` → Register in `MainWindow::initializeTabPages()`
-4. **Add XenLib method**: Add to `xenlib.h` → Implement in `xenlib.cpp` → Use `XenAPI` for actual calls
-5. **Test**: Build in `release/`, run `./xenadmin-ui/xenadmin-qt`, connect to XenServer
+1. Find the corresponding C# implementation under `xenadmin/XenAdmin/` or
+   `xenadmin/XenModel/` when porting a feature.
+2. Add missing API bindings in `xen/xenapi/` and workflows in `xen/actions/`.
+3. Wire commands, Designer forms, and tab pages into the UI.
+4. Update both build systems for new files.
+5. Build and run appropriate tests; validate server workflows against a test
+   XCP-ng/XenServer environment when available.
 
-## Key Documentation Files
+## Documentation
 
-- `README.md` - Project overview, build instructions, architecture guide
-- `src/TODO.md` - Comprehensive feature porting checklist
-- `docs/SIGNAL_FLOW.md` - Connection sequence diagram
-- `docs/ASYNC_REFACTORING.md` - Why we use worker threads
-- `docs/ARCHITECTURE_FIX.md` - Connection/Session separation
-- `docs/CONSOLE_IMPLEMENTATION.md` - VNC console details
-- `docs/TESTING.md` - Unit test guide
-- `docs/xapi.md`, `docs/xapi_list.md` - XenServer API reference
-
-## Project Context
-
-**Project folder name**: `XenAdminQt`
-**Target platforms**: Linux (primary), Windows/macOS (secondary)
-**Qt version**: Qt6
-**Build system**: qmake (not CMake)
-**Original codebase**: C# WinForms → Qt6 Widgets
-**Status**: Core functionality complete (connection, VMs, hosts, storage, commands, wizards, console). Advanced features (HA, WLB, metrics, alerts) in progress.
+- `README.md`: project overview and build entry points.
+- `docs/core_concepts.md`: current architecture and code map.
+- `docs/actions.md`: action lifecycle and implementation guidance.
+- `docs/testing.md`: QtTest setup and limitations.
+- `docs/status.md`: implementation status and historical validation notes.
+- `CHANGELOG.md`: user-visible changes.
+- `docs/xapi.md`, `docs/xapi_list.md`: XAPI reference.
+- `packaging/README.md`: dependencies and package scripts.
 
 ## Coding style
 Uses old-school Microsoft C++ style with braces on new lines. We are also prefixing local member accesses with this-> to improve code readability.
