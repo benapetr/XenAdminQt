@@ -1,18 +1,19 @@
 # Changelog
 
 Notable user-visible changes to XenAdminQt are documented here. The project is
-still alpha software; entries focus on features, behavior changes, bug fixes,
+still beta software; entries focus on features, behavior changes, bug fixes,
 and supported build or packaging targets. Pure refactoring and routine cleanup
 are omitted.
 
 ## [Unreleased]
+
+## [v0.1.0-beta] - 2026-11-14
 
 ### Added
 
 - Added an optional snapshot exportability setting that clears `is_a_template`
   after creation for use with `xe vm-export`. Template creation from these
   snapshots explicitly marks the clone as a template.
-
 - Added VM and appliance import/export wizards, including XVA, OVF/OVA, gzip,
   URL-based imports, OVF validation, and the supporting upload/download flows.
 - Added host TLS certificate installation and management.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(XenAdminQt VERSION 0.0.6 LANGUAGES CXX) # keep in sync with docs/version.md
+project(XenAdminQt VERSION 0.1.0 LANGUAGES CXX) # keep in sync with docs/version.md
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

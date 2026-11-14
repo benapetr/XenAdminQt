@@ -1,3 +1,12 @@
+xenadmin-qt (0.1.0) unstable; urgency=medium
+
+  * First beta release.
+  * Add VM/appliance import and export, optional exportable snapshots,
+    host certificate management, and expanded platform packaging.
+  * Improve storage and VM wizards, connection handling, and UI stability.
+
+ -- Petr Bena <petr@bena.rocks>  Sat, 14 Nov 2026 10:34:02 +0100
+
 xenadmin-qt (0.0.6) unstable; urgency=medium
   
   * Many small fixes especially related to VNC

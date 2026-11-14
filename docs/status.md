@@ -1,6 +1,6 @@
 # Status of code migration from original C#
 
-This is an alpha port. The implementation notes below reflect the current
+This is a beta port. The implementation notes below reflect the current
 source and [changelog](../CHANGELOG.md). They are not a fresh live-server test
 report. Historical testing and issue lists are retained below for follow-up;
 revalidate them before treating them as current release guarantees or defects.

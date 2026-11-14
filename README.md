@@ -1,6 +1,6 @@
 # XenAdminQt C++/Qt6 Rewrite
 
-**IMPORTANT** This is an alpha version right now - many things work, but many things do not. Use at your own risk.
+**IMPORTANT** This is a beta version right now - many things work, but many things do not. Use at your own risk.
 
 This is the C++/Qt6 rewrite of the original C# XenAdmin codebase, converted using AI assistance, but hand-fixed, manually reviewed and post-processed with many manual fixes. The fixes are still being done - the goal is to get this codebase into perfection.
 

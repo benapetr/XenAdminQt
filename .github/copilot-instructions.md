@@ -2,7 +2,7 @@
 
 This is a C++/Qt Widgets port of the C# XenAdmin client for XCP-ng/XenServer.
 Preserve the original naming, workflow, and error handling while adapting to Qt.
-The project is alpha software; implementation does not imply complete parity or
+The project is beta software; implementation does not imply complete parity or
 validation against a live server.
 
 ## Project Structure
