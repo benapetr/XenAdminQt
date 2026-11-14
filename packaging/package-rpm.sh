@@ -97,9 +97,11 @@ if command -v rpm >/dev/null 2>&1; then
     missing_groups=()
     optional_groups=()
 
+    # Match RPM capabilities as well as package names (for example,
+    # Rocky 10's zlib-ng-compat-devel provides zlib-devel).
     require_pkg() {
         local pkg="$1"
-        if ! rpm -q "$pkg" >/dev/null 2>&1; then
+        if ! rpm -q --whatprovides "$pkg" >/dev/null 2>&1; then
             missing+=("$pkg")
         fi
     }
@@ -109,7 +111,7 @@ if command -v rpm >/dev/null 2>&1; then
         local found=""
         local pkg
         for pkg in "${group[@]}"; do
-            if rpm -q "$pkg" >/dev/null 2>&1; then
+            if rpm -q --whatprovides "$pkg" >/dev/null 2>&1; then
                 found="yes"
                 break
             fi
@@ -124,7 +126,7 @@ if command -v rpm >/dev/null 2>&1; then
         local found=""
         local pkg
         for pkg in "${group[@]}"; do
-            if rpm -q "$pkg" >/dev/null 2>&1; then
+            if rpm -q --whatprovides "$pkg" >/dev/null 2>&1; then
                 found="yes"
                 break
             fi
