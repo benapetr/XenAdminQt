@@ -96,7 +96,7 @@ namespace Xen
             void allConnectionsDisconnected();
 
         private slots:
-            void onConnectionConnected();
+            void onConnectionConnected(XenConnection* connection);
             void onConnectionDisconnected();
             void onConnectionError(const QString& error);
             void onMonitoringTimer();
@@ -110,6 +110,8 @@ namespace Xen
             void setupConnection(XenConnection* connection);
             void cleanupConnection(XenConnection* connection);
             void checkConnectionHealth();
+            void startHeartbeat(XenConnection* connection);
+            void stopHeartbeat(XenConnection* connection);
 
             // Pool member failover methods
             void startCoordinatorSearchTimer(XenConnection* connection, int timeoutMs);

@@ -97,6 +97,8 @@ class XENLIB_EXPORT XenConnection : public QObject
         void BeginConnect(bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword = PasswordPrompt());
         void EndConnect(bool clearCache = true, bool exiting = false);
         void Interrupt();
+        // Route heartbeat failure through the logical connection recovery flow.
+        void HandleHeartbeatConnectionLost();
         ConnectTask* GetConnectTask() const;
         bool InProgress() const;
         XenAPI::Session* GetConnectSession() const;

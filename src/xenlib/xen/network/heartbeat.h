@@ -30,6 +30,7 @@
 
 #include "../../xenlib_global.h"
 #include <QtCore/QObject>
+#include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QThread>
 #include <QtCore/QMutex>
@@ -68,12 +69,12 @@ class XENLIB_EXPORT XenHeartbeat : public QObject
         void onHeartbeatTimer();
 
     private:
-        void getServerTime();
+        bool getServerTime();
         void handleConnectionLoss();
         void dropSession();
         bool createSession();
 
-        XenConnection* m_connection;
+        QPointer<XenConnection> m_connection;
         XenAPI::Session* m_session;
         QTimer* m_heartbeatTimer;
 

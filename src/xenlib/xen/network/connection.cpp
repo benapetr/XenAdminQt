@@ -698,6 +698,12 @@ void XenConnection::onEventPollerCachePopulated()
     }
 }
 
+void XenConnection::HandleHeartbeatConnectionLost()
+{
+    if (this->d->connectTask && this->d->connectTask->Connected)
+        this->handleConnectionLostNewFlow();
+}
+
 void XenConnection::onEventPollerConnectionLost()
 {
     this->handleConnectionLostNewFlow();

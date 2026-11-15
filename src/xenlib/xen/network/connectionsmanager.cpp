@@ -299,21 +299,15 @@ bool ConnectionsManager::IsMonitoring() const
     return this->m_isMonitoring;
 }
 
-void ConnectionsManager::onConnectionConnected()
+void ConnectionsManager::onConnectionConnected(XenConnection* connection)
 {
-    XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (connection)
     {
         this->m_connectionStates[connection] = "connected";
         emit connectionStateChanged(connection, true);
         qDebug() << "Connection established:" << connection->GetHostname();
 
-        // Start heartbeat monitoring for this connection
-        XenHeartbeat* heartbeat = this->m_heartbeats.value(connection);
-        if (heartbeat)
-        {
-            heartbeat->start();
-        }
+        this->startHeartbeat(connection);
 
         // Stop reconnection timer for this connection since it's now connected
         QTimer* timer = this->m_reconnectionTimers.value(connection);
@@ -336,12 +330,7 @@ void ConnectionsManager::onConnectionDisconnected()
     emit connectionStateChanged(connection, false);
     qDebug() << "Connection lost:" << connection->GetHostname();
 
-    // Stop heartbeat monitoring for this connection
-    XenHeartbeat* heartbeat = this->m_heartbeats.value(connection);
-    if (heartbeat)
-    {
-        heartbeat->stop();
-    }
+    this->stopHeartbeat(connection);
 
     // Check if pool member failover is needed (matches C# HandleConnectionLost logic)
     QStringList poolMembers = connection->GetPoolMembers();
@@ -408,50 +397,74 @@ void ConnectionsManager::onMonitoringTimer()
 
 void ConnectionsManager::setupConnection(XenConnection* connection)
 {
-    // Connect to connection signals
-    connect(connection, &XenConnection::Connected,
-            this, &ConnectionsManager::onConnectionConnected);
+    // Logical readiness is emitted after login and initial cache synchronization.
+    // Connected belongs to the internal socket transport, not this outer connection.
+    connect(connection, &XenConnection::ConnectionResult, this,
+            [this, connection](bool ready, const QString&) {
+                if (ready && connection->IsConnected())
+                    this->onConnectionConnected(connection);
+                else
+                    this->stopHeartbeat(connection);
+            });
+    connect(connection, &XenConnection::BeforeConnectionEnd, this, [this, connection]() {
+        this->stopHeartbeat(connection);
+    });
     connect(connection, &XenConnection::Disconnected,
             this, &ConnectionsManager::onConnectionDisconnected);
     connect(connection, &XenConnection::Error,
             this, &ConnectionsManager::onConnectionError);
 
-    // Create and setup heartbeat for this connection
-    XenHeartbeat* heartbeat = new XenHeartbeat(connection, 15000, this); // 15 second timeout
-    this->m_heartbeats[connection] = heartbeat;
-
-    connect(heartbeat, &XenHeartbeat::connectionLost,
-            this, [this, connection]() {
-                this->onHeartbeatConnectionLost(connection);
-            });
-    connect(heartbeat, &XenHeartbeat::serverTimeUpdated,
-            this, [connection](const QDateTime& serverTime, const QDateTime& localTime) {
-                Q_UNUSED(serverTime);
-                const qint64 offsetSeconds = serverTime.secsTo(localTime);
-                connection->SetServerTimeOffsetSeconds(offsetSeconds);
-            });
-
     // Initialize state tracking
     this->m_connectionStates[connection] = "new";
+}
+
+void ConnectionsManager::startHeartbeat(XenConnection* connection)
+{
+    if (this->m_heartbeats.contains(connection))
+        return;
+
+    auto* workerThread = new QThread();
+    workerThread->setObjectName(QString("Heartbeat for %1").arg(connection->GetHostname()));
+    auto* heartbeat = new XenHeartbeat(connection, 15000);
+    heartbeat->moveToThread(workerThread);
+    this->m_heartbeats.insert(connection, heartbeat);
+
+    connect(workerThread, &QThread::started, heartbeat, &XenHeartbeat::start);
+    connect(workerThread, &QThread::finished, heartbeat, &QObject::deleteLater);
+    connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
+    const QPointer<XenHeartbeat> monitor(heartbeat);
+    connect(heartbeat, &XenHeartbeat::connectionLost, this, [this, connection, monitor]() {
+        // Ignore queued results from a monitor retired by disconnect/reconnect.
+        if (monitor && this->m_heartbeats.value(connection) == monitor.data())
+            this->onHeartbeatConnectionLost(connection);
+    });
+    connect(heartbeat, &XenHeartbeat::serverTimeUpdated, this,
+            [this, connection, monitor](const QDateTime& serverTime, const QDateTime& localTime) {
+                if (monitor && this->m_heartbeats.value(connection) == monitor.data() && connection->IsConnected())
+                    connection->SetServerTimeOffsetSeconds(serverTime.secsTo(localTime));
+            });
+    workerThread->start();
+}
+
+void ConnectionsManager::stopHeartbeat(XenConnection* connection)
+{
+    XenHeartbeat* heartbeat = this->m_heartbeats.take(connection);
+    if (!heartbeat)
+        return;
+
+    // Probe/cleanup may block on transport I/O. Keep both on the heartbeat thread.
+    QMetaObject::invokeMethod(heartbeat, [heartbeat]() {
+        heartbeat->stop();
+        QThread::currentThread()->quit();
+    }, Qt::QueuedConnection);
 }
 
 void ConnectionsManager::cleanupConnection(XenConnection* connection)
 {
     // Disconnect from connection signals
-    disconnect(connection, &XenConnection::Connected,
-               this, &ConnectionsManager::onConnectionConnected);
-    disconnect(connection, &XenConnection::Disconnected,
-               this, &ConnectionsManager::onConnectionDisconnected);
-    disconnect(connection, &XenConnection::Error,
-               this, &ConnectionsManager::onConnectionError);
+    disconnect(connection, nullptr, this, nullptr);
 
-    // Clean up heartbeat
-    XenHeartbeat* heartbeat = this->m_heartbeats.take(connection);
-    if (heartbeat)
-    {
-        heartbeat->stop();
-        heartbeat->deleteLater();
-    }
+    this->stopHeartbeat(connection);
 
     // Clean up reconnection timer
     QTimer* timer = this->m_reconnectionTimers.take(connection);
@@ -593,43 +606,14 @@ void ConnectionsManager::ReconnectAll()
 
 void ConnectionsManager::onHeartbeatConnectionLost(XenConnection* connection)
 {
-    if (!connection)
-    {
+    if (!connection || !this->ContainsConnection(connection) || !connection->IsConnected())
         return;
-    }
 
     qWarning() << "Heartbeat detected connection loss for" << connection->GetHostname();
-
-    // Mark as disconnected
+    this->stopHeartbeat(connection);
     this->m_connectionStates[connection] = "heartbeat_lost";
-    emit connectionStateChanged(connection, false);
-
-    // Use same failover logic as onConnectionDisconnected
-    // Check if pool member failover is needed
-    QStringList poolMembers = connection->GetPoolMembers();
-    bool hasMultipleMembers = poolMembers.size() > 1;
-    bool coordinatorMayChange = connection->GetCoordinatorMayChange();
-    bool expectDisruption = connection->GetExpectDisruption();
-
-    if (hasMultipleMembers && (coordinatorMayChange || expectDisruption))
-    {
-        qDebug() << "ConnectionsManager: Heartbeat lost, attempting pool member failover";
-
-        connection->SetLastCoordinatorHostname(connection->GetHostname());
-        connection->SetFindingNewCoordinator(true);
-        connection->SetFindingNewCoordinatorStartedAt(QDateTime::currentDateTime());
-
-        connection->ResetPoolMemberIndex();
-        if (poolMembers.size() > 1)
-        {
-            connection->SetCurrentPoolMemberIndex(1); // Skip coordinator
-        }
-
-        this->startCoordinatorSearchTimer(connection, SEARCH_NEW_COORDINATOR_TIMEOUT_MS);
-    } else if (this->m_autoReconnectionEnabled)
-    {
-        this->ReconnectConnection(connection);
-    }
+    emit this->connectionStateChanged(connection, false);
+    connection->HandleHeartbeatConnectionLost();
 }
 
 void ConnectionsManager::startCoordinatorSearchTimer(XenConnection* connection, int timeoutMs)

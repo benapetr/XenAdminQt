@@ -5,6 +5,8 @@
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/heartbeat.h"
 #include "xenlib/xen/actions/vdi/movevirtualdiskaction.h"
 #include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
 #include <QTemporaryFile>
@@ -38,6 +40,44 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void connectionManagerWaitsForLogicalReadiness()
+    {
+        XenConnection connection;
+        auto* manager = Xen::ConnectionsManager::instance();
+        manager->AddConnection(&connection);
+        QSignalSpy ready(manager, &Xen::ConnectionsManager::connectionStateChanged);
+
+        // Simulate transport establishment without login/cache completion.
+        const bool established = QMetaObject::invokeMethod(&connection, "onWorkerEstablished", Qt::DirectConnection);
+        const int beforeLogin = ready.count();
+        connection.ConnectionResult(true, QString());
+        const int afterLogin = ready.count();
+        connection.EndConnect();
+        manager->RemoveConnection(&connection);
+
+        QVERIFY(established);
+        QCOMPARE(beforeLogin, 0);
+        QCOMPARE(afterLogin, 1);
+    }
+
+    void heartbeatReportsTwoConsecutiveSessionFailures()
+    {
+        XenConnection connection;
+        QVERIFY(QMetaObject::invokeMethod(&connection, "onWorkerEstablished", Qt::DirectConnection));
+        // A connected transport without a logged-in session cannot create a probe.
+        XenHeartbeat heartbeat(&connection, 15000);
+        QSignalSpy lost(&heartbeat, &XenHeartbeat::connectionLost);
+        heartbeat.start();
+        QVERIFY(heartbeat.isRunning());
+
+        QVERIFY(QMetaObject::invokeMethod(&heartbeat, "performHeartbeat", Qt::DirectConnection));
+        QCOMPARE(lost.count(), 0);
+        QVERIFY(heartbeat.isRunning());
+        QVERIFY(QMetaObject::invokeMethod(&heartbeat, "performHeartbeat", Qt::DirectConnection));
+        QCOMPARE(lost.count(), 1);
+        QVERIFY(!heartbeat.isRunning());
+    }
+
     void diskActionsUseCachedMetadataWithoutSession()
     {
         XenConnection connection;
@@ -430,5 +470,5 @@ private slots:
     }
 };
 
-QTEST_APPLESS_MAIN(XenLibTests)
+QTEST_GUILESS_MAIN(XenLibTests)
 #include "test_main.moc"

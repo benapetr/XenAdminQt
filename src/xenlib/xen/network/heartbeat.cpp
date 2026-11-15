@@ -124,6 +124,8 @@ void XenHeartbeat::stop()
 
     this->m_running = false;
     this->m_heartbeatTimer->stop();
+    this->m_retrying = false;
+    this->dropSession();
 
     qDebug() << "Heartbeat stopped for connection" << (this->m_connection ? this->m_connection->GetHostname() : "null");
 }
@@ -148,7 +150,7 @@ void XenHeartbeat::onHeartbeatTimer()
 
 void XenHeartbeat::performHeartbeat()
 {
-    if (!this->m_connection || !this->m_connection->IsConnected())
+    if (!this->isRunning() || !this->m_connection || !this->m_connection->IsConnected())
     {
         qDebug() << "Skipping heartbeat: connection not available";
         return;
@@ -167,7 +169,17 @@ void XenHeartbeat::performHeartbeat()
         }
 
         // Perform the actual heartbeat by getting server time
-        this->getServerTime();
+        if (!this->getServerTime())
+        {
+            this->handleConnectionLoss();
+            return;
+        }
+
+        if (!this->m_connection)
+        {
+            this->stop();
+            return;
+        }
 
         // Reset retry flag on successful heartbeat
         if (this->m_retrying)
@@ -177,7 +189,7 @@ void XenHeartbeat::performHeartbeat()
         }
     } catch (...)
     {
-        qWarning() << "Exception during heartbeat for" << this->m_connection->GetHostname();
+        qWarning() << "Exception during heartbeat";
         this->handleConnectionLoss();
     }
 }
@@ -207,6 +219,7 @@ bool XenHeartbeat::createSession()
         return false;
     }
 
+    this->m_masterHostRef.clear();
     // Get pool master host reference for heartbeat target
     try
     {
@@ -225,21 +238,21 @@ bool XenHeartbeat::createSession()
         qWarning() << "Failed to resolve pool master for heartbeat:" << ex.what();
     }
 
-    return true;
+    return !this->m_masterHostRef.isEmpty();
 }
 
-void XenHeartbeat::getServerTime()
+bool XenHeartbeat::getServerTime()
 {
     if (!this->m_session || !this->m_connection)
     {
-        return;
+        return false;
     }
 
     // Call Host.get_servertime on the pool master
     if (this->m_masterHostRef.isEmpty())
     {
         qWarning() << "No master host ref for heartbeat";
-        return;
+        return false;
     }
 
     QVariant serverTimeVar;
@@ -250,14 +263,12 @@ void XenHeartbeat::getServerTime()
     catch (const std::exception& ex)
     {
         qWarning() << "Failed to get server time from" << this->m_masterHostRef << ":" << ex.what();
-        this->handleConnectionLoss();
-        return;
+        return false;
     }
     if (serverTimeVar.isNull())
     {
         qWarning() << "Failed to get server time from" << this->m_masterHostRef;
-        this->handleConnectionLoss();
-        return;
+        return false;
     }
 
     // Parse server time (XenAPI returns an ISO 8601 string; older servers may return a Unix timestamp)
@@ -298,51 +309,54 @@ void XenHeartbeat::getServerTime()
     if (!parsed)
     {
         qWarning() << "Failed to parse server time";
-        this->handleConnectionLoss();
-        return;
+        return false;
     }
 
     QDateTime localTime = QDateTime::currentDateTimeUtc();
 
     // Calculate offset: server time + offset = local time
     qint64 offsetSeconds = serverTime.secsTo(localTime);
-    this->m_serverTimeOffset = QDateTime::fromSecsSinceEpoch(offsetSeconds, Qt::UTC);
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_serverTimeOffset = QDateTime::fromSecsSinceEpoch(offsetSeconds, Qt::UTC);
+    }
 
-    emit serverTimeUpdated(serverTime, localTime);
+    emit this->serverTimeUpdated(serverTime, localTime);
 
-    qDebug() << "Heartbeat successful for" << this->m_connection->GetHostname()
+    qDebug() << "Heartbeat successful for" << (this->m_connection ? this->m_connection->GetHostname() : QString("removed connection"))
              << "offset:" << offsetSeconds << "seconds";
+    return true;
 }
 
 void XenHeartbeat::handleConnectionLoss()
 {
-    if (this->m_retrying)
-    {
-        // Second failure - connection is likely dead
-        qDebug() << "Heartbeat for" << this->m_connection->GetHostname()
-                 << "failed for second time - closing connection";
+    if (!this->m_connection)
+        return;
 
-        this->dropSession();
-        emit connectionLost();
+    if (this->m_retrying && !this->m_connection->GetExpectDisruption())
+    {
+        qWarning() << "Heartbeat failed twice for" << this->m_connection->GetHostname();
+        this->stop();
+        emit this->connectionLost();
     } else
     {
-        // First failure - give it another chance
-        qDebug() << "Heartbeat for" << this->m_connection->GetHostname()
-                 << "failed - will retry";
+        qDebug() << "Heartbeat failed for" << this->m_connection->GetHostname() << "- will retry";
         this->m_retrying = true;
-        this->dropSession(); // Drop session to create a fresh one next time
+        this->dropSession();
     }
 }
 
 void XenHeartbeat::dropSession()
 {
-    if (this->m_session)
-    {
-        // In a full implementation, this would logout the session on a background thread
-        // to avoid blocking if the coordinator has died
-        qDebug() << "Dropping heartbeat session for" << (this->m_connection ? this->m_connection->GetHostname() : "null");
+    if (!this->m_session)
+        return;
 
-        // this->m_session->logoutAsync(); // Would be implemented
-        this->m_session = nullptr;
-    }
+    // Duplicates share the login token. Destroy their transport, never log out
+    // the original login. Both objects belong to this heartbeat thread.
+    Session* session = this->m_session;
+    XenConnection* transport = session->GetConnection();
+    this->m_session = nullptr;
+    this->m_masterHostRef.clear();
+    delete session;
+    delete transport;
 }
