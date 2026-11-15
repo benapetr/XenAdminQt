@@ -107,6 +107,7 @@ class VMOperationMenu : public QMenu
         void enqueueHostMenuItem(const QSharedPointer<Host>& host, HostMenuItem* menuItem, bool isHomeServer);
         void runOperationOnHost(const QSharedPointer<Host>& host);
         void runOperationOnHostForVms(const QSharedPointer<Host>& host, const QList<QSharedPointer<VM>>& vms);
+        void runOperationOnHostForVm(const QSharedPointer<Host>& host, const QSharedPointer<VM>& vm);
         void runHomeServerOperation();
         void runOptimalServerOperation();
         

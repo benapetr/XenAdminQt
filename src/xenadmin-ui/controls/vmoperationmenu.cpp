@@ -44,6 +44,7 @@
 #include "xenlib/operations/producerconsumerqueue.h"
 #include <QMutexLocker>
 #include <QSet>
+#include <QPointer>
 
 namespace
 {
@@ -446,13 +447,10 @@ void VMOperationMenu::enableAppropriateHostsNoWlb()
     this->clearWorkerQueue();
     this->m_workerQueue = new ProducerConsumerQueue(25);
 
-    // Get affinity host (home server)
-    QSharedPointer<Host> affinityHost = this->m_vms.first()->GetAffinityHost();
-
     // Process home server item
     if (!this->m_hostMenuItems.isEmpty() && this->m_hostMenuItems.first()->isHomeServer)
     {
-        this->enqueueHostMenuItem(affinityHost, this->m_hostMenuItems.first(), true);
+        this->enqueueHostMenuItem(QSharedPointer<Host>(), this->m_hostMenuItems.first(), true);
     }
 
     if (this->isStopped())
@@ -634,9 +632,10 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
             {
                 QString reason;
                 bool canRun = false;
-                if (host)
+                const QSharedPointer<Host> affinityHost = vm->GetAffinityHost();
+                if (affinityHost)
                 {
-                    canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason);
+                    canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm, affinityHost->OpaqueRef(), this->m_operationName, &reason);
                 } else
                 {
                     reason = tr("No home server");
@@ -653,14 +652,12 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
                 }
             }
 
-            QMetaObject::invokeMethod(this, [this, menuItem, canRunAny, reasons, host]()
+            QMetaObject::invokeMethod(this, [this, menuItem, canRunAny, reasons]()
             {
                 if (this->isStopped())
                     return;
 
                 QString label = tr("Home Server");
-                if (host)
-                    label += QString(" (%1)").arg(host->GetName());
 
                 QString uniqueReason = joinUniqueReasons(reasons);
                 if (!canRunAny && !uniqueReason.isEmpty())
@@ -712,27 +709,35 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
 
 void VMOperationMenu::runHomeServerOperation()
 {
-    if (this->m_vms.isEmpty())
-        return;
-
-    XenConnection* connection = this->getConnection();
-    if (!connection)
-        return;
-
-    QSharedPointer<Host> affinityHost = this->m_vms.first()->GetAffinityHost();
-
-    if (!affinityHost)
+    QHash<QSharedPointer<VM>, QString> cantRun;
+    QList<QPair<QSharedPointer<VM>, QSharedPointer<Host>>> targets;
+    for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        QHash<QSharedPointer<VM>, QString> reasons;
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        const QSharedPointer<Host> affinityHost = vm->GetAffinityHost();
+        QString reason;
+        if (!affinityHost)
         {
-            reasons.insert(vm, tr("Home server not found."));
+            reason = tr("No home server");
+        } else if (VMOperationHelpers::VMCanBootOnHost(vm->GetConnection(), vm, affinityHost->OpaqueRef(),
+                                                      this->m_operationName, &reason))
+        {
+            targets.append(qMakePair(vm, affinityHost));
+            continue;
         }
-        this->showCantRunDialog(reasons, false);
-        return;
+        cantRun.insert(vm, reason);
     }
 
-    this->runOperationOnHost(affinityHost);
+    // Report all ineligible VMs together before starting any eligible VM.
+    if (!cantRun.isEmpty())
+    {
+        const bool allowProceed = !targets.isEmpty();
+        const bool proceed = this->showCantRunDialog(cantRun, allowProceed);
+        if (!allowProceed || !proceed)
+            return;
+    }
+
+    for (const auto& target : targets)
+        this->runOperationOnHostForVm(target.second, target.first);
 }
 
 void VMOperationMenu::runOptimalServerOperation()
@@ -812,47 +817,39 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
             return;
     }
 
-    // Create appropriate action
     for (const QSharedPointer<VM>& vm : runnable)
+        this->runOperationOnHostForVm(host, vm);
+}
+
+void VMOperationMenu::runOperationOnHostForVm(const QSharedPointer<Host>& host, const QSharedPointer<VM>& vm)
+{
+    // The context menu is destroyed after selection; diagnosis may run later.
+    const QPointer<MainWindow> window(this->m_mainWindow);
+    const auto diagnose = [window, vm](bool isStart, const Failure& failure) {
+        if (window)
+            VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(), vm->OpaqueRef(), vm->GetName(),
+                                                  isStart, failure, window.data());
+    };
+    AsyncOperation* action = nullptr;
+    switch (this->m_operation)
     {
-        AsyncOperation* action = nullptr;
-
-        switch (this->m_operation)
-        {
-            case Operation::StartOn:
-                action = new VMStartOnAction(vm, host, 
-                                             nullptr,  // WarningDialogHAInvalidConfig
-                                             [this, vm](VMStartAbstractAction*, const Failure& failure) {
-                                                 VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(),
-                                                                                        vm->OpaqueRef(),
-                                                                                        vm->GetName(),
-                                                                                        true,
-                                                                                        failure,
-                                                                                        this->m_mainWindow);
-                                             },
-                                             this->m_mainWindow);
-                break;
-            case Operation::ResumeOn:
-                action = new VMResumeOnAction(vm, host,
-                                              nullptr,  // WarningDialogHAInvalidConfig
-                                              [this, vm](VMStartAbstractAction*, const Failure& failure) {
-                                                  VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(),
-                                                                                         vm->OpaqueRef(),
-                                                                                         vm->GetName(),
-                                                                                         false,
-                                                                                         failure,
-                                                                                         this->m_mainWindow);
-                                              },
-                                              this->m_mainWindow);
-                break;
-            case Operation::Migrate:
-                action = new VMMigrateAction(vm, host, this->m_mainWindow);
-                break;
-        }
-
-        if (!action)
-            continue;
-
-        action->RunAsync(true);
+        case Operation::StartOn:
+            action = new VMStartOnAction(vm, host, nullptr,
+                                        [diagnose](VMStartAbstractAction*, const Failure& failure) {
+                                            diagnose(true, failure);
+                                        }, this->m_mainWindow);
+            break;
+        case Operation::ResumeOn:
+            action = new VMResumeOnAction(vm, host, nullptr,
+                                         [diagnose](VMStartAbstractAction*, const Failure& failure) {
+                                             diagnose(false, failure);
+                                         }, this->m_mainWindow);
+            break;
+        case Operation::Migrate:
+            action = new VMMigrateAction(vm, host, this->m_mainWindow);
+            break;
     }
+
+    if (action)
+        action->RunAsync(true);
 }

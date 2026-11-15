@@ -15,6 +15,8 @@ are omitted.
   incorrectly enable unavailable hosts in Start on Server and related menus.
 - Fixed several storage and VM settings operations using the primary connection
   instead of their action's dedicated session.
+- Fixed Home Server operations with multiple VMs selected to check and use each
+  VM's own home server instead of the first selected VM's home server.
 
 ## [v0.1.0-beta] - 2026-11-14
 
