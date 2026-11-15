@@ -243,9 +243,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         void reconnectSingleHostTimer();
         void reconnectCoordinatorTimer();
         bool poolMemberRemaining() const;
-        void updatePoolMembersFromCache(QString* poolName,
-                                        bool* haEnabled,
-                                        QString* coordinatorAddress);
+        void updatePoolMembersFromCache(QString* poolName, bool* haEnabled, QString* coordinatorAddress);
 
         class Private;
         Private* d;

@@ -323,8 +323,8 @@ Session* XenConnection::GetNewSession(const QString& hostname,
         newConn->SetSession(session);
 
         QString redirectHost;
-        QObject::connect(session, &Session::needsRedirectToMaster,
-                         session, [&redirectHost](const QString& host) {
+        QObject::connect(session, &Session::needsRedirectToMaster, session, [&redirectHost](const QString& host)
+                         {
                              redirectHost = host;
                          });
 
@@ -380,8 +380,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
     return nullptr;
 }
 
-void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
-                                 const PasswordPrompt& promptForNewPassword)
+void XenConnection::BeginConnect(bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword)
 {
     if (this->d->connectTask || (this->d->connectThread && this->d->connectThread->isRunning()))
         return;
@@ -1047,8 +1046,7 @@ void XenConnection::connectWorkerThread()
         if (objectClass.isEmpty() || objectRef.isEmpty())
             continue;
 
-        if (objectClass == "session" || objectClass == "event" ||
-            objectClass == "user" || objectClass == "secret")
+        if (objectClass == "session" || objectClass == "event" || objectClass == "user" || objectClass == "secret")
         {
             continue;
         }

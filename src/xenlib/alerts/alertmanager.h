@@ -77,9 +77,9 @@ class XENLIB_EXPORT AlertManager : public QObject
 
     signals:
         // C# Reference: Alert.cs line 199 - RegisterAlertCollectionChanged
-        void alertAdded(Alert* alert);
-        void alertRemoved(Alert* alert);
-        void alertChanged(Alert* alert);
+        void alertAdded(XenLib::Alert* alert);
+        void alertRemoved(XenLib::Alert* alert);
+        void alertChanged(XenLib::Alert* alert);
         void collectionChanged();
 
     private:

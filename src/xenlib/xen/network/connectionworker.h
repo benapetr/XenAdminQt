@@ -88,8 +88,7 @@ namespace Xen
              * @param certManager Certificate manager for SSL validation (optional)
              * @param parent Parent QObject
              */
-            explicit ConnectionWorker(const QString& hostname, int port,
-                                      QObject* parent = nullptr);
+            explicit ConnectionWorker(const QString& hostname, int port, QObject* parent = nullptr);
 
             ~ConnectionWorker() override;
 
