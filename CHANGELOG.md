@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Fixed new and attached VM disks skipping free device positions, and restored
+  the reboot notification when a newly created disk cannot be hot-plugged.
+
 - Restored the HA warning when starting or resuming protected VMs that cannot
   run on every host, with confirmation before clearing their HA restart priority.
 

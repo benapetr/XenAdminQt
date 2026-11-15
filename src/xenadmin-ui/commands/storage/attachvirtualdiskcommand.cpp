@@ -116,12 +116,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
 
     qDebug() << "[AttachVirtualDiskCommand] Selected VDI:" << vdiRef;
 
-    QString devicePosition = dialog->getDevicePosition();
     QString mode = dialog->getMode();
-    bool bootable = dialog->isBootable();
-
-    qDebug() << "[AttachVirtualDiskCommand] Device position:" << devicePosition
-             << "Mode:" << mode << "Bootable:" << bootable;
 
     // Get VDI name for UI feedback
     QSharedPointer<VDI> vdi = vm->GetCache()->ResolveObject<VDI>(vdiRef);
@@ -134,10 +129,8 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     QVariantMap vbdRecord;
     vbdRecord["VDI"] = vdiRef;
     vbdRecord["VM"] = vm->OpaqueRef();
-    vbdRecord["bootable"] = bootable;
     vbdRecord["device"] = QString(""); // Will be filled by XenAPI
     vbdRecord["empty"] = false;
-    vbdRecord["userdevice"] = devicePosition;
     vbdRecord["type"] = "Disk";
     vbdRecord["mode"] = (mode == "RO") ? "RO" : "RW";
     vbdRecord["unpluggable"] = true;
@@ -160,11 +153,13 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Creating VbdCreateAndPlugAction";
     VbdCreateAndPlugAction* action = new VbdCreateAndPlugAction(vm, vbdRecord, vdiName, false, this);
 
-    // Show user instruction dialog if reboot is needed
+    // Omit userdevice: the action asks the server for a free position.
+    // Show user instruction dialog if reboot is needed.
+    MainWindow* window = this->mainWindow();
     connect(action, &VbdCreateAndPlugAction::showUserInstruction,
-            mainWindow(), [this](const QString& instruction) {
+            window, [window](const QString& instruction) {
                 qDebug() << "[AttachVirtualDiskCommand] Reboot instruction received:" << instruction;
-                QMessageBox::information(mainWindow(), "Reboot Required", instruction);
+                QMessageBox::information(window, tr("Reboot Required"), instruction);
             });
 
     // Show progress dialog

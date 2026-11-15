@@ -21,7 +21,8 @@
 class TransportTestServer : public QThread
 {
 public:
-    enum Reply { Close, PeerClose, Truncated, Malformed, HttpError, Chunked, ApiFailure, Login, AgilityFailure, PermissionFailure };
+    enum Reply { Close, PeerClose, Truncated, Malformed, HttpError, Chunked, ApiFailure, Login, AgilityFailure, PermissionFailure,
+                 DiskDevices, EmptyDevices, CreatedVDI, CreatedVBD, RunningVM, BootDevice, PlugAllowed };
 
     TransportTestServer(const QString& certPath, const QString& keyPath, QVector<Reply> replies)
         : m_replies(std::move(replies))
@@ -131,6 +132,27 @@ protected:
                 if (reply == Login)
                     body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
                         {"result", "OpaqueRef:test-session"}}).toJson(QJsonDocument::Compact);
+                if (reply == DiskDevices || reply == EmptyDevices || reply == BootDevice ||
+                    reply == CreatedVDI || reply == CreatedVBD || reply == RunningVM || reply == PlugAllowed)
+                {
+                    QJsonValue result;
+                    if (reply == DiskDevices)
+                        result = QJsonArray{"1", "2", "4"};
+                    else if (reply == EmptyDevices)
+                        result = QJsonArray();
+                    else if (reply == BootDevice)
+                        result = QJsonArray{"0", "1", "4"};
+                    else if (reply == CreatedVDI)
+                        result = QString("OpaqueRef:new-vdi");
+                    else if (reply == CreatedVBD)
+                        result = QString("OpaqueRef:new-vbd");
+                    else if (reply == PlugAllowed)
+                        result = QJsonArray{"plug"};
+                    else
+                        result = QJsonObject{{"power_state", "Running"}};
+                    body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
+                        {"result", result}}).toJson(QJsonDocument::Compact);
+                }
                 if (reply == AgilityFailure)
                     body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
                         {"error", QJsonObject{{"code", 1}, {"message", "HA_CONSTRAINT_VIOLATION_SR_NOT_SHARED"},

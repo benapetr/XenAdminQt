@@ -14,6 +14,8 @@
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/heartbeat.h"
 #include "xenlib/xen/actions/vdi/movevirtualdiskaction.h"
+#include "xenlib/xen/actions/vdi/creatediskaction.h"
+#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
 #include <QTemporaryFile>
 #include <QTextStream>
@@ -61,6 +63,93 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void diskDeviceSelection_data()
+    {
+        QTest::addColumn<bool>("create");
+        QTest::addColumn<int>("devices");
+        QTest::addColumn<bool>("existingBootable");
+        QTest::addColumn<bool>("plugFails");
+        QTest::newRow("create-fills-gap-before-dvd") << true << int(TransportTestServer::DiskDevices) << true << false;
+        QTest::newRow("attach-fills-gap-before-dvd") << false << int(TransportTestServer::DiskDevices) << true << false;
+        QTest::newRow("create-full-no-orphan-vdi") << true << int(TransportTestServer::EmptyDevices) << true << false;
+        QTest::newRow("attach-full") << false << int(TransportTestServer::EmptyDevices) << true << false;
+        QTest::newRow("first-created-disk-bootable") << true << int(TransportTestServer::BootDevice) << false << false;
+        QTest::newRow("keep-existing-bootable-disk") << true << int(TransportTestServer::BootDevice) << true << false;
+        QTest::newRow("first-attached-disk-bootable") << false << int(TransportTestServer::BootDevice) << false << false;
+        QTest::newRow("propagate-hotplug-error") << true << int(TransportTestServer::DiskDevices) << true << true;
+    }
+
+    void diskDeviceSelection()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        QFETCH(bool, create);
+        QFETCH(int, devices);
+        QFETCH(bool, existingBootable);
+        QFETCH(bool, plugFails);
+        const bool full = devices == TransportTestServer::EmptyDevices;
+        QVector<TransportTestServer::Reply> replies{TransportTestServer::Login, TransportTestServer::Close,
+                                                   TransportTestServer::Reply(devices)};
+        if (!full)
+        {
+            if (create)
+                replies.append(TransportTestServer::CreatedVDI);
+            replies.append(TransportTestServer::CreatedVBD);
+            replies.append(plugFails ? TransportTestServer::PlugAllowed : TransportTestServer::Close);
+            replies.append(plugFails ? TransportTestServer::ApiFailure : TransportTestServer::RunningVM);
+        }
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"), replies);
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        XenConnection connection;
+        QVERIFY(connection.ConnectToHost("127.0.0.1", port, "test", "test"));
+        QTRY_VERIFY_WITH_TIMEOUT(connection.IsTransportConnected(), 5000);
+        XenAPI::Session session(&connection);
+        QVERIFY(session.Login("test", "test"));
+        session.SetOwnsSessionToken(false);
+        connection.SetSession(&session);
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VM, "OpaqueRef:disk-vm",
+                      QVariantMap{{"name_label", "Disk VM"}, {"power_state", "Running"},
+                                  {"VBDs", QStringList{"OpaqueRef:disk", "OpaqueRef:dvd"}}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:disk",
+                      QVariantMap{{"VM", "OpaqueRef:disk-vm"}, {"userdevice", devices == TransportTestServer::BootDevice ? "2" : "0"},
+                                  {"type", "Disk"}, {"bootable", existingBootable}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:dvd",
+                      QVariantMap{{"VM", "OpaqueRef:disk-vm"}, {"userdevice", "3"}, {"type", "CD"}});
+        const auto vm = cache->ResolveObject<VM>("OpaqueRef:disk-vm");
+        QVariantMap vbd{{"VM", vm->OpaqueRef()}, {"VDI", "OpaqueRef:existing-vdi"},
+                        {"type", "Disk"}, {"empty", false}, {"mode", "RW"}};
+        CreateDiskAction createAction(QVariantMap{{"name_label", "New disk"}}, vbd, vm);
+        VbdCreateAndPlugAction attachAction(vm, vbd, "Existing disk");
+        QSignalSpy createInstructions(&createAction, &CreateDiskAction::showUserInstruction);
+        QSignalSpy attachInstructions(&attachAction, &VbdCreateAndPlugAction::showUserInstruction);
+        AsyncOperation* action = create ? static_cast<AsyncOperation*>(&createAction) : &attachAction;
+        action->RunSync(&session);
+        QCOMPARE(action->HasError(), full || plugFails);
+        QCOMPARE(create ? createInstructions.count() : attachInstructions.count(), !full && !plugFails ? 1 : 0);
+        QStringList methods;
+        for (const QJsonObject& request : server.recordedRequests())
+        {
+            const QString method = request.value("method").toString();
+            methods.append(method);
+            if (method == "VBD.create")
+            {
+                const QJsonObject record = request.value("params").toArray().at(1).toObject();
+                QCOMPARE(record.value("userdevice").toString(), devices == TransportTestServer::BootDevice ? QString("0") : QString("1"));
+                QCOMPARE(record.value("bootable").toBool(), devices == TransportTestServer::BootDevice && (!create || !existingBootable));
+            }
+        }
+        QCOMPARE(methods.count("VM.get_allowed_VBD_devices"), 1);
+        QCOMPARE(methods.count("VDI.create"), create && !full ? 1 : 0);
+        QCOMPARE(methods.count("VBD.create"), full ? 0 : 1);
+        QCOMPARE(methods.count("VBD.async_plug"), plugFails ? 1 : 0);
+        if (create && !full)
+            QVERIFY(methods.indexOf("VM.get_allowed_VBD_devices") < methods.indexOf("VDI.create"));
+        connection.SetSession(nullptr);
+    }
+
     void protectedVmStart_data()
     {
         QTest::addColumn<bool>("haEnabled");

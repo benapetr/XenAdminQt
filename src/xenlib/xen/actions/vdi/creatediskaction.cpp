@@ -29,12 +29,11 @@
 #include "../../vm.h"
 #include "../../vdi.h"
 #include "../../vbd.h"
+#include "../vbd/vbdcreateandplugaction.h"
 #include "../../sr.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VDI.h"
-#include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/xenapi_SR.h"
 #include "../../../xencache.h"
 
 CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
@@ -50,7 +49,7 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
 
 CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
                                    const QVariantMap& vbdRecord,
-                                   VM* vm,
+                                   QSharedPointer<VM> vm,
                                    QObject* parent)
     : AsyncOperation(vm->GetConnection(),
                      tr("Creating disk '%1' on VM '%2'")
@@ -64,6 +63,8 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
     AddApiMethodToRoleCheck("VM.get_allowed_VBD_devices");
     AddApiMethodToRoleCheck("VDI.create");
     AddApiMethodToRoleCheck("VBD.create");
+    this->AddApiMethodToRoleCheck("VBD.get_allowed_operations");
+    this->AddApiMethodToRoleCheck("VBD.async_plug");
 }
 
 void CreateDiskAction::run()
@@ -183,7 +184,21 @@ void CreateDiskAction::run()
             vbdRecord["qos_algorithm_params"] = QVariantMap();
         }
 
-        QString vbdRef = XenAPI::VBD::create(session, vbdRecord);
+        VbdCreateAndPlugAction attachAction(this->m_vm, vbdRecord,
+                                           this->m_vdiRecord.value("name_label").toString(), true);
+        connect(&attachAction, &VbdCreateAndPlugAction::showUserInstruction,
+                this, &CreateDiskAction::showUserInstruction, Qt::DirectConnection);
+        attachAction.RunSync(session);
+        if (attachAction.HasError())
+        {
+            this->setError(attachAction.GetErrorMessage(), attachAction.GetErrorDetails());
+            return;
+        }
+        if (attachAction.IsCancelled())
+        {
+            this->setState(Cancelled);
+            return;
+        }
 
         this->SetPercentComplete(100);
         this->SetDescription(tr("Virtual disk created and attached to VM"));
@@ -196,69 +211,16 @@ bool CreateDiskAction::hasBootableDisk()
         return false;
     }
 
-    try
+    // Match C#: inspect cached VBDs and ignore CD/floppy and tools media.
+    for (const auto& vbd : this->m_vm->GetVBDs())
     {
-        XenAPI::Session* session = this->GetSession();
-        if (!session || !session->IsLoggedIn())
-        {
-            return false;
-        }
-
-        // Get all VBDs for this VM
-        QStringList vbdRefs = this->m_vm->GetVBDRefs();
-
-        for (const QString& vbdRef : vbdRefs)
-        {
-            // Get VBD record
-            QVariantMap vbdRecord = XenAPI::VBD::get_record(session, vbdRef);
-
-            // Skip CD and floppy drives
-            QString type = vbdRecord.value("type").toString();
-            if (type == "CD")
-            {
-                continue;
-            }
-
-            // Check if bootable
-            bool bootable = vbdRecord.value("bootable").toBool();
-            if (!bootable)
-            {
-                continue;
-            }
-
-            // Get VDI reference
-            QString vdiRef = vbdRecord.value("VDI").toString();
-            if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
-            {
-                continue;
-            }
-
-            // Get VDI record to check SR
-            QVariantMap vdiRecord = XenAPI::VDI::get_record(session, vdiRef);
-            QString srRef = vdiRecord.value("SR").toString();
-
-            if (!srRef.isEmpty() && srRef != XENOBJECT_NULL)
-            {
-                // Get SR record to check if it's a tools SR
-                QVariantMap srRecord = XenAPI::SR::get_record(session, srRef);
-                QVariantMap otherConfig = srRecord.value("other_config").toMap();
-
-                // Skip tools SR (special SR for XenServer Tools ISOs)
-                if (otherConfig.value("xenserver_tools_sr").toBool())
-                {
-                    continue;
-                }
-
-                // Found a bootable disk that's not in tools SR
-                return true;
-            }
-        }
-
-        return false;
-
-    } catch (...)
-    {
-        // If we can't check, assume no bootable disk
-        return false;
+        if (!vbd || vbd->IsCD() || vbd->IsFloppyDrive() || !vbd->IsBootable())
+            continue;
+        const auto vdi = vbd->GetVDI();
+        const auto sr = vdi ? vdi->GetSR() : QSharedPointer<SR>();
+        if (sr && sr->IsToolsSR())
+            continue;
+        return true;
     }
+    return false;
 }

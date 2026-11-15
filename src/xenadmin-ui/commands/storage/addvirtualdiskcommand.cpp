@@ -35,7 +35,6 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vdi/creatediskaction.h"
-#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xenlib/xen/sr.h"
 
 AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -88,17 +87,13 @@ void AddVirtualDiskCommand::Run()
         QString name = dialog.getVDIName();
         QString description = dialog.getVDIDescription();
         qint64 size = dialog.getSize();
-        QString devicePosition = dialog.getDevicePosition();
         QString mode = dialog.getMode();
-        bool bootable = dialog.isBootable();
 
         qDebug() << "[AddVirtualDiskCommand] VDI parameters:";
         qDebug() << "  SR:" << srRef;
         qDebug() << "  Name:" << name;
         qDebug() << "  Size:" << size;
-        qDebug() << "  Device position:" << devicePosition;
         qDebug() << "  Mode:" << mode;
-        qDebug() << "  Bootable:" << bootable;
 
         // Build VDI record
         QVariantMap vdiRecord;
@@ -111,38 +106,8 @@ void AddVirtualDiskCommand::Run()
         vdiRecord["read_only"] = false;
         vdiRecord["other_config"] = QVariantMap();
 
-        // Create VDI using CreateDiskAction
-        qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
-        CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, vm->GetConnection(), this);
-
-        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, MainWindow::instance());
-        qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
-        int createResult = createDialog->exec();
-
-        if (createResult != QDialog::Accepted)
-        {
-            qWarning() << "[AddVirtualDiskCommand] VDI creation failed or cancelled";
-            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
-            delete createDialog;
-            return;
-        }
-
-        QString vdiRef = createAction->GetResult();
-        qDebug() << "[AddVirtualDiskCommand] VDI created successfully, ref:" << vdiRef;
-        delete createDialog;
-
-        if (vdiRef.isEmpty())
-        {
-            qWarning() << "[AddVirtualDiskCommand] VDI ref is empty despite success";
-            QMessageBox::warning(MainWindow::instance(), tr("Failed"), tr("Failed to create virtual disk."));
-            return;
-        }
-
         QVariantMap vbdRecord;
-        vbdRecord["VM"] = objectRef;
-        vbdRecord["VDI"] = vdiRef;
-        vbdRecord["userdevice"] = devicePosition;
-        vbdRecord["bootable"] = bootable;
+        vbdRecord["device"] = QString();
         vbdRecord["mode"] = mode;
         vbdRecord["type"] = "Disk";
         vbdRecord["unpluggable"] = true;
@@ -151,29 +116,19 @@ void AddVirtualDiskCommand::Run()
         vbdRecord["qos_algorithm_type"] = "";
         vbdRecord["qos_algorithm_params"] = QVariantMap();
 
-        qDebug() << "[AddVirtualDiskCommand] Creating VbdCreateAndPlugAction to attach VDI to VM...";
-        VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
-
-        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, MainWindow::instance());
-        qDebug() << "[AddVirtualDiskCommand] Executing attach dialog...";
-        int attachResult = attachDialog->exec();
-        qDebug() << "[AddVirtualDiskCommand] Attach dialog result:" << attachResult
-                 << "(Accepted=" << QDialog::Accepted << ")";
-        qDebug() << "[AddVirtualDiskCommand] VbdCreateAndPlugAction state:"
-                 << "hasError=" << attachAction->HasError()
-                 << "isCancelled=" << attachAction->IsCancelled()
-                 << "errorMessage=" << attachAction->GetErrorMessage();
-
-        if (attachResult != QDialog::Accepted)
+        // The action selects a server-allowed position before creating the VDI,
+        // then creates and hot-plugs the VBD, matching the C# workflow.
+        CreateDiskAction* action = new CreateDiskAction(vdiRecord, vbdRecord, vm, this);
+        MainWindow* window = MainWindow::instance();
+        connect(action, &CreateDiskAction::showUserInstruction,
+                window, [window](const QString& instruction)
         {
-            qWarning() << "[AddVirtualDiskCommand] VBD attachment failed or cancelled";
-            QMessageBox::warning(MainWindow::instance(), tr("Warning"), tr("Virtual disk created but failed to attach to VM.\nYou can attach it manually from the Attach menu."));
-            delete attachDialog;
-            return;
-        }
+            QMessageBox::information(window, tr("Reboot Required"), instruction);
+        });
 
-        qDebug() << "[AddVirtualDiskCommand] VBD attached successfully";
-        delete attachDialog;
+        ActionProgressDialog progressDialog(action, window);
+        if (progressDialog.exec() != QDialog::Accepted)
+            return;
 
         MainWindow::instance()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
     } else if (objectType == XenObjectType::SR)

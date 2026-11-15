@@ -39,11 +39,11 @@ class VM;
  * @brief CreateDiskAction - Create a new virtual disk image (VDI)
  *
  * Qt equivalent of C# CreateDiskAction. Creates a new VDI and optionally
- * attaches it to a VM via a VBD.
+ * attaches it to a VM via a VBD, attempting to hot-plug it.
  *
  * From C# XenModel/Actions/VDI/CreateDiskAction.cs:
  * - Creates VDI using VDI.create()
- * - If VM specified, also creates VBD and attaches to VM
+ * - If VM specified, selects an allowed position, creates VBD and tries to hot-plug it
  * - Checks for existing bootable disks
  * - Only makes new disk bootable if userdevice=0 and no other bootable disk exists
  */
@@ -71,8 +71,11 @@ class XENLIB_EXPORT CreateDiskAction : public AsyncOperation
          */
         explicit CreateDiskAction(const QVariantMap& vdiRecord,
                                   const QVariantMap& vbdRecord,
-                                  VM* vm,
+                                  QSharedPointer<VM> vm,
                                   QObject* parent = nullptr);
+
+    signals:
+        void showUserInstruction(const QString& instruction);
 
     protected:
         void run() override;
@@ -86,7 +89,7 @@ class XENLIB_EXPORT CreateDiskAction : public AsyncOperation
 
         QVariantMap m_vdiRecord;
         QVariantMap m_vbdRecord;
-        VM* m_vm;
+        QSharedPointer<VM> m_vm;
         bool m_attachToVM;
 };
 

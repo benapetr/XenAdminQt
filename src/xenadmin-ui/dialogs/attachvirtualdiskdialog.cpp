@@ -70,10 +70,6 @@ AttachVirtualDiskDialog::AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget*
     connect(this->ui->srComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AttachVirtualDiskDialog::onSRFilterChanged);
     connect(this->ui->vdiTable, &QTableWidget::itemSelectionChanged, this, &AttachVirtualDiskDialog::onVDISelectionChanged);
 
-    // Find next available device position
-    int nextDevice = this->findNextAvailableDevice();
-    this->ui->deviceSpinBox->setValue(nextDevice);
-
     // Populate SR filter and VDI list
     this->populateSRFilter();
     this->populateVDITable();
@@ -258,32 +254,6 @@ void AttachVirtualDiskDialog::populateVDITable()
     }
 }
 
-int AttachVirtualDiskDialog::findNextAvailableDevice()
-{
-    if (!this->m_vm)
-        return 0;
-
-    // Find highest device number in use
-    int maxDevice = -1;
-
-    QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
-    for (const QSharedPointer<VBD>& vbd : vbds)
-    {
-        if (!vbd || !vbd->IsValid())
-            continue;
-
-        QString userdevice = vbd->GetUserdevice();
-        bool ok;
-        int deviceNum = userdevice.toInt(&ok);
-        if (ok && deviceNum > maxDevice)
-        {
-            maxDevice = deviceNum;
-        }
-    }
-
-    return maxDevice + 1;
-}
-
 void AttachVirtualDiskDialog::onSRFilterChanged(int index)
 {
     Q_UNUSED(index);
@@ -310,17 +280,7 @@ QString AttachVirtualDiskDialog::getSelectedVDIRef() const
     return QString();
 }
 
-QString AttachVirtualDiskDialog::getDevicePosition() const
-{
-    return QString::number(this->ui->deviceSpinBox->value());
-}
-
 QString AttachVirtualDiskDialog::getMode() const
 {
     return (this->ui->modeComboBox->currentIndex() == 1) ? "RO" : "RW";
-}
-
-bool AttachVirtualDiskDialog::isBootable() const
-{
-    return this->ui->bootableCheckBox->isChecked();
 }

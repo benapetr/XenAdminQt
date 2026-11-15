@@ -37,7 +37,7 @@ VbdCreateAndPlugAction::VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVar
     : AsyncOperation(vm ? vm->GetConnection() : nullptr,
                      QString("Attaching Virtual Disk"),
                      QString("Attaching '%1' to '%2'...").arg(vdiName).arg(vm ? vm->GetName() : ""),
-                     parent),
+                     suppress, parent),
       m_vm(vm), m_vbdRecord(vbdRecord), m_vdiName(vdiName), m_suppress(suppress)
 {
     if (!vm)
@@ -47,6 +47,8 @@ VbdCreateAndPlugAction::VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVar
 
     // RBAC dependencies (matches C# VbdCreateAndPlugAction)
     this->AddApiMethodToRoleCheck("vbd.create");
+    if (!this->m_vbdRecord.contains("userdevice"))
+        this->AddApiMethodToRoleCheck("VM.get_allowed_VBD_devices");
     if (this->m_vm->IsHVM() || !this->isVBDEmpty())
     {
         this->AddApiMethodToRoleCheck("vbd.get_allowed_operations");
@@ -70,6 +72,17 @@ void VbdCreateAndPlugAction::run()
         }
 
         qDebug() << "[VbdCreateAndPlugAction] Session valid, proceeding with VBD creation";
+
+        // C# AttachDiskDialog uses the first position returned by the server.
+        // Do this on the action session immediately before creating the VBD.
+        if (!this->m_vbdRecord.contains("userdevice"))
+        {
+            const QStringList devices = XenAPI::VM::get_allowed_VBD_devices(session, this->m_vm->OpaqueRef()).toStringList();
+            if (devices.isEmpty())
+                throw std::runtime_error("Maximum number of VBDs already attached to VM");
+            this->m_vbdRecord["userdevice"] = devices.first();
+            this->m_vbdRecord["bootable"] = devices.first() == "0";
+        }
 
         // Step 1: Create the VBD record
         this->SetDescription(QString("Creating VBD for '%1'...").arg(this->m_vdiName));

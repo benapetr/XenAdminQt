@@ -42,12 +42,12 @@
 #include "xen/actions/vdi/destroydiskaction.h"
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xen/actions/delegatedasyncoperation.h"
-#include "dialogs/attachvirtualdiskdialog.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/actionprogressdialog.h"
 #include "commands/command.h"
 #include "commands/storage/addvirtualdiskcommand.h"
+#include "commands/storage/attachvirtualdiskcommand.h"
 #include "settingsmanager.h"
 #include "mainwindow.h"
 #include "../widgets/isodropdownbox.h"
@@ -1377,66 +1377,11 @@ void VMStorageTabPage::onAttachButtonClicked()
     if (!this->m_vm || !this->m_vm->IsConnected())
         return;
 
-    // Open Attach Virtual Disk Dialog
-    AttachVirtualDiskDialog dialog(this->m_vm, this);
-    if (dialog.exec() != QDialog::Accepted)
+    AttachVirtualDiskCommand command(MainWindow::instance(), this);
+    command.SetSelectionOverride(QList<QSharedPointer<XenObject>>{this->m_vm});
+    if (!command.CanRun())
         return;
-
-    // Get parameters from dialog
-    QString vdiRef = dialog.getSelectedVDIRef();
-    QString devicePosition = dialog.getDevicePosition();
-    QString mode = dialog.getMode();
-    bool bootable = dialog.isBootable();
-
-    if (vdiRef.isEmpty())
-    {
-        QMessageBox::warning(this, "Error", "No virtual disk selected.");
-        return;
-    }
-
-    // Attach VDI to VM using VbdCreateAndPlugAction
-    qDebug() << "Attaching VDI:" << vdiRef << "to VM:" << this->m_vm->OpaqueRef();
-
-    // Build VBD record
-    QVariantMap vbdRecord;
-    vbdRecord["VM"] = this->m_vm->OpaqueRef();
-    vbdRecord["VDI"] = vdiRef;
-    vbdRecord["userdevice"] = devicePosition;
-    vbdRecord["bootable"] = bootable;
-    vbdRecord["mode"] = mode;
-    vbdRecord["type"] = "Disk";
-    vbdRecord["unpluggable"] = true;
-    vbdRecord["empty"] = false;
-    vbdRecord["other_config"] = QVariantMap();
-    vbdRecord["qos_algorithm_type"] = "";
-    vbdRecord["qos_algorithm_params"] = QVariantMap();
-
-    // Get VDI name for display
-    QString vdiName = "Virtual Disk";
-    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
-    if (vdi && vdi->IsValid())
-        vdiName = vdi->GetName();
-
-    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, vdiName, false, this);
-    ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this);
-
-    if (attachDialog->exec() != QDialog::Accepted)
-    {
-        QMessageBox::warning(this, tr("Failed"), tr("Failed to attach virtual disk."));
-        delete attachDialog;
-        return;
-    }
-
-    QString vbdRef = attachAction->GetResult();
-    delete attachDialog;
-
-    if (vbdRef.isEmpty())
-    {
-        QMessageBox::warning(this, tr("Failed"), tr("Failed to attach virtual disk."));
-        return;
-    }
-
-    qDebug() << "VBD created:" << vbdRef;
+    command.Run();
 
     // Refresh to show attached disk
     this->refreshContent();

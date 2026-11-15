@@ -140,42 +140,12 @@ void NewVirtualDiskDialog::populateSRList()
 
 int NewVirtualDiskDialog::findNextAvailableDevice() const
 {
-    if (!this->m_usedDevices.isEmpty())
-    {
-        int maxDevice = -1;
-        for (const QString& device : this->m_usedDevices)
-        {
-            bool ok = false;
-            int deviceNum = device.toInt(&ok);
-            if (ok && deviceNum > maxDevice)
-                maxDevice = deviceNum;
-        }
-        return maxDevice + 1;
-    }
-
-    if (!this->m_connection || !this->m_connection->GetCache())
-        return 0;
-
-    // Find highest device number in use
-    int maxDevice = -1;
-
-    if (!this->m_vm.isNull())
-    {
-        QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
-        for (const QSharedPointer<VBD>& vbd : vbds)
-        {
-            if (!vbd || !vbd->IsValid())
-                continue;
-
-            QString userdevice = vbd->GetUserdevice();
-            bool ok;
-            int deviceNum = userdevice.toInt(&ok);
-            if (ok && deviceNum > maxDevice)
-                maxDevice = deviceNum;
-        }
-    }
-
-    return maxDevice + 1;
+    // Used for the suggested name and planned disks in the New VM wizard.
+    // Existing VMs get their actual position from the server in the action.
+    int device = 0;
+    while (this->m_usedDevices.contains(QString::number(device)))
+        ++device;
+    return device;
 }
 
 void NewVirtualDiskDialog::onSRChanged()
@@ -404,8 +374,8 @@ void NewVirtualDiskDialog::applyInitialDisk()
     Q_UNUSED(this->m_initialSrRef);
 }
 
-// Device position, mode, and bootable are determined by the calling command
-// These methods are kept for compatibility but return defaults
+// Device positions for existing VMs are selected by the action using XenAPI.
+// The New VM wizard uses this value for disks planned before VM creation.
 QString NewVirtualDiskDialog::getDevicePosition() const
 {
     return QString::number(findNextAvailableDevice());

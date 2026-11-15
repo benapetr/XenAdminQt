@@ -53,7 +53,8 @@ class VbdCreateAndPlugAction : public AsyncOperation
         /**
          * @brief Construct a VBD create and plug action
          * @param vm The VM to attach the VBD to
-         * @param vbdRecord The VBD record to create (should include VM, VDI, device, etc.)
+         * @param vbdRecord The VBD record to create. If userdevice is omitted, select
+         * the first server-allowed position and make position 0 bootable.
          * @param vdiName Name of the VDI being attached (for display purposes)
          * @param suppress Suppress progress notifications
          * @param parent Parent QObject

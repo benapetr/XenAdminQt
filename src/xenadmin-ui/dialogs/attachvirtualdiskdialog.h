@@ -48,9 +48,7 @@ class AttachVirtualDiskDialog : public QDialog
         ~AttachVirtualDiskDialog();
 
         QString getSelectedVDIRef() const;
-        QString getDevicePosition() const;
         QString getMode() const; // "RO" or "RW"
-        bool isBootable() const;
 
     private slots:
         void onSRFilterChanged(int index);
@@ -59,7 +57,6 @@ class AttachVirtualDiskDialog : public QDialog
     private:
         void populateSRFilter();
         void populateVDITable();
-        int findNextAvailableDevice();
 
         Ui::AttachVirtualDiskDialog* ui;
         QSharedPointer<VM> m_vm;
