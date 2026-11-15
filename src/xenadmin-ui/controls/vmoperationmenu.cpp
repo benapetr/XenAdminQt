@@ -99,11 +99,11 @@ VMOperationMenu::VMOperationMenu(MainWindow* main_window, const QList<QSharedPoi
 VMOperationMenu::~VMOperationMenu()
 {
     this->stop();
-    
+    // Workers may still be posting results to this QObject. Join them before
+    // freeing records or allowing QObject destruction to begin.
+    this->clearWorkerQueue();
     qDeleteAll(this->m_hostMenuItems);
     this->m_hostMenuItems.clear();
-    
-    this->clearWorkerQueue();
 }
 
 QString VMOperationMenu::getOperationName() const
@@ -142,6 +142,8 @@ void VMOperationMenu::aboutToShowMenu()
 void VMOperationMenu::stop()
 {
     this->setStopped(true);
+    ++this->m_generation;
+    this->m_checksCancelled->store(true);
     
     if (this->m_workerQueue)
     {
@@ -165,7 +167,7 @@ void VMOperationMenu::clearWorkerQueue()
 {
     if (this->m_workerQueue)
     {
-        this->m_workerQueue->CancelWorkers(false);
+        this->m_workerQueue->CancelWorkers(true);
         delete this->m_workerQueue;
         this->m_workerQueue = nullptr;
     }
@@ -251,14 +253,16 @@ void VMOperationMenu::addDisabledReason(const QString& reason)
 
 void VMOperationMenu::populate()
 {
-    // Clear existing items
+    // Retire the previous opening before deleting any data used by its checks.
+    this->stop();
+    this->clearWorkerQueue();
     this->clear();
     qDeleteAll(this->m_hostMenuItems);
     this->m_hostMenuItems.clear();
     this->m_additionalActions.clear();
     this->m_wlbRecommendations.clear();
+    this->m_checksCancelled = std::make_shared<std::atomic_bool>(false);
     this->setStopped(false);
-    this->clearWorkerQueue();
     this->menuAction()->setEnabled(true);
     
     if (this->m_vms.isEmpty())
@@ -477,32 +481,29 @@ void VMOperationMenu::enableAppropriateHostsWlb()
         return;
 
     // Retrieve WLB recommendations for this VM
-    WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, this->m_vms, this);
+    WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, this->m_vms, nullptr);
+    const quint64 generation = this->m_generation;
+    const QPointer<WlbRetrieveVmRecommendationsAction> actionGuard(wlbAction);
 
-    connect(wlbAction, &AsyncOperation::completed, wlbAction, [this, wlbAction]()
+    connect(wlbAction, &AsyncOperation::completed, this, [this, actionGuard, generation]()
     {
-        if (this->isStopped())
-        {
-            wlbAction->deleteLater();
+        if (!actionGuard || this->isStopped() || generation != this->m_generation)
             return;
-        }
 
-        if (wlbAction->IsFailed())
+        if (actionGuard->IsFailed())
         {
             this->enableAppropriateHostsNoWlb();
-            wlbAction->deleteLater();
             return;
         }
 
         // Get recommendations
-        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> recommendations = wlbAction->GetRecommendations();
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> recommendations = actionGuard->GetRecommendations();
         WlbRecommendations wlbRecs(this->m_vms, recommendations);
 
         if (wlbRecs.IsError())
         {
             qDebug() << "WLB recommendations returned error, falling back to non-WLB";
             this->enableAppropriateHostsNoWlb();
-            wlbAction->deleteLater();
             return;
         }
 
@@ -601,10 +602,9 @@ void VMOperationMenu::enableAppropriateHostsWlb()
         for (HostMenuItem* item : hostItems)
             this->insertAction(insertBefore, item->action);
 
-        wlbAction->deleteLater();
     });
 
-    wlbAction->RunAsync();
+    wlbAction->RunAsync(true);
 }
 
 void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, HostMenuItem* menuItem, bool isHomeServer)
@@ -612,98 +612,63 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
     if (!this->m_workerQueue)
         return;
 
-    this->m_workerQueue->EnqueueTask([this, host, menuItem, isHomeServer]()
+    const auto vms = this->m_vms;
+    const QString operation = this->m_operationName;
+    const auto cancelled = this->m_checksCancelled;
+    const quint64 generation = this->m_generation;
+    const QString label = isHomeServer ? tr("Home Server") : host->GetName();
+    this->m_workerQueue->EnqueueTask([this, vms, operation, host, menuItem, isHomeServer, cancelled, generation, label]()
     {
-        if (this->isStopped())
-            return;
-
-        XenConnection* connection = this->getConnection();
-        if (!connection)
-            return;
-
         bool canRunAny = false;
         QSet<QString> reasons;
-        menuItem->cantRunReasons.clear();
-
-        if (isHomeServer)
+        QHash<QSharedPointer<VM>, QString> cantRunReasons;
+        for (const QSharedPointer<VM>& vm : vms)
         {
-            // Home server operation
-            for (const QSharedPointer<VM>& vm : this->m_vms)
-            {
-                QString reason;
-                bool canRun = false;
-                const QSharedPointer<Host> affinityHost = vm->GetAffinityHost();
-                if (affinityHost)
-                {
-                    canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm, affinityHost->OpaqueRef(), this->m_operationName, &reason);
-                } else
-                {
-                    reason = tr("No home server");
-                }
+            if (cancelled->load())
+                return;
 
-                if (canRun)
-                {
-                    canRunAny = true;
-                } else
-                {
-                    menuItem->cantRunReasons.insert(vm, reason);
-                    if (!reason.isEmpty())
-                        reasons.insert(reason);
-                }
+            const auto target = isHomeServer ? vm->GetAffinityHost() : host;
+            QString reason;
+            bool canRun = false;
+            if (target)
+            {
+                canRun = VMOperationHelpers::VMCanBootOnHost(vm->GetConnection(), vm, target->OpaqueRef(), operation, &reason);
+            } else
+            {
+                reason = VMOperationMenu::tr("No home server");
             }
-
-            QMetaObject::invokeMethod(this, [this, menuItem, canRunAny, reasons]()
+            if (canRun)
             {
-                if (this->isStopped())
-                    return;
-
-                QString label = tr("Home Server");
-
-                QString uniqueReason = joinUniqueReasons(reasons);
-                if (!canRunAny && !uniqueReason.isEmpty())
-                    label += QString(" - %1").arg(uniqueReason);
-
-                menuItem->action->setText(label);
-                menuItem->action->setEnabled(canRunAny);
-                menuItem->canRunAny = canRunAny;
-            }, Qt::QueuedConnection);
-        } else if (host)
-        {
-            // Regular host operation
-            for (const QSharedPointer<VM>& vm : this->m_vms)
+                canRunAny = true;
+            } else
             {
-                QString reason;
-                bool canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm,
-                                                                 host->OpaqueRef(),
-                                                                 this->m_operationName,
-                                                                 &reason);
-                if (canRun)
-                {
-                    canRunAny = true;
-                } else
-                {
-                    menuItem->cantRunReasons.insert(vm, reason);
-                    if (!reason.isEmpty())
-                        reasons.insert(reason);
-                }
+                cantRunReasons.insert(vm, reason);
+                if (!reason.isEmpty())
+                    reasons.insert(reason);
             }
-
-            QMetaObject::invokeMethod(this, [this, menuItem, canRunAny, reasons, host]()
-            {
-                if (this->isStopped())
-                    return;
-
-                QString label = host->GetName();
-                QString uniqueReason = joinUniqueReasons(reasons);
-                if (!canRunAny && !uniqueReason.isEmpty())
-                    label += QString(" - %1").arg(uniqueReason);
-
-                menuItem->action->setText(label);
-                menuItem->action->setEnabled(canRunAny);
-                menuItem->reason = uniqueReason;
-                menuItem->canRunAny = canRunAny;
-            }, Qt::QueuedConnection);
         }
+        if (cancelled->load())
+            return;
+
+        // No menu item is accessed by a worker. Teardown joins the queue before
+        // destroying this receiver; queued callbacks are then discarded by Qt.
+        QMetaObject::invokeMethod(this, [this, menuItem, cancelled, generation, label, canRunAny, reasons, cantRunReasons]()
+        {
+            // stop() invalidates even callbacks already queued before closing.
+            // Check the generation before dereferencing a potentially retired item.
+            if (cancelled->load() || this->isStopped() || generation != this->m_generation)
+                return;
+
+            QString text = label;
+            const QString uniqueReason = joinUniqueReasons(reasons);
+            if (!canRunAny && !uniqueReason.isEmpty())
+                text += QString(" - %1").arg(uniqueReason);
+            menuItem->cantRunReasons = cantRunReasons;
+            menuItem->action->setText(text);
+            menuItem->action->setEnabled(canRunAny);
+            menuItem->reason = uniqueReason;
+            menuItem->canRunAny = canRunAny;
+        }, Qt::QueuedConnection);
     });
 }
 

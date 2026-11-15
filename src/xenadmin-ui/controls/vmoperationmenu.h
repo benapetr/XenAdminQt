@@ -33,6 +33,8 @@
 #include <QMutex>
 #include <QList>
 #include <QHash>
+#include <atomic>
+#include <memory>
 
 class MainWindow;
 class VM;
@@ -92,6 +94,8 @@ class VMOperationMenu : public QMenu
         Operation m_operation;
         QString m_operationName;  // "start_on", "resume_on", or "pool_migrate"
         bool m_stopped = false;
+        quint64 m_generation = 0; // UI thread: invalidates results from earlier openings.
+        std::shared_ptr<std::atomic_bool> m_checksCancelled = std::make_shared<std::atomic_bool>(true);
         mutable QMutex m_stopMutex;
         ProducerConsumerQueue* m_workerQueue = nullptr;
         QList<HostMenuItem*> m_hostMenuItems;

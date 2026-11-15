@@ -17,6 +17,8 @@ are omitted.
   instead of their action's dedicated session.
 - Fixed Home Server operations with multiple VMs selected to check and use each
   VM's own home server instead of the first selected VM's home server.
+- Fixed potential crashes from host eligibility checks finishing after a VM
+  operation menu was closed or reopened.
 
 ## [v0.1.0-beta] - 2026-11-14
 
