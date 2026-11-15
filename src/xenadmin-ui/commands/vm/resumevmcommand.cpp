@@ -130,7 +130,9 @@ bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmNa
 
     VMResumeAction* action = new VMResumeAction(
         vm,
-        nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
+        [mainWindow](QSharedPointer<VM> vm, bool isStart) {
+            VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, mainWindow.data());
+        },
         [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
             Q_UNUSED(abstractAction)
             if (!mainWindow)

@@ -51,7 +51,8 @@ void VMStartOnAction::run()
 {
     SetDescription(tr("Starting on host..."));
     startOrResumeVmWithHa(0, 100);
-    SetDescription(tr("Started"));
+    if (!this->IsCancelled() && !this->IsFailed())
+        this->SetDescription(tr("Started"));
 }
 
 void VMStartOnAction::doAction(int start, int end)

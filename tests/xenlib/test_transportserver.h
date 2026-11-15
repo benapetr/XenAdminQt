@@ -8,6 +8,7 @@
 #include <utility>
 #include <QJsonObject>
 #include <QSemaphore>
+#include <QMutex>
 #include <QSslCertificate>
 #include <QSslKey>
 #include <QSslSocket>
@@ -20,7 +21,7 @@
 class TransportTestServer : public QThread
 {
 public:
-    enum Reply { Close, PeerClose, Truncated, Malformed, HttpError, Chunked, ApiFailure };
+    enum Reply { Close, PeerClose, Truncated, Malformed, HttpError, Chunked, ApiFailure, Login, AgilityFailure, PermissionFailure };
 
     TransportTestServer(const QString& certPath, const QString& keyPath, QVector<Reply> replies)
         : m_replies(std::move(replies))
@@ -49,6 +50,11 @@ public:
 
     int requests() const { return this->m_requests.loadAcquire(); }
     int connections() const { return this->m_connections.loadAcquire(); }
+    QList<QJsonObject> recordedRequests() const
+    {
+        QMutexLocker locker(&this->m_recordsMutex);
+        return this->m_records;
+    }
 
 protected:
     void run() override
@@ -112,12 +118,27 @@ protected:
                     continue;
                 const QJsonObject request = QJsonDocument::fromJson(input.mid(end + 4, length)).object();
                 input.remove(0, end + 4 + length);
+                {
+                    QMutexLocker locker(&this->m_recordsMutex);
+                    this->m_records.append(request);
+                }
                 const int index = this->m_requests.fetchAndAddOrdered(1);
                 const Reply reply = this->m_replies.value(index, Close);
                 QByteArray body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
                                                            {"result", QJsonValue(QJsonValue::Null)}}).toJson(QJsonDocument::Compact);
                 if (reply == Malformed)
                     body = "not JSON";
+                if (reply == Login)
+                    body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
+                        {"result", "OpaqueRef:test-session"}}).toJson(QJsonDocument::Compact);
+                if (reply == AgilityFailure)
+                    body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
+                        {"error", QJsonObject{{"code", 1}, {"message", "HA_CONSTRAINT_VIOLATION_SR_NOT_SHARED"},
+                                             {"data", QJsonArray{"OpaqueRef:test-sr"}}}}}).toJson(QJsonDocument::Compact);
+                if (reply == PermissionFailure)
+                    body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
+                        {"error", QJsonObject{{"code", 1}, {"message", "RBAC_PERMISSION_DENIED"},
+                                             {"data", QJsonArray{"VM.assert_agile", "Permission denied"}}}}}).toJson(QJsonDocument::Compact);
                 if (reply == ApiFailure)
                     body = QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", request.value("id")},
                         {"error", QJsonObject{{"code", 1}, {"message", "HOST_NOT_ENOUGH_FREE_MEMORY"},
@@ -157,6 +178,8 @@ private:
     QSslCertificate m_certificate;
     QSslKey m_key;
     QSemaphore m_ready;
+    mutable QMutex m_recordsMutex;
+    QList<QJsonObject> m_records;
     QAtomicInt m_port = 0;
     QAtomicInt m_requests = 0;
     QAtomicInt m_connections = 0;

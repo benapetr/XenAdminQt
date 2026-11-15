@@ -791,21 +791,29 @@ void VMOperationMenu::runOperationOnHostForVm(const QSharedPointer<Host>& host, 
     // The context menu is destroyed after selection; diagnosis may run later.
     const QPointer<MainWindow> window(this->m_mainWindow);
     const auto diagnose = [window, vm](bool isStart, const Failure& failure) {
-        if (window)
-            VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(), vm->OpaqueRef(), vm->GetName(),
-                                                  isStart, failure, window.data());
+        if (!window)
+            return;
+        const Failure copy = failure;
+        QMetaObject::invokeMethod(window.data(), [window, vm, isStart, copy]() {
+            if (window)
+                VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(), vm->OpaqueRef(), vm->GetName(),
+                                                      isStart, copy, window.data());
+        }, Qt::QueuedConnection);
+    };
+    const auto warnHa = [window](QSharedPointer<VM> vm, bool isStart) {
+        VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, window.data());
     };
     AsyncOperation* action = nullptr;
     switch (this->m_operation)
     {
         case Operation::StartOn:
-            action = new VMStartOnAction(vm, host, nullptr,
+            action = new VMStartOnAction(vm, host, warnHa,
                                         [diagnose](VMStartAbstractAction*, const Failure& failure) {
                                             diagnose(true, failure);
                                         }, this->m_mainWindow);
             break;
         case Operation::ResumeOn:
-            action = new VMResumeOnAction(vm, host, nullptr,
+            action = new VMResumeOnAction(vm, host, warnHa,
                                          [diagnose](VMStartAbstractAction*, const Failure& failure) {
                                              diagnose(false, failure);
                                          }, this->m_mainWindow);

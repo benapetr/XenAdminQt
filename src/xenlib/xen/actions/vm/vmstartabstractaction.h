@@ -52,6 +52,14 @@ class XENLIB_EXPORT VMStartAbstractAction : public AsyncOperation
         using WarningDialogHAInvalidConfig = std::function<void(QSharedPointer<VM>, bool)>;
         using StartDiagnosisForm = std::function<void(VMStartAbstractAction*, const Failure&)>;
 
+        // Warning callbacks throw this after the user cancels. It is handled
+        // inside this action, rather than crossing a Qt event callback.
+        class CancelledByUser : public std::exception
+        {
+        public:
+            const char* what() const noexcept override { return "VM start/resume cancelled"; }
+        };
+
         virtual ~VMStartAbstractAction();
 
         /**

@@ -49,6 +49,10 @@ class VMOperationHelpers : public QObject
     Q_OBJECT
 
     public:
+        // Show the HA warning on the UI thread and wait for the decision.
+        // Throws VMStartAbstractAction::CancelledByUser on Cancel/window closure.
+        static void WarningDialogHAInvalidConfig(QSharedPointer<VM> vm, bool isStart, QWidget* parent);
+
         /*!
          * \brief Show diagnosis form for VM start failures
          *

@@ -109,6 +109,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/exportapplianceaction.cpp
     xen/actions/vm/exportvmaction.cpp
     xen/actions/vm/gpuassignaction.cpp
+    xen/actions/vm/haunprotectvmaction.cpp
     xen/actions/vm/hvmbootaction.cpp
     xen/actions/vm/importapplianceaction.cpp
     xen/actions/vm/importimageaction.cpp

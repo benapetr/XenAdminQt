@@ -149,7 +149,9 @@ namespace
 
         return new VMStartAction(
             vm,
-            nullptr,
+            [windowPtr](QSharedPointer<VM> vm, bool isStart) {
+                VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, windowPtr.data());
+            },
             [conn, displayName, windowPtr, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
                 Q_UNUSED(abstractAction)
                 if (!windowPtr)

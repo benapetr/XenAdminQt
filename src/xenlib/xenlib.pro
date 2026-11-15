@@ -162,6 +162,7 @@ HEADERS += \
     xen/actions/vm/exportapplianceaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
+    xen/actions/vm/haunprotectvmaction.h \
     xen/actions/vm/hvmbootaction.h \
     xen/actions/gpu/vgpuconfigurationaction.h \
     xen/actions/gpu/gpuhelpers.h \
@@ -412,6 +413,7 @@ SOURCES += \
     xen/actions/vm/exportapplianceaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
+    xen/actions/vm/haunprotectvmaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
     xen/actions/gpu/vgpuconfigurationaction.cpp \
     xen/actions/pool/setgpuplacementpolicyaction.cpp \

@@ -8,6 +8,8 @@
 #include "xenlib/xen/network/connectionworker.h"
 #include "xenlib/xen/jsonrpcclient.h"
 #include "xenlib/xen/failure.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/actions/vm/vmstartabstractaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/heartbeat.h"
@@ -39,11 +41,111 @@ static QVariantMap normalVm(const QString& powerState = "Halted",
     return d;
 }
 
+class HaTestStartAction : public VMStartAbstractAction
+{
+public:
+    HaTestStartAction(QSharedPointer<VM> vm, WarningDialogHAInvalidConfig warning, bool isStart)
+        : VMStartAbstractAction(vm, "Test HA start", warning, nullptr), m_isStart(isStart) {}
+    bool IsStart() const override { return this->m_isStart; }
+    VMStartAbstractAction* Clone() override { return nullptr; }
+    bool performed = false;
+protected:
+    void run() override { this->startOrResumeVmWithHa(0, 100); }
+    void doAction(int, int) override { this->performed = true; }
+private:
+    bool m_isStart;
+};
+
 class XenLibTests : public QObject
 {
     Q_OBJECT
 
 private slots:
+    void protectedVmStart_data()
+    {
+        QTest::addColumn<bool>("haEnabled");
+        QTest::addColumn<QString>("priority");
+        QTest::addColumn<int>("agilityReply");
+        QTest::addColumn<bool>("accept");
+        QTest::addColumn<bool>("clearFails");
+        QTest::addColumn<bool>("isStart");
+        QTest::newRow("confirm-start") << true << QString("restart") << int(TransportTestServer::AgilityFailure) << true << false << true;
+        QTest::newRow("confirm-resume") << true << QString("restart") << int(TransportTestServer::AgilityFailure) << true << false << false;
+        QTest::newRow("cancel") << true << QString("restart") << int(TransportTestServer::AgilityFailure) << false << false << true;
+        QTest::newRow("clear-fails") << true << QString("restart") << int(TransportTestServer::AgilityFailure) << true << true << true;
+        QTest::newRow("agile") << true << QString("restart") << int(TransportTestServer::Close) << true << false << true;
+        QTest::newRow("transport-error-is-not-non-agility") << true << QString("restart") << int(TransportTestServer::Truncated) << true << false << true;
+        QTest::newRow("permission-error-is-not-non-agility") << true << QString("restart") << int(TransportTestServer::PermissionFailure) << true << false << true;
+        QTest::newRow("ha-disabled") << false << QString("restart") << int(TransportTestServer::AgilityFailure) << true << false << true;
+        QTest::newRow("best-effort") << true << QString("best-effort") << int(TransportTestServer::AgilityFailure) << true << false << true;
+    }
+
+    void protectedVmStart()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        QFETCH(bool, haEnabled);
+        QFETCH(QString, priority);
+        QFETCH(int, agilityReply);
+        QFETCH(bool, accept);
+        QFETCH(bool, clearFails);
+        QFETCH(bool, isStart);
+        const bool checksAgility = haEnabled && priority == "restart";
+        const bool prompts = checksAgility && agilityReply == TransportTestServer::AgilityFailure;
+        QVector<TransportTestServer::Reply> replies{TransportTestServer::Login, TransportTestServer::Close};
+        if (checksAgility)
+            replies.append(TransportTestServer::Reply(agilityReply));
+        if (prompts && accept)
+            replies.append(clearFails ? TransportTestServer::ApiFailure : TransportTestServer::Close);
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"), replies);
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        XenConnection connection;
+        QVERIFY(connection.ConnectToHost("127.0.0.1", port, "test", "test"));
+        QTRY_VERIFY_WITH_TIMEOUT(connection.IsTransportConnected(), 5000);
+        XenAPI::Session session(&connection);
+        QVERIFY(session.Login("test", "test"));
+        session.SetOwnsSessionToken(false);
+        connection.SetSession(&session);
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:test-pool", QVariantMap{{"ha_enabled", haEnabled}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:test-vm",
+                      QVariantMap{{"name_label", "HA VM"}, {"power_state", isStart ? "Halted" : "Suspended"},
+                                  {"ha_restart_priority", priority}});
+        const auto vm = cache->ResolveObject<VM>("OpaqueRef:test-vm");
+        bool warned = false;
+        bool correctMode = false;
+        HaTestStartAction action(vm, [&](QSharedPointer<VM> warnedVm, bool start) {
+            warned = true;
+            correctMode = warnedVm == vm && start == isStart;
+            if (!accept)
+                throw VMStartAbstractAction::CancelledByUser();
+        }, isStart);
+        action.RunSync(&session);
+        QCOMPARE(warned, prompts);
+        if (prompts)
+            QVERIFY(correctMode);
+        const bool cancelled = prompts && !accept;
+        const bool failed = (checksAgility && agilityReply != TransportTestServer::Close && !prompts) || (prompts && accept && clearFails);
+        QCOMPARE(action.GetState(), cancelled ? AsyncOperation::Cancelled : failed ? AsyncOperation::Failed : AsyncOperation::Completed);
+        QCOMPARE(action.performed, !cancelled && !failed);
+
+        int clears = 0;
+        for (const QJsonObject& request : server.recordedRequests())
+        {
+            if (request.value("method").toString() == "VM.set_ha_restart_priority")
+            {
+                ++clears;
+                const QJsonArray params = request.value("params").toArray();
+                QCOMPARE(params.at(0).toString(), session.GetSessionID());
+                QCOMPARE(params.at(1).toString(), vm->OpaqueRef());
+                QCOMPARE(params.at(2).toString(), QString());
+            }
+        }
+        QCOMPARE(clears, prompts && accept ? 1 : 0);
+    }
+
     void jsonRpcStrictValidation()
     {
         using Xen::JsonRpcClient;

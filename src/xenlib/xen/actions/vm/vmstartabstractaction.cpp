@@ -26,6 +26,8 @@
  */
 
 #include "vmstartabstractaction.h"
+#include "haunprotectvmaction.h"
+#include "../../../xencache.h"
 #include "../../vm.h"
 #include "../../host.h"
 #include "../../pool.h"
@@ -41,24 +43,15 @@ VMStartAbstractAction::VMStartAbstractAction(QSharedPointer<VM> vm,
                                              QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
 {
-    SetVM(vm);
-
+    this->SetVM(vm);
     if (vm)
     {
-        // Set host to VM's home
-        // TODO: Implement VM::home() method
-        // setHost(vm->home());
-
-        // Set pool
-        XenConnection* conn = vm->GetConnection();
-        if (conn)
-        {
-            // TODO: Get pool from connection
-            // setPool(conn->pool());
-        }
+        this->SetHost(vm->GetHome());
+        XenConnection* connection = vm->GetConnection();
+        if (connection && connection->GetCache())
+            this->SetPool(connection->GetCache()->GetPoolOfOne());
     }
-
-    addCommonAPIMethodsToRoleCheck();
+    this->addCommonAPIMethodsToRoleCheck();
 }
 
 VMStartAbstractAction::~VMStartAbstractAction()
@@ -74,58 +67,55 @@ void VMStartAbstractAction::addCommonAPIMethodsToRoleCheck()
 void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
 {
     // Matches C# StartOrResumeVmWithHa
-    QSharedPointer<VM> vmObj = GetVM();
+    QSharedPointer<VM> vmObj = this->GetVM();
     if (!vmObj)
     {
-        setError("VM object is null");
+        this->setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = GetSession();
+    XenAPI::Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
     try
     {
-        // Check if GetPool has HA enabled and VM is protected
-        QSharedPointer<Pool> poolObj = GetPool();
-        if (poolObj)
+        const auto pool = this->GetPool();
+        if (pool && pool->HAEnabled() && vmObj->HARestartPriority() == "restart")
         {
-            bool haEnabled = poolObj->GetData().value("ha_enabled", false).toBool();
-
-            if (haEnabled)
+            try
             {
-                // Check if VM has HA restart priority set (is protected)
-                QString haPriority = vmObj->GetData().value("ha_restart_priority", "").toString();
-                bool isProtected = !haPriority.isEmpty() && haPriority != "best-effort";
+                XenAPI::VM::assert_agile(sess, vmObj->OpaqueRef());
+            } catch (const Failure& failure)
+            {
+                // Only a confirmed agility constraint can justify removing HA
+                // protection. Transport, permission, and session errors must fail.
+                const QString code = failure.errorCode();
+                const QStringList agilityErrors{
+                    "HA_CONSTRAINT_VIOLATION_SR_NOT_SHARED",
+                    "HA_CONSTRAINT_VIOLATION_NETWORK_NOT_SHARED",
+                    "VM_HAS_VGPU", "VM_HAS_VUSBS", "VM_HAS_SRIOV_VIF"
+                };
+                if (!agilityErrors.contains(code))
+                    throw;
+                if (!this->m_warningDialogHAInvalidConfig)
+                    throw std::runtime_error("Clearing HA restart priority requires user confirmation");
 
-                if (isProtected)
-                {
-                    // Check if VM is agile (can run on any host in the pool)
-                    try
-                    {
-                        XenAPI::VM::assert_agile(sess, vmObj->OpaqueRef());
-                    } catch (...)
-                    {
-                        // VM is not agile but protected - inconsistent state
-                        qDebug() << "VM is not agile, but protected by HA";
-
-                        // Warn user and ask if they want to fix it
-                        if (m_warningDialogHAInvalidConfig)
-                        {
-                            m_warningDialogHAInvalidConfig(vmObj, IsStart());
-                        }
-
-                        // TODO: Implement HAUnprotectVMAction equivalent
-                        // For now, just log the issue
-                        qWarning() << "VM" << vmObj->GetName() << "is protected by HA but not agile";
-                    }
-                }
+                this->m_warningDialogHAInvalidConfig(vmObj, this->IsStart());
+                if (this->IsCancelled())
+                    return;
+                this->SetDescription(tr("Clearing VM HA restart priority..."));
+                HAUnprotectVMAction unprotect(vmObj, true);
+                unprotect.RunSync(sess);
+                if (unprotect.IsFailed())
+                    throw std::runtime_error(unprotect.GetErrorMessage().toStdString());
             }
         }
+        if (this->IsCancelled())
+            return;
 
         auto invokeDiagnosis = [this]() {
             if (!this->m_startDiagnosisForm)
@@ -142,14 +132,19 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
                 description << QStringLiteral("UNKNOWN_ERROR");
 
             Failure failure(description);
-            m_startDiagnosisForm(this, failure);
+            this->m_startDiagnosisForm(this, failure);
         };
 
         // Perform the actual start/resume operation
-        doAction(start, end);
+        this->doAction(start, end);
 
         if (this->IsFailed())
             invokeDiagnosis();
+    } catch (const CancelledByUser&)
+    {
+        this->SetDescription(tr("Cancelled"));
+        this->setState(Cancelled);
+        this->auditLogCancelled();
     } catch (const Failure& failure)
     {
         if (this->m_startDiagnosisForm)
@@ -158,7 +153,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
     } catch (const std::exception& e)
     {
         QString error = QString::fromLocal8Bit(e.what());
-        if (m_startDiagnosisForm)
+        if (this->m_startDiagnosisForm)
         {
             QStringList description = this->GetErrorDetails();
             if (description.isEmpty())
@@ -169,7 +164,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
                     description << QStringLiteral("UNKNOWN_ERROR");
             }
             Failure failure(description);
-            m_startDiagnosisForm(this, failure);
+            this->m_startDiagnosisForm(this, failure);
         }
         throw; // Re-throw to let AsyncOperation handle it
     }

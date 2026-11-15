@@ -48,7 +48,8 @@ void VMResumeAction::run()
 {
     SetDescription(tr("Resuming..."));
     startOrResumeVmWithHa(0, 100);
-    SetDescription(tr("Resumed"));
+    if (!this->IsCancelled() && !this->IsFailed())
+        this->SetDescription(tr("Resumed"));
 }
 
 void VMResumeAction::doAction(int start, int end)

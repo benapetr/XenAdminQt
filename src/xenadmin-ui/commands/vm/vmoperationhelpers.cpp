@@ -26,6 +26,11 @@
  */
 
 #include "vmoperationhelpers.h"
+#include "../../dialogs/warningdialogs/warningdialog.h"
+#include "xenlib/xen/actions/vm/vmstartabstractaction.h"
+#include <QCoreApplication>
+#include <QThread>
+#include <QPointer>
 #include "../../dialogs/commanderrordialog.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/friendlyerrornames.h"
@@ -89,6 +94,39 @@ namespace
 
         return vmFlags.value("vendor").toString() != hostCpuInfo.value("vendor").toString();
     }
+}
+
+void VMOperationHelpers::WarningDialogHAInvalidConfig(QSharedPointer<VM> vm, bool isStart, QWidget* parent)
+{
+    QCoreApplication* app = QCoreApplication::instance();
+    if (!app || QCoreApplication::closingDown() || !vm)
+        throw VMStartAbstractAction::CancelledByUser();
+
+    const QPointer<QWidget> window(parent);
+    const QString message = (isStart
+        ? tr("VM '%1' has an invalid HA configuration that prevents it from starting. "
+             "Clear its HA restart priority to proceed? The VM will no longer be automatically restarted by HA.")
+        : tr("VM '%1' has an invalid HA configuration that prevents it from being resumed. "
+             "Clear its HA restart priority to proceed? The VM will no longer be automatically restarted by HA."))
+            .arg(vm->GetName());
+    bool accepted = false;
+    const auto showWarning = [window, message, &accepted]() {
+        if (!window)
+            return;
+        WarningDialog dialog(message, VMOperationHelpers::tr("High Availability"),
+                             {{VMOperationHelpers::tr("OK"), WarningDialog::Result::Yes},
+                              {VMOperationHelpers::tr("Cancel"), WarningDialog::Result::Cancel}}, window.data());
+        dialog.exec();
+        accepted = dialog.GetResult() == WarningDialog::Result::Yes;
+    };
+    if (QThread::currentThread() == app->thread())
+        showWarning();
+    else
+        QMetaObject::invokeMethod(app, showWarning, Qt::BlockingQueuedConnection);
+
+    // Throw on the action thread, never through Qt's event dispatch.
+    if (!accepted)
+        throw VMStartAbstractAction::CancelledByUser();
 }
 
 void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent)

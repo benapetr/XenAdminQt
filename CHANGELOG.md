@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Restored the HA warning when starting or resuming protected VMs that cannot
+  run on every host, with confirmation before clearing their HA restart priority.
+
 - Fixed recovery from closed API connections in long-running sessions and
   restored heartbeat monitoring after connection and reconnection.
 - Fixed failed host eligibility checks being treated as successful, which could
