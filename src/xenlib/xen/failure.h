@@ -31,6 +31,7 @@
 #include "../xenlib_global.h"
 #include <QString>
 #include <QStringList>
+#include <QByteArray>
 #include <stdexcept>
 
 /*!
@@ -117,13 +118,14 @@ class XENLIB_EXPORT Failure : public std::runtime_error
         QString shortMessage() const { return this->m_shortError; }
 
         // std::exception interface
-        const char* what() const noexcept override { return this->m_errorText.toUtf8().constData(); }
+        const char* what() const noexcept override { return this->m_errorUtf8.constData(); }
 
         // Error code (first element of errorDescription)
         QString errorCode() const;
 
     private:
         QStringList m_errorDescription;
+        QByteArray m_errorUtf8;
         QString m_errorText;        // Friendly error message with parameters filled in
         QString m_shortError;       // Short version of error (if available)
 

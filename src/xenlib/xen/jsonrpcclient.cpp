@@ -32,6 +32,8 @@
 #include <QtCore/QMetaType>
 #include <QtCore/QDebug>
 #include <cmath>
+#include <stdexcept>
+#include "failure.h"
 #include <cstring>
 
 namespace Xen
@@ -185,7 +187,7 @@ namespace Xen
     }
 
     // Static error storage
-    QString JsonRpcClient::s_lastError;
+    thread_local QString JsonRpcClient::s_lastError;
 
     JsonRpcClient::JsonRpcClient()
     {
@@ -356,6 +358,39 @@ namespace Xen
 
         // Direct result (string, number, array, etc.)
         return denormalizeNonFiniteVariant(result.toVariant());
+    }
+
+    QVariant JsonRpcClient::parseJsonRpcResponseOrThrow(const QByteArray& json)
+    {
+        const QVariant result = parseJsonRpcResponse(json);
+        if (s_lastError.isEmpty())
+            return result;
+
+        const QJsonObject response = QJsonDocument::fromJson(json).object();
+        QStringList errors;
+        const auto appendErrors = [&errors](const QJsonArray& values) {
+            for (const QJsonValue& value : values)
+                errors.append(value.toVariant().toString());
+        };
+        const QJsonObject error = response.value("error").toObject();
+        if (!error.isEmpty())
+        {
+            const QString message = error.value("message").toString();
+            if (!message.isEmpty())
+                errors.append(message);
+            const QJsonValue data = error.value("data");
+            if (data.isArray())
+                appendErrors(data.toArray());
+            else if (data.isString() && !data.toString().isEmpty())
+                errors.append(data.toString());
+        }
+        const QJsonObject wrappedResult = response.value("result").toObject();
+        if (wrappedResult.value("Status").toString() == "Failure")
+            appendErrors(wrappedResult.value("ErrorDescription").toArray());
+        if (!errors.isEmpty())
+            throw Failure(errors);
+
+        throw std::runtime_error(s_lastError.toStdString());
     }
 
     QString JsonRpcClient::lastError()

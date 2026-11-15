@@ -112,7 +112,22 @@ namespace XenAPI
             return false;
         }
 
-        return this->parseLoginResponse(response);
+        try
+        {
+            return this->parseLoginResponse(response);
+        } catch (const Failure& failure)
+        {
+            this->d->lastError = failure.message();
+            this->d->lastErrorDescription = failure.errorDescription();
+        } catch (const std::exception& error)
+        {
+            this->d->lastError = QString::fromUtf8(error.what());
+        }
+        // Authentication may have succeeded before metadata loading failed.
+        // Clear/logout that partial login while its transport is still alive.
+        this->LogoutWithoutDisconnect();
+        emit this->loginFailed(this->d->lastError);
+        return false;
     }
 
     void Session::Logout()
@@ -271,21 +286,14 @@ namespace XenAPI
     QByteArray Session::SendApiRequest(const QString& jsonRequest)
     {
         if (!this->d->connection || !this->d->loggedIn)
-        {
-            this->d->lastError = "Not connected or not logged in";
-            return QByteArray();
-        }
+            throw std::runtime_error("Not connected or not logged in");
 
-        // Send the JSON-RPC request through the connection
-        QByteArray requestData = jsonRequest.toUtf8();
-        QByteArray response = this->d->connection->SendRequest(requestData);
-
+        const QByteArray response = this->d->connection->SendRequest(jsonRequest.toUtf8());
         if (response.isEmpty())
-        {
-            this->d->lastError = "Empty response from server";
-            return QByteArray();
-        }
-
+            throw std::runtime_error("API transport returned no response");
+        // Validate before returning to bindings, including those for void methods.
+        // Previously an empty/invalid reply could silently count as success.
+        Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(response);
         return response;
     }
 

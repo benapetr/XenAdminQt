@@ -36,6 +36,7 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <QQueue>
+#include <QElapsedTimer>
 
 namespace Xen
 {
@@ -44,6 +45,8 @@ namespace Xen
      */
     struct ApiRequest
     {
+        QElapsedTimer queuedAt; // One deadline includes queueing and transport I/O.
+        QAtomicInt abandoned = 0;
         int id;                 // Unique request ID
         QByteArray payload;     // request body
         bool processed = false; // Whether request has been processed
@@ -97,6 +100,8 @@ namespace Xen
              * The thread will finish its current operation and then terminate.
              */
             void RequestStop();
+            // Last observed TCP/TLS state; a connected socket can still fail on I/O.
+            bool IsTransportConnected() const;
 
             /**
              * @brief Queue an API request to be processed by the worker thread
@@ -119,7 +124,7 @@ namespace Xen
              *
              * @param requestId The request ID returned from queueRequest
              * @param timeoutMs Timeout in milliseconds (default 30 seconds)
-             * @return Response data, or empty if timeout/error
+             * @return Response data, or a JSON-RPC transport error (including on timeout)
              */
             QByteArray WaitForResponse(int requestId, int timeoutMs = 60000);
 
@@ -137,6 +142,7 @@ namespace Xen
              * The worker thread will process queued API requests (including login).
              */
             void ConnectionEstablished();
+            void TransportStateChanged(bool connected);
 
             /**
              * @brief Emitted when connection or login fails
@@ -188,13 +194,16 @@ namespace Xen
              * @brief Establish TCP connection synchronously
              * @return true if connection successful, false otherwise
              */
-            bool connectToHostSync();
+            bool ensureTransportConnected(int timeoutMs);
+            void invalidateTransport();
+            void setTransportConnected(bool connected);
+            bool connectToHostSync(int timeoutMs);
 
             /**
              * @brief Perform SSL handshake synchronously
              * @return true if SSL handshake successful, false otherwise
              */
-            bool sslHandshakeSync();
+            bool sslHandshakeSync(int timeoutMs);
             int connectionTimeoutMs_() const;
 
             /**
@@ -227,9 +236,9 @@ namespace Xen
              * This is safe to block because it runs on the worker thread.
              *
              * @param request API request body
-             * @return HTTP response body (API response) or empty on error
+             * @return API response body or a JSON-RPC transport error; requests are never replayed
              */
-            QByteArray sendRequestSync(const QByteArray& request);
+            QByteArray sendRequestSync(const QByteArray& request, int timeoutMs, const QAtomicInt& abandoned);
 
             /**
              * @brief Read HTTP response from socket
@@ -239,7 +248,7 @@ namespace Xen
              * @param headers Output parameter - filled with HTTP headers
              * @return HTTP response body
              */
-            QByteArray readHttpResponse(QMap<QString, QString>& headers);
+            QByteArray readHttpResponse(QMap<QString, QString>& headers, QElapsedTimer& timer, int timeoutMs);
 
             // Connection parameters
             QString m_hostname;
@@ -247,6 +256,7 @@ namespace Xen
 
             // Connection state
             QSslSocket* m_socket = nullptr;
+            QAtomicInt m_transportConnected = 0;
 
             // Thread control
             QAtomicInt m_stopped = 0; // Thread-safe stop flag
@@ -257,6 +267,7 @@ namespace Xen
             QMutex m_requestMutex;
             QWaitCondition m_requestCondition;
             QAtomicInt m_nextRequestId = 1;
+            ApiRequest* m_activeRequest = nullptr; // Protected by m_requestMutex.
     };
 
 } // namespace Xen

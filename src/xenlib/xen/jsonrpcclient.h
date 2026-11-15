@@ -103,6 +103,10 @@ namespace Xen
          */
         static QVariant parseJsonRpcResponse(const QByteArray& json);
 
+        // Throw Failure for API errors and std::runtime_error for invalid replies.
+        // A valid void/null result is successful, unlike an absent/malformed reply.
+        static QVariant parseJsonRpcResponseOrThrow(const QByteArray& json);
+
         /**
          * @brief Get the last error message
          * @return Error message from last parseJsonRpcResponse() failure
@@ -110,7 +114,7 @@ namespace Xen
         static QString lastError();
 
     private:
-        static QString s_lastError;
+        static thread_local QString s_lastError;
     };
 } // namespace Xen
 

@@ -100,6 +100,7 @@ Failure::Failure(const QStringList& errorDescription)
     , m_errorDescription(errorDescription)
 {
     this->parseExceptionMessage();
+    this->m_errorUtf8 = this->m_errorText.toUtf8();
 }
 
 Failure::Failure(const QString& errorCode)

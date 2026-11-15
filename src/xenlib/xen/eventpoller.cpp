@@ -26,6 +26,7 @@
  */
 
 #include "eventpoller.h"
+#include "failure.h"
 #include "api.h"
 #include "network/connection.h"
 #include "session.h"
@@ -269,7 +270,17 @@ void EventPoller::pollEvents()
     }
 
     // Call event.from with current token
-    QVariantMap result = this->d->api->EventFrom(this->d->classes, this->d->token, this->d->POLL_TIMEOUT);
+    QVariantMap result;
+    try
+    {
+        result = this->d->api->EventFrom(this->d->classes, this->d->token, this->d->POLL_TIMEOUT);
+    } catch (const Failure& failure)
+    {
+        qWarning() << "EventPoller: event.from failed:" << failure.message();
+    } catch (const std::exception& error)
+    {
+        qWarning() << "EventPoller: event.from failed:" << error.what();
+    }
 
     if (result.isEmpty())
     {

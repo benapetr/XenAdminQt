@@ -32,9 +32,32 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <limits>
+#include <stdexcept>
+#include "../jsonrpcclient.h"
+#include "../failure.h"
 
 namespace Xen
 {
+    namespace
+    {
+        constexpr int requestTimeoutMs = 60000;
+
+        QByteArray requestError(const QByteArray& request, const QString& detail, bool mayHaveExecuted)
+        {
+            const QString message = (mayHaveExecuted
+                ? QString("Request outcome is unknown: ")
+                : QString("Request was not sent: ")) + detail;
+            const QJsonObject original = QJsonDocument::fromJson(request).object();
+            const QJsonObject error{{"code", -32098}, {"message", "TRANSPORT_ERROR"},
+                                    {"data", QJsonArray{message}}};
+            return QJsonDocument(QJsonObject{{"jsonrpc", "2.0"}, {"id", original.value("id")},
+                                            {"error", error}}).toJson(QJsonDocument::Compact);
+        }
+    }
     ConnectionWorker::ConnectionWorker(const QString& hostname, int port, QObject* parent) : QThread(parent), m_hostname(hostname), m_port(port)
     {
     }
@@ -50,6 +73,8 @@ namespace Xen
             this->terminate();
             this->wait();
         }
+        qDeleteAll(this->m_pendingQueue);
+        qDeleteAll(this->m_completedQueue);
     }
 
     void ConnectionWorker::RequestStop()
@@ -66,6 +91,7 @@ namespace Xen
 
         // Create request
         ApiRequest* request = new ApiRequest();
+        request->queuedAt.start();
         request->id = this->m_nextRequestId.fetchAndAddRelaxed(1);
         request->payload = data;
         request->processed = false;
@@ -113,8 +139,33 @@ namespace Xen
             }
         }
 
+        QMutexLocker locker(&this->m_requestMutex);
+        // Resolve a completion racing with the deadline before abandoning it.
+        for (int i = 0; i < this->m_completedQueue.size(); ++i)
+        {
+            if (this->m_completedQueue.at(i)->id == requestId)
+            {
+                ApiRequest* request = this->m_completedQueue.takeAt(i);
+                const QByteArray response = request->response;
+                delete request;
+                return response;
+            }
+        }
+        // A timed-out queued mutation must never be sent later.
+        for (int i = 0; i < this->m_pendingQueue.size(); ++i)
+        {
+            if (this->m_pendingQueue.at(i)->id == requestId)
+            {
+                ApiRequest* request = this->m_pendingQueue.takeAt(i);
+                const QByteArray response = requestError(request->payload, "Timed out in request queue", false);
+                delete request;
+                return response;
+            }
+        }
+        if (this->m_activeRequest && this->m_activeRequest->id == requestId)
+            this->m_activeRequest->abandoned.storeRelease(1);
         qWarning() << "ConnectionWorker: Timeout waiting for response to request" << requestId;
-        return QByteArray();
+        return requestError(QByteArray(), "Timed out waiting for a response", true);
     }
 
     void ConnectionWorker::handleSslErrors(const QList<QSslError>& errors)
@@ -161,115 +212,115 @@ namespace Xen
         }
     }
 
-    void ConnectionWorker::run()
+    bool ConnectionWorker::IsTransportConnected() const
     {
-        // qDebug() << timestamp() << "ConnectionWorker: Thread started for" << this->m_hostname;
-
-        // Create socket on this thread (important for thread affinity)
-        this->m_socket = new QSslSocket();
-
-        // Connect certificate validation with DIRECT connection to avoid queued signals after cleanup
-        // This is critical because SSL errors can arrive after socket deletion if using queued connection
-        connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors), this, &ConnectionWorker::handleSslErrors, Qt::DirectConnection);
-
-        // qDebug() << "ConnectionWorker: Certificate manager allowSelfSigned =" << this->m_certManager->getAllowSelfSigned();
-
-        // Step 1: TCP connection
-        if (!this->connectToHostSync())
-        {
-            emit ConnectionFailed("Failed to connect to " + this->m_hostname);
-            goto cleanup;
-        }
-
-        /*if (this->m_stopped.loadRelaxed())
-        {
-            qDebug() << "ConnectionWorker: Stop requested after TCP connect";
-            goto cleanup;
-        }
-
-        // Step 2: SSL handshake
-        if (!this->sslHandshakeSync())
-        {
-            emit connectionFailed("SSL handshake failed");
-            goto cleanup;
-        }
-
-        if (this->m_stopped.loadRelaxed())
-        {
-            qDebug() << "ConnectionWorker: Stop requested after SSL handshake";
-            goto cleanup;
-        }*/
-
-        // Notify main thread that TCP/SSL connection is ready
-        // The caller (XenLib) will now use XenSession to login
-        // qDebug() << timestamp() << "ConnectionWorker: TCP/SSL connection established, ready for login";
-        emit ConnectionEstablished();
-
-        // Enter event polling loop - this processes queued API requests (including login from XenSession)
-        // qDebug() << timestamp() << "ConnectionWorker: Entering event poll loop";
-        this->eventPollLoop();
-
-    cleanup:
-        // qDebug() << "ConnectionWorker: Cleaning up";
-
-        if (this->m_socket)
-        {
-            if (this->m_socket->state() == QAbstractSocket::ConnectedState)
-            {
-                this->m_socket->disconnectFromHost();
-                this->m_socket->waitForDisconnected(1000);
-            }
-            this->m_socket->deleteLater();
-            this->m_socket = nullptr;
-        }
-
-        emit WorkerFinished();
-        // qDebug() << "ConnectionWorker: Thread finished";
+        return this->m_transportConnected.loadAcquire() != 0;
     }
 
-    bool ConnectionWorker::connectToHostSync()
+    void ConnectionWorker::setTransportConnected(bool connected)
     {
-        emit ConnectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
-        const int timeoutMs = this->connectionTimeoutMs_();
+        if (this->m_transportConnected.fetchAndStoreOrdered(connected ? 1 : 0) != (connected ? 1 : 0))
+            emit this->TransportStateChanged(connected);
+    }
 
-        // Start encrypted connection
-        this->m_socket->setPeerVerifyMode(QSslSocket::VerifyNone);
-        this->m_socket->connectToHostEncrypted(this->m_hostname, this->m_port);
-
-        // Block this thread (worker thread) until connected
-        // Main thread is unaffected
-        if (!this->m_socket->waitForConnected(timeoutMs))
+    void ConnectionWorker::invalidateTransport()
+    {
+        this->setTransportConnected(false);
+        if (this->m_socket)
         {
-            qWarning() << "ConnectionWorker: TCP connection timeout -" << this->m_socket->errorString();
+            this->m_socket->abort();
+            delete this->m_socket;
+            this->m_socket = nullptr;
+        }
+    }
+
+    bool ConnectionWorker::ensureTransportConnected(int timeoutMs)
+    {
+        if (this->m_stopped.loadRelaxed() || timeoutMs <= 0)
             return false;
+
+        if (this->m_socket && this->m_socket->state() == QAbstractSocket::ConnectedState && this->m_socket->isEncrypted())
+        {
+            // Process an already-arrived peer close without sending a network probe.
+            // This is advisory: the peer can still close immediately afterwards.
+            if (this->m_socket->bytesAvailable() == 0)
+                this->m_socket->waitForReadyRead(1);
+            if (this->m_socket->state() == QAbstractSocket::ConnectedState &&
+                this->m_socket->isEncrypted() && this->m_socket->bytesAvailable() == 0)
+                return true;
         }
 
-        // qDebug() << "ConnectionWorker: TCP connection established";
+        this->invalidateTransport();
+        this->m_socket = new QSslSocket();
+        connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
+                this, &ConnectionWorker::handleSslErrors, Qt::DirectConnection);
+        connect(this->m_socket, &QSslSocket::disconnected, this, [this]() {
+            this->setTransportConnected(false);
+        }, Qt::DirectConnection);
+
+        QElapsedTimer timer;
+        timer.start();
+        if (!this->connectToHostSync(timeoutMs) ||
+            !this->sslHandshakeSync(qMax(0, timeoutMs - int(timer.elapsed()))))
+        {
+            this->invalidateTransport();
+            return false;
+        }
+        this->setTransportConnected(true);
         return true;
     }
 
-    bool ConnectionWorker::sslHandshakeSync()
+    void ConnectionWorker::run()
     {
-        emit ConnectionProgress("Performing SSL handshake...");
-        const int timeoutMs = this->connectionTimeoutMs_();
-
-        // qDebug() << "ConnectionWorker: Waiting for SSL handshake, socket state:" << this->m_socket->state();
-        // qDebug() << "ConnectionWorker: Socket encrypted before wait:" << this->m_socket->isEncrypted();
-
-        // Wait for SSL handshake to complete
-        // The socket is already doing the handshake from connectToHostEncrypted
-        if (!this->m_socket->waitForEncrypted(timeoutMs))
+        if (this->ensureTransportConnected(this->connectionTimeoutMs_()))
         {
-            qWarning() << "ConnectionWorker: SSL handshake timeout";
-            qWarning() << "  - Socket state:" << this->m_socket->state();
-            qWarning() << "  - Socket encrypted:" << this->m_socket->isEncrypted();
-            qWarning() << "  - Error string:" << this->m_socket->errorString();
-            qWarning() << "  - SSL errors:" << this->m_socket->sslHandshakeErrors();
+            emit this->ConnectionEstablished();
+            this->eventPollLoop();
+        } else
+        {
+            emit this->ConnectionFailed("Failed to connect to " + this->m_hostname);
+        }
+        this->invalidateTransport();
+
+        // Wake callers whose requests were queued while the worker was stopping.
+        QMutexLocker locker(&this->m_requestMutex);
+        while (!this->m_pendingQueue.isEmpty())
+        {
+            ApiRequest* request = this->m_pendingQueue.dequeue();
+            request->response = requestError(request->payload, "Connection worker stopped", false);
+            request->processed = true;
+            this->m_completedQueue.enqueue(request);
+            if (request->emitSignal)
+                emit this->ApiResponse(request->id, request->response);
+        }
+        this->m_requestCondition.wakeAll();
+        locker.unlock();
+        emit this->WorkerFinished();
+    }
+
+    bool ConnectionWorker::connectToHostSync(int timeoutMs)
+    {
+        emit this->ConnectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
+        // Preserve the existing certificate policy on replacement transports.
+        this->m_socket->setPeerVerifyMode(QSslSocket::VerifyNone);
+        this->m_socket->connectToHostEncrypted(this->m_hostname, this->m_port);
+        if (timeoutMs <= 0 || !this->m_socket->waitForConnected(timeoutMs))
+        {
+            qWarning() << "ConnectionWorker: TCP connection failed -" << this->m_socket->errorString();
             return false;
         }
+        return true;
+    }
 
-        // qDebug() << "ConnectionWorker: SSL handshake complete";
-        // qDebug() << "ConnectionWorker: Socket encrypted:" << this->m_socket->isEncrypted();
+    bool ConnectionWorker::sslHandshakeSync(int timeoutMs)
+    {
+        if (this->m_socket->isEncrypted())
+            return true;
+        if (timeoutMs <= 0 || !this->m_socket->waitForEncrypted(timeoutMs))
+        {
+            qWarning() << "ConnectionWorker: TLS handshake failed -" << this->m_socket->errorString();
+            return false;
+        }
         return true;
     }
 
@@ -321,18 +372,26 @@ namespace Xen
         {
             // Take request from pending queue
             ApiRequest* request = this->m_pendingQueue.dequeue();
+            this->m_activeRequest = request;
             locker.unlock(); // Unlock while processing
 
             // qDebug() << timestamp() << "ConnectionWorker: Processing request" << request->id;
 
             // Send request synchronously (safe on worker thread)
-            QByteArray response = this->sendRequestSync(request->payload);
+            const int remaining = int(qMax<qint64>(0, requestTimeoutMs - request->queuedAt.elapsed()));
+            const QByteArray response = this->sendRequestSync(request->payload, remaining, request->abandoned);
 
             // Store response and mark as processed
             locker.relock();
+            this->m_activeRequest = nullptr;
             request->response = response;
             request->processed = true;
 
+            if (request->abandoned.loadAcquire())
+            {
+                delete request;
+                continue;
+            }
             // Move to completed queue so waitForResponse() can retrieve it
             this->m_completedQueue.enqueue(request);
 
@@ -350,177 +409,185 @@ namespace Xen
         }
     }
 
-    QByteArray ConnectionWorker::sendRequestSync(const QByteArray& request)
+    QByteArray ConnectionWorker::sendRequestSync(const QByteArray& request, int timeoutMs, const QAtomicInt& abandoned)
     {
-        // Build HTTP POST request
-        QByteArray httpRequest;
-
-        // Auto-detect content type and endpoint: JSON uses /jsonrpc, legacy XML uses /RPC2
-        QString endpoint = "/RPC2";
-        QString contentType = "text/xml";
-        if (request.trimmed().startsWith("{") || request.trimmed().startsWith("["))
+        QElapsedTimer timer;
+        timer.start();
+        bool mayHaveExecuted = false;
+        try
         {
-            endpoint = "/jsonrpc";
-            contentType = "application/json";
-        }
+            if (abandoned.loadAcquire())
+                throw std::runtime_error("Request was abandoned before sending");
+            if (!this->ensureTransportConnected(qMin(timeoutMs, this->connectionTimeoutMs_())))
+                throw std::runtime_error("Could not establish TCP/TLS transport");
+            if (abandoned.loadAcquire() || this->m_stopped.loadRelaxed() || timer.elapsed() >= timeoutMs)
+                throw std::runtime_error("Request cancelled or timed out before sending");
 
-        httpRequest += "POST " + endpoint.toLatin1() + " HTTP/1.1\r\n";
-        httpRequest += "Host: " + this->m_hostname.toUtf8() + "\r\n";
-        httpRequest += "User-Agent: XenAdminQt/1.0\r\n";
-        httpRequest += "Content-Type: " + contentType.toLatin1() + "\r\n";
-        httpRequest += "Content-Length: " + QByteArray::number(request.size()) + "\r\n";
-        httpRequest += "Connection: keep-alive\r\n";
-        httpRequest += "\r\n";
-        httpRequest += request;
+            const QByteArray trimmed = request.trimmed();
+            const bool json = trimmed.startsWith('{') || trimmed.startsWith('[');
+            QByteArray httpRequest = json ? "POST /jsonrpc HTTP/1.1\r\n" : "POST /RPC2 HTTP/1.1\r\n";
+            httpRequest += "Host: " + this->m_hostname.toUtf8() + "\r\n";
+            httpRequest += "User-Agent: XenAdminQt/1.0\r\n";
+            httpRequest += json ? "Content-Type: application/json\r\n" : "Content-Type: text/xml\r\n";
+            httpRequest += "Content-Length: " + QByteArray::number(request.size()) + "\r\n";
+            httpRequest += "Connection: keep-alive\r\n\r\n";
+            httpRequest += request;
 
-        /*QString trimmed = request;
-        if (trimmed.length() > 100)
-            trimmed = trimmed.mid(0, 100);
-        qDebug() << "ConnectionWorker: Sending request," << httpRequest.size() << "bytes - Body:" << trimmed;*/
-
-        // Write request to socket
-        qint64 written = this->m_socket->write(httpRequest);
-        if (written != httpRequest.size())
-        {
-            qWarning() << "ConnectionWorker: Failed to write complete request";
-            return QByteArray();
-        }
-
-        // Wait for write to complete (synchronous - safe on worker thread)
-        if (!this->m_socket->waitForBytesWritten(30000))
-        {
-            qWarning() << "ConnectionWorker: Timeout waiting for bytes written -" << this->m_socket->errorString();
-            return QByteArray();
-        }
-
-        // qDebug() << "ConnectionWorker: Request sent, waiting for response...";
-
-        // Wait for response data (synchronous - safe on worker thread)
-        if (!this->m_socket->waitForReadyRead(30000))
-        {
-            qWarning() << "ConnectionWorker: Timeout waiting for response -" << this->m_socket->errorString();
-            // Check if data arrived anyway (race condition handling)
-            if (this->m_socket->bytesAvailable() == 0)
+            // Once write is attempted, failure is ambiguous. Never replay this request.
+            mayHaveExecuted = true;
+            if (this->m_socket->write(httpRequest) != httpRequest.size())
+                throw std::runtime_error("Failed to queue the complete HTTP request");
+            while (this->m_socket->bytesToWrite() > 0 || this->m_socket->encryptedBytesToWrite() > 0)
             {
-                return QByteArray();
-            }
-            // qDebug() << "ConnectionWorker: Data available despite timeout";
-        }
-
-        // qDebug() << "ConnectionWorker: Response received," << this->m_socket->bytesAvailable() << "bytes available";
-
-        // fprintf(stderr, "[WORKER] sendRequestSync: About to read HTTP response, %lld bytes available\n",
-        //         this->m_socket->bytesAvailable());
-        // fflush(stderr);
-
-        // Read HTTP response
-        QMap<QString, QString> headers;
-        QByteArray responseBody = this->readHttpResponse(headers);
-
-        // qDebug() << "ConnectionWorker: Response body size:" << responseBody.size();
-
-        // fprintf(stderr, "[WORKER] sendRequestSync: Got response body, size=%lld\n",
-        //         (long long)responseBody.size());
-        // fflush(stderr);
-
-        return responseBody;
-    }
-
-    QByteArray ConnectionWorker::readHttpResponse(QMap<QString, QString>& headers)
-    {
-        QByteArray responseData;
-
-        /*fprintf(stderr, "[WORKER] readHttpResponse: Starting to read HTTP response\n");
-        fflush(stderr);*/
-
-        // Read until we have the headers
-        while (this->m_socket->canReadLine() || this->m_socket->waitForReadyRead(5000))
-        {
-            QByteArray line = this->m_socket->readLine();
-            responseData += line;
-
-            /*fprintf(stderr, "[WORKER] readHttpResponse: Read line (%lld bytes): %s",
-                    (long long)line.size(), line.left(80).constData());
-            fflush(stderr);*/
-
-            // Empty line marks end of headers
-            if (line == "\r\n" || line == "\n")
-            {
-                /*fprintf(stderr, "[WORKER] readHttpResponse: Found end of headers\n");
-                fflush(stderr);*/
-                break;
+                const int remaining = qMax(0, timeoutMs - int(timer.elapsed()));
+                if (this->m_stopped.loadRelaxed() || remaining == 0 || !this->m_socket->waitForBytesWritten(remaining))
+                    throw std::runtime_error("Failed while writing HTTP request");
             }
 
-            // Parse header line
-            int colonPos = line.indexOf(':');
-            if (colonPos > 0)
+            QMap<QString, QString> headers;
+            const QByteArray response = this->readHttpResponse(headers, timer, timeoutMs);
+            if (json)
             {
-                QString headerName = QString::fromLatin1(line.left(colonPos)).trimmed();
-                QString headerValue = QString::fromLatin1(line.mid(colonPos + 1)).trimmed();
-                // Store with lowercase key for case-insensitive lookup
-                headers[headerName.toLower()] = headerValue;
-                /*fprintf(stderr, "[WORKER] readHttpResponse: Header: %s = %s\n",
-                        headerName.toUtf8().constData(), headerValue.toUtf8().constData());
-                fflush(stderr);*/
-            }
-        }
-
-        // Check for Content-Length (case-insensitive)
-        int contentLength = headers.value("content-length", "-1").toInt();
-        /*fprintf(stderr, "[WORKER] readHttpResponse: Content-Length = %d (from headers[\"content-length\"])\n", contentLength);
-        fflush(stderr);*/
-
-        if (contentLength > 0)
-        {
-            /*fprintf(stderr, "[WORKER] readHttpResponse: Reading %d bytes of body\n", contentLength);
-            fflush(stderr);*/
-
-            // Read exact number of bytes
-            QByteArray body;
-            while (body.size() < contentLength)
-            {
-                if (this->m_socket->bytesAvailable() > 0 || this->m_socket->waitForReadyRead(5000))
+                try
                 {
-                    QByteArray chunk = this->m_socket->read(contentLength - body.size());
-                    body += chunk;
-                    /*fprintf(stderr, "[WORKER] readHttpResponse: Read %lld bytes, total %lld/%d\n",
-                            (long long)chunk.size(), (long long)body.size(), contentLength);
-                    fflush(stderr);*/
-                } else
+                    JsonRpcClient::parseJsonRpcResponseOrThrow(response);
+                } catch (const Failure&)
                 {
-                    // fprintf(stderr, "[WORKER] readHttpResponse: Timeout reading body\n");
-                    // fflush(stderr);
-                    qWarning() << "ConnectionWorker: Timeout reading response body";
-                    break;
+                    // A valid API rejection is not a broken transport. Pass it to the caller.
                 }
             }
-
-            /*fprintf(stderr, "[WORKER] readHttpResponse: Body complete, size=%lld\n",
-                    (long long)body.size());
-            fprintf(stderr, "[WORKER] readHttpResponse: Body content (first 200 chars): %s\n",
-                    body.left(200).constData());
-            fflush(stderr);*/
-
-            return body;
-        } else
+            if (headers.value("connection").toLower() == "close")
+                this->invalidateTransport();
+            return response;
+        } catch (const std::exception& error)
         {
-            // fprintf(stderr, "[WORKER] readHttpResponse: No Content-Length, reading until timeout\n");
-            // fflush(stderr);
+            qWarning() << "ConnectionWorker: Request failed on" << this->m_hostname << ':' << this->m_port
+                       << error.what() << (mayHaveExecuted ? "(outcome unknown)" : "(not sent)");
+            this->invalidateTransport();
+            return requestError(request, QString::fromUtf8(error.what()), mayHaveExecuted);
+        }
+    }
 
-            // No Content-Length, read until connection closes or timeout
-            // (should not happen with keep-alive)
+    QByteArray ConnectionWorker::readHttpResponse(QMap<QString, QString>& headers, QElapsedTimer& timer, int timeoutMs)
+    {
+        const auto waitForData = [this, &timer, timeoutMs]() {
+            const int remaining = qMax(0, timeoutMs - int(timer.elapsed()));
+            return !this->m_stopped.loadRelaxed() && remaining > 0 && this->m_socket->waitForReadyRead(remaining);
+        };
+        const auto readLine = [this, &waitForData]() {
+            while (!this->m_socket->canReadLine())
+            {
+                if (this->m_socket->bytesAvailable() > 65536 ||
+                    (!waitForData() && !this->m_socket->canReadLine()))
+                    throw std::runtime_error("Incomplete HTTP response headers or chunk framing");
+            }
+            const QByteArray line = this->m_socket->readLine();
+            if (line.size() > 65536)
+                throw std::runtime_error("HTTP response header line too long");
+            return line;
+        };
+        const auto readExact = [this, &waitForData](qint64 length) {
+            if (length < 0 || length > std::numeric_limits<int>::max())
+                throw std::runtime_error("Invalid HTTP response length");
+            QByteArray data;
+            while (data.size() < length)
+            {
+                if (this->m_socket->bytesAvailable() == 0 && !waitForData() && this->m_socket->bytesAvailable() == 0)
+                    throw std::runtime_error("Incomplete HTTP response body");
+                const QByteArray chunk = this->m_socket->read(length - data.size());
+                if (chunk.isEmpty())
+                    throw std::runtime_error("Incomplete HTTP response body");
+                data += chunk;
+            }
+            return data;
+        };
+
+        int status = 0;
+        QByteArray protocol;
+        do
+        {
+            headers.clear();
+            const QList<QByteArray> statusLine = readLine().trimmed().split(' ');
+            if (statusLine.size() < 2 || (statusLine[0] != "HTTP/1.1" && statusLine[0] != "HTTP/1.0"))
+                throw std::runtime_error("Invalid HTTP response status line");
+            protocol = statusLine[0];
+            bool validStatus = false;
+            status = statusLine[1].toInt(&validStatus);
+            if (!validStatus || status < 100 || status > 599 || status == 101)
+                throw std::runtime_error("Invalid HTTP response status");
+            int headerBytes = 0;
+            while (true)
+            {
+                const QByteArray line = readLine();
+                headerBytes += line.size();
+                if (headerBytes > 65536)
+                    throw std::runtime_error("HTTP response headers too long");
+                if (line == "\r\n" || line == "\n")
+                    break;
+                const int colon = line.indexOf(':');
+                if (colon <= 0)
+                    throw std::runtime_error("Invalid HTTP response header");
+                const QString name = QString::fromLatin1(line.left(colon)).trimmed().toLower();
+                const QString value = QString::fromLatin1(line.mid(colon + 1)).trimmed();
+                if (headers.contains(name) && (name == "content-length" || name == "transfer-encoding"))
+                    throw std::runtime_error("Ambiguous HTTP response framing");
+                headers.insert(name, value);
+            }
+        } while (status < 200);
+
+        if (status < 200 || status >= 300)
+            throw std::runtime_error(QString("HTTP request failed with status %1").arg(status).toStdString());
+
+        if (headers.contains("transfer-encoding"))
+        {
+            if (headers.value("transfer-encoding").toLower() != "chunked" || headers.contains("content-length"))
+                throw std::runtime_error("Unsupported or ambiguous HTTP transfer encoding");
             QByteArray body;
-            while (this->m_socket->waitForReadyRead(1000))
+            while (true)
+            {
+                bool ok = false;
+                const qint64 size = readLine().trimmed().split(';').first().toLongLong(&ok, 16);
+                if (!ok || size < 0 || size > std::numeric_limits<int>::max() - body.size())
+                    throw std::runtime_error("Invalid HTTP chunk size");
+                if (size == 0)
+                {
+                    int trailerBytes = 0;
+                    while (true)
+                    {
+                        const QByteArray trailer = readLine();
+                        trailerBytes += trailer.size();
+                        if (trailerBytes > 65536)
+                            throw std::runtime_error("HTTP trailers too long");
+                        if (trailer == "\r\n" || trailer == "\n")
+                            return body;
+                    }
+                }
+                body += readExact(size);
+                if (readExact(2) != "\r\n")
+                    throw std::runtime_error("Invalid HTTP chunk terminator");
+            }
+        }
+        if (headers.contains("content-length"))
+        {
+            bool ok = false;
+            const qint64 length = headers.value("content-length").toLongLong(&ok);
+            if (!ok)
+                throw std::runtime_error("Invalid HTTP Content-Length");
+            return readExact(length);
+        }
+        if (protocol == "HTTP/1.0" || headers.value("connection").toLower() == "close")
+        {
+            QByteArray body;
+            while (true)
             {
                 body += this->m_socket->readAll();
+                if (this->m_socket->state() == QAbstractSocket::UnconnectedState)
+                    return body;
+                if (!waitForData() && this->m_socket->state() != QAbstractSocket::UnconnectedState)
+                    throw std::runtime_error("Timed out reading close-delimited HTTP response");
             }
-
-            /*fprintf(stderr, "[WORKER] readHttpResponse: Body complete (no CL), size=%lld\n",
-                    (long long)body.size());
-            fflush(stderr);*/
-
-            return body;
         }
+        throw std::runtime_error("HTTP response has no supported body framing");
     }
 
 } // namespace Xen

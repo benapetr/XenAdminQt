@@ -7,6 +7,15 @@ are omitted.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed recovery from closed API connections in long-running sessions and
+  restored heartbeat monitoring after connection and reconnection.
+- Fixed failed host eligibility checks being treated as successful, which could
+  incorrectly enable unavailable hosts in Start on Server and related menus.
+- Fixed several storage and VM settings operations using the primary connection
+  instead of their action's dedicated session.
+
 ## [v0.1.0-beta] - 2026-11-14
 
 ### Added

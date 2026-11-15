@@ -4,6 +4,10 @@
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
+#include "test_transportserver.h"
+#include "xenlib/xen/network/connectionworker.h"
+#include "xenlib/xen/jsonrpcclient.h"
+#include "xenlib/xen/failure.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/heartbeat.h"
@@ -40,6 +44,140 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void jsonRpcStrictValidation()
+    {
+        using Xen::JsonRpcClient;
+        QVERIFY(JsonRpcClient::parseJsonRpcResponseOrThrow(R"({"jsonrpc":"2.0","result":null,"id":1})").isNull());
+        QCOMPARE(JsonRpcClient::parseJsonRpcResponseOrThrow(R"({"jsonrpc":"2.0","result":false,"id":1})").toBool(), false);
+        for (const QByteArray& invalid : {QByteArray(), QByteArray("not JSON"), QByteArray("{}"),
+             QByteArray(R"({"jsonrpc":"2.0","id":1})")})
+        {
+            QVERIFY_EXCEPTION_THROWN(JsonRpcClient::parseJsonRpcResponseOrThrow(invalid), std::runtime_error);
+        }
+        try
+        {
+            JsonRpcClient::parseJsonRpcResponseOrThrow(R"({"jsonrpc":"2.0","error":{"code":1,"message":"HOST_NOT_ENOUGH_FREE_MEMORY","data":["1024","512"]},"id":1})");
+            QFAIL("API rejection was accepted");
+        } catch (const Failure& failure)
+        {
+            QCOMPARE(failure.errorCode(), QString("HOST_NOT_ENOUGH_FREE_MEMORY"));
+            QCOMPARE(failure.errorDescription().size(), 3);
+            QCOMPARE(QString::fromUtf8(failure.what()), failure.message());
+        }
+    }
+
+    void transportReconnectsBeforeNextRequest_data()
+    {
+        QTest::addColumn<int>("reply");
+        QTest::newRow("announced-close") << int(TransportTestServer::Close);
+        QTest::newRow("idle-peer-close") << int(TransportTestServer::PeerClose);
+        QTest::newRow("chunked-close") << int(TransportTestServer::Chunked);
+    }
+
+    void transportReconnectsBeforeNextRequest()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        QFETCH(int, reply);
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"),
+                                   {TransportTestServer::Reply(reply), TransportTestServer::Close});
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        Xen::ConnectionWorker worker("127.0.0.1", port);
+        worker.start();
+        QTRY_VERIFY_WITH_TIMEOUT(worker.IsTransportConnected(), 5000);
+        const QByteArray request = Xen::JsonRpcClient::buildJsonRpcCall("VM.assert_can_boot_here", {}, 1);
+        for (int i = 0; i < 2; ++i)
+        {
+            const int id = worker.QueueRequest(request, false);
+            const QByteArray response = worker.WaitForResponse(id, 5000);
+            QVERIFY(Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(response).isNull());
+            // Let the peer's close arrive before the next request.
+            QTest::qWait(50);
+        }
+        QCOMPARE(server.requests(), 2);
+        QCOMPARE(server.connections(), 2);
+    }
+
+    void transportFailureDoesNotReplayMutation_data()
+    {
+        QTest::addColumn<int>("reply");
+        QTest::newRow("truncated-body") << int(TransportTestServer::Truncated);
+        QTest::newRow("invalid-json") << int(TransportTestServer::Malformed);
+        QTest::newRow("http-error") << int(TransportTestServer::HttpError);
+    }
+
+    void transportFailureDoesNotReplayMutation()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        QFETCH(int, reply);
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"),
+                                   {TransportTestServer::Reply(reply), TransportTestServer::Close});
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        Xen::ConnectionWorker worker("127.0.0.1", port);
+        worker.start();
+        QTRY_VERIFY_WITH_TIMEOUT(worker.IsTransportConnected(), 5000);
+        const QByteArray mutation = Xen::JsonRpcClient::buildJsonRpcCall("VM.start", {}, 1);
+        const QByteArray failed = worker.WaitForResponse(worker.QueueRequest(mutation, false), 5000);
+        const QJsonObject error = QJsonDocument::fromJson(failed).object().value("error").toObject();
+        QCOMPARE(error.value("message").toString(), QString("TRANSPORT_ERROR"));
+        QVERIFY(error.value("data").toArray().first().toString().contains("outcome is unknown"));
+        QVERIFY_EXCEPTION_THROWN(Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(failed), Failure);
+        QVERIFY(!worker.IsTransportConnected());
+        QCOMPARE(server.requests(), 1);
+
+        const QByteArray read = Xen::JsonRpcClient::buildJsonRpcCall("VM.get_record", {}, 2);
+        const QByteArray response = worker.WaitForResponse(worker.QueueRequest(read, false), 5000);
+        QVERIFY(Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(response).isNull());
+        QCOMPARE(server.requests(), 2);
+        QCOMPARE(server.connections(), 2);
+    }
+
+    void transportPreservesApiFailure()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"),
+                                   {TransportTestServer::ApiFailure, TransportTestServer::Close});
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        Xen::ConnectionWorker worker("127.0.0.1", port);
+        worker.start();
+        QTRY_VERIFY_WITH_TIMEOUT(worker.IsTransportConnected(), 5000);
+        const QByteArray request = Xen::JsonRpcClient::buildJsonRpcCall("VM.assert_can_boot_here", {}, 1);
+        const QByteArray response = worker.WaitForResponse(worker.QueueRequest(request, false), 5000);
+        QCOMPARE(QJsonDocument::fromJson(response).object().value("error").toObject().value("message").toString(),
+                 QString("HOST_NOT_ENOUGH_FREE_MEMORY"));
+        QVERIFY(worker.IsTransportConnected());
+        const QByteArray next = worker.WaitForResponse(worker.QueueRequest(request, false), 5000);
+        QVERIFY(Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(next).isNull());
+        QCOMPARE(server.connections(), 1);
+    }
+
+    void timedOutQueuedRequestIsNeverSent()
+    {
+        if (!QSslSocket::supportsSsl())
+            QSKIP("TLS backend unavailable");
+        TransportTestServer server(QFINDTESTDATA("transport-testdata/server-cert.pem"),
+                                   QFINDTESTDATA("transport-testdata/server-key.pem"), {TransportTestServer::Close});
+        const int port = server.startListening();
+        QVERIFY(port > 0);
+        Xen::ConnectionWorker worker("127.0.0.1", port);
+        const QByteArray request = Xen::JsonRpcClient::buildJsonRpcCall("VM.start", {}, 1);
+        const QByteArray cancelled = worker.WaitForResponse(worker.QueueRequest(request, false), 1);
+        QVERIFY(cancelled.contains("Request was not sent"));
+        worker.start();
+        QTRY_VERIFY_WITH_TIMEOUT(worker.IsTransportConnected(), 5000);
+        const QByteArray response = worker.WaitForResponse(worker.QueueRequest(request, false), 5000);
+        QVERIFY(Xen::JsonRpcClient::parseJsonRpcResponseOrThrow(response).isNull());
+        QCOMPARE(server.requests(), 1);
+    }
+
     void connectionManagerWaitsForLogicalReadiness()
     {
         XenConnection connection;

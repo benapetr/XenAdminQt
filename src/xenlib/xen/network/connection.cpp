@@ -184,6 +184,9 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
     // Connect worker signals
     connect(this->d->worker, &Xen::ConnectionWorker::ConnectionProgress, this, &XenConnection::onWorkerProgress);
     connect(this->d->worker, &Xen::ConnectionWorker::ConnectionEstablished, this, &XenConnection::onWorkerEstablished);
+    connect(this->d->worker, &Xen::ConnectionWorker::TransportStateChanged, this, [this](bool connected) {
+        this->d->connected = connected;
+    });
     connect(this->d->worker, &Xen::ConnectionWorker::ConnectionFailed, this, &XenConnection::onWorkerFailed);
     connect(this->d->worker, &Xen::ConnectionWorker::CacheDataReceived, this, &XenConnection::onWorkerCacheData);
     connect(this->d->worker, &Xen::ConnectionWorker::WorkerFinished, this, &XenConnection::onWorkerFinished);
@@ -394,8 +397,22 @@ void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
     this->d->cacheIsPopulated = false;
     emit this->ConnectionMessageChanged(QString("Attempting to connect to %1...").arg(this->d->host));
 
-    this->d->connectThread = QThread::create([this]() {
-        this->connectWorkerThread();
+    ConnectTask* task = this->d->connectTask;
+    this->d->connectThread = QThread::create([this, task]() {
+        try
+        {
+            this->connectWorkerThread();
+        } catch (const std::exception& error)
+        {
+            const QString message = QString::fromUtf8(error.what());
+            QMetaObject::invokeMethod(this, [this, task, message]() {
+                if (this->d->connectTask != task)
+                    return;
+                this->EndConnect(false);
+                emit this->ConnectionResult(false, message);
+                emit this->ConnectionStateChanged();
+            }, Qt::QueuedConnection);
+        }
     });
 
     connect(this->d->connectThread, &QThread::finished, this, [this]() {
@@ -653,7 +670,15 @@ QVariantMap XenConnection::fetchObjectRecord(const QString& cacheType, const QSt
 
     const QString methodName = QString("%1.get_record").arg(apiClass);
     QByteArray jsonRequest = api.BuildJsonRpcCall(methodName, params);
-    QByteArray response = session->SendApiRequest(QString::fromUtf8(jsonRequest));
+    QByteArray response;
+    try
+    {
+        response = session->SendApiRequest(QString::fromUtf8(jsonRequest));
+    } catch (const std::exception& error)
+    {
+        qWarning() << "Could not refresh cached object" << cacheType << ref << ':' << error.what();
+        return QVariantMap();
+    }
     if (response.isEmpty())
         return QVariantMap();
 
@@ -1137,7 +1162,7 @@ bool XenConnection::IsConnected() const
 
 bool XenConnection::IsTransportConnected() const
 {
-    return this->d->connected;
+    return this->d->worker && this->d->worker->IsTransportConnected();
 }
 
 Session* XenConnection::GetConnectSession() const
@@ -1202,7 +1227,7 @@ void XenConnection::SetFromDialog(bool fromDialog)
 
 QByteArray XenConnection::SendRequest(const QByteArray& data)
 {
-    if (!this->IsConnected() || !this->d->worker)
+    if (!this->d->worker || !this->d->worker->isRunning())
     {
         qWarning() << "XenConnection::sendRequest: Not connected or no worker";
         return QByteArray();
@@ -1223,7 +1248,7 @@ QByteArray XenConnection::SendRequest(const QByteArray& data)
 
 int XenConnection::SendRequestAsync(const QByteArray& data)
 {
-    if (!this->IsConnected() || !this->d->worker)
+    if (!this->d->worker || !this->d->worker->isRunning())
     {
         qWarning() << "XenConnection::sendRequestAsync: Not connected or no worker";
         return -1;

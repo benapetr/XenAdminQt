@@ -9,7 +9,8 @@ SOURCES += \
     test_helpers.cpp
 
 HEADERS += \
-    test_helpers.h
+    test_helpers.h \
+    test_transportserver.h
 
 RESOURCES += \
     testdata.qrc
@@ -20,3 +21,7 @@ INCLUDEPATH += \
 
 # Link with prebuilt xenlib (user-managed build output)
 LIBS += -L../../release/xenlib -lxenlib
+
+DISTFILES += \
+    transport-testdata/server-cert.pem \
+    transport-testdata/server-key.pem
