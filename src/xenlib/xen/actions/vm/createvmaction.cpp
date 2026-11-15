@@ -37,6 +37,7 @@
 #include "../vm/vmstartaction.h"
 #include "../../jsonrpcclient.h"
 #include "../../vm.h"
+#include "../../../xencache.h"
 #include <QDebug>
 #include <QSet>
 #include <stdexcept>
@@ -128,25 +129,21 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
     if (!this->m_homeServerRef.isEmpty())
         this->AddApiMethodToRoleCheck("vm.set_affinity");
 
-    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
-    if (session)
+    const auto vmTemplate = connection && connection->GetCache()
+        ? connection->GetCache()->ResolveObject<::VM>(this->m_templateRef)
+        : QSharedPointer<::VM>();
+    if (vmTemplate)
     {
-        try
-        {
-            QVariantMap templateRecord = XenAPI::VM::get_record(session, this->m_templateRef);
-            qint64 templateDynMin = templateRecord.value("memory_dynamic_min").toLongLong() / (1024 * 1024);
-            qint64 templateDynMax = templateRecord.value("memory_dynamic_max").toLongLong() / (1024 * 1024);
-            qint64 templateStaticMax = templateRecord.value("memory_static_max").toLongLong() / (1024 * 1024);
+        const QVariantMap templateRecord = vmTemplate->GetData();
+        qint64 templateDynMin = templateRecord.value("memory_dynamic_min").toLongLong() / (1024 * 1024);
+        qint64 templateDynMax = templateRecord.value("memory_dynamic_max").toLongLong() / (1024 * 1024);
+        qint64 templateStaticMax = templateRecord.value("memory_static_max").toLongLong() / (1024 * 1024);
 
-            if (templateDynMin != this->m_memoryDynamicMinMb ||
-                templateDynMax != this->m_memoryDynamicMaxMb ||
-                templateStaticMax != this->m_memoryStaticMaxMb)
-            {
-                this->AddApiMethodToRoleCheck("vm.set_memory_limits");
-            }
-        } catch (...)
+        if (templateDynMin != this->m_memoryDynamicMinMb ||
+            templateDynMax != this->m_memoryDynamicMaxMb ||
+            templateStaticMax != this->m_memoryStaticMaxMb)
         {
-            // Best-effort RBAC enrichment.
+            this->AddApiMethodToRoleCheck("vm.set_memory_limits");
         }
     }
 

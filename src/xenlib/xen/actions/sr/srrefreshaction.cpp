@@ -69,7 +69,7 @@ void SrRefreshAction::run()
 
     try
     {
-        Session* session = this->GetConnection()->GetSession();
+        Session* session = this->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");

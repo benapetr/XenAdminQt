@@ -127,7 +127,7 @@ AsyncOperation* HomeServerEditPage::SaveSettings()
         tr("Change Home Server"),
         tr("Setting VM home server..."),
         [vmRef = m_vmRef, affinityRef = newAffinityRef](DelegatedAsyncOperation* self) {
-            XenAPI::Session* session = self->GetConnection()->GetSession();
+            XenAPI::Session* session = self->GetSession();
             if (!session || !session->IsLoggedIn())
                 throw std::runtime_error("No valid session");
             XenAPI::VM::set_affinity(session, vmRef, affinityRef);

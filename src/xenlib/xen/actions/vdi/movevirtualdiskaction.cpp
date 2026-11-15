@@ -27,6 +27,9 @@
 
 #include "movevirtualdiskaction.h"
 #include "xen/network/connection.h"
+#include "xencache.h"
+#include "xen/vdi.h"
+#include "xen/sr.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/xenapi/xenapi_VBD.h"
@@ -55,26 +58,18 @@ MoveVirtualDiskAction::MoveVirtualDiskAction(XenConnection* connection,
     this->AddApiMethodToRoleCheck("vdi.destroy");
     this->AddApiMethodToRoleCheck("vdi.copy");
 
-    XenAPI::Session* session = this->GetConnection() ? this->GetConnection()->GetSession() : nullptr;
-    if (session)
-    {
-        try
-        {
-            QVariantMap vdiRecord = XenAPI::VDI::get_record(session, this->m_vdiRef);
-            if (vdiRecord.value("type").toString() == "suspend")
-                this->AddApiMethodToRoleCheck("vm.set_suspend_VDI");
-        } catch (...)
-        {
-            // Best-effort RBAC enrichment.
-        }
-    }
+    const auto vdi = connection && connection->GetCache()
+        ? connection->GetCache()->ResolveObject<::VDI>(this->m_vdiRef)
+        : QSharedPointer<::VDI>();
+    if (vdi && vdi->GetType() == "suspend")
+        this->AddApiMethodToRoleCheck("vm.set_suspend_VDI");
 }
 
 void MoveVirtualDiskAction::run()
 {
     try
     {
-        Session* session = this->GetConnection()->GetSession();
+        Session* session = this->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
@@ -239,34 +234,25 @@ void MoveVirtualDiskAction::run()
 
 QString MoveVirtualDiskAction::getVDIName() const
 {
-    try
-    {
-        Session* session = this->GetConnection()->GetSession();
-        QString name = XenAPI::VDI::get_name_label(session, this->m_vdiRef);
-        return name.isEmpty() ? this->m_vdiRef : name;
-    } catch (...)
-    {
-        return this->m_vdiRef;
-    }
+    XenConnection* connection = this->GetConnection();
+    const auto vdi = connection && connection->GetCache()
+        ? connection->GetCache()->ResolveObject<::VDI>(this->m_vdiRef)
+        : QSharedPointer<::VDI>();
+    return vdi && !vdi->GetName().isEmpty() ? vdi->GetName() : this->m_vdiRef;
 }
 
 QString MoveVirtualDiskAction::getSRName(const QString& srRef) const
 {
-    try
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    QString actualSrRef = srRef;
+    if (cache && actualSrRef.isEmpty())
     {
-        Session* session = this->GetConnection()->GetSession();
-        QString actualSrRef = srRef;
-
-        // If no SR ref provided, get it from the VDI
-        if (actualSrRef.isEmpty())
-        {
-            actualSrRef = XenAPI::VDI::get_SR(session, this->m_vdiRef);
-        }
-
-        QString name = XenAPI::SR::get_name_label(session, actualSrRef);
-        return name.isEmpty() ? actualSrRef : name;
-    } catch (...)
-    {
-        return srRef.isEmpty() ? "Unknown" : srRef;
+        const auto vdi = cache->ResolveObject<::VDI>(this->m_vdiRef);
+        if (vdi)
+            actualSrRef = vdi->SRRef();
     }
+    const auto sr = cache ? cache->ResolveObject<::SR>(actualSrRef) : QSharedPointer<::SR>();
+    return sr && !sr->GetName().isEmpty() ? sr->GetName()
+        : (actualSrRef.isEmpty() ? QString("Unknown") : actualSrRef);
 }

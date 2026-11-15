@@ -167,7 +167,10 @@ AsyncOperation* CustomFieldsDisplayPage::SaveSettings()
     protected:
         void run() override
         {
-            XenRpcAPI api(GetConnection()->GetSession());
+            XenAPI::Session* session = this->GetSession();
+            if (!session || !session->IsLoggedIn())
+                throw std::runtime_error("No valid session");
+            XenRpcAPI api(session);
 
             SetPercentComplete(30);
 
@@ -175,9 +178,9 @@ AsyncOperation* CustomFieldsDisplayPage::SaveSettings()
             QString methodName = m_objectType + ".set_other_config";
 
             QVariantList params;
-            params << GetConnection()->GetSessionId() << m_objectRef << m_otherConfig;
+            params << session->GetSessionID() << this->m_objectRef << this->m_otherConfig;
             QByteArray request = api.BuildJsonRpcCall(methodName, params);
-            GetConnection()->SendRequest(request);
+            session->SendApiRequest(QString::fromUtf8(request));
 
             SetPercentComplete(100);
         }

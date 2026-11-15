@@ -4,6 +4,9 @@
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/vdi/movevirtualdiskaction.h"
+#include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
 #include <QTemporaryFile>
 #include <QTextStream>
 
@@ -35,6 +38,41 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void diskActionsUseCachedMetadataWithoutSession()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        const QString vdiRef = "OpaqueRef:metadata-vdi";
+        const QString sourceSrRef = "OpaqueRef:metadata-source";
+        const QString targetSrRef = "OpaqueRef:metadata-target";
+        cache->Update(XenObjectType::SR, sourceSrRef, QVariantMap{{"name_label", "Source SR"}});
+        cache->Update(XenObjectType::SR, targetSrRef, QVariantMap{{"name_label", "Target SR"}});
+        cache->Update(XenObjectType::VDI, vdiRef,
+                      QVariantMap{{"name_label", "Cached disk"}, {"SR", sourceSrRef}, {"type", "suspend"}});
+        QVERIFY(!connection.GetSession());
+
+        MoveVirtualDiskAction move(&connection, vdiRef, targetSrRef);
+        MigrateVirtualDiskAction migrate(&connection, vdiRef, targetSrRef);
+        for (const AsyncOperation* action : {static_cast<AsyncOperation*>(&move), static_cast<AsyncOperation*>(&migrate)})
+        {
+            QVERIFY(action->GetDescription().contains("Cached disk"));
+            QVERIFY(action->GetDescription().contains("Source SR"));
+            QVERIFY(action->GetDescription().contains("Target SR"));
+        }
+        QVERIFY(move.GetApiMethodsToRoleCheck().contains("vm.set_suspend_VDI"));
+    }
+
+    void diskActionMetadataFallsBackToReferences()
+    {
+        MoveVirtualDiskAction move(nullptr, "missing-vdi", "missing-sr");
+        MigrateVirtualDiskAction migrate(nullptr, "missing-vdi", "missing-sr");
+        for (const AsyncOperation* action : {static_cast<AsyncOperation*>(&move), static_cast<AsyncOperation*>(&migrate)})
+        {
+            QVERIFY(action->GetDescription().contains("missing-vdi"));
+            QVERIFY(action->GetDescription().contains("missing-sr"));
+        }
+    }
+
     // ── cache round-trip ──────────────────────────────────────────────────────
     void loadCacheFromResource_populatesVmData()
     {

@@ -59,7 +59,7 @@ void CreateCdDriveAction::run()
         return;
     }
 
-    XenAPI::Session* session = connection->GetSession();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         this->setError(tr("Not connected to XenServer"));
@@ -174,5 +174,5 @@ void CreateCdDriveAction::run()
     });
 
     // Run synchronously (blocking this thread, but we're on a worker thread)
-    createAction->RunSync();
+    createAction->RunSync(this->GetSession());
 }

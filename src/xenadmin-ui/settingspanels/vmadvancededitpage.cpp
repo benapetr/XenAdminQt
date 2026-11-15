@@ -136,7 +136,7 @@ AsyncOperation* VMAdvancedEditPage::SaveSettings()
             tr("Change shadow multiplier"),
             tr("Changing shadow multiplier for '%1'...").arg(vmName),
             [vmRef = this->m_vmRef, newMultiplier](DelegatedAsyncOperation* self) {
-                XenAPI::Session* session = self->GetConnection()->GetSession();
+                XenAPI::Session* session = self->GetSession();
                 if (!session || !session->IsLoggedIn())
                     throw std::runtime_error("No valid session");
                 XenAPI::VM::set_shadow_multiplier_live(session, vmRef, newMultiplier);

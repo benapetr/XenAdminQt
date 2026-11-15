@@ -62,7 +62,7 @@ void VbdCreateAndPlugAction::run()
 
     try
     {
-        XenAPI::Session* session = this->m_vm->GetConnection()->GetSession();
+        XenAPI::Session* session = this->GetSession();
         if (!session)
         {
             qCritical() << "[VbdCreateAndPlugAction] No valid session!";

@@ -64,7 +64,7 @@ void SetSrAsDefaultAction::run()
         return;
     }
 
-    XenAPI::Session* session = this->GetConnection()->GetSession();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         this->setError("No valid session");

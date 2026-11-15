@@ -27,6 +27,9 @@
 
 #include "migratevirtualdiskaction.h"
 #include "xen/network/connection.h"
+#include "xencache.h"
+#include "xen/vdi.h"
+#include "xen/sr.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_SR.h"
 #include <QDebug>
@@ -55,7 +58,7 @@ void MigrateVirtualDiskAction::run()
 {
     try
     {
-        XenAPI::Session* session = this->GetConnection()->GetSession();
+        XenAPI::Session* session = this->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
@@ -92,34 +95,25 @@ void MigrateVirtualDiskAction::run()
 
 QString MigrateVirtualDiskAction::getVDIName() const
 {
-    try
-    {
-        XenAPI::Session* session = this->GetConnection()->GetSession();
-        QString name = XenAPI::VDI::get_name_label(session, this->m_vdiRef);
-        return name.isEmpty() ? this->m_vdiRef : name;
-    } catch (...)
-    {
-        return this->m_vdiRef;
-    }
+    XenConnection* connection = this->GetConnection();
+    const auto vdi = connection && connection->GetCache()
+        ? connection->GetCache()->ResolveObject<::VDI>(this->m_vdiRef)
+        : QSharedPointer<::VDI>();
+    return vdi && !vdi->GetName().isEmpty() ? vdi->GetName() : this->m_vdiRef;
 }
 
 QString MigrateVirtualDiskAction::getSRName(const QString& srRef) const
 {
-    try
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    QString actualSrRef = srRef;
+    if (cache && actualSrRef.isEmpty())
     {
-        XenAPI::Session* session = this->GetConnection()->GetSession();
-        QString actualSrRef = srRef;
-
-        // If no SR ref provided, get it from the VDI
-        if (actualSrRef.isEmpty())
-        {
-            actualSrRef = XenAPI::VDI::get_SR(session, this->m_vdiRef);
-        }
-
-        QString name = XenAPI::SR::get_name_label(session, actualSrRef);
-        return name.isEmpty() ? actualSrRef : name;
-    } catch (...)
-    {
-        return srRef.isEmpty() ? "Unknown" : srRef;
+        const auto vdi = cache->ResolveObject<::VDI>(this->m_vdiRef);
+        if (vdi)
+            actualSrRef = vdi->SRRef();
     }
+    const auto sr = cache ? cache->ResolveObject<::SR>(actualSrRef) : QSharedPointer<::SR>();
+    return sr && !sr->GetName().isEmpty() ? sr->GetName()
+        : (actualSrRef.isEmpty() ? QString("Unknown") : actualSrRef);
 }
