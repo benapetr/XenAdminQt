@@ -787,8 +787,11 @@ QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* co
             bool isSnapshot = vm->IsSnapshot();
             bool isDefaultTemplate = vm->IsDefaultTemplate();
 
-            if (!isTemplate && !isSnapshot && (types & ObjectTypes::VM) != ObjectTypes::None)
-                typeMatches = true;
+            // Match C# TypeProperty: a snapshot remains a snapshot even when
+            // XenServer also marks it as a template. Do not admit it through
+            // template scopes when snapshots are excluded (Infrastructure).
+            if (isSnapshot)
+                typeMatches = (types & ObjectTypes::Snapshot) != ObjectTypes::None;
             else if (isTemplate)
             {
                 if (isDefaultTemplate && (types & ObjectTypes::DefaultTemplate) != ObjectTypes::None)
@@ -796,10 +799,8 @@ QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* co
                 else if (!isDefaultTemplate && (types & ObjectTypes::UserTemplate) != ObjectTypes::None)
                     typeMatches = true;
             }
-            else if (isSnapshot && (types & ObjectTypes::Snapshot) != ObjectTypes::None)
-            {
-                typeMatches = true;
-            }
+            else
+                typeMatches = (types & ObjectTypes::VM) != ObjectTypes::None;
         } else if (objType == XenObjectType::SR)
         {
             if ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || (types & ObjectTypes::LocalSR) != ObjectTypes::None)

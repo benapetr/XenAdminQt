@@ -146,14 +146,16 @@ QIcon IconManager::GetIconForVM(const VM* vm) const
 
     QIcon icon;
 
-    if (isTemplate)
+    // Snapshots can also have is_a_template set. C# gives snapshot identity
+    // precedence over that flag when selecting the icon.
+    if (isSnapshot)
+    {
+        icon = QIcon(":/tree-icons/snapshot.png");
+    } else if (isTemplate)
     {
         icon = isDefaultTemplate
             ? QIcon(":/tree-icons/template.png")
             : QIcon(":/tree-icons/template_user.png");
-    } else if (isSnapshot)
-    {
-        icon = QIcon(":/tree-icons/snapshot.png");
     } else if (operationInProgress)
     {
         icon = QIcon(":/tree-icons/vm_starting.png");

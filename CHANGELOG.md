@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Fixed snapshots marked as templates showing template icons and appearing as
+  templates in Infrastructure view; snapshot classification now takes precedence.
+
 - Fixed built-in and custom templates sharing a cached icon, and matched C#'s
   built-in template detection using the presence of the `default_template` marker.
 
