@@ -119,6 +119,7 @@ class NavigationView : public QWidget
         void treeNodeBeforeSelected();
         void treeNodeClicked();
         void treeNodeRightClicked();
+        void treeNodeActivated(QSharedPointer<XenObject> object);
         void treeViewRefreshed();
         void dragDropCommandActivated(const QString& commandKey);
         void connectToServerRequested();

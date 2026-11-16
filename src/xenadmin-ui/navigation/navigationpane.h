@@ -29,6 +29,7 @@
 #define NAVIGATIONPANE_H
 
 #include <QWidget>
+#include "xenlib/xen/xenobject.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -137,6 +138,7 @@ class NavigationPane : public QWidget
         void treeNodeRightClicked();
         void treeViewRefreshed();
         void connectToServerRequested();
+        void treeNodeActivated(QSharedPointer<XenObject> object);
 
         /**
          * Drag/drop command activation

@@ -49,6 +49,7 @@
 #include "xenlib/xen/folder.h"
 #include "xenlib/folders/foldersmanager.h"
 #include <QDebug>
+#include <QApplication>
 #include <QDropEvent>
 #include <QItemSelectionModel>
 #include <QMimeData>
@@ -441,12 +442,23 @@ void NavigationView::buildObjectsTree()
 void NavigationView::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
 {
     Q_UNUSED(column);
-    if (!item)
+    if (!item || !(QApplication::mouseButtons() & Qt::LeftButton))
         return;
 
     const QVariant action = item->data(0, Qt::UserRole + 4);
     if (action.toString() == QLatin1String("connect"))
+    {
         emit this->connectToServerRequested();
+        return;
+    }
+
+    const auto object = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    if (!object)
+        return;
+
+    // A double-click applies to the clicked node, not other selected VMs.
+    this->ui->treeWidget->setCurrentItem(item, 0, QItemSelectionModel::ClearAndSelect);
+    emit this->treeNodeActivated(object);
 }
 
 bool NavigationView::eventFilter(QObject* watched, QEvent* event)

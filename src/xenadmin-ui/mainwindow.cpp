@@ -279,6 +279,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
     connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
     connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
+    connect(this->m_navigationPane, &NavigationPane::treeNodeActivated, this, &MainWindow::onNavigationPaneTreeNodeActivated);
     connect(this->m_navigationPane, &NavigationPane::dragDropCommandActivated, this, &MainWindow::onNavigationPaneDragDropCommandActivated);
     connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
 
@@ -1991,6 +1992,55 @@ void MainWindow::onNavigationPaneTreeNodeRightClicked()
 {
     // Matches C# MainWindow.navigationPane_TreeNodeRightClicked
     // Context menu is already handled via customContextMenuRequested signal
+}
+
+void MainWindow::onNavigationPaneTreeNodeActivated(QSharedPointer<XenObject> object)
+{
+    if (!object)
+        return;
+
+    // Match C# NavigationView.treeView_NodeMouseDoubleClick: reconnect first,
+    // otherwise dispatch the normal command for this node's current state.
+    XenConnection* connection = object->GetConnection();
+    if (connection && !connection->IsConnected())
+    {
+        ReconnectHostCommand command(QList<XenConnection*>{connection}, this);
+        if (command.CanRun())
+            command.Run();
+        return;
+    }
+
+    auto run = [object](Command& command)
+    {
+        command.SetSelectionOverride(QList<QSharedPointer<XenObject>>{object});
+        if (command.CanRun())
+            command.Run();
+    };
+
+    const auto vm = qSharedPointerDynamicCast<VM>(object);
+    if (vm)
+    {
+        if (vm->IsTemplate())
+        {
+            NewVMCommand command(vm->GetUUID(), this);
+            run(command);
+        } else if (vm->GetPowerState() == "Halted" && vm->GetAllowedOperations().contains("start"))
+        {
+            StartVMCommand command(this);
+            run(command);
+        } else if (vm->GetPowerState() == "Suspended" && vm->GetAllowedOperations().contains("resume"))
+        {
+            ResumeVMCommand command(this);
+            run(command);
+        }
+        return;
+    }
+
+    if (object->GetObjectType() == XenObjectType::Host)
+    {
+        PowerOnHostCommand command(this);
+        run(command);
+    }
 }
 
 void MainWindow::onNavigationPaneDragDropCommandActivated(const QString& commandKey)

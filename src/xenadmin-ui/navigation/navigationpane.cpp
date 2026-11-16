@@ -77,6 +77,7 @@ NavigationPane::NavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::Na
     connect(this->m_currentNavigationView, &NavigationView::treeViewRefreshed, this, &NavigationPane::onNavigationViewRefreshed);
     connect(this->m_currentNavigationView, &NavigationView::dragDropCommandActivated, this, &NavigationPane::onNavigationViewDragDropCommand);
     connect(this->m_currentNavigationView, &NavigationView::connectToServerRequested, this, &NavigationPane::onNavigationViewConnectToServerRequested);
+    connect(this->m_currentNavigationView, &NavigationView::treeNodeActivated, this, &NavigationPane::treeNodeActivated);
 
     // Wire up NotificationsView events
     connect(this->m_currentNotificationsView, &NotificationsView::notificationsSubModeChanged, this, &NavigationPane::onNotificationsSubModeChanged);

@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Restored tree double-click actions for starting or resuming VMs, creating VMs
+  from templates, reconnecting disconnected hosts, and powering on eligible hosts.
+
 - Fixed new and attached VM disks skipping free device positions, and restored
   the reboot notification when a newly created disk cannot be hot-plugged.
 
