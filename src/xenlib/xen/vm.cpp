@@ -110,8 +110,8 @@ bool VM::IsLocked() const
 bool VM::IsDefaultTemplate() const
 {
     const QVariantMap otherConfig = this->GetOtherConfig();
-    const QVariant value = otherConfig.value("default_template");
-    return value.isValid() && value.toBool();
+    // C# DefaultTemplate checks for the marker's presence, not its value.
+    return otherConfig.contains("default_template");
 }
 
 bool VM::IsInstantTemplate() const

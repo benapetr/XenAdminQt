@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Fixed built-in and custom templates sharing a cached icon, and matched C#'s
+  built-in template detection using the presence of the `default_template` marker.
+
 - Restored tree double-click actions for starting or resuming VMs, creating VMs
   from templates, reconnecting disconnected hosts, and powering on eligible hosts.
 

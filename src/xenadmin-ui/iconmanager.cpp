@@ -131,12 +131,13 @@ QIcon IconManager::GetIconForVM(const VM* vm) const
 
     const QString powerState = vm->GetPowerState();
     const bool isTemplate = vm->IsTemplate();
+    const bool isDefaultTemplate = isTemplate && vm->IsDefaultTemplate();
     const bool isSnapshot = vm->IsSnapshot();
     const bool operationInProgress = !vm->CurrentOperations().isEmpty();
 
     QString cacheKey = QString("vm_%1_%2_%3_%4")
                            .arg(powerState)
-                           .arg(isTemplate ? "template" : "vm")
+                           .arg(isTemplate ? (isDefaultTemplate ? "template_default" : "template_user") : "vm")
                            .arg(isSnapshot ? "snapshot" : "normal")
                            .arg(operationInProgress ? "busy" : "idle");
 
@@ -147,7 +148,7 @@ QIcon IconManager::GetIconForVM(const VM* vm) const
 
     if (isTemplate)
     {
-        icon = vm->IsDefaultTemplate()
+        icon = isDefaultTemplate
             ? QIcon(":/tree-icons/template.png")
             : QIcon(":/tree-icons/template_user.png");
     } else if (isSnapshot)
