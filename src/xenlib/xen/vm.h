@@ -64,6 +64,39 @@ class XENLIB_EXPORT VM : public XenObject
     Q_OBJECT
 
     public:
+        // Numeric order matches C# and controls the New VM template list.
+        enum class VmTemplateType
+        {
+            NoTemplate = 0,
+            Custom = 1,
+            Windows = 2,
+            WindowsServer = 3,
+            LegacyWindows = 4,
+            Asianux = 5,
+            Centos = 6,
+            CoreOS = 7,
+            Debian = 8,
+            Gooroom = 9,
+            Linx = 10,
+            NeoKylin = 11,
+            Oracle = 12,
+            RedHat = 13,
+            Rocky = 14,
+            SciLinux = 15,
+            Suse = 16,
+            Turbo = 17,
+            Ubuntu = 18,
+            YinheKylin = 19,
+            Citrix = 20,
+            Solaris = 21,
+            Misc = 22,
+            Snapshot = 23,
+            SnapshotFromVmpp = 24,
+            Count = 25,
+        };
+
+        VmTemplateType TemplateType() const;
+
         static constexpr int DEFAULT_CORES_PER_SOCKET = 1;
         static constexpr long MAX_SOCKETS = 16;
         static constexpr long MAX_VCPUS_FOR_NON_TRUSTED_VMS = 32;

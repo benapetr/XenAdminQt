@@ -52,6 +52,73 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/vmhelpers.h"
+#include "xenlib/utils/misc.h"
+
+namespace
+{
+    struct TemplatePresentation
+    {
+        const char* label;
+        const char* icon;
+    };
+
+    TemplatePresentation templatePresentation(VM::VmTemplateType type)
+    {
+        switch (type)
+        {
+            case VM::VmTemplateType::Custom:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Custom"), ":/tree-icons/template_user.png"};
+            case VM::VmTemplateType::Windows:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Windows"), ":/template-icons/windows_h32bit_16.png"};
+            case VM::VmTemplateType::WindowsServer:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Windows"), ":/template-icons/windows_h32bit_16.png"};
+            case VM::VmTemplateType::LegacyWindows:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Windows"), ":/template-icons/windows_h32bit_16.png"};
+            case VM::VmTemplateType::Asianux:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Asianux"), ":/template-icons/asianux_16x.png"};
+            case VM::VmTemplateType::Centos:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "CentOS"), ":/template-icons/centos_16x.png"};
+            case VM::VmTemplateType::CoreOS:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "CoreOS"), ":/template-icons/coreos-globe-icon.png"};
+            case VM::VmTemplateType::Debian:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Debian"), ":/template-icons/debian_16x.png"};
+            case VM::VmTemplateType::Gooroom:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Gooroom"), ":/template-icons/gooroom_16x.png"};
+            case VM::VmTemplateType::Linx:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Linx"), ":/template-icons/linx_16x.png"};
+            case VM::VmTemplateType::NeoKylin:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "NeoKylin"), ":/template-icons/neokylin_16x.png"};
+            case VM::VmTemplateType::Oracle:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Oracle"), ":/template-icons/oracle_16x.png"};
+            case VM::VmTemplateType::RedHat:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Red Hat"), ":/template-icons/redhat_16x.png"};
+            case VM::VmTemplateType::Rocky:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Rocky"), ":/template-icons/rocky_16x.png"};
+            case VM::VmTemplateType::SciLinux:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Scientific Linux"), ":/template-icons/scilinux_16x.png"};
+            case VM::VmTemplateType::Suse:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "SUSE"), ":/template-icons/suse_16x.png"};
+            case VM::VmTemplateType::Turbo:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Turbo"), ":/template-icons/turbo_16x.png"};
+            case VM::VmTemplateType::Ubuntu:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Ubuntu"), ":/template-icons/ubuntu_16x.png"};
+            case VM::VmTemplateType::YinheKylin:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "YinheKylin"), ":/template-icons/yinhekylin_16x.png"};
+            case VM::VmTemplateType::Citrix:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "XCP-ng"), ":/template-icons/template-brand-logo.png"};
+            case VM::VmTemplateType::Solaris:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Misc"), ":/tree-icons/template.png"};
+            case VM::VmTemplateType::Misc:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Misc"), ":/tree-icons/template.png"};
+            case VM::VmTemplateType::Snapshot:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Snapshots"), ":/template-icons/snapshot.png"};
+            case VM::VmTemplateType::SnapshotFromVmpp:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Snapshots"), ":/template-icons/snapshot.png"};
+            default:
+                return {QT_TRANSLATE_NOOP("NewVMWizard", "Misc"), ":/tree-icons/template.png"};
+        }
+    }
+}
 
 NewVMWizard::NewVMWizard(XenConnection* connection, const QString& defaultTemplateRef, QWidget* parent) : QWizard(parent), m_connection(connection), ui(new Ui::NewVMWizard), m_initialTemplateRef(defaultTemplateRef)
 {
@@ -213,7 +280,7 @@ void NewVMWizard::loadTemplates()
         if (!vm || !vm->IsValid())
             continue;
 
-        if (!vm->IsTemplate() || vm->IsSnapshot())
+        if (!vm->IsTemplate())
             continue;
 
         if (!vm->IsVisible(showHidden))
@@ -229,13 +296,19 @@ void NewVMWizard::loadTemplates()
         TemplateInfo info;
         info.ref = vm->OpaqueRef();
         info.name = vm->GetName();
-        QString virtualizationType = vm->IsHVM() ? tr("HVM") : tr("PV");
-        info.type = virtualizationType;
+        info.uuid = vm->GetUUID();
+        const VM::VmTemplateType type = vm->TemplateType();
+        const TemplatePresentation presentation = templatePresentation(type);
+        info.type = tr(presentation.label);
+        info.sortOrder = static_cast<int>(type);
+        if (vm->IsHidden())
+            info.sortOrder += static_cast<int>(VM::VmTemplateType::Count);
         info.description = vm->GetDescription();
 
-        QTreeWidgetItem* item = new QTreeWidgetItem(this->ui->templateTree);
+        QTreeWidgetItem* item = new QTreeWidgetItem();
         item->setText(0, info.name);
-        item->setText(1, virtualizationType);
+        item->setText(1, info.type);
+        item->setIcon(0, QIcon(presentation.icon));
         item->setData(0, Qt::UserRole, info.ref);
         info.item = item;
 
@@ -245,12 +318,26 @@ void NewVMWizard::loadTemplates()
     if (this->m_templateItems.isEmpty())
         return;
 
+    // C# TemplateSorter: category first, reverse natural name order, then ref.
+    std::sort(this->m_templateItems.begin(), this->m_templateItems.end(),
+              [](const TemplateInfo& left, const TemplateInfo& right)
+    {
+        if (left.sortOrder != right.sortOrder)
+            return left.sortOrder < right.sortOrder;
+        const int nameOrder = Misc::NaturalCompare(left.name, right.name);
+        if (nameOrder != 0)
+            return nameOrder > 0;
+        return left.ref < right.ref;
+    });
+    for (const TemplateInfo& info : std::as_const(this->m_templateItems))
+        this->ui->templateTree->addTopLevelItem(info.item);
+
     QTreeWidgetItem* selectedItem = nullptr;
     if (!this->m_initialTemplateRef.isEmpty())
     {
         for (const TemplateInfo& info : std::as_const(this->m_templateItems))
         {
-            if (info.ref == this->m_initialTemplateRef && info.item)
+            if ((info.ref == this->m_initialTemplateRef || info.uuid == this->m_initialTemplateRef) && info.item)
             {
                 selectedItem = info.item;
                 break;

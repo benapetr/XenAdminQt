@@ -141,6 +141,8 @@ class NewVMWizard : public QWizard
         struct TemplateInfo
         {
             QString ref;
+            QString uuid;
+            int sortOrder = 0;
             QString name;
             QString type;
             QString description;

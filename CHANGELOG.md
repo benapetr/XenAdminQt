@@ -9,6 +9,10 @@ are omitted.
 
 ### Fixed
 
+- Restored OS icons, template category labels, and C# ordering in the New VM
+  wizard: custom templates first, newer names first within each category, and
+  hidden templates last. Explicit template selection now also accepts UUIDs.
+
 - Fixed snapshots marked as templates showing template icons and appearing as
   templates in Infrastructure view; snapshot classification now takes precedence.
 

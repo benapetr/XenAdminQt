@@ -114,6 +114,62 @@ bool VM::IsDefaultTemplate() const
     return otherConfig.contains("default_template");
 }
 
+VM::VmTemplateType VM::TemplateType() const
+{
+    if (!this->IsTemplate())
+        return VmTemplateType::NoTemplate;
+    if (this->IsSnapshotFromVMPP())
+        return VmTemplateType::SnapshotFromVmpp;
+    if (this->IsSnapshot())
+        return VmTemplateType::Snapshot;
+    if (!this->IsDefaultTemplate())
+        return VmTemplateType::Custom;
+
+    // Match C# VM.TemplateType, including the precedence of overlapping names.
+    const QString name = this->GetName().toLower();
+    if (name.contains("citrix"))
+        return VmTemplateType::Citrix;
+    if (name.contains("debian"))
+        return VmTemplateType::Debian;
+    if (name.contains("gooroom"))
+        return VmTemplateType::Gooroom;
+    if (name.contains("rocky"))
+        return VmTemplateType::Rocky;
+    if (name.contains("centos"))
+        return VmTemplateType::Centos;
+    if (name.contains("linx"))
+        return VmTemplateType::Linx;
+    if (name.contains("red hat"))
+        return VmTemplateType::RedHat;
+    if (name.contains("oracle"))
+        return VmTemplateType::Oracle;
+    if (name.contains("suse"))
+        return VmTemplateType::Suse;
+    if (name.contains("scientific"))
+        return VmTemplateType::SciLinux;
+    if (name.contains("legacy windows"))
+        return VmTemplateType::LegacyWindows;
+    if (name.contains("windows") && name.contains("server"))
+        return VmTemplateType::WindowsServer;
+    if (name.contains("windows"))
+        return VmTemplateType::Windows;
+    if (name.contains("ubuntu"))
+        return VmTemplateType::Ubuntu;
+    if (name.contains("yinhe"))
+        return VmTemplateType::YinheKylin;
+    if (name.contains("kylin"))
+        return VmTemplateType::NeoKylin;
+    if (name.contains("asianux"))
+        return VmTemplateType::Asianux;
+    if (name.contains("turbo"))
+        return VmTemplateType::Turbo;
+    if (name.contains("solaris"))
+        return VmTemplateType::Solaris;
+    if (name.contains("coreos"))
+        return VmTemplateType::CoreOS;
+    return VmTemplateType::Misc;
+}
+
 bool VM::IsInstantTemplate() const
 {
     const QVariantMap otherConfig = this->GetOtherConfig();

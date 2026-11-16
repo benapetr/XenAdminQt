@@ -1,4 +1,24 @@
 <RCC>
+    <qresource prefix="/template-icons">
+        <file alias="snapshot.png">images/000_VMSession_h32bit_16.png</file>
+        <file alias="asianux_16x.png">images/asianux_16x.png</file>
+        <file alias="centos_16x.png">images/centos_16x.png</file>
+        <file alias="coreos-globe-icon.png">images/coreos-globe-icon.png</file>
+        <file alias="debian_16x.png">images/debian_16x.png</file>
+        <file alias="gooroom_16x.png">images/gooroom_16x.png</file>
+        <file alias="linx_16x.png">images/linx_16x.png</file>
+        <file alias="neokylin_16x.png">images/neokylin_16x.png</file>
+        <file alias="oracle_16x.png">images/oracle_16x.png</file>
+        <file alias="redhat_16x.png">images/redhat_16x.png</file>
+        <file alias="rocky_16x.png">images/rocky_16x.png</file>
+        <file alias="scilinux_16x.png">images/scilinux_16x.png</file>
+        <file alias="suse_16x.png">images/suse_16x.png</file>
+        <file alias="template-brand-logo.png">images/template-brand-logo.png</file>
+        <file alias="turbo_16x.png">images/turbo_16x.png</file>
+        <file alias="ubuntu_16x.png">images/ubuntu_16x.png</file>
+        <file alias="windows_h32bit_16.png">images/windows_h32bit_16.png</file>
+        <file alias="yinhekylin_16x.png">images/yinhekylin_16x.png</file>
+    </qresource>
     <qresource prefix="/icons">
         <file alias="app.ico">images/AppIcon.ico</file>
         <file alias="back.png">images/001_Back_h32bit_24.png</file>

@@ -63,6 +63,41 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void templateClassificationPrecedence_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<bool>("builtIn");
+        QTest::addColumn<bool>("isTemplate");
+        QTest::addColumn<bool>("snapshot");
+        QTest::addColumn<bool>("scheduled");
+        QTest::addColumn<int>("expected");
+        using Type = VM::VmTemplateType;
+        QTest::newRow("named-custom-template") << QString("Windows Server backup") << false << true << false << false << int(Type::Custom);
+        QTest::newRow("server-before-windows") << QString("Windows Server 2022") << true << true << false << false << int(Type::WindowsServer);
+        QTest::newRow("legacy-before-server") << QString("Legacy Windows Server") << true << true << false << false << int(Type::LegacyWindows);
+        QTest::newRow("yinhe-before-kylin") << QString("Yinhe Kylin") << true << true << false << false << int(Type::YinheKylin);
+        QTest::newRow("unknown-built-in") << QString("Other install media") << true << true << false << false << int(Type::Misc);
+        QTest::newRow("snapshot-before-os") << QString("Windows Server snapshot") << true << true << true << false << int(Type::Snapshot);
+        QTest::newRow("scheduled-before-snapshot") << QString("Scheduled snapshot") << false << true << true << true << int(Type::SnapshotFromVmpp);
+        QTest::newRow("regular-vm") << QString("Ubuntu") << true << false << false << false << int(Type::NoTemplate);
+    }
+
+    void templateClassificationPrecedence()
+    {
+        QFETCH(QString, name);
+        QFETCH(bool, builtIn);
+        QFETCH(bool, isTemplate);
+        QFETCH(bool, snapshot);
+        QFETCH(bool, scheduled);
+        QFETCH(int, expected);
+        QVariantMap data{{"name_label", name}, {"is_a_template", isTemplate},
+                         {"is_a_snapshot", snapshot}, {"is_snapshot_from_vmpp", scheduled}};
+        if (builtIn)
+            data["other_config"] = QVariantMap{{"default_template", "false"}};
+        const auto vm = makeVm("template-classification", data);
+        QCOMPARE(int(vm->TemplateType()), expected);
+    }
+
     void diskDeviceSelection_data()
     {
         QTest::addColumn<bool>("create");
