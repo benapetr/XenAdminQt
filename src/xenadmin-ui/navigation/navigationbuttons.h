@@ -91,6 +91,7 @@ class NavigationButtonBig : public QToolButton, public INavigationItem
         void navigationViewChanged();
 
     protected:
+        void paintEvent(QPaintEvent* event) override;
         void checkStateChanged();
 
     private:

@@ -28,6 +28,8 @@
 #include "navigationbuttons.h"
 #include <QPainter>
 #include <QStyleOptionButton>
+#include <QStyleOptionToolButton>
+#include <QStylePainter>
 
 // ============================================================================
 // NavigationButtonBig
@@ -59,6 +61,28 @@ NavigationButtonBig::NavigationButtonBig(QWidget* parent)
 void NavigationButtonBig::setChecked(bool checked)
 {
     QToolButton::setChecked(checked);
+}
+
+void NavigationButtonBig::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event);
+    QStyleOptionToolButton option;
+    this->initStyleOption(&option);
+    QStylePainter painter(this);
+
+    // Keep the native full-width frame and split-menu arrow, but draw the
+    // icon/text label in a size-hint-wide area at the left of the button.
+    QStyleOptionToolButton frame = option;
+    frame.text.clear();
+    frame.icon = QIcon();
+    painter.drawComplexControl(QStyle::CC_ToolButton, frame);
+
+    const QRect content = this->style()->subControlRect(QStyle::CC_ToolButton, &option,
+                                                       QStyle::SC_ToolButton, this);
+    const int menuWidth = option.rect.width() - content.width();
+    option.rect = content;
+    option.rect.setWidth(qMin(content.width(), qMax(0, this->sizeHint().width() - menuWidth)));
+    painter.drawControl(QStyle::CE_ToolButtonLabel, option);
 }
 
 // ============================================================================
