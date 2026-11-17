@@ -472,6 +472,7 @@ bool PerformanceTabPage::showGraphDetailsDialog(DesignedGraph& graph, bool editM
     layout->addWidget(filterRow);
 
     auto* sourceTable = new QTableWidget(&dialog);
+    sourceTable->verticalHeader()->setVisible(false);
     sourceTable->setColumnCount(4);
     sourceTable->setHorizontalHeaderLabels({ tr("Display"), tr("Color"), tr("Data Source"), tr("Description") });
     sourceTable->horizontalHeader()->setStretchLastSection(true);

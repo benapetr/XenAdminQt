@@ -61,6 +61,7 @@ GpuEditPage::GpuEditPage(QWidget* parent) : IEditPage(parent)
     root->addWidget(this->m_infoLabel);
 
     this->m_table = new QTableWidget(this);
+    this->m_table->verticalHeader()->setVisible(false);
     this->m_table->setColumnCount(3);
     this->m_table->setHorizontalHeaderLabels(QStringList() << tr("Device") << tr("GPU Group") << tr("vGPU Type"));
     this->m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
