@@ -38,6 +38,8 @@ namespace Ui
 }
 
 class VM;
+class SR;
+class QTimer;
 
 class AttachVirtualDiskDialog : public QDialog
 {
@@ -49,6 +51,7 @@ class AttachVirtualDiskDialog : public QDialog
 
         QString getSelectedVDIRef() const;
         QString getMode() const; // "RO" or "RW"
+        void accept() override;
 
     private slots:
         void onSRFilterChanged(int index);
@@ -57,9 +60,13 @@ class AttachVirtualDiskDialog : public QDialog
     private:
         void populateSRFilter();
         void populateVDITable();
+        bool isSRVisible(QSharedPointer<SR> sr) const;
+        QString srUnavailableReason(QSharedPointer<SR> sr) const;
 
         Ui::AttachVirtualDiskDialog* ui;
         QSharedPointer<VM> m_vm;
+        QTimer* m_refreshTimer;
+        bool m_preferReadOnly = false;
 };
 
 #endif // ATTACHVIRTUALDISKDIALOG_H

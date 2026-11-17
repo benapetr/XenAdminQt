@@ -240,6 +240,12 @@ class XENLIB_EXPORT SR : public XenObject
         //! Check if SR has any PBDs
         bool HasPBDs() const;
 
+        //! C# SR.Show: hide temporary, memory, legacy local and hidden/DR SRs.
+        bool IsVisible(bool showHidden) const;
+
+        //! C# SR.CanBeSeenFrom: an attached PBD must connect the SR to the host.
+        bool CanBeSeenFrom(QSharedPointer<Host> host) const;
+
         /**
          * @brief Check if SR is broken
          *

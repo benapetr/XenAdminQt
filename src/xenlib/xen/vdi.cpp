@@ -62,6 +62,34 @@ bool VDI::ReadOnly() const
     return boolProperty("read_only");
 }
 
+bool VDI::CanAttach(bool showHidden, bool* forceReadOnly) const
+{
+    if (forceReadOnly)
+        *forceReadOnly = false;
+    if (!this->IsValid() || this->Missing() || !this->Managed() || (!showHidden && this->IsHidden()))
+        return false;
+
+    const QString type = this->GetType();
+    if (type == "crashdump" || type == "ephemeral" || type == "suspend")
+        return false;
+
+    bool readOnly = this->ReadOnly();
+    if (!this->GetVBDRefs().isEmpty() && !this->Sharable())
+    {
+        // C# permits these disks only read-only, and hides them when any
+        // existing attachment is both writable and currently attached.
+        for (const auto& vbd : this->GetVBDs())
+        {
+            if (vbd && !vbd->IsReadOnly() && vbd->CurrentlyAttached())
+                return false;
+        }
+        readOnly = true;
+    }
+    if (forceReadOnly)
+        *forceReadOnly = readOnly;
+    return true;
+}
+
 QString VDI::SRRef() const
 {
     return stringProperty("SR");

@@ -1,6 +1,9 @@
 #include <QtTest>
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
@@ -63,6 +66,92 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+    void attachDiskEligibility_data()
+    {
+        QTest::addColumn<QVariantMap>("properties");
+        QTest::addColumn<QVariantList>("attachments");
+        QTest::addColumn<bool>("showHidden");
+        QTest::addColumn<bool>("eligible");
+        QTest::addColumn<bool>("readOnly");
+        const QVariantList activeRW{QVariantMap{{"mode", "RW"}, {"currently_attached", true}}};
+        const QVariantList activeRO{QVariantMap{{"mode", "RO"}, {"currently_attached", true}}};
+        const QVariantList detachedRW{QVariantMap{{"mode", "RW"}, {"currently_attached", false}}};
+        QTest::newRow("unused-user-disk") << QVariantMap{} << QVariantList{} << false << true << false;
+        QTest::newRow("unmanaged-base-disk") << QVariantMap{{"managed", false}} << QVariantList{} << false << false << false;
+        QTest::newRow("base-disk-hidden-even-with-show-hidden") << QVariantMap{{"managed", false}} << QVariantList{} << true << false << false;
+        QTest::newRow("missing-disk") << QVariantMap{{"missing", true}} << QVariantList{} << true << false << false;
+        const QVariantMap hidden{{"other_config", QVariantMap{{"HideFromXenCenter", "true"}}}};
+        QTest::newRow("hidden-disk") << hidden << QVariantList{} << false << false << false;
+        QTest::newRow("show-hidden-disk") << hidden << QVariantList{} << true << true << false;
+        for (const QString& type : {QString("crashdump"), QString("ephemeral"), QString("suspend")})
+            QTest::newRow(qPrintable(type)) << QVariantMap{{"type", type}} << QVariantList{} << false << false << false;
+        QTest::newRow("read-only-disk") << QVariantMap{{"read_only", true}} << QVariantList{} << false << true << true;
+        QTest::newRow("active-writer") << QVariantMap{} << activeRW << false << false << false;
+        QTest::newRow("active-reader") << QVariantMap{} << activeRO << false << true << true;
+        QTest::newRow("detached-writer") << QVariantMap{} << detachedRW << false << true << true;
+        QTest::newRow("sharable-active-writer") << QVariantMap{{"sharable", true}} << activeRW << false << true << false;
+        QTest::newRow("managed-snapshot-disk") << QVariantMap{{"is_a_snapshot", true}} << detachedRW << false << true << true;
+    }
+
+    void attachDiskEligibility()
+    {
+        QFETCH(QVariantMap, properties);
+        QFETCH(QVariantList, attachments);
+        QFETCH(bool, showHidden);
+        QFETCH(bool, eligible);
+        QFETCH(bool, readOnly);
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        QStringList refs;
+        for (int i = 0; i < attachments.size(); ++i)
+        {
+            const QString ref = QString("OpaqueRef:attach-vbd-%1").arg(i);
+            cache->Update(XenObjectType::VBD, ref, attachments.at(i).toMap());
+            refs.append(ref);
+        }
+        QVariantMap record{{"type", "user"}, {"managed", true}, {"VBDs", refs}};
+        for (auto it = properties.cbegin(); it != properties.cend(); ++it)
+            record[it.key()] = it.value();
+        cache->Update(XenObjectType::VDI, "OpaqueRef:attach-vdi", record);
+        const auto vdi = cache->ResolveObject<VDI>("OpaqueRef:attach-vdi");
+        bool forceReadOnly = false;
+        QCOMPARE(vdi->CanAttach(showHidden, &forceReadOnly), eligible);
+        if (eligible)
+            QCOMPARE(forceReadOnly, readOnly);
+    }
+
+    void attachStorageVisibilityAndAccessibility()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Host, "OpaqueRef:attach-host", QVariantMap{{"name_label", "Host"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:other-host", QVariantMap{{"name_label", "Other"}});
+        QVariantMap pbd{{"host", "OpaqueRef:attach-host"}, {"currently_attached", true}};
+        cache->Update(XenObjectType::PBD, "OpaqueRef:attach-pbd", pbd);
+        QVariantMap record{{"name_label", "Storage"}, {"type", "lvm"},
+                           {"PBDs", QStringList{"OpaqueRef:attach-pbd"}}};
+        cache->Update(XenObjectType::SR, "OpaqueRef:attach-sr", record);
+        const auto sr = cache->ResolveObject<SR>("OpaqueRef:attach-sr");
+        const auto host = cache->ResolveObject<Host>("OpaqueRef:attach-host");
+        QVERIFY(sr->IsVisible(false));
+        QVERIFY(sr->CanBeSeenFrom(host));
+        QVERIFY(!sr->CanBeSeenFrom(cache->ResolveObject<Host>("OpaqueRef:other-host")));
+        pbd["currently_attached"] = false;
+        cache->Update(XenObjectType::PBD, "OpaqueRef:attach-pbd", pbd);
+        QVERIFY(!sr->CanBeSeenFrom(host));
+        record["introduced_by"] = "OpaqueRef:dr-task";
+        cache->Update(XenObjectType::SR, "OpaqueRef:attach-sr", record);
+        QVERIFY(!sr->IsVisible(false));
+        QVERIFY(sr->IsVisible(true));
+        record["name_label"] = "__gui__temporary";
+        cache->Update(XenObjectType::SR, "OpaqueRef:attach-sr", record);
+        QVERIFY(!sr->IsVisible(true));
+        record["name_label"] = "Memory";
+        record["type"] = "tmpfs";
+        cache->Update(XenObjectType::SR, "OpaqueRef:attach-sr", record);
+        QVERIFY(!sr->IsVisible(true));
+    }
+
     void templateClassificationPrecedence_data()
     {
         QTest::addColumn<QString>("name");

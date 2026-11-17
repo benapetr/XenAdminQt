@@ -528,6 +528,29 @@ bool SR::HasPBDs() const
     return !GetPBDRefs().isEmpty();
 }
 
+bool SR::IsVisible(bool showHidden) const
+{
+    if (!this->IsValid() || this->GetName().startsWith("__gui__") ||
+        this->GetType() == "local" || this->GetType() == "tmpfs")
+        return false;
+    if (showHidden)
+        return true;
+    const QString introducedBy = this->IntroducedBy();
+    return !this->IsHidden() && (introducedBy.isEmpty() || introducedBy == XENOBJECT_NULL);
+}
+
+bool SR::CanBeSeenFrom(QSharedPointer<Host> host) const
+{
+    if (!host)
+        return this->IsShared() && !this->IsBroken();
+    for (const auto& pbd : this->GetPBDs())
+    {
+        if (pbd && pbd->IsCurrentlyAttached() && pbd->GetHostRef() == host->OpaqueRef())
+            return true;
+    }
+    return false;
+}
+
 bool SR::IsBroken(bool checkAttached) const
 {
     XenCache* cache = this->GetCache();

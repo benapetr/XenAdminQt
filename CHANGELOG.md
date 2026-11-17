@@ -9,6 +9,10 @@ are omitted.
 
 ### Fixed
 
+- Fixed Attach Disk showing unmanaged snapshot-chain base disks and other
+  ineligible disks. Matched C# sharing, read-only, HVM, and storage-accessibility
+  rules, with eligibility refreshed as disk and storage metadata changes.
+
 - Restored OS icons, template category labels, and C# ordering in the New VM
   wizard: custom templates first, newer names first within each category, and
   hidden templates last. Explicit template selection now also accepts UUIDs.
