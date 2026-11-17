@@ -76,12 +76,6 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
     this->ui->treeWidget->header()->setStretchLastSection(false);
     this->ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     this->ui->treeWidget->header()->setResizeContentsPrecision(-1);
-    auto resizeTreeColumn = [this]()
-    {
-        this->ui->treeWidget->resizeColumnToContents(0);
-    };
-    connect(this->ui->treeWidget, &QTreeWidget::itemExpanded, this, resizeTreeColumn);
-    connect(this->ui->treeWidget, &QTreeWidget::itemCollapsed, this, resizeTreeColumn);
     this->m_treeBuilder = new MainWindowTreeBuilder(this->ui->treeWidget, this);
 
     SettingsManager& settings = SettingsManager::instance();
