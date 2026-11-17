@@ -17,6 +17,14 @@ It connects to xapi over HTTP/S protocol using JSON-RPC API calls, provides acce
 That means it can be used as a graphical frontend to directly manage standalone XCP-ng / XenServer hosts as well as clusters.
 
 # Building
+
+The primary build system is qmake. Open `src/xenadminqt.pro` in Qt Creator,
+select a Qt6 or Qt5 kit with Qt Charts installed, and build the project.
+Use a build directory outside `src/`.
+
+CMake is an alternative introduced for the RISC-V cross-build pipeline. It is
+not required for the normal Qt Creator or packaging workflow.
+
 See [packaging readme](packaging/README.md) for details
 
 There is a packaging folder that is used to create packages for Linux (.deb and .rpm) as well as macOS
@@ -40,12 +48,48 @@ If you need to compile without OpenSSL/CommonCrypto/BCrypt (master password feat
 qmake CONFIG+=no_crypto
 ```
 
-## Linux dependencies:
+## Linux dependencies
 
-```
-# EL based (rpm):
-sudo dnf install qt6-qtbase-devel rpm-build qt6-qtbase-devel freerdp2-devel libwinpr2-devel mesa-libGL-devel mesa-libGLU-devel mesa-libEGL mesa-libEGL-devel libxkbcommon qt6-qtcharts-devel rsync
+### Debian/Ubuntu
 
-# Debian based:
-sudo apt-get install qt6-base-dev build-essential freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
+For a Qt6 build:
+
+```bash
+sudo apt-get install build-essential pkg-config \
+  qt6-base-dev qt6-charts-dev libssl-dev zlib1g-dev \
+  libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
 ```
+
+For a Qt5 build, use this alternative instead:
+
+```bash
+sudo apt-get install build-essential pkg-config \
+  qtbase5-dev libqt5charts5-dev libssl-dev zlib1g-dev \
+  libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+```
+
+Use `qmake6` for Qt6 or the Qt5 `qmake` for Qt5. Keep Qt Base and Qt Charts
+on the same major version. Both Qt versions are supported by the qmake projects.
+
+Native `.deb` packaging additionally requires `debhelper` and `dpkg-dev`.
+For the alternative CMake build, install `cmake` (3.22 or newer) in addition
+to the Qt6 dependencies above; CMake does not support Qt5 in this project.
+
+RDP console support is optional; VNC remains available without FreeRDP.
+For Debian 12 / Ubuntu 22.04, the optional FreeRDP 2 development packages are:
+
+```bash
+sudo apt-get install freerdp2-dev libwinpr2-dev
+```
+
+The qmake build currently detects FreeRDP 2 only. CMake probes FreeRDP 3 first,
+then FreeRDP 2; a version-3-only installation does not enable RDP in qmake builds.
+Package names vary by distribution release.
+
+### Fedora/RHEL/CentOS
+
+See the [RPM prerequisites](packaging/README.md#fedorarhelcentos-rpm) for Qt5
+and Qt6 package options and the additional packaging tools.
+
+See the [packaging prerequisites](packaging/README.md#prerequisites) for AppImage
+and other platform requirements.

@@ -788,7 +788,7 @@ unix:!macx {
         INCLUDEPATH += /usr/include/freerdp2 /usr/include/winpr2
     } else {
         message("FreeRDP not found - RDP support disabled (VNC-only mode)")
-        message("Install FreeRDP: sudo apt-get install libfreerdp-dev libfreerdp-client2 libwinpr2-dev")
+        message("Install FreeRDP 2 (Debian 12 / Ubuntu 22.04): sudo apt-get install freerdp2-dev libwinpr2-dev")
     }
 }
 

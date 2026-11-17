@@ -5,55 +5,113 @@ This directory contains scripts to build native packages for different platforms
 ## Prerequisites
 
 ### All Platforms
-- Qt6 development tools (qmake, etc.)
-- C++ compiler toolchain
+
+- C++17 compiler toolchain
+- Matching Qt Base and Qt Charts development packages
+- Qt6 (preferred) or Qt5 development tools, including qmake
+
+The primary build system is qmake: open `src/xenadminqt.pro` in Qt Creator for
+development. The packaging scripts also use qmake. CMake was introduced for the
+RISC-V cross-build pipeline; that alternative requires Qt6 and CMake 3.22 or
+newer. CMake is not needed for the packaging scripts.
+
+Install one Qt major version with its matching
+Charts module; installing both Qt5 and Qt6 is not required. The scripts prefer
+`qmake6` when it is available. Use `--qt <Qt5-bin-directory>` to select Qt5
+explicitly when both versions are installed.
 
 ### Debian/Ubuntu (.deb)
-- `dpkg-buildpackage`/debhelper
-- Build dependencies:
-  ```bash
-  sudo apt-get install build-essential debhelper dpkg-dev pkg-config \
-    qtbase5-dev qt6-base-dev libqt5charts5-dev qt6-charts-dev \
-    libfreerdp2-dev libfreerdp-dev libwinpr2-dev libwinpr-dev \
-    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libssl-dev zlib1g-dev
-  ```
+
+Install the common build and packaging dependencies:
+
+```bash
+sudo apt-get install build-essential debhelper dpkg-dev pkg-config \
+  libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libssl-dev zlib1g-dev
+```
+
+Then choose **one** Qt option:
+
+**Qt6:**
+
+```bash
+sudo apt-get install qt6-base-dev qt6-charts-dev
+```
+
+**Qt5:**
+
+```bash
+sudo apt-get install qtbase5-dev libqt5charts5-dev
+```
+
+RDP console support is optional; FreeRDP is not required to build with VNC
+console support. For Debian 12 / Ubuntu 22.04, install the FreeRDP 2 packages:
+
+```bash
+sudo apt-get install freerdp2-dev libwinpr2-dev
+```
+
+Package names vary by release. The qmake packaging builds detect FreeRDP 2 only;
+installing FreeRDP 3 alone does not enable their RDP support. CMake source builds
+probe FreeRDP 3 first and fall back to FreeRDP 2.
 
 ### Ubuntu Notes
-On Ubuntu 22.04/24.04 the Qt dev packages may be in `universe`. If you see
-missing `qtbase5-dev`/`qt6-base-dev`/`qt6-charts-dev`, enable `universe` first:
+
+The Qt development packages may require the `universe` repository. If apt cannot
+find them, enable it and refresh the package index:
+
 ```bash
 sudo apt-get install software-properties-common
 sudo add-apt-repository universe
 sudo apt-get update
 ```
-If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
-(`qtbase5-dev` + `libqt5charts5-dev`) or install Qt6/Qt6 Charts from a PPA.
+
+If your distribution release does not provide Qt6 Charts, use the Qt5 option
+above with qmake, or supply a Qt6 installation that includes Charts via `--qt`.
 
 ### Fedora/RHEL/CentOS (.rpm)
-- `rpmbuild` and related tools
-- Build dependencies:
-  ```bash
-  sudo dnf install rpm-build rsync pkgconf-pkg-config \
-    qt6-qtbase-devel qt6-qtcharts-devel \
-    mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel openssl-devel zlib-devel
-  ```
-  - Alma/Rocky/RHEL 8: use Qt5 (`qt5-qtbase-devel` + `qt5-qtcharts-devel`)
-  - Alma/Rocky/RHEL 9: Qt5 Charts may require CRB/EPEL
-  - FreeRDP/WinPR support is optional (`freerdp-devel` + `winpr-devel`)
+
+Install the common build and packaging dependencies:
+
+```bash
+sudo dnf install gcc-c++ make rpm-build rsync pkgconf-pkg-config \
+  mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel \
+  openssl-devel zlib-devel
+```
+
+Then choose **one** Qt option:
+
+**Qt6:**
+
+```bash
+sudo dnf install qt6-qtbase-devel qt6-qtcharts-devel
+```
+
+**Qt5:**
+
+```bash
+sudo dnf install qt5-qtbase-devel qt5-qtcharts-devel
+```
+
+- Alma/Rocky/RHEL 8: use Qt5.
+- Alma/Rocky/RHEL 9: Qt5 Charts may require CRB/EPEL.
+- FreeRDP/WinPR support is optional (`freerdp-devel` + `winpr-devel` where
+  available); qmake needs the FreeRDP 2 API and pkg-config module.
 
 ### AppImage (.AppImage)
+
+Install the source build dependencies and choose either Qt5 or Qt6 as described
+in the [root README](../README.md#debianubuntu). The `.deb` tools (`debhelper`
+and `dpkg-dev`) are not needed for AppImage packaging. RDP support remains
+optional, with the same FreeRDP 2 requirement for qmake builds.
+
+Also install:
+
 - `linuxdeploy`
 - `linuxdeploy-plugin-qt`
 - `linuxdeploy-plugin-appimage`
-- Build dependencies:
-  ```bash
-  sudo apt-get install build-essential pkg-config \
-    qtbase5-dev qt6-base-dev libqt5charts5-dev qt6-charts-dev \
-    libfreerdp2-dev libfreerdp-dev libwinpr2-dev libwinpr-dev \
-    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libssl-dev zlib1g-dev
-  ```
-  Download released AppImages from the three linuxdeploy projects, create symlinks
-  with bare command names, and put that directory on `PATH`.
+
+Download released AppImages from the three linuxdeploy projects, create symlinks
+with bare command names, and put that directory on `PATH`.
 
 ### macOS (.dmg) (includes `sips` and `iconutil` for icon conversion)
 - macOS 10.15 or later

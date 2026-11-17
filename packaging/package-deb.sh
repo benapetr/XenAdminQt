@@ -96,8 +96,9 @@ if command -v dpkg-query >/dev/null 2>&1; then
         fi
     }
 
-    optional_one_of libfreerdp3-dev libfreerdp2-dev libfreerdp-dev
-    optional_one_of libwinpr3-dev libwinpr2-dev libwinpr-dev
+    # These qmake builds detect the FreeRDP 2 pkg-config module only.
+    optional_one_of freerdp2-dev
+    optional_one_of libwinpr2-dev
     require_pkg libglu1-mesa-dev
     require_pkg libegl1-mesa-dev
     require_pkg libxkbcommon-dev
