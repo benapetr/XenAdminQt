@@ -20,6 +20,17 @@
         <file alias="yinhekylin_16x.png">images/yinhekylin_16x.png</file>
     </qresource>
     <qresource prefix="/icons">
+        <file alias="infra_view_16.png">images/infra_view_16.png</file>
+        <file alias="infra_view_24.png">images/infra_view_24.png</file>
+        <file alias="objects_16.png">images/objects_16.png</file>
+        <file alias="objects_24.png">images/objects_24.png</file>
+        <file alias="org_view_16.png">images/org_view_16.png</file>
+        <file alias="org_view_24.png">images/org_view_24.png</file>
+        <file alias="saved_searches_16.png">images/saved_searches_16.png</file>
+        <file alias="saved_searches_24.png">images/saved_searches_24.png</file>
+        <file alias="notif_none_16.png">images/notif_none_16.png</file>
+        <file alias="notif_none_24.png">images/notif_none_24.png</file>
+
         <file alias="app.ico">images/AppIcon.ico</file>
         <file alias="back.png">images/001_Back_h32bit_24.png</file>
         <file alias="forward.png">images/001_Forward_h32bit_24.png</file>

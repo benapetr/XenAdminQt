@@ -153,6 +153,7 @@ class NavigationPane : public QWidget
          * File: xenadmin/XenAdmin/Controls/MainWindowControls/NavigationPane.cs line 115
          */
         void resizeEvent(QResizeEvent* event) override;
+        bool eventFilter(QObject* watched, QEvent* event) override;
 
     private slots:
         void onNavigationButtonChecked();
@@ -173,6 +174,8 @@ class NavigationPane : public QWidget
 
     private:
         void setupNavigationButtons();
+        void updateButtonLayout();
+        void restoreButtonPanelHeight();
         void addNavigationItemPair(QObject* bigButton, QObject* smallButton);
         void populateOrganizationDropDown();
         void populateSearchDropDown();
@@ -185,6 +188,7 @@ class NavigationPane : public QWidget
 
         NavigationMode m_currentMode;
         NotificationsSubMode m_lastNotificationsMode;
+        int m_buttonPanelHeight = 0;
 
         // Navigation buttons (big variants in Panel2)
         NavigationButtonBig* m_buttonInfraBig;

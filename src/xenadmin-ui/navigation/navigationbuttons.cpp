@@ -39,7 +39,8 @@ NavigationButtonBig::NavigationButtonBig(QWidget* parent)
     this->setCheckable(true);
     this->setAutoExclusive(true); // Radio button behavior
     this->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    this->setMinimumHeight(40);
+    this->setIconSize(QSize(24, 24));
+    this->setFixedHeight(qMax(28, this->fontMetrics().height() + 8));
     this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     connect(this, &QToolButton::toggled, this, [this](bool checked) {

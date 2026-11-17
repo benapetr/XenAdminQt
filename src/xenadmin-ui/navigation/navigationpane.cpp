@@ -35,6 +35,8 @@
 #include <QResizeEvent>
 #include <QDebug>
 #include <QMetaType>
+#include <QTimer>
+#include <QSplitter>
 
 NavigationPane::NavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::NavigationPane), m_currentMode(Infrastructure), m_lastNotificationsMode(Alerts), m_buttonInfraBig(nullptr), m_buttonObjectsBig(nullptr), m_buttonOrganizationBig(nullptr), m_buttonSearchesBig(nullptr), m_buttonNotifyBig(nullptr), m_buttonInfraSmall(nullptr), m_buttonObjectsSmall(nullptr), m_buttonOrganizationSmall(nullptr), m_buttonSearchesSmall(nullptr), m_buttonNotifySmall(nullptr)
 {
@@ -68,6 +70,19 @@ NavigationPane::NavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::Na
 
     // Create navigation buttons
     this->setupNavigationButtons();
+    this->m_buttonPanelHeight = this->m_buttonInfraBig->height() * 5;
+    this->ui->panel2->setMaximumHeight(this->m_buttonPanelHeight);
+    this->ui->panel2->installEventFilter(this);
+    this->ui->splitContainer->setCollapsible(0, false);
+    this->ui->splitContainer->setCollapsible(1, true);
+    this->ui->splitContainer->setStretchFactor(0, 1);
+    this->ui->splitContainer->setStretchFactor(1, 0);
+    connect(this->ui->splitContainer, &QSplitter::splitterMoved, this, [this]()
+    {
+        this->m_buttonPanelHeight = this->ui->splitContainer->sizes().value(1);
+        this->updateButtonLayout();
+    });
+    QTimer::singleShot(0, this, &NavigationPane::restoreButtonPanelHeight);
 
     // Wire up NavigationView events to forward them
     connect(this->m_currentNavigationView, &NavigationView::treeViewSelectionChanged, this, &NavigationPane::onNavigationViewSelectionChanged);
@@ -96,7 +111,7 @@ void NavigationPane::setupNavigationButtons()
     // Create big buttons (vertical toolbar in Panel2)
     this->m_buttonInfraBig = new NavigationButtonBig(this);
     this->m_buttonInfraBig->setText("Infrastructure");
-    this->m_buttonInfraBig->setIcon(QIcon(":/icons/infra_view_24.png")); // TODO: Add icons
+    this->m_buttonInfraBig->setIcon(QIcon(":/icons/infra_view_24.png"));
     this->m_buttonInfraBig->setTag(QVariant::fromValue(Infrastructure));
 
     this->m_buttonObjectsBig = new NavigationButtonBig(this);
@@ -117,7 +132,7 @@ void NavigationPane::setupNavigationButtons()
     this->m_buttonNotifyBig->setIcon(QIcon(":/icons/notif_none_24.png"));
     this->m_buttonNotifyBig->setTag(QVariant::fromValue(Notifications));
 
-    // Create small buttons (horizontal toolbar, shown when pane is narrow)
+    // Create small buttons for the large buttons that overflow vertically.
     this->m_buttonInfraSmall = new NavigationButtonSmall(this);
     this->m_buttonInfraSmall->setIcon(QIcon(":/icons/infra_view_16.png"));
     this->m_buttonInfraSmall->setToolTip("Infrastructure");
@@ -431,23 +446,49 @@ void NavigationPane::SetInSearchMode(bool enabled)
     this->m_currentNavigationView->SetInSearchMode(enabled);
 }
 
+void NavigationPane::updateButtonLayout()
+{
+    // C# toolStripBig_LayoutCompleted shows each small button only when its
+    // fixed-height large counterpart no longer fits in the vertical strip.
+    const QList<NavigationButtonBig*> bigButtons = {
+        this->m_buttonInfraBig, this->m_buttonObjectsBig, this->m_buttonOrganizationBig,
+        this->m_buttonSearchesBig, this->m_buttonNotifyBig
+    };
+    const QList<NavigationButtonSmall*> smallButtons = {
+        this->m_buttonInfraSmall, this->m_buttonObjectsSmall, this->m_buttonOrganizationSmall,
+        this->m_buttonSearchesSmall, this->m_buttonNotifySmall
+    };
+    int remainingHeight = this->ui->panel2->height();
+    for (int i = 0; i < bigButtons.size(); ++i)
+    {
+        const int buttonHeight = bigButtons.at(i)->height();
+        const bool fits = remainingHeight >= buttonHeight;
+        bigButtons.at(i)->setVisible(fits);
+        smallButtons.at(i)->setVisible(!fits);
+        if (fits)
+            remainingHeight -= buttonHeight;
+    }
+}
+
+void NavigationPane::restoreButtonPanelHeight()
+{
+    const int available = qMax(0, this->ui->splitContainer->height() - this->ui->splitContainer->handleWidth());
+    const int buttonHeight = qMin(this->m_buttonPanelHeight, available);
+    this->ui->splitContainer->setSizes(QList<int>{available - buttonHeight, buttonHeight});
+    this->updateButtonLayout();
+}
+
+bool NavigationPane::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == this->ui->panel2 && event->type() == QEvent::Resize)
+        this->updateButtonLayout();
+    return QWidget::eventFilter(watched, event);
+}
+
 void NavigationPane::resizeEvent(QResizeEvent* event)
 {
-    // Matches C# NavigationPane.OnResize
-    // Preserve Panel2 height during resize
     QWidget::resizeEvent(event);
-
-    QSplitter* splitter = this->ui->splitContainer;
-    int panel2Height = splitter->widget(1)->height();
-    int totalHeight = splitter->height();
-    int splitterWidth = splitter->handleWidth();
-
-    // Calculate new splitter distance to preserve panel2Height
-    int newDistance = totalHeight - panel2Height - splitterWidth;
-    if (newDistance > 0)
-    {
-        QList<int> sizes;
-        sizes << newDistance << panel2Height;
-        splitter->setSizes(sizes);
-    }
+    // Wait for the outer layout to resize the splitter, then preserve the
+    // user's chosen button area rather than scaling it with the tree.
+    QTimer::singleShot(0, this, &NavigationPane::restoreButtonPanelHeight);
 }

@@ -9,6 +9,9 @@ are omitted.
 
 ### Fixed
 
+- Restored fixed-height navigation buttons and their icons, with buttons moving
+  progressively into the bottom icon row as the tree splitter is dragged down.
+
 - Fixed Attach Disk showing unmanaged snapshot-chain base disks and other
   ineligible disks. Matched C# sharing, read-only, HVM, and storage-accessibility
   rules, with eligibility refreshed as disk and storage metadata changes.
