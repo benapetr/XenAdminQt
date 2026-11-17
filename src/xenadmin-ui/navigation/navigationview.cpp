@@ -51,6 +51,7 @@
 #include <QDebug>
 #include <QApplication>
 #include <QDropEvent>
+#include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QMimeData>
 #include <QScrollBar>
@@ -72,6 +73,15 @@ static bool isTypeRelevantForTree(XenObjectType type)
 NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
 {
     this->ui->setupUi(this);
+    this->ui->treeWidget->header()->setStretchLastSection(false);
+    this->ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    this->ui->treeWidget->header()->setResizeContentsPrecision(-1);
+    auto resizeTreeColumn = [this]()
+    {
+        this->ui->treeWidget->resizeColumnToContents(0);
+    };
+    connect(this->ui->treeWidget, &QTreeWidget::itemExpanded, this, resizeTreeColumn);
+    connect(this->ui->treeWidget, &QTreeWidget::itemCollapsed, this, resizeTreeColumn);
     this->m_treeBuilder = new MainWindowTreeBuilder(this->ui->treeWidget, this);
 
     SettingsManager& settings = SettingsManager::instance();
@@ -180,6 +190,7 @@ void NavigationView::RequestRefreshTreeView()
         || (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty());
     this->restoreSelection();
 
+    this->ui->treeWidget->resizeColumnToContents(0);
     this->ui->treeWidget->setUpdatesEnabled(true); // Resume painting
     if (verticalBar)
         verticalBar->setValue(savedVertical);
