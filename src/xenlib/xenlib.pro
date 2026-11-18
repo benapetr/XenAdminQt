@@ -74,6 +74,7 @@ HEADERS += \
     xen/xenapi/xenapi_GPU_group.h \
     xen/xenapi/xenapi_PIF.h \
     xen/xenapi/xenapi_Secret.h \
+    xen/xenapi/xenapi_Message.h \
     xen/xenapi/xenapi_VBD.h \
     xen/xenapi/xenapi_VDI.h \
     xen/xenapi/xenapi_VGPU.h \
@@ -206,6 +207,7 @@ HEADERS += \
     xen/actions/general/perfmondefinitionaction.h \
     xen/actions/general/savechangesaction.h \
     xen/actions/general/savedatasourcestateaction.h \
+    xen/actions/general/dismissalertsaction.h \
     xen/actions/vm/vmstartabstractaction.h \
     xen/actions/vm/vmstartonaction.h \
     xen/actions/vm/vmresumeaction.h \
@@ -337,6 +339,7 @@ SOURCES += \
     xen/xenapi/xenapi_GPU_group.cpp \
     xen/xenapi/xenapi_PIF.cpp \
     xen/xenapi/xenapi_Secret.cpp \
+    xen/xenapi/xenapi_Message.cpp \
     xen/xenapi/xenapi_VBD.cpp \
     xen/xenapi/xenapi_VDI.cpp \
     xen/xenapi/xenapi_VGPU.cpp \
@@ -457,6 +460,7 @@ SOURCES += \
     xen/actions/general/perfmondefinitionaction.cpp \
     xen/actions/general/savechangesaction.cpp \
     xen/actions/general/savedatasourcestateaction.cpp \
+    xen/actions/general/dismissalertsaction.cpp \
     xen/actions/vm/vmstartabstractaction.cpp \
     xen/actions/vm/vmstartonaction.cpp \
     xen/actions/vm/vmresumeaction.cpp \

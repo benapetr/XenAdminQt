@@ -42,14 +42,244 @@
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <algorithm>
+#include <functional>
+#include <QHash>
 #include "alertsummarypage.h"
 #include "ui_alertsummarypage.h"
+#include "../mainwindow.h"
 #include "../settingsmanager.h"
 #include "../widgets/tableclipboardutils.h"
+#include "../commands/pool/haconfigurecommand.h"
+#include "../commands/storage/repairsrcommand.h"
+#include "../commands/host/certificatecommand.h"
+#include "../dialogs/hostpropertiesdialog.h"
+#include "../dialogs/vmpropertiesdialog.h"
+#include "../dialogs/storagepropertiesdialog.h"
 #include "xenlib/alerts/alertmanager.h"
 #include "xenlib/alerts/alert.h"
+#include "xenlib/alerts/messagealert.h"
+#include "xenlib/alerts/alarmmessagealert.h"
+#include "xenlib/alerts/certificatealert.h"
+#include "xenlib/xen/actions/general/dismissalertsaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vm.h"
 
 using namespace XenLib;
+
+namespace
+{
+    // Equivalent of C# Alert.FixLinkText + Alert.FixLinkAction (which live in the GUI
+    // assembly in C#; here the alert classes are in xenlib, so the UI resolves them)
+    struct AlertFixLink
+    {
+        QString text;
+        std::function<void()> action;
+
+        bool IsValid() const { return !this->text.isEmpty() && this->action; }
+    };
+
+    // C# Reference: VM.IsControlDomainZero(out Host)
+    QSharedPointer<Host> controlDomainZeroHost(const QSharedPointer<VM>& vm)
+    {
+        if (!vm || !vm->IsControlDomain())
+            return QSharedPointer<Host>();
+
+        QSharedPointer<Host> host = vm->GetResidentOnHost();
+        if (!host || !host->IsValid())
+            return QSharedPointer<Host>();
+
+        QSharedPointer<VM> dom0 = host->ControlDomainZero();
+        if (dom0 && dom0->OpaqueRef() == vm->OpaqueRef())
+            return host;
+
+        return QSharedPointer<Host>();
+    }
+
+    // C# Reference: AlarmMessageAlert.GetStorage()
+    QSharedPointer<SR> resolveAlarmSR(XenConnection* connection, const QString& srUuid)
+    {
+        if (!connection || srUuid.isEmpty() || !connection->GetCache())
+            return QSharedPointer<SR>();
+
+        for (const QSharedPointer<SR>& sr : connection->GetCache()->GetAll<SR>())
+        {
+            if (sr && sr->IsValid() && sr->GetUUID().startsWith(srUuid))
+                return sr;
+        }
+        return QSharedPointer<SR>();
+    }
+
+    // C# Reference: AlarmMessageAlert.FixLinkAction / FixLinkText
+    AlertFixLink getAlarmFixLink(AlarmMessageAlert* alarm)
+    {
+        AlertFixLink link;
+        QSharedPointer<XenObject> xenObject = alarm->GetXenObject();
+        QSharedPointer<XenObject> target;
+
+        if (QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(xenObject))
+        {
+            // The SR is only set when it's AlarmType::Storage
+            QSharedPointer<SR> sr;
+            if (alarm->GetAlarmType() == AlarmType::Storage)
+                sr = resolveAlarmSR(alarm->GetConnection(), alarm->GetSRUuid());
+            target = sr ? qSharedPointerCast<XenObject>(sr) : xenObject;
+        } else if (QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(xenObject))
+        {
+            QSharedPointer<Host> host = controlDomainZeroHost(vm);
+            target = host ? qSharedPointerCast<XenObject>(host) : xenObject;
+        }
+
+        if (!target)
+            return link;
+
+        link.text = QObject::tr("Alarm Settings");
+        link.action = [target]()
+        {
+            VerticallyTabbedDialog* dialog = nullptr;
+            if (QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(target))
+                dialog = new HostPropertiesDialog(host, MainWindow::instance());
+            else if (QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(target))
+                dialog = new VMPropertiesDialog(vm, MainWindow::instance());
+            else if (QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(target))
+                dialog = new StoragePropertiesDialog(sr, MainWindow::instance());
+
+            if (!dialog)
+                return;
+
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            dialog->setModal(true);
+            dialog->SelectPerfmonAlertEditPage();
+            dialog->exec();
+        };
+        return link;
+    }
+
+    // C# Reference: CertificateAlert.FixLinkAction / FixLinkText
+    AlertFixLink getCertificateFixLink(CertificateAlert* alert)
+    {
+        AlertFixLink link;
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(alert->GetXenObject());
+        if (!host)
+            return link;
+
+        const QString type = alert->GetMessageType();
+        if (type != "HOST_SERVER_CERTIFICATE_EXPIRED" &&
+            type != "HOST_SERVER_CERTIFICATE_EXPIRING_07" &&
+            type != "HOST_SERVER_CERTIFICATE_EXPIRING_14" &&
+            type != "HOST_SERVER_CERTIFICATE_EXPIRING_30")
+        {
+            return link;
+        }
+
+        const QList<QSharedPointer<XenObject>> selection { host };
+        InstallCertificateCommand probe(MainWindow::instance());
+        probe.SetSelectionOverride(selection);
+        if (!probe.CanRun())
+            return link;
+
+        link.text = QObject::tr("Install certificate...");
+        link.action = [selection]()
+        {
+            InstallCertificateCommand cmd(MainWindow::instance());
+            cmd.SetSelectionOverride(selection);
+            if (cmd.CanRun())
+                cmd.Run();
+        };
+        return link;
+    }
+
+    // C# Reference: MessageAlert.FixLinkAction / FixLinkText
+    AlertFixLink getMessageFixLink(MessageAlert* alert)
+    {
+        AlertFixLink link;
+        QSharedPointer<XenObject> xenObject = alert->GetXenObject();
+        if (!xenObject)
+            return link;
+
+        XenConnection* connection = xenObject->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return link;
+
+        static const QStringList haTypes = {
+            "HA_HEARTBEAT_APPROACHING_TIMEOUT",
+            "HA_HOST_FAILED",
+            "HA_HOST_WAS_FENCED",
+            "HA_NETWORK_BONDING_ERROR",
+            "HA_POOL_DROP_IN_PLAN_EXISTS_FOR",
+            "HA_POOL_OVERCOMMITTED",
+            "HA_PROTECTED_VM_RESTART_FAILED",
+            "HA_STATEFILE_APPROACHING_TIMEOUT",
+            "HA_STATEFILE_LOST",
+            "HA_XAPI_HEALTHCHECK_APPROACHING_TIMEOUT",
+        };
+
+        const QString type = alert->GetMessageType();
+        if (haTypes.contains(type))
+        {
+            QSharedPointer<Pool> pool = cache->GetPoolOfOne();
+            if (!pool)
+                return link;
+
+            // FriendlyNames: Message.action-ha_*
+            link.text = QObject::tr("HA Settings");
+            const QList<QSharedPointer<XenObject>> selection { pool };
+            link.action = [selection]()
+            {
+                HAConfigureCommand cmd(MainWindow::instance());
+                cmd.SetSelectionOverride(selection);
+                cmd.Run();
+            };
+        } else if (type == "PBD_PLUG_FAILED_ON_SERVER_START")
+        {
+            QList<QSharedPointer<XenObject>> selection;
+            for (const QSharedPointer<SR>& sr : cache->GetAll<SR>())
+                selection.append(sr);
+
+            RepairSRCommand probe(MainWindow::instance());
+            probe.SetSelectionOverride(selection);
+            if (selection.isEmpty() || !probe.CanRun())
+                return link;
+
+            // FriendlyNames: Message.action-pbd_plug_failed_on_server_start
+            link.text = QObject::tr("Repair Storage");
+            link.action = [selection]()
+            {
+                RepairSRCommand cmd(MainWindow::instance());
+                cmd.SetSelectionOverride(selection);
+                if (cmd.CanRun())
+                    cmd.Run();
+            };
+        }
+
+        // TODO: MULTIPATH_PERIODIC_ALERT -> "View Log Files" (C# Program.ViewLogFiles opens the
+        // application log folder). This client doesn't write a log file yet, so there is nothing
+        // to open; add file logging + ViewLogFiles, then return that action here.
+        return link;
+    }
+
+    AlertFixLink getAlertFixLink(Alert* alert)
+    {
+        if (!alert)
+            return AlertFixLink();
+
+        if (AlarmMessageAlert* alarm = dynamic_cast<AlarmMessageAlert*>(alert))
+            return getAlarmFixLink(alarm);
+        if (CertificateAlert* certificate = dynamic_cast<CertificateAlert*>(alert))
+            return getCertificateFixLink(certificate);
+        if (MessageAlert* message = dynamic_cast<MessageAlert*>(alert))
+            return getMessageFixLink(message);
+
+        // TODO: C# IqnAlert has FixLinkText "Edit IQN" -> IqnPropertiesCommand. IqnAlert (and other
+        // non-message alerts) aren't ported yet; add its fix link here once it exists.
+
+        return AlertFixLink();
+    }
+} // namespace
 
 AlertSummaryPage::AlertSummaryPage(QWidget* parent) : NotificationsBasePage(parent), ui(new Ui::AlertSummaryPage), m_dateFilterEnabled(false)
 {
@@ -153,25 +383,44 @@ void AlertSummaryPage::buildAlertList()
         dateItem->setData(Qt::UserRole, alert->GetTimestamp());
         this->ui->alertsTable->setItem(row, 4, dateItem);
         
-        // Column 5: Actions dropdown (C# Reference: GetAlertActionItems() line 200)
+        // Column 5: Actions dropdown (C# Reference: GetAlertActionItems())
         QToolButton* actionBtn = new QToolButton();
         actionBtn->setText(tr("Actions"));
         actionBtn->setPopupMode(QToolButton::InstantPopup);
         
         QMenu* actionMenu = new QMenu(actionBtn);
-        
-        // Dismiss action (always available)
-        QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
-        connect(dismissAction, &QAction::triggered, this, [this, alert]()
+
+        const AlertFixLink fixLink = getAlertFixLink(alert);
+        if (fixLink.IsValid())
         {
-            this->dismissAlerts(QList<Alert*>() << alert,
-                               true,
-                               tr("Dismiss Alert"),
-                               tr("Are you sure you want to dismiss this alert?"));
+            QAction* fixAction = actionMenu->addAction(fixLink.text);
+            const std::function<void()> fix = fixLink.action;
+            connect(fixAction, &QAction::triggered, this, [fix]() { fix(); });
+        }
+
+        if (alert->IsAllowedToDismiss())
+        {
+            QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
+            connect(dismissAction, &QAction::triggered, this, [this, alert]()
+            {
+                this->dismissAlerts(QList<Alert*>() << alert,
+                                   true,
+                                   tr("Dismiss Alert"),
+                                   tr("Are you sure you want to dismiss this alert?"));
+            });
+        }
+
+        if (!actionMenu->isEmpty())
+            actionMenu->addSeparator();
+
+        const QString alertUuid = alert->GetUUID();
+        QAction* copyAction = actionMenu->addAction(tr("Copy"));
+        connect(copyAction, &QAction::triggered, this, [this, alertUuid]()
+        {
+            const int alertRow = this->rowForAlert(alertUuid);
+            if (alertRow >= 0)
+                this->copyRowsToClipboard(QList<int>() << alertRow);
         });
-        
-        // TODO: Add Fix/Help/Web Console actions based on alert type
-        // C# Reference: MessageAlert.cs FixLinkAction, HelpLinkAction, WebConsoleAction
         
         actionBtn->setMenu(actionMenu);
         this->ui->alertsTable->setCellWidget(row, 5, actionBtn);
@@ -662,11 +911,84 @@ void AlertSummaryPage::dismissAlerts(const QList<Alert*>& alerts, bool confirm, 
             return;
     }
 
+    // C# Reference: AlertSummaryPage.DismissAlerts() - group by connection and run a
+    // DismissAlertsAction per connection, hiding the alerts while it runs
+    QHash<XenConnection*, QStringList> messageRefsByConnection;
+    QList<Alert*> localAlerts;
+
     for (Alert* alert : alerts)
+    {
+        if (!alert || !alert->IsAllowedToDismiss())
+            continue;
+
+        MessageAlert* messageAlert = dynamic_cast<MessageAlert*>(alert);
+        if (messageAlert && messageAlert->GetConnection() && !messageAlert->GetOpaqueRef().isEmpty())
+        {
+            messageAlert->SetDismissing(true);
+            messageRefsByConnection[messageAlert->GetConnection()].append(messageAlert->GetOpaqueRef());
+        } else
+        {
+            localAlerts.append(alert);
+        }
+    }
+
+    // Alerts without a server-side message are only removed from the client
+    for (Alert* alert : localAlerts)
     {
         alert->Dismiss();
         AlertManager::instance()->RemoveAlert(alert);
     }
+
+    // Alerts are looked up again by message ref when the action finishes, because
+    // AlertManager may have deleted them in the meantime (e.g. on a message "del" event)
+    auto matchesMessage = [](Alert* alert, XenConnection* connection, const QSet<QString>& refs)
+    {
+        MessageAlert* messageAlert = dynamic_cast<MessageAlert*>(alert);
+        return messageAlert && messageAlert->GetConnection() == connection && refs.contains(messageAlert->GetOpaqueRef());
+    };
+
+    for (auto it = messageRefsByConnection.cbegin(); it != messageRefsByConnection.cend(); ++it)
+    {
+        XenConnection* connection = it.key();
+        const QStringList& refList = it.value();
+        const QSet<QString> refs(refList.cbegin(), refList.cend());
+
+        DismissAlertsAction* action = new DismissAlertsAction(connection, refList);
+
+        connect(action, &AsyncOperation::completed, this, [connection, refs, matchesMessage]()
+        {
+            AlertManager::instance()->RemoveAlerts([&](Alert* alert) { return matchesMessage(alert, connection, refs); });
+        });
+
+        auto restoreAlerts = [this, connection, refs, matchesMessage]()
+        {
+            for (Alert* alert : AlertManager::instance()->GetAllAlerts())
+            {
+                if (matchesMessage(alert, connection, refs))
+                    alert->SetDismissing(false);
+            }
+            this->buildAlertList();
+        };
+        connect(action, &AsyncOperation::failed, this, restoreAlerts);
+        connect(action, &AsyncOperation::cancelled, this, restoreAlerts);
+
+        action->RunAsync(true);
+    }
+
+    if (!messageRefsByConnection.isEmpty())
+        this->buildAlertList();
+}
+
+int AlertSummaryPage::rowForAlert(const QString& alertUuid) const
+{
+    for (int row = 0; row < this->ui->alertsTable->rowCount(); ++row)
+    {
+        QTableWidgetItem* item = this->ui->alertsTable->item(row, 0);
+        Alert* alert = item ? item->data(Qt::UserRole).value<Alert*>() : nullptr;
+        if (alert && alert->GetUUID() == alertUuid)
+            return row;
+    }
+    return -1;
 }
 
 void AlertSummaryPage::copyRowsToClipboard(const QList<int>& rows) const

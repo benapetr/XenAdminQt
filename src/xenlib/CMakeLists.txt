@@ -32,6 +32,7 @@ set(XENLIB_SOURCES
     xen/actions/general/perfmondefinitionaction.cpp
     xen/actions/general/savechangesaction.cpp
     xen/actions/general/savedatasourcestateaction.cpp
+    xen/actions/general/dismissalertsaction.cpp
     xen/actions/gpu/vgpuconfigurationaction.cpp
     xen/actions/host/changecontroldomainmemoryaction.cpp
     xen/actions/host/changehostautostartaction.cpp
@@ -235,6 +236,7 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_Pool.cpp
     xen/xenapi/xenapi_Role.cpp
     xen/xenapi/xenapi_Secret.cpp
+    xen/xenapi/xenapi_Message.cpp
     xen/xenapi/xenapi_Session.cpp
     xen/xenapi/xenapi_SR.cpp
     xen/xenapi/xenapi_Task.cpp

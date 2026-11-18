@@ -7,7 +7,25 @@ are omitted.
 
 ## [Unreleased]
 
+### Added
+
+- Added C# fix actions to the alert Actions menu: HA Settings for HA alerts,
+  Repair Storage for failed storage plugs, Alarm Settings for performance alarms
+  (opening the Alerts page of the affected host, VM, or SR), and Install
+  Certificate for expiring host certificates. The menu also gained Copy, and
+  Dismiss is only offered when the alert can be dismissed.
+- Added the snapshot schedule panel to the Snapshots tab, showing whether the VM
+  is part of a snapshot schedule.
+
 ### Fixed
+
+- Fixed dismissed alerts reappearing after reconnecting. Dismissing now deletes
+  the messages on the server, in one call on xapi 22.19.0 and newer; alerts
+  reappear if the deletion fails. Alerts can no longer be dismissed while their
+  connection is disconnected.
+- Repair Storage now handles several selected storage repositories at once.
+- The Scheduled snapshots view option is now hidden only when the license does
+  not allow snapshot schedules.
 
 - Restored fixed-height navigation buttons and their icons, with buttons moving
   progressively into the bottom icon row as the tree splitter is dragged down.

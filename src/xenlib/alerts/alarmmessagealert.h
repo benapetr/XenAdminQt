@@ -70,6 +70,11 @@ class XENLIB_EXPORT AlarmMessageAlert : public MessageAlert
         AlertPriority GetPriority() const override;
         QString GetDescription() const override;
 
+        AlarmType GetAlarmType() const { return this->m_alarmType; }
+
+        // UUID prefix of the SR for AlarmType::Storage alarms (empty otherwise)
+        QString GetSRUuid() const { return this->m_srUuid; }
+
     private:
         void parseAlarmMessage();
 

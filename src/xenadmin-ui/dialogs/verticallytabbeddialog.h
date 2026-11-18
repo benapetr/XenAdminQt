@@ -86,6 +86,13 @@ class VerticallyTabbedDialog : public QDialog
         explicit VerticallyTabbedDialog(QSharedPointer<XenObject> object, QWidget* parent = nullptr);
         ~VerticallyTabbedDialog();
 
+        /**
+         * @brief Select the performance alerts page if this dialog has one
+         *
+         * C# equivalent: PropertiesDialog.SelectPerfmonAlertEditPage()
+         */
+        void SelectPerfmonAlertEditPage();
+
     protected:
         /**
          * @brief Build the page list - override in subclasses

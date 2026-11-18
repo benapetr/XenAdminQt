@@ -30,8 +30,10 @@
 
 #include "alert.h"
 #include <QVariantMap>
+#include <QSharedPointer>
 
 class XenConnection;
+class XenObject;
 
 namespace XenLib
 {
@@ -55,6 +57,7 @@ class XENLIB_EXPORT MessageAlert : public Alert
         QString AppliesTo() const override;
         QString GetName() const override;
         void Dismiss() override;
+        bool IsAllowedToDismiss() const override;
 
         // Access to underlying message data
         QVariantMap GetMessageData() const { return this->m_messageData; }
@@ -62,6 +65,11 @@ class XENLIB_EXPORT MessageAlert : public Alert
         QString GetMessageBody() const;
         QString GetObjUUID() const;
         QString GetOpaqueRef() const;
+        QString GetObjClass() const;
+
+        // Resolve the object this message applies to from the connection cache
+        // C# Reference: MessageAlert.XenObject (Message.GetXenObject())
+        QSharedPointer<XenObject> GetXenObject() const;
 
         // Factory method to create appropriate alert type based on message type
         // C# Reference: MessageAlert.cs line 462 - ParseMessage()

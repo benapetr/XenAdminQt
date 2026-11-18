@@ -31,6 +31,9 @@
 #include "certificatealert.h"
 #include "alertmanager.h"
 #include "../xen/network/connection.h"
+#include "../xen/xenobject.h"
+#include "../xen/xenobjecttype.h"
+#include "../xencache.h"
 #include <QDateTime>
 
 using namespace XenLib;
@@ -67,9 +70,29 @@ QString MessageAlert::GetName() const
 
 void MessageAlert::Dismiss()
 {
-    // TODO: Call XenAPI Message.destroy to remove the message
-    // For now, just mark as dismissing
+    // C# MessageAlert.Dismiss() calls Message.destroy synchronously. Here the server-side
+    // deletion is done by DismissAlertsAction (off the UI thread), which the UI runs for
+    // message alerts; this only marks the alert locally.
     this->m_dismissing = true;
+}
+
+bool MessageAlert::IsAllowedToDismiss() const
+{
+    // C# Reference: MessageAlert.AllowedToDismiss()
+    if (this->m_dismissing)
+        return false;
+
+    // this shouldn't happen for this type of alert, but check for safety
+    if (!this->m_connection)
+        return true;
+
+    // if we are disconnected do not dismiss as the alert will disappear soon
+    if (!this->m_connection->IsConnected())
+        return false;
+
+    // TODO: C# also requires the session to hold a role allowed to call Message.destroy
+    // (unless it's the local superuser). Add once RBAC role checks are wired up.
+    return true;
 }
 
 QString MessageAlert::GetMessageType() const
@@ -90,6 +113,36 @@ QString MessageAlert::GetObjUUID() const
 QString MessageAlert::GetOpaqueRef() const
 {
     return this->m_messageData.value("ref").toString();
+}
+
+QString MessageAlert::GetObjClass() const
+{
+    return this->m_messageData.value("cls").toString();
+}
+
+QSharedPointer<XenObject> MessageAlert::GetXenObject() const
+{
+    // C# Reference: Message.GetXenObject() - resolves cls + obj_uuid via the cache
+    if (!this->m_connection)
+        return QSharedPointer<XenObject>();
+
+    XenCache* cache = this->m_connection->GetCache();
+    const QString objUuid = this->GetObjUUID();
+    if (!cache || objUuid.isEmpty())
+        return QSharedPointer<XenObject>();
+
+    const XenObjectType type = XenObjectTypeFromString(this->GetObjClass());
+    if (type == XenObjectType::Null)
+        return QSharedPointer<XenObject>();
+
+    const QList<QSharedPointer<XenObject>> objects = cache->GetAll(type);
+    for (const QSharedPointer<XenObject>& object : objects)
+    {
+        if (object && object->IsValid() && object->GetUUID() == objUuid)
+            return object;
+    }
+
+    return QSharedPointer<XenObject>();
 }
 
 Alert* MessageAlert::ParseMessage(XenConnection* connection, const QVariantMap& messageData)

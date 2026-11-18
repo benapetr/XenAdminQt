@@ -29,6 +29,7 @@
 #include "verticallytabbeddialog.h"
 #include "ui_verticallytabbeddialog.h"
 #include "actionprogressdialog.h"
+#include "../settingspanels/perfmonalerteditpage.h"
 #include "xenlib/xen/actions/general/savechangesaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
@@ -160,6 +161,18 @@ void VerticallyTabbedDialog::selectPage(IEditPage* page)
     if (index >= 0)
     {
         this->ui->verticalTabs->setCurrentRow(index);
+    }
+}
+
+void VerticallyTabbedDialog::SelectPerfmonAlertEditPage()
+{
+    for (IEditPage* page : this->m_pages)
+    {
+        if (qobject_cast<PerfmonAlertEditPage*>(page))
+        {
+            this->selectPage(page);
+            return;
+        }
     }
 }
 

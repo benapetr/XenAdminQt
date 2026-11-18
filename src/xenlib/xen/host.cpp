@@ -95,6 +95,11 @@ bool Host::RestrictVtpm() const
     return boolKeyPreferTrue(LicenseParams(), "restrict_vtpm");
 }
 
+bool Host::RestrictVMSnapshotSchedule() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_vmss");
+}
+
 bool Host::RestrictIntraPoolMigrate() const
 {
     return boolKey(LicenseParams(), "restrict_xen_motion");
@@ -658,6 +663,13 @@ QVariantMap Host::LicenseServer() const
 QString Host::BuildNumberRaw() const
 {
     return this->SoftwareVersion().value("build_number").toString();
+}
+
+QString Host::GetXapiVersion() const
+{
+    const QVariantMap softwareVersion = this->SoftwareVersion();
+    const QString xapiBuild = softwareVersion.value("xapi_build").toString();
+    return !xapiBuild.isEmpty() ? xapiBuild : softwareVersion.value("xapi").toString();
 }
 
 QString Host::PlatformVersion() const

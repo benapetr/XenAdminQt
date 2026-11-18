@@ -48,6 +48,11 @@ class RepairSRCommand : public SRCommand
         void Run() override;
         QString MenuText() const override;
         QIcon GetIcon() const override;
+
+    private:
+        static bool canRepairSR(const QSharedPointer<SR>& sr);
+        QList<QSharedPointer<SR>> getRepairableSRs() const;
+        bool allSelectedItemsAreSRs() const;
 };
 
 #endif // REPAIRSRCOMMAND_H

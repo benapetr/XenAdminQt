@@ -55,6 +55,11 @@
 #include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vmss.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/actions/gpu/gpuhelpers.h"
+#include "xenlib/utils/misc.h"
 
 QHash<QString, SnapshotsTabPage::SnapshotsView> SnapshotsTabPage::s_viewByVmRef;
 
@@ -81,6 +86,8 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent) : BaseTabPage(parent), ui(ne
         SnapshotPropertiesDialog dialog(snapshot, this);
         dialog.exec();
     });
+
+    connect(this->ui->vmssLinkLabel, &QLabel::linkActivated, this, &SnapshotsTabPage::onVmssLinkClicked);
 
     this->ui->snapshotTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->snapshotTable, &QTableWidget::customContextMenuRequested, this, &SnapshotsTabPage::onSnapshotContextMenu);
@@ -1186,6 +1193,8 @@ void SnapshotsTabPage::onScheduledSnapshotsToggled()
 
 void SnapshotsTabPage::onVmssLinkClicked()
 {
+    // TODO: C# runs VMGroupCommand<VMSS> (opens the VM snapshot schedules management dialog).
+    // Replace this placeholder once the VMSS dialog/command is ported.
     QMessageBox::information(this,
                              tr("VM Snapshot Schedules"),
                              tr("VM snapshot schedules are not available yet in this version."));
@@ -1252,18 +1261,57 @@ void SnapshotsTabPage::buildSnapshotTree(const QString& snapshotRef,
 
 void SnapshotsTabPage::refreshVmssPanel()
 {
+    // C# Reference: SnapshotsPage.RefreshVMSSPanel() and the VM setter
     if (!this->m_connection || !this->m_vm)
     {
         if (this->m_scheduledSnapshotsAction)
             this->m_scheduledSnapshotsAction->setVisible(false);
+        this->ui->vmssPanel->setVisible(false);
         return;
     }
 
-    const bool hasVmssSupport = !this->m_vm->GetCache()->GetAllData(XenObjectType::VMSS).isEmpty() || this->m_objectData.contains("snapshot_schedule");
+    // TODO: verify XCP-ng hosts report "restrict_vmss" in license_params. RestrictVMSnapshotSchedule()
+    // treats a missing key as restricted (C# BoolKeyPreferTrue), which would hide the scheduled
+    // snapshots toggle and always report "not in a snapshot schedule".
+    const bool vmssForbidden = GpuHelpers::FeatureForbidden(this->m_connection, &Host::RestrictVMSnapshotSchedule);
 
     if (this->m_scheduledSnapshotsAction)
-        this->m_scheduledSnapshotsAction->setVisible(hasVmssSupport);
+        this->m_scheduledSnapshotsAction->setVisible(!vmssForbidden);
 
-    // TODO: C# shows VMSS status inside the details panel (not a top banner).
-    // Move VMSS info there once the details panel is ported.
+    // C# Reference: Helpers.FalconOrGreater(connection) - true when the coordinator is unknown
+    bool falconOrGreater = true;
+    XenCache* cache = this->m_connection->GetCache();
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    QSharedPointer<Host> coordinator = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    if (coordinator && coordinator->IsValid())
+    {
+        const QString platformVersion = coordinator->PlatformVersion();
+        falconOrGreater = !platformVersion.isEmpty() && Misc::ProductVersionCompare(platformVersion, QStringLiteral("2.2.50")) >= 0;
+    }
+
+    if (!falconOrGreater)
+    {
+        this->ui->vmssPanel->setVisible(false);
+        return;
+    }
+
+    this->ui->vmssPanel->setVisible(true);
+
+    const QString vmssRef = this->m_vm->SnapshotScheduleRef();
+    QSharedPointer<VMSS> vmss = (cache && !vmssRef.isEmpty() && vmssRef != XENOBJECT_NULL)
+        ? cache->ResolveObject<VMSS>(vmssRef)
+        : QSharedPointer<VMSS>();
+
+    if (!vmss || !vmss->IsValid() || vmssForbidden)
+    {
+        this->ui->vmssInfoLabel->setText(tr("This VM is not currently part of a snapshot schedule"));
+        this->ui->vmssInfoIconLabel->setPixmap(QPixmap(":/icons/info3_16.png"));
+        const QString linkText = vmssForbidden ? tr("Tell me more ...") : tr("View snapshot schedules");
+        this->ui->vmssLinkLabel->setText(QStringLiteral("<a href=\"#\">%1</a>").arg(linkText.toHtmlEscaped()));
+    } else
+    {
+        this->ui->vmssInfoLabel->setText(tr("This VM is currently part of the snapshot schedule '%1'").arg(vmss->GetName()));
+        this->ui->vmssInfoIconLabel->setPixmap(QPixmap(":/icons/tick_h32bit_16.png"));
+        this->ui->vmssLinkLabel->setText(QStringLiteral("<a href=\"#\">%1</a>").arg(tr("View snapshot schedules").toHtmlEscaped()));
+    }
 }

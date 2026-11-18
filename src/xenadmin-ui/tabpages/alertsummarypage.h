@@ -89,6 +89,7 @@ class AlertSummaryPage : public NotificationsBasePage
         QList<XenLib::Alert*> selectedAlerts(int fallbackRow = -1) const;
         void dismissAlerts(const QList<XenLib::Alert*>& alerts, bool confirm, const QString& title, const QString& text);
         void copyRowsToClipboard(const QList<int>& rows) const;
+        int rowForAlert(const QString& alertUuid) const;
 };
 
 #endif // ALERTSUMMARYPAGE_H

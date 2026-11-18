@@ -35,10 +35,10 @@ RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent) : SRCo
 {
 }
 
-bool RepairSRCommand::CanRun() const
+bool RepairSRCommand::canRepairSR(const QSharedPointer<SR>& sr)
 {
-    QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
+    // C# Reference: RepairSRCommand.CanRun(SR)
+    if (!sr || !sr->IsValid())
         return false;
 
     XenConnection* connection = sr->GetConnection();
@@ -50,26 +50,60 @@ bool RepairSRCommand::CanRun() const
            sr->CanRepairAfterUpgradeFromLegacySL();
 }
 
+bool RepairSRCommand::allSelectedItemsAreSRs() const
+{
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    if (objects.isEmpty())
+        return false;
+
+    for (const QSharedPointer<XenObject>& obj : objects)
+    {
+        if (!obj || obj->GetObjectType() != XenObjectType::SR)
+            return false;
+    }
+    return true;
+}
+
+QList<QSharedPointer<SR>> RepairSRCommand::getRepairableSRs() const
+{
+    // C# Reference: selection.AsXenObjects<SR>(CanRun)
+    QList<QSharedPointer<SR>> srs;
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
+    {
+        QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(obj);
+        if (canRepairSR(sr))
+            srs.append(sr);
+    }
+    return srs;
+}
+
+bool RepairSRCommand::CanRun() const
+{
+    // C# Reference: CanRunCore - all items are SRs and at least one can be repaired
+    return this->allSelectedItemsAreSRs() && !this->getRepairableSRs().isEmpty();
+}
+
 void RepairSRCommand::Run()
 {
-    QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
+    const QList<QSharedPointer<SR>> srs = this->getRepairableSRs();
+    if (srs.isEmpty())
         return;
 
-    XenConnection* connection = sr->GetConnection();
-    if (!connection || !connection->IsConnected())
+    for (const QSharedPointer<SR>& sr : srs)
     {
-        QMessageBox::warning(MainWindow::instance(), "Repair Storage Repository Failed", "Not connected to XenServer.");
-        return;
-    }
-
-    if (!sr->MultipathAOK())
-    {
-        QMessageBox::warning(MainWindow::instance(), "Multipathing", "Multipathing has failed on this storage repository.");
+        if (!sr->MultipathAOK())
+        {
+            QMessageBox::warning(MainWindow::instance(), tr("Multipathing"),
+                                 tr("Multipathing has failed on this storage repository."));
+            break;
+        }
     }
 
     // Show the RepairSRDialog which will handle the repair operation
-    RepairSRDialog* dialog = new RepairSRDialog(sr, true, MainWindow::instance());
+    RepairSRDialog* dialog = srs.size() == 1
+        ? new RepairSRDialog(srs.first(), true, MainWindow::instance())
+        : new RepairSRDialog(srs, true, MainWindow::instance());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }

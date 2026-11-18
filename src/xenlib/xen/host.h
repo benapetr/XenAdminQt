@@ -87,6 +87,13 @@ class XENLIB_EXPORT Host : public XenObject
         bool RestrictVtpm() const;
 
         /**
+         * @brief Check if VM snapshot schedules (VMSS) are restricted by licensing
+         *
+         * C# equivalent: Host.RestrictVMSnapshotSchedule (BoolKeyPreferTrue on license_params)
+         */
+        bool RestrictVMSnapshotSchedule() const;
+
+        /**
          * @brief Check if intra-pool migration is restricted by licensing
          *
          * C# equivalent: Host.RestrictIntraPoolMigrate (BoolKey on license_params)
@@ -352,6 +359,9 @@ class XENLIB_EXPORT Host : public XenObject
 
         //! Get raw build number from software_version (may be empty)
         QString BuildNumberRaw() const;
+
+        //! Get xapi version from software_version (C# Host.GetXapiVersion: xapi_build, else xapi)
+        QString GetXapiVersion() const;
 
         //! Get platform version string from software_version
         QString PlatformVersion() const;
