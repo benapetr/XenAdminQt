@@ -256,6 +256,7 @@ namespace Xen
             // Connection state
             QSslSocket* m_socket = nullptr;
             QAtomicInt m_transportConnected = 0;
+            QAtomicInt m_certificateRejected = 0; // last handshake's certificate was rejected
 
             // Thread control
             QAtomicInt m_stopped = 0; // Thread-safe stop flag

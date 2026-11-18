@@ -32,6 +32,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/network/certificatemanager.h"
 #include <QEventLoop>
 #include <QMetaObject>
 #include <QNetworkAccessManager>
@@ -182,14 +183,10 @@ namespace
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::UserAgentHeader, "XenAdmin-Qt/1.0");
 
-        if (url.scheme().startsWith(QStringLiteral("https"), Qt::CaseInsensitive))
-        {
-            QSslConfiguration sslConfig = request.sslConfiguration();
-            sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-            request.setSslConfiguration(sslConfig);
-        }
-
         QNetworkReply* reply = manager.get(request);
+        // Qt verifies the server certificate; errors go through the trust check
+        // (C# SSL.ValidateServerCertificate)
+        XenCertificateManager::instance()->GuardReply(reply, url.host());
         QEventLoop loop;
         QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         loop.exec();

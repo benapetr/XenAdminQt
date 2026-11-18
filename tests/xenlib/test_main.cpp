@@ -24,6 +24,7 @@
 #include "xenlib/xen/actions/vm/vmrebootaction.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include "xenlib/xensearch/group.h"
+#include "xenlib/xen/network/certificatemanager.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/friendlynames.h"
 #include "xenlib/xen/message.h"
@@ -31,6 +32,7 @@
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include <QTemporaryFile>
+#include <QScopeGuard>
 #include <QTextStream>
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +128,94 @@ private slots:
         // FriendlyNames has no entry for this type, so that is the raw message name
         auto broken = make("not xml");
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
+    }
+
+    void serverCertificateTrustOnFirstUse()
+    {
+        QFile pem(QFINDTESTDATA("transport-testdata/server-cert.pem"));
+        QVERIFY(pem.open(QIODevice::ReadOnly));
+        const QSslCertificate cert(pem.readAll());
+        QVERIFY(!cert.isNull());
+
+        XenCertificateManager* manager = XenCertificateManager::instance();
+        const QString host = "tofu-test.invalid";
+        using Prompt = XenCertificateManager::CertificatePrompt;
+        const QList<QSslError> selfSigned{QSslError(QSslError::SelfSignedCertificate, cert)};
+
+        // Only a host name mismatch still counts as a trusted chain (shown in the prompt)
+        QVERIFY(!XenCertificateManager::IsTrustedChain(selfSigned));
+        QVERIFY(XenCertificateManager::IsTrustedChain({QSslError(QSslError::HostNameMismatch, cert)}));
+
+        // Restore the singleton for the other tests (no handler = accept everything)
+        const auto restore = qScopeGuard([manager]() {
+            manager->SetPromptHandler(nullptr);
+            manager->SetKnownServers({});
+            manager->SetWarnUnrecognizedCertificate(true);
+            manager->SetWarnChangedCertificate(true);
+        });
+        manager->SetKnownServers({});
+
+        // No handler (C#: no MainWindow): accepted without being remembered
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QVERIFY(manager->GetKnownServers().isEmpty());
+
+        QList<Prompt> prompts;
+        XenCertificateManager::PromptResult answer;
+        manager->SetPromptHandler([&](Prompt prompt, const QSslCertificate&, const QString&, bool trusted) {
+            prompts.append(prompt);
+            Q_UNUSED(trusted)
+            return answer;
+        });
+
+        // Unknown certificate, rejected: not remembered
+        answer = {false, false};
+        QVERIFY(!manager->ValidateServerCertificate(cert, selfSigned, host));
+        QCOMPARE(prompts, QList<Prompt>{Prompt::Unknown});
+        QVERIFY(!manager->GetKnownServers().contains(host));
+
+        // Accepted: remembered by SHA-1, and not asked again
+        answer = {true, false};
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QCOMPARE(manager->GetKnownServers().value(host), XenCertificateManager::CertificateHashString(cert));
+        QCOMPARE(manager->GetKnownServers().value(host).length(), 40);
+        prompts.clear();
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QVERIFY(prompts.isEmpty());
+
+        // Different remembered hash: "changed" prompt; rejecting keeps the old hash
+        manager->SetKnownServers({{host, "OLDHASH"}});
+        answer = {false, false};
+        QVERIFY(!manager->ValidateServerCertificate(cert, selfSigned, host));
+        QCOMPARE(prompts, QList<Prompt>{Prompt::Changed});
+        QCOMPARE(manager->GetKnownServers().value(host), QString("OLDHASH"));
+
+        // Accepting with "Always ignore" replaces the hash and turns off change warnings
+        answer = {true, true};
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QCOMPARE(manager->GetKnownServers().value(host), XenCertificateManager::CertificateHashString(cert));
+        QVERIFY(!manager->GetWarnChangedCertificate());
+
+        // Change warnings off: a changed certificate is replaced silently
+        prompts.clear();
+        manager->SetKnownServers({{host, "OLDHASH"}});
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QVERIFY(prompts.isEmpty());
+
+        // New-certificate warnings off: an unknown one is added silently
+        manager->SetKnownServers({});
+        manager->SetWarnUnrecognizedCertificate(false);
+        QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, host));
+        QVERIFY(prompts.isEmpty());
+        QVERIFY(manager->GetKnownServers().contains(host));
+
+        // No SSL errors (C# SslPolicyErrors.None): accepted without any check
+        manager->SetKnownServers({});
+        manager->SetWarnUnrecognizedCertificate(true);
+        QVERIFY(manager->ValidateServerCertificate(cert, {}, host));
+        QVERIFY(manager->GetKnownServers().isEmpty());
+
+        // A missing certificate with errors is rejected
+        QVERIFY(!manager->ValidateServerCertificate(QSslCertificate(), selfSigned, host));
     }
 
     void groupHideMatchesCSharp()

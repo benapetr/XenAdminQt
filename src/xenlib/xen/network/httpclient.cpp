@@ -30,6 +30,7 @@
 #include <QFileInfo>
 #include <QUrlQuery>
 #include <QSslConfiguration>
+#include "certificatemanager.h"
 #include <QEventLoop>
 #include <QTimer>
 #include <QDateTime>
@@ -76,17 +77,30 @@ bool HttpClient::connectToHost(const QUrl& url, QSslSocket*& socket)
     if (appProxy.type() != QNetworkProxy::NoProxy)
         socket->setProxy(appProxy);
     
-    // Configure SSL to accept all certificates (matching C# behavior)
-    QSslConfiguration sslConfig = socket->sslConfiguration();
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-    socket->setSslConfiguration(sslConfig);
+    // Qt verifies the server certificate; any errors go through the trust check
+    // (C# SSL.ValidateServerCertificate) and are ignored only if it accepts them.
+    // Runs inside waitForEncrypted() on this thread.
+    bool certificateRejected = false;
+    const QString host = url.host();
+    QObject::connect(socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors), socket,
+                     [socket, host, &certificateRejected](const QList<QSslError>& errors)
+    {
+        if (XenCertificateManager::instance()->ValidateServerCertificate(socket->peerCertificate(), errors, host))
+            socket->ignoreSslErrors();
+        else
+            certificateRejected = true;
+    }, Qt::DirectConnection);
 
     // Connect to host
-    socket->connectToHostEncrypted(url.host(), url.port(443));
+    socket->connectToHostEncrypted(host, url.port(443));
     
-    if (!socket->waitForEncrypted(30000))
+    const bool encrypted = socket->waitForEncrypted(30000);
+    QObject::disconnect(socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors), nullptr, nullptr);
+    if (!encrypted)
     {
-        this->lastError_ = QString("Failed to establish SSL connection: %1").arg(socket->errorString());
+        this->lastError_ = certificateRejected
+            ? QString("The security certificate of %1 was not accepted").arg(host)
+            : QString("Failed to establish SSL connection: %1").arg(socket->errorString());
         delete socket;
         socket = nullptr;
         return false;

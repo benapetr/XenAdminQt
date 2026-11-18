@@ -35,6 +35,7 @@
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QSslConfiguration>
 #include <QtNetwork/QSslSocket>
+#include "../network/certificatemanager.h"
 #include <stdexcept>
 
 namespace XenAPI
@@ -69,12 +70,9 @@ namespace XenAPI
 
         void configureSsl(QNetworkRequest& request, const QUrl& url)
         {
-            if (!url.scheme().startsWith("https"))
-                return;
-
-            QSslConfiguration sslConfig = request.sslConfiguration();
-            sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
-            request.setSslConfiguration(sslConfig);
+            // Qt verifies the server certificate; GuardReply() runs the trust check on errors
+            Q_UNUSED(request)
+            Q_UNUSED(url)
         }
     }
 
@@ -90,6 +88,7 @@ namespace XenAPI
         configureSsl(request, url);
 
         QNetworkReply* reply = manager.put(request, data);
+        XenCertificateManager::instance()->GuardReply(reply, url.host());
         QEventLoop loop;
         QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         loop.exec();
@@ -116,6 +115,7 @@ namespace XenAPI
         configureSsl(request, url);
 
         QNetworkReply* reply = manager.get(request);
+        XenCertificateManager::instance()->GuardReply(reply, url.host());
         QEventLoop loop;
         QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
         loop.exec();

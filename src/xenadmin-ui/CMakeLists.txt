@@ -225,6 +225,8 @@ set(XENADMIN_SOURCES
     dialogs/importwizard.cpp
     dialogs/installcertificatedialog.cpp
     dialogs/installcertificatedialog.ui
+    dialogs/certificatewarningdialog.cpp
+    dialogs/certificatewarningdialog.ui
     dialogs/migratevirtualdiskdialog.cpp
     dialogs/movevirtualdiskdialog.cpp
     dialogs/movevirtualdiskdialog.ui

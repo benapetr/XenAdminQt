@@ -33,6 +33,10 @@
 #include <QtCore/QString>
 #include <QtNetwork/QSslCertificate>
 #include <QtNetwork/QSslError>
+#include <QtCore/QHash>
+#include <functional>
+
+class QNetworkReply;
 
 class XENLIB_EXPORT XenCertificateManager : public QObject
 {
@@ -42,6 +46,65 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
 
         explicit XenCertificateManager(QObject* parent = nullptr);
         ~XenCertificateManager();
+
+        // ── Server certificate trust (C# XenAdmin.Network.SSL) ──────────────────
+        //
+        // TLS connections keep Qt's normal peer verification. A certificate that verifies
+        // against the system CAs and matches the host raises no SSL errors and is used as
+        // is. When Qt reports SSL errors (C# SslPolicyErrors != None), the connection's
+        // sslErrors handler calls ValidateServerCertificate() and ignores the errors only
+        // if it returns true. That trusts the certificate on first use: its SHA-1 hash is
+        // remembered per host, and an unknown or changed certificate is passed to the
+        // prompt handler unless the matching "warn" setting is off.
+        //
+        // QSslCertificate::verify() is not used: the macOS Secure Transport backend does
+        // not support it and reports no errors for any certificate.
+
+        enum class CertificatePrompt
+        {
+            Unknown,  //!< First connection to this host (C# UnknownCertificateDialog)
+            Changed   //!< Known host presents a different certificate (C# CertificateChangedDialog)
+        };
+
+        struct PromptResult
+        {
+            bool accept = false;        //!< Connect using this certificate
+            bool stopWarning = false;   //!< "Automatically accept new" / "Always ignore" was ticked
+        };
+
+        //! Asks the user about a certificate. Called on the validating thread; the UI
+        //! implementation must show its dialog on the GUI thread.
+        using PromptHandler = std::function<PromptResult(CertificatePrompt prompt, const QSslCertificate& certificate,
+                                                         const QString& hostname, bool trusted)>;
+
+        //! With no handler every certificate is accepted (C#: no MainWindow, e.g. tests)
+        void SetPromptHandler(const PromptHandler& handler);
+
+        //! C# SSL.ValidateServerCertificate, called from an sslErrors handler with Qt's
+        //! verification errors. Returns true if the errors may be ignored.
+        bool ValidateServerCertificate(const QSslCertificate& certificate, const QList<QSslError>& errors,
+                                       const QString& hostname);
+
+        //! For QNetworkAccessManager users: ignore the reply's SSL errors only if
+        //! ValidateServerCertificate() accepts its certificate
+        void GuardReply(QNetworkReply* reply, const QString& hostname);
+
+        //! Remembered certificate hashes, host -> SHA-1 hash (C# Settings.KnownServers)
+        QHash<QString, QString> GetKnownServers() const;
+        void SetKnownServers(const QHash<QString, QString>& knownServers);
+
+        //! C# Properties.Settings WarnUnrecognizedCertificate / WarnChangedCertificate
+        void SetWarnUnrecognizedCertificate(bool warn);
+        bool GetWarnUnrecognizedCertificate() const;
+        void SetWarnChangedCertificate(bool warn);
+        bool GetWarnChangedCertificate() const;
+
+        //! C# X509Certificate.GetCertHashString(): SHA-1 of the DER encoding, upper-case hex
+        static QString CertificateHashString(const QSslCertificate& certificate);
+
+        //! C# X509Ext.VerifyInAllStores(), shown as "trusted" in the prompt: the only
+        //! verification problem is a host name mismatch (e.g. connecting by IP address)
+        static bool IsTrustedChain(const QList<QSslError>& errors);
 
         // Certificate validation
         bool validateCertificate(const QSslCertificate& certificate, const QString& hostname);
@@ -70,6 +133,9 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
         bool getAllowExpired() const;
 
     signals:
+        //! Known servers or warn settings changed (emitted from the validating thread)
+        void trustSettingsChanged();
+
         void certificateValidated(const QString& hostname, bool isValid);
         void certificateStored(const QString& hostname);
         void certificateRemoved(const QString& hostname);

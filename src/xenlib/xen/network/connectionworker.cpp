@@ -185,30 +185,16 @@ namespace Xen
              qDebug() << "  - Error type:" << error.error() << "Message:" << error.errorString();
          }
 
-        // For XenServer/XCP-ng with self-signed certificates, we accept them
-        if (XenCertificateManager::instance()->getAllowSelfSigned())
+        // C# SSL.ValidateServerCertificate: trust on first use, may ask the user.
+        // Runs inside waitForEncrypted() on this worker thread.
+        if (XenCertificateManager::instance()->ValidateServerCertificate(this->m_socket->peerCertificate(),
+                                                                        errors, this->m_hostname))
         {
-            qDebug() << "ConnectionWorker: Ignoring SSL errors due to allowSelfSigned policy";
-            qDebug() << "ConnectionWorker: Calling ignoreSslErrors()...";
             this->m_socket->ignoreSslErrors();
-            qDebug() << "ConnectionWorker: ignoreSslErrors() called, socket state:" << this->m_socket->state();
-            return;
-        }
-
-        // Validate certificate if we're not accepting all self-signed
-        if (!this->m_socket->peerCertificate().isNull())
-        {
-            if (XenCertificateManager::instance()->validateCertificate(this->m_socket->peerCertificate(), this->m_hostname))
-            {
-                // qDebug() << "ConnectionWorker: Certificate validated, ignoring SSL errors";
-                this->m_socket->ignoreSslErrors();
-            } else
-            {
-                qDebug() << "ConnectionWorker: Certificate validation FAILED";
-            }
         } else
         {
-            // qDebug() << "ConnectionWorker: Peer certificate is NULL";
+            qWarning() << "ConnectionWorker: server certificate for" << this->m_hostname << "was rejected";
+            this->m_certificateRejected.storeRelease(1);
         }
     }
 
@@ -278,7 +264,9 @@ namespace Xen
             this->eventPollLoop();
         } else
         {
-            emit this->ConnectionFailed("Failed to connect to " + this->m_hostname);
+            emit this->ConnectionFailed(this->m_certificateRejected.loadAcquire()
+                ? tr("The security certificate of %1 was not accepted").arg(this->m_hostname)
+                : "Failed to connect to " + this->m_hostname);
         }
         this->invalidateTransport();
 
@@ -301,8 +289,8 @@ namespace Xen
     bool ConnectionWorker::connectToHostSync(int timeoutMs)
     {
         emit this->ConnectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
-        // Preserve the existing certificate policy on replacement transports.
-        this->m_socket->setPeerVerifyMode(QSslSocket::VerifyNone);
+        // Qt verifies the server certificate; handleSslErrors() decides about any errors
+        this->m_certificateRejected.storeRelease(0);
         this->m_socket->connectToHostEncrypted(this->m_hostname, this->m_port);
         if (timeoutMs <= 0 || !this->m_socket->waitForConnected(timeoutMs))
         {
@@ -419,7 +407,9 @@ namespace Xen
             if (abandoned.loadAcquire())
                 throw std::runtime_error("Request was abandoned before sending");
             if (!this->ensureTransportConnected(qMin(timeoutMs, this->connectionTimeoutMs_())))
-                throw std::runtime_error("Could not establish TCP/TLS transport");
+                throw std::runtime_error(this->m_certificateRejected.loadAcquire()
+                    ? tr("The security certificate of %1 was not accepted").arg(this->m_hostname).toStdString()
+                    : std::string("Could not establish TCP/TLS transport"));
             if (abandoned.loadAcquire() || this->m_stopped.loadRelaxed() || timer.elapsed() >= timeoutMs)
                 throw std::runtime_error("Request cancelled or timed out before sending");
 

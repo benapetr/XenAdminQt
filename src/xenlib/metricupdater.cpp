@@ -36,6 +36,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QSslConfiguration>
+#include "xen/network/certificatemanager.h"
 
 // C# Equivalent: XenAdmin.XenSearch.MetricUpdater implementation
 // C# Reference: xenadmin/XenModel/XenSearch/MetricUpdater.cs
@@ -178,16 +179,10 @@ void MetricUpdater::fetchRrdData()
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, "XenAdmin-Qt/1.0");
 
-    // Configure SSL if HTTPS
-    if (url.startsWith("https"))
-    {
-        QSslConfiguration sslConfig = request.sslConfiguration();
-        sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // Accept self-signed certificates
-        request.setSslConfiguration(sslConfig);
-    }
-
     // Send HTTP GET request
     QNetworkReply* reply = this->m_networkManager->get(request);
+    // Certificate errors go through the trust check (C# SSL.ValidateServerCertificate)
+    XenCertificateManager::instance()->GuardReply(reply, QUrl(url).host());
     reply->setProperty("requestTime", QDateTime::currentMSecsSinceEpoch());
 }
 

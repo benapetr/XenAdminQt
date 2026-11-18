@@ -31,6 +31,14 @@ are omitted.
 
 ### Fixed
 
+- Security: server TLS certificates were never checked. Every connection (API,
+  console, import/export, performance data) accepted any certificate, so an
+  impersonated server would have received the login password. Certificates are
+  now handled as in C#: ones trusted by the system are accepted; any other is
+  trusted on first use after a "New Security Certificate" prompt, remembered
+  per server, and a later change triggers a "Security Certificate Changed"
+  warning. The Options > Security settings for both warnings now take effect.
+  Expect one prompt per server the first time you connect after updating.
 - OVF/OVA and disk image imports now keep the new VM hidden until it is fully
   set up, as in C#, and destroy the partly imported VM when an import is
   cancelled or fails part-way (OVF/OVA imports could leave it behind).

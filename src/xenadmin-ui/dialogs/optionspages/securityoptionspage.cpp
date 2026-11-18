@@ -28,6 +28,7 @@
 // securityoptionspage.cpp - Security settings options page
 #include "securityoptionspage.h"
 #include "../../settingsmanager.h"
+#include "../certificatewarningdialog.h"
 
 SecurityOptionsPage::SecurityOptionsPage(QWidget* parent)
     : IOptionsPage(parent), ui(new Ui::SecurityOptionsPage)
@@ -110,6 +111,7 @@ void SecurityOptionsPage::Save()
                       this->ui->CertificateFoundCheckBox->isChecked());
     settings.SetValue("Security/WarnChangedCertificate",
                       this->ui->CertificateChangedCheckBox->isChecked());
+    CertificateWarningDialog::ApplyWarnSettings();
 
     // Password reminder
     settings.SetValue("Security/RemindChangePassword",

@@ -27,6 +27,7 @@
 
 #include "httpconnect.h"
 #include <QSslSocket>
+#include "xenlib/xen/network/certificatemanager.h"
 #include <QSslConfiguration>
 #include <QTimer>
 #include <QDebug>
@@ -88,9 +89,8 @@ void HTTPConnect::connectToConsoleAsync(const QUrl& consoleUrl, const QString& s
     // Create SSL socket
     this->m_socket = new QSslSocket(this);
 
-    // Configure SSL to accept XenServer self-signed certificates
+    // Qt verifies the server certificate; onSslError() runs the trust check on errors
     QSslConfiguration sslConfig = this->m_socket->sslConfiguration();
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // Accept self-signed certs
     sslConfig.setProtocol(QSsl::TlsV1_2OrLater);
     this->m_socket->setSslConfiguration(sslConfig);
 
@@ -329,10 +329,17 @@ void HTTPConnect::onSslError(const QList<QSslError>& errors)
     }
     qDebug() << "HTTPConnect:" << errorStr;
 
-    // Since we're accepting self-signed certificates, ignore SSL errors
-    if (this->m_socket)
+    // C# SSL.ValidateServerCertificate (trust on first use, may ask the user)
+    if (!this->m_socket)
+        return;
+
+    if (XenCertificateManager::instance()->ValidateServerCertificate(this->m_socket->peerCertificate(), errors,
+                                                                    this->m_consoleUrl.host()))
     {
         this->m_socket->ignoreSslErrors();
+    } else
+    {
+        this->failWithError(tr("The security certificate of %1 was not accepted").arg(this->m_consoleUrl.host()));
     }
 }
 

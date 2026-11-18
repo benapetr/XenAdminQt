@@ -29,6 +29,7 @@ SOURCES += \
     dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/installcertificatedialog.cpp \
+    dialogs/certificatewarningdialog.cpp \
     dialogs/xencacheexplorer.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -338,6 +339,7 @@ HEADERS += \
     dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
     dialogs/installcertificatedialog.h \
+    dialogs/certificatewarningdialog.h \
     dialogs/xencacheexplorer.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -644,6 +646,7 @@ FORMS += \
     dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/installcertificatedialog.ui \
+    dialogs/certificatewarningdialog.ui \
     dialogs/xencacheexplorer.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \

@@ -57,6 +57,7 @@
 #include "dialogs/debugwindow.h"
 #include "dialogs/xencacheexplorer.h"
 #include "dialogs/aboutdialog.h"
+#include "dialogs/certificatewarningdialog.h"
 #include "dialogs/optionsdialog.h"
 #include "dialogs/restoresession/entermainpassworddialog.h"
 #include "dialogs/warningdialogs/closexencenterwarningdialog.h"
@@ -292,8 +293,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         });
     }
 
-    // TODO wire this to settings
-    XenCertificateManager::instance()->setValidationPolicy(true, false); // Allow self-signed, not expired
+    // Server certificates: trust on first use with the C# unknown/changed certificate prompts
+    // (C# SSL.ValidateServerCertificate, Settings.KnownServers, Options > Security)
+    CertificateWarningDialog::InstallPromptHandler();
 
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
     connect(OperationManager::instance(), &OperationManager::newOperation, this, &MainWindow::onNewOperation);
