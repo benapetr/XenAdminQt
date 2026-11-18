@@ -30,6 +30,7 @@
 #include "../../host.h"
 #include "../../pool.h"
 #include "../../network/connection.h"
+#include "../../../xencache.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
@@ -43,17 +44,13 @@ VMShutdownAction::VMShutdownAction(QSharedPointer<VM> vm, const QString& title, 
 
     if (vm)
     {
-        // Set host to VM's home
-        // TODO: Implement VM::home() method
-        // setHost(vm->home());
+        // C#: Host = vm.Home(); Pool = Helpers.GetPool(vm.Connection);
+        this->SetHost(vm->GetHome());
 
-        // Set pool
         XenConnection* conn = vm->GetConnection();
-        if (conn)
-        {
-            // TODO: Get pool from connection
-            // setPool(conn->pool());
-        }
+        XenCache* cache = conn ? conn->GetCache() : nullptr;
+        if (cache)
+            this->SetPool(cache->GetPool());
     }
 }
 

@@ -262,6 +262,9 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get maximum allowed VBDs (virtual block devices)
         int GetMaxVBDsAllowed() const;
 
+        //! Get maximum allowed VIFs (virtual network interfaces)
+        int MaxVIFsAllowed() const;
+
         //! Get minimum recommended VCPUs
         int MinVCPUs() const;
 

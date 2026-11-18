@@ -28,6 +28,7 @@
 #include "networktabpage.h"
 #include "ui_networktabpage.h"
 #include "../settingsmanager.h"
+#include "xenlib/xen/friendlyerrornames.h"
 #include "../dialogs/newnetworkwizard.h"
 #include "../dialogs/networkpropertiesdialog.h"
 #include "../dialogs/networkingpropertiesdialog.h"
@@ -292,19 +293,13 @@ void NetworkTabPage::populateVIFsForVM()
             continue;
         }
 
-        // C#: Check for guest installer network (CA-73056)
-        // var network = vif.Connection.Resolve(vif.network);
-        // if (network != null && network.IsGuestInstallerNetwork() && !ShowHiddenVMs) continue;
+        // C# NetworkList: don't show the guest installer network (CA-73056),
+        // unless hidden objects are shown (CA-218956)
         QSharedPointer<Network> network = vif->GetNetwork();
-        if (network && network->IsValid())
+        if (network && network->IsValid() && network->IsGuestInstallerNetwork()
+            && !SettingsManager::instance().GetShowHiddenObjects())
         {
-            bool isGuestInstallerNetwork = network->IsGuestInstallerNetwork();
-            // TODO: Check ShowHiddenVMs setting when implemented
-            if (isGuestInstallerNetwork)
-            {
-                qDebug() << "NetworkTabPage::populateVIFsForVM - Skipping guest installer network VIF";
-                continue;
-            }
+            continue;
         }
 
         visibleVifs.append(vif);
@@ -1159,13 +1154,11 @@ void NetworkTabPage::onAddNetwork()
     if (this->m_object->GetObjectType() == XenObjectType::VM)
     {
         // C#: For VMs, check MaxVIFsAllowed() then show VIFDialog
-        int currentVifCount = this->ui->networksTable->rowCount();
-        // TODO: Get actual MaxVIFsAllowed from VM - for now use 7 as default
-        int maxVifs = 7;
-
-        if (currentVifCount >= maxVifs)
+        QSharedPointer<VM> vmForLimit = qSharedPointerDynamicCast<VM>(this->m_object);
+        if (vmForLimit && this->ui->networksTable->rowCount() >= vmForLimit->MaxVIFsAllowed())
         {
-            QMessageBox::critical(this, tr("Maximum VIFs Reached"), tr("The maximum number of network interfaces (%1) has been reached for this VM.").arg(maxVifs));
+            QMessageBox::critical(this, FriendlyErrorNames::getString("VIFS_MAX_ALLOWED_TITLE"),
+                                  FriendlyErrorNames::getString("VIFS_MAX_ALLOWED"));
             return;
         }
 

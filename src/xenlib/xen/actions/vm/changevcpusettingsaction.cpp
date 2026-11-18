@@ -85,10 +85,10 @@ void ChangeVCPUSettingsAction::run()
 
             if (currentVCPUsAtStartup > this->m_vcpusAtStartup)
             {
-                // Trying to reduce VCPUs on running VM
-                // TODO: Match C# error message (Messages.VM_VCPU_CANNOT_UNPLUG_LIVE) for parity.
-                throw std::runtime_error("Cannot reduce VCPUs on a running VM. "
-                                         "Please shut down the VM first.");
+                // Reducing VCPUs_at_startup is not allowed for live VMs
+                // C# Reference: Messages.VM_VCPU_CANNOT_UNPLUG_LIVE
+                throw std::runtime_error(tr("The current number of vCPUs is already %1 and cannot be decreased while the VM is running.")
+                                             .arg(currentVCPUsAtStartup).toStdString());
             }
 
             // Hot-plug VCPUs

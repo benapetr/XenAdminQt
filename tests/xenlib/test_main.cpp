@@ -124,6 +124,26 @@ private slots:
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
     }
 
+    void vmMaxVIFsAllowed()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+
+        // No restriction anywhere: C# default of 7
+        cache->Update(XenObjectType::VM, "OpaqueRef:plain", QVariantMap{{"is_a_template", false}});
+        QCOMPARE(cache->ResolveObject<VM>("OpaqueRef:plain")->MaxVIFsAllowed(), 7);
+
+        // A template's own restriction applies to the template
+        const QString recommendations = "<restrictions><restriction field=\"number-of-vifs\" max=\"16\" /></restrictions>";
+        cache->Update(XenObjectType::VM, "OpaqueRef:tmpl", QVariantMap{
+            {"is_a_template", true}, {"reference_label", "debian"}, {"recommendations", recommendations}});
+        QCOMPARE(cache->ResolveObject<VM>("OpaqueRef:tmpl")->MaxVIFsAllowed(), 16);
+
+        // A VM uses the template with the same reference_label
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"is_a_template", false}, {"reference_label", "debian"}});
+        QCOMPARE(cache->ResolveObject<VM>("OpaqueRef:vm")->MaxVIFsAllowed(), 16);
+    }
+
     void leafCoalesceAlert()
     {
         XenConnection connection;

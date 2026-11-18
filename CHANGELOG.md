@@ -28,6 +28,15 @@ are omitted.
 
 ### Fixed
 
+- The VM network tab now uses the VM's own limit on network interfaces (from
+  its template's restrictions) instead of always allowing 7, and shows the C#
+  error when the limit is reached.
+- The VM network tab now shows interfaces on the guest installer network when
+  hidden objects are shown, as in C#.
+- VM reboot and shutdown operations now record the VM's server and pool, so
+  their Events history entries show where they ran.
+- Reducing vCPUs on a running VM now fails with C#'s message, which includes
+  the current vCPU count.
 - Fixed dismissed alerts reappearing after reconnecting. Dismissing now deletes
   the messages on the server, in one call on xapi 22.19.0 and newer; alerts
   reappear if the deletion fails. Alerts can no longer be dismissed while their

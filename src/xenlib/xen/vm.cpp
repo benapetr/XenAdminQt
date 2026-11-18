@@ -719,6 +719,7 @@ namespace
 {
     static const int DEFAULT_NUM_VCPUS_ALLOWED = 16;
     static const int DEFAULT_NUM_VBDS_ALLOWED = 255;
+    static const int DEFAULT_NUM_VIFS_ALLOWED = 7;
 
     bool tryParseRestrictionValue(const QVariantMap& vmData,
                                   const QString& field,
@@ -878,6 +879,21 @@ int VM::GetMaxVBDsAllowed() const
 
     QList<qint64> values = getRestrictionValuesAcrossTemplates(cache, "number-of-vbds", "max");
     values.append(DEFAULT_NUM_VBDS_ALLOWED);
+    return static_cast<int>(*std::max_element(values.begin(), values.end()));
+}
+
+int VM::MaxVIFsAllowed() const
+{
+    // C# Reference: VM.MaxVIFsAllowed()
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    QVariantMap vmData = this->GetData();
+
+    qint64 value = 0;
+    if (tryGetMatchingTemplateRestriction(cache, vmData, "number-of-vifs", "max", value))
+        return static_cast<int>(value);
+
+    QList<qint64> values = getRestrictionValuesAcrossTemplates(cache, "number-of-vifs", "max");
+    values.append(DEFAULT_NUM_VIFS_ALLOWED);
     return static_cast<int>(*std::max_element(values.begin(), values.end()));
 }
 
