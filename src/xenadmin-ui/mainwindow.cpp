@@ -267,6 +267,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         button->setIcon(icon);
         button->setToolTip(toolTip);
+        // QStatusBar sizes itself to the tallest widget, hidden ones included; a tool button's
+        // default height would make the bar taller, so keep it to the label's height
+        button->setMaximumHeight(this->m_statusLabel->sizeHint().height() + 4);
         button->setVisible(false);
         connect(button, &QToolButton::clicked, this, [this, mode]()
         {
