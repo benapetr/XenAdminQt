@@ -23,6 +23,8 @@ are omitted.
 - Failed login attempt alerts now summarise the attempts: totals, attempts from
   unknown sources, and the most common sources with IP address, attempt count,
   last attempt time, username, originator and user agent.
+- Disk data merge (leaf coalesce) alerts now name the disk and its VM, for
+  example "Data merge for VDI 'disk0' of VM 'vm1' has completed."
 
 ### Fixed
 

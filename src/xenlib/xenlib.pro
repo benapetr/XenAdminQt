@@ -54,6 +54,7 @@ HEADERS += \
     alerts/policyalert.h \
     alerts/certificatealert.h \
     alerts/failedloginattemptalert.h \
+    alerts/leafcoalescealert.h \
     operations/operationmanager.h \
     operations/multipleaction.h \
     operations/multipleactionlauncher.h \
@@ -317,6 +318,7 @@ SOURCES += \
     alerts/policyalert.cpp \
     alerts/certificatealert.cpp \
     alerts/failedloginattemptalert.cpp \
+    alerts/leafcoalescealert.cpp \
     operations/operationmanager.cpp \
     operations/multipleaction.cpp \
     operations/multipleactionlauncher.cpp \

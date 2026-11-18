@@ -25,6 +25,7 @@
 #include "xenlib/xen/message.h"
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/failedloginattemptalert.h"
+#include "xenlib/alerts/leafcoalescealert.h"
 #include <QTemporaryFile>
 #include <QTextStream>
 
@@ -121,6 +122,35 @@ private slots:
         // FriendlyNames has no entry for this type, so that is the raw message name
         auto broken = make("not xml");
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
+    }
+
+    void leafCoalesceAlert()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VDI, "OpaqueRef:vdi", QVariantMap{{"uuid", "vdi-uuid"}, {"name_label", "disk0"}, {"VBDs", QVariantList{"OpaqueRef:vbd"}}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:vbd", QVariantMap{{"VM", "OpaqueRef:vm"}, {"VDI", "OpaqueRef:vdi"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"name_label", "vm1"}});
+
+        auto make = [&](const QString& name, const QString& objUuid)
+        {
+            return QSharedPointer<XenLib::Alert>(XenLib::MessageAlert::ParseMessage(&connection, QVariantMap{
+                {"ref", "OpaqueRef:msg"}, {"name", name}, {"cls", "VDI"}, {"obj_uuid", objUuid},
+                {"body", ""}, {"priority", 5}, {"timestamp", 0}}));
+        };
+
+        auto started = make("LEAF_COALESCE_START_MESSAGE", "vdi-uuid");
+        QVERIFY(dynamic_cast<XenLib::LeafCoalesceAlert*>(started.data()));
+        QCOMPARE(started->GetTitle(), QString("Data merge for VM vm1 has started."));
+        QCOMPARE(started->GetDescription(), QString("Data merge for VDI 'disk0' of VM 'vm1' has started, performance may be reduced."));
+
+        auto completed = make("LEAF_COALESCE_COMPLETED", "vdi-uuid");
+        QCOMPARE(completed->GetDescription(), QString("Data merge for VDI 'disk0' of VM 'vm1' has completed."));
+
+        // VDI not in the cache: its uuid is used and the VM is unknown
+        auto failed = make("LEAF_COALESCE_FAILED", "gone-uuid");
+        QCOMPARE(failed->GetTitle(), QString("Data merge for VM Unknown has failed."));
+        QCOMPARE(failed->GetDescription(), QString("Data merge for VDI 'gone-uuid' of VM 'Unknown' has failed."));
     }
 
     void messageAlertText()
