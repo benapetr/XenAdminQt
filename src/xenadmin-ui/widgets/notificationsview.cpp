@@ -147,3 +147,13 @@ int NotificationsView::getTotalEntries() const
 {
     return this->m_alertsCount + this->m_eventsCount;
 }
+
+QIcon NotificationsView::GetSubModeIcon(NavigationPane::NotificationsSubMode subMode) const
+{
+    NotificationsSubModeItemData data;
+    data.subMode = subMode;
+    data.unreadEntries = subMode == NavigationPane::Alerts ? this->m_alertsCount
+                       : subMode == NavigationPane::Events ? this->m_eventsCount
+                       : 0;
+    return data.getIcon();
+}

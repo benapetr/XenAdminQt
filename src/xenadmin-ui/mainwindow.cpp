@@ -1952,17 +1952,15 @@ void MainWindow::onNotificationsSubModeChanged(int subMode)
     {
         case NavigationPane::Alerts:
             title = tr("Alerts");
-            icon = QIcon(":/icons/alert.png"); // TODO: Use correct alert icon
             break;
         case NavigationPane::Events:
             title = tr("Events");
-            icon = QIcon(":/icons/events.png"); // TODO: Use correct events icon
             break;
         case NavigationPane::Updates:
             title = tr("Updates");
-            icon = QIcon(":/icons/updates.png"); // TODO: Use correct updates icon
             break;
     }
+    icon = this->m_navigationPane->GetNotificationsSubModeIcon(mode);
     
     // Update the title bar with notification sub-mode info
     if (this->m_titleBar)

@@ -134,20 +134,17 @@ QString NotificationsSubModeItemData::getSubText() const
 
 QIcon NotificationsSubModeItemData::getIcon() const
 {
-    // TODO: Replace with actual icon paths once icons are available
+    // C# Reference: NotificationsSubModeItem.GetImage()
     switch (subMode)
     {
         case NavigationPane::Alerts:
-            return QIcon::fromTheme("dialog-warning");
+            return QIcon(":/icons/alert_16.png"); // 000_Alert2_h32bit_16
 
         case NavigationPane::Events:
-            if (unreadEntries == 0)
-                return QIcon::fromTheme("view-calendar");
-            else
-                return QIcon::fromTheme("dialog-error");
+            return QIcon(unreadEntries == 0 ? ":/icons/notif_events_16.png" : ":/icons/notif_events_errors_16.png");
 
         case NavigationPane::Updates:
-            return QIcon::fromTheme("system-software-update");
+            return QIcon(":/icons/patch_16.png"); // 000_Patch_h32bit_16
 
         default:
             return QIcon();

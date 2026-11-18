@@ -387,6 +387,11 @@ NotificationsView* NavigationPane::GetNotificationsView() const
     return this->m_currentNotificationsView;
 } 
 
+QIcon NavigationPane::GetNotificationsSubModeIcon(NotificationsSubMode mode) const
+{
+    return this->m_currentNotificationsView ? this->m_currentNotificationsView->GetSubModeIcon(mode) : QIcon();
+}
+
 void NavigationPane::UpdateNotificationsButton(NotificationsSubMode mode, int entries)
 {
     this->m_currentNotificationsView->updateEntries(mode, entries);

@@ -28,6 +28,10 @@ are omitted.
 
 ### Fixed
 
+- The Alerts, Events and Updates entries in the notifications pane and the
+  title bar of those pages now show C#'s icons. They used desktop theme icons,
+  which are missing on macOS and Windows, and the title bar referenced images
+  that did not exist.
 - View > Show Hidden Objects now works in the tree and searches. Hidden VMs,
   SRs, disks and networks are left out unless it is enabled (they used to be
   always shown, grayed), and, as in C#, internal and temporary objects, memory
