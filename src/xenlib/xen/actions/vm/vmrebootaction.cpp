@@ -35,6 +35,22 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
+
+namespace
+{
+    // C#: vm.Home() == null ? Helpers.GetName(vm.Connection) : vm.Home().Name()
+    QString homeOrConnectionName(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return QString();
+        QSharedPointer<Host> home = vm->GetHome();
+        if (home)
+            return home->GetName();
+        XenConnection* connection = vm->GetConnection();
+        return connection ? connection->GetName() : QString();
+    }
+} // namespace
+
 // VMRebootAction implementation
 
 VMRebootAction::VMRebootAction(QSharedPointer<VM> vm, const QString& title, QObject* parent)
@@ -62,7 +78,7 @@ VMRebootAction::~VMRebootAction()
 
 VMCleanReboot::VMCleanReboot(QSharedPointer<VM> vm, QObject* parent)
     : VMRebootAction(vm,
-                     tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
+                     tr("Rebooting VM '%1' on '%2'").arg(vm ? vm->GetName() : QString(), homeOrConnectionName(vm)),
                      parent)
 {
     AddApiMethodToRoleCheck("VM.async_clean_reboot");
@@ -70,7 +86,7 @@ VMCleanReboot::VMCleanReboot(QSharedPointer<VM> vm, QObject* parent)
 
 void VMCleanReboot::run()
 {
-    SetDescription(tr("Rebooting..."));
+    SetDescription(tr("Rebooting VM"));
 
     QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
@@ -105,7 +121,7 @@ void VMCleanReboot::run()
 
 VMHardReboot::VMHardReboot(QSharedPointer<VM> vm, QObject* parent)
     : VMRebootAction(vm,
-                     tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
+                     tr("Rebooting VM '%1' on '%2'").arg(vm ? vm->GetName() : QString(), homeOrConnectionName(vm)),
                      parent)
 {
     AddApiMethodToRoleCheck("VM.async_hard_reboot");
@@ -113,7 +129,7 @@ VMHardReboot::VMHardReboot(QSharedPointer<VM> vm, QObject* parent)
 
 void VMHardReboot::run()
 {
-    SetDescription(tr("Rebooting..."));
+    SetDescription(tr("Rebooting VM"));
 
     QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)

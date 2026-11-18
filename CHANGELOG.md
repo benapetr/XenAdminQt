@@ -34,7 +34,8 @@ are omitted.
 - The VM network tab now shows interfaces on the guest installer network when
   hidden objects are shown, as in C#.
 - VM reboot and shutdown operations now record the VM's server and pool, so
-  their Events history entries show where they ran.
+  their Events history entries show where they ran, and use C#'s titles such
+  as "Rebooting VM 'vm1' on 'host1'" and "Suspending VM 'vm1'".
 - Reducing vCPUs on a running VM now fails with C#'s message, which includes
   the current vCPU count.
 - Fixed dismissed alerts reappearing after reconnecting. Dismissing now deletes

@@ -74,6 +74,11 @@ class XENLIB_EXPORT XenConnection : public QObject
         bool IsTransportConnected() const;
 
         QString GetHostname() const;
+
+        //! Display name: the pool (or standalone server) name, else the hostname.
+        //! C# XenConnection.Name, minus the user-set friendly name kept in the UI's connection profile.
+        QString GetName() const;
+
         int GetPort() const;
         QString GetUsername() const;
         QString GetPassword() const;

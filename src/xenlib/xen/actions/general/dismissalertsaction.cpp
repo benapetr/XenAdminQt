@@ -55,14 +55,8 @@ DismissAlertsAction::DismissAlertsAction(XenConnection* connection, const QStrin
 
 QString DismissAlertsAction::actionTitle(XenConnection* connection, int alertCount)
 {
-    QString name;
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
-    if (pool && pool->IsValid())
-        name = pool->GetName();
-    if (name.isEmpty() && connection)
-        name = connection->GetHostname();
-
+    // C# Helpers.GetName(connection)
+    const QString name = connection ? connection->GetName() : QString();
     return alertCount == 1
         ? tr("Removing alert on '%1'").arg(name)
         : tr("Removing %1 alerts on '%2'").arg(alertCount).arg(name);

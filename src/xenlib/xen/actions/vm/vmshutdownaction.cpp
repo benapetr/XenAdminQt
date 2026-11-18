@@ -35,6 +35,22 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
+
+namespace
+{
+    // C#: vm.Home() == null ? Helpers.GetName(vm.Connection) : vm.Home().Name()
+    QString homeOrConnectionName(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return QString();
+        QSharedPointer<Host> home = vm->GetHome();
+        if (home)
+            return home->GetName();
+        XenConnection* connection = vm->GetConnection();
+        return connection ? connection->GetName() : QString();
+    }
+} // namespace
+
 // VMShutdownAction implementation
 
 VMShutdownAction::VMShutdownAction(QSharedPointer<VM> vm, const QString& title, QObject* parent)
@@ -62,7 +78,7 @@ VMShutdownAction::~VMShutdownAction()
 
 VMCleanShutdown::VMCleanShutdown(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
+                       tr("Shutting down VM '%1' on '%2'").arg(vm ? vm->GetName() : QString(), homeOrConnectionName(vm)),
                        parent)
 {
     AddApiMethodToRoleCheck("VM.async_clean_shutdown");
@@ -70,7 +86,7 @@ VMCleanShutdown::VMCleanShutdown(QSharedPointer<VM> vm, QObject* parent)
 
 void VMCleanShutdown::run()
 {
-    SetDescription(tr("Shutting down..."));
+    SetDescription(tr("Shutting down VM"));
 
     QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
@@ -105,7 +121,7 @@ void VMCleanShutdown::run()
 
 VMHardShutdown::VMHardShutdown(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
+                       tr("Shutting down VM '%1' on '%2'").arg(vm ? vm->GetName() : QString(), homeOrConnectionName(vm)),
                        parent)
 {
     AddApiMethodToRoleCheck("VM.async_hard_shutdown");
@@ -113,7 +129,7 @@ VMHardShutdown::VMHardShutdown(QSharedPointer<VM> vm, QObject* parent)
 
 void VMHardShutdown::run()
 {
-    SetDescription(tr("Shutting down..."));
+    SetDescription(tr("Shutting down VM"));
 
     QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
@@ -148,7 +164,7 @@ void VMHardShutdown::run()
 
 VMSuspendAction::VMSuspendAction(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Suspending '%1'...").arg(vm ? vm->GetName() : "VM"),
+                       tr("Suspending VM '%1'").arg(vm ? vm->GetName() : QString()),
                        parent)
 {
     AddApiMethodToRoleCheck("VM.async_suspend");
@@ -156,7 +172,7 @@ VMSuspendAction::VMSuspendAction(QSharedPointer<VM> vm, QObject* parent)
 
 void VMSuspendAction::run()
 {
-    SetDescription(tr("Suspending..."));
+    SetDescription(tr("Suspending VM"));
 
     QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)

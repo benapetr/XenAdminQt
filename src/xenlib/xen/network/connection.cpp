@@ -34,6 +34,7 @@
 #include "../../utils/misc.h"
 #include "../session.h"
 #include "../../xencache.h"
+#include "../pool.h"
 #include "metricupdater.h"
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
@@ -226,6 +227,14 @@ void XenConnection::DisconnectTransport()
 QString XenConnection::GetHostname() const
 {
     return this->d->host;
+}
+
+QString XenConnection::GetName() const
+{
+    XenCache* cache = this->GetCache();
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    const QString poolName = pool ? pool->GetName() : QString();
+    return !poolName.isEmpty() ? poolName : this->GetHostname();
 }
 
 int XenConnection::GetPort() const

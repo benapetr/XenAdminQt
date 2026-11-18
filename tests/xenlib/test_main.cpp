@@ -21,6 +21,8 @@
 #include "xenlib/xen/actions/vdi/creatediskaction.h"
 #include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
+#include "xenlib/xen/actions/vm/vmrebootaction.h"
+#include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include "xenlib/xen/friendlynames.h"
 #include "xenlib/xen/message.h"
 #include "xenlib/alerts/messagealert.h"
@@ -122,6 +124,33 @@ private slots:
         // FriendlyNames has no entry for this type, so that is the raw message name
         auto broken = make("not xml");
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
+    }
+
+    void vmPowerActionTitles()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "MyPool"}, {"master", "OpaqueRef:h1"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:h1", QVariantMap{{"name_label", "host1"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:running", QVariantMap{
+            {"name_label", "vm1"}, {"power_state", "Running"}, {"resident_on", "OpaqueRef:h1"}, {"is_a_template", false}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:halted", QVariantMap{
+            {"name_label", "vm2"}, {"power_state", "Halted"}, {"affinity", "OpaqueRef:NULL"}, {"is_a_template", false}});
+        QCOMPARE(connection.GetName(), QString("MyPool"));
+
+        // Running VM: its home is the server it runs on
+        QSharedPointer<VM> running = cache->ResolveObject<VM>("OpaqueRef:running");
+        VMCleanReboot reboot(running);
+        QCOMPARE(reboot.GetTitle(), QString("Rebooting VM 'vm1' on 'host1'"));
+        QCOMPARE(reboot.GetHost(), running->GetHome());
+        VMCleanShutdown shutdown(running);
+        QCOMPARE(shutdown.GetTitle(), QString("Shutting down VM 'vm1' on 'host1'"));
+        VMSuspendAction suspend(running);
+        QCOMPARE(suspend.GetTitle(), QString("Suspending VM 'vm1'"));
+
+        // No home server: the connection (pool) name is used
+        VMHardShutdown hardShutdown(cache->ResolveObject<VM>("OpaqueRef:halted"));
+        QCOMPARE(hardShutdown.GetTitle(), QString("Shutting down VM 'vm2' on 'MyPool'"));
     }
 
     void vmMaxVIFsAllowed()
