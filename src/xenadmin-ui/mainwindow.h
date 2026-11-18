@@ -136,6 +136,10 @@ class MainWindow : public QMainWindow
         // NavigationPane events (matches C# MainWindow.navigationPane_* handlers)
         void onNavigationModeChanged(int mode);
         void onNotificationsSubModeChanged(int subMode);
+        // Unread counts on the notifications button and sub-mode items
+        // (C# XenCenterAlerts_CollectionChanged / UpdateErrorStatusButton)
+        void updateAlertsCount();
+        void updateEventsErrorCount();
         void onNavigationPaneTreeViewSelectionChanged();
         void onNavigationPaneTreeNodeRightClicked();
         void onNavigationPaneTreeNodeActivated(QSharedPointer<XenObject> object);
@@ -261,6 +265,8 @@ class MainWindow : public QMainWindow
         void on_actionCheck_for_leaks_triggered();
 
     private:
+        //! Set the title bar text and icon from a notifications sub-mode item, if its page is shown
+        void refreshNotificationsTitle(NavigationPane::NotificationsSubMode mode, bool force = false);
         static MainWindow *g_instance;
 
         void updateActions();

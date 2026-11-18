@@ -966,14 +966,15 @@ void AlertSummaryPage::dismissAlerts(const QList<Alert*>& alerts, bool confirm, 
             AlertManager::instance()->RemoveAlerts([&](Alert* alert) { return matchesMessage(alert, connection, refs); });
         });
 
-        auto restoreAlerts = [this, connection, refs, matchesMessage]()
+        auto restoreAlerts = [connection, refs, matchesMessage]()
         {
             for (Alert* alert : AlertManager::instance()->GetAllAlerts())
             {
                 if (matchesMessage(alert, connection, refs))
                     alert->SetDismissing(false);
             }
-            this->buildAlertList();
+            // Rebuilds this list and updates the unread count
+            AlertManager::instance()->NotifyCollectionChanged();
         };
         connect(action, &AsyncOperation::failed, this, restoreAlerts);
         connect(action, &AsyncOperation::cancelled, this, restoreAlerts);
@@ -981,8 +982,9 @@ void AlertSummaryPage::dismissAlerts(const QList<Alert*>& alerts, bool confirm, 
         action->RunAsync(true);
     }
 
+    // Alerts marked as dismissing drop out of the list and the unread count
     if (!messageRefsByConnection.isEmpty())
-        this->buildAlertList();
+        AlertManager::instance()->NotifyCollectionChanged();
 }
 
 int AlertSummaryPage::rowForAlert(const QString& alertUuid) const

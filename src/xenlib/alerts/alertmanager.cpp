@@ -196,3 +196,8 @@ void AlertManager::ClearAllAlerts()
 
     emit this->collectionChanged();
 }
+
+void AlertManager::NotifyCollectionChanged()
+{
+    emit this->collectionChanged();
+}

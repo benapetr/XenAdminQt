@@ -107,8 +107,9 @@ class NavigationPane : public QWidget
         // Public methods matching C# NavigationPane interface
         void UpdateNotificationsButton(NotificationsSubMode mode, int entries);
 
-        //! Icon of a notifications sub-mode item (C# NotificationsSubModeItem.Image)
+        //! Icon and text of a notifications sub-mode item (C# NotificationsSubModeItem.Image / .Text)
         QIcon GetNotificationsSubModeIcon(NotificationsSubMode mode) const;
+        QString GetNotificationsSubModeText(NotificationsSubMode mode) const;
         void SwitchToInfrastructureMode();
         void SwitchToNotificationsView(NotificationsSubMode subMode);
         void FocusTreeView();

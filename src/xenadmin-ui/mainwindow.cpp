@@ -283,6 +283,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this->m_navigationPane, &NavigationPane::dragDropCommandActivated, this, &MainWindow::onNavigationPaneDragDropCommandActivated);
     connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
 
+    // Unread counts for the notifications button and sub-mode items
+    // C# Reference: Alert.RegisterAlertCollectionChanged / History.CollectionChanged
+    connect(XenLib::AlertManager::instance(), &XenLib::AlertManager::collectionChanged, this, &MainWindow::updateAlertsCount);
+    connect(OperationManager::instance(), &OperationManager::recordAdded, this, &MainWindow::updateEventsErrorCount);
+    connect(OperationManager::instance(), &OperationManager::recordUpdated, this, &MainWindow::updateEventsErrorCount);
+    connect(OperationManager::instance(), &OperationManager::recordRemoved, this, &MainWindow::updateEventsErrorCount);
+    this->updateAlertsCount();
+    this->updateEventsErrorCount();
+
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
     auto* navView = this->m_navigationPane->GetNavigationView();
@@ -1917,6 +1926,52 @@ void MainWindow::updateViewMenu(NavigationPane::NavigationMode mode)
     this->ui->viewMenuSeparator2->setVisible(showHiddenVisible || showAllServerEventsVisible);
 }
 
+void MainWindow::refreshNotificationsTitle(NavigationPane::NotificationsSubMode mode, bool force)
+{
+    if (!this->m_titleBar || !this->m_navigationPane)
+        return;
+
+    if (!force)
+    {
+        // Only while that sub-mode's page is shown (C#: if (alertPage.Visible) ...)
+        bool shown = false;
+        for (NotificationsBasePage* page : this->m_notificationPages)
+        {
+            if (page->GetNotificationsSubMode() == mode && page->isVisible())
+            {
+                shown = true;
+                break;
+            }
+        }
+        if (!shown)
+            return;
+    }
+
+    this->m_titleBar->SetTitle(this->m_navigationPane->GetNotificationsSubModeText(mode));
+    this->m_titleBar->SetIcon(this->m_navigationPane->GetNotificationsSubModeIcon(mode));
+}
+
+void MainWindow::updateAlertsCount()
+{
+    // C# Reference: MainWindow.XenCenterAlerts_CollectionChanged
+    const int count = XenLib::AlertManager::instance()->NonDismissingAlertCount();
+    this->m_navigationPane->UpdateNotificationsButton(NavigationPane::Alerts, count);
+    this->refreshNotificationsTitle(NavigationPane::Alerts);
+}
+
+void MainWindow::updateEventsErrorCount()
+{
+    // C# Reference: MainWindow.UpdateErrorStatusButton - completed, unsuccessful, not cancelled
+    int errorCount = 0;
+    for (const OperationManager::OperationRecord* record : OperationManager::instance()->GetRecords())
+    {
+        if (record && record->state == AsyncOperation::Failed)
+            ++errorCount;
+    }
+    this->m_navigationPane->UpdateNotificationsButton(NavigationPane::Events, errorCount);
+    this->refreshNotificationsTitle(NavigationPane::Events);
+}
+
 void MainWindow::onNotificationsSubModeChanged(int subMode)
 {
     // C# Reference: MainWindow.navigationPane_NotificationsSubModeChanged line 2551
@@ -1943,31 +1998,8 @@ void MainWindow::onNotificationsSubModeChanged(int subMode)
     this->ui->mainTabWidget->setVisible(false);
 
     // Update title label and icon for notification pages
-    // C# Reference: TitleLabel.Text = submodeItem.Text; line 2567
-    // C# Reference: TitleIcon.Image = submodeItem.Image; line 2568
-    QString title;
-    QIcon icon;
-    
-    switch (mode)
-    {
-        case NavigationPane::Alerts:
-            title = tr("Alerts");
-            break;
-        case NavigationPane::Events:
-            title = tr("Events");
-            break;
-        case NavigationPane::Updates:
-            title = tr("Updates");
-            break;
-    }
-    icon = this->m_navigationPane->GetNotificationsSubModeIcon(mode);
-    
-    // Update the title bar with notification sub-mode info
-    if (this->m_titleBar)
-    {
-        this->m_titleBar->SetTitle(title);
-        this->m_titleBar->SetIcon(icon);
-    }
+    // C# Reference: TitleLabel.Text = submodeItem.Text; TitleIcon.Image = submodeItem.Image;
+    this->refreshNotificationsTitle(mode, true);
 
     // TODO: Update filters label in title bar
     // C# SetFiltersLabel();

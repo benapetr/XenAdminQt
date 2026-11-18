@@ -59,8 +59,10 @@ class NotificationsView : public QWidget
         void updateEntries(NavigationPane::NotificationsSubMode mode, int entries);
         int getTotalEntries() const;
 
-        //! Icon of a sub-mode item, as shown in the list (C# NotificationsSubModeItem.Image)
+        //! Icon and text of a sub-mode item, as shown in the list
+        //! (C# NotificationsSubModeItem.Image / .Text, e.g. "Alerts (3)")
         QIcon GetSubModeIcon(NavigationPane::NotificationsSubMode subMode) const;
+        QString GetSubModeText(NavigationPane::NotificationsSubMode subMode) const;
 
     signals:
         void notificationsSubModeChanged(NavigationPane::NotificationsSubMode subMode);
@@ -71,6 +73,7 @@ class NotificationsView : public QWidget
     private:
         void initializeItems();
         QListWidgetItem* getItemForSubMode(NavigationPane::NotificationsSubMode subMode) const;
+        NotificationsSubModeItemData subModeData(NavigationPane::NotificationsSubMode subMode) const;
 
         Ui::NotificationsView* ui;
         NotificationsSubModeItemDelegate* m_delegate;

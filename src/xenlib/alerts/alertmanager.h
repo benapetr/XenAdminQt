@@ -75,6 +75,9 @@ class XENLIB_EXPORT AlertManager : public QObject
         // Clear all alerts (for cleanup)
         void ClearAllAlerts();
 
+        //! Emit collectionChanged() after alerts changed state in place (e.g. marked as dismissing)
+        void NotifyCollectionChanged();
+
     signals:
         // C# Reference: Alert.cs line 199 - RegisterAlertCollectionChanged
         void alertAdded(XenLib::Alert* alert);
