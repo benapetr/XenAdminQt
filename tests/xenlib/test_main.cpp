@@ -24,6 +24,7 @@
 #include "xenlib/xen/friendlynames.h"
 #include "xenlib/xen/message.h"
 #include "xenlib/alerts/messagealert.h"
+#include "xenlib/alerts/failedloginattemptalert.h"
 #include <QTemporaryFile>
 #include <QTextStream>
 
@@ -86,6 +87,40 @@ private slots:
         QCOMPARE(Message::FriendlyBody("HA_HOST_FAILED"), QString("Server '{0}' has failed."));
         QCOMPARE(Message::FriendlyAction("PBD_PLUG_FAILED_ON_SERVER_START"), QString("Repair Storage"));
         QVERIFY(Message::FriendlyName("NOT_A_REAL_MESSAGE").isEmpty());
+    }
+
+    void failedLoginAttemptAlert()
+    {
+        XenConnection connection;
+        connection.GetCache()->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"uuid", "pool-uuid"}, {"name_label", "MyPool"}});
+
+        auto make = [&](const QString& body)
+        {
+            return QSharedPointer<XenLib::Alert>(XenLib::MessageAlert::ParseMessage(&connection, QVariantMap{
+                {"ref", "OpaqueRef:msg"}, {"name", "FAILED_LOGIN_ATTEMPTS"}, {"cls", "Pool"},
+                {"obj_uuid", "pool-uuid"}, {"body", body}, {"priority", 3}, {"timestamp", 0}}));
+        };
+
+        auto full = make("<body><total>12</total><unknown>2</unknown>"
+                         "<known><number>10</number><date>20260101T10:00:00Z</date><ip>203.0.113.5</ip>"
+                         "<username>root</username></known></body>");
+        QVERIFY(dynamic_cast<XenLib::FailedLoginAttemptAlert*>(full.data()));
+        QCOMPARE(full->GetTitle(), QString("There has been a number of failed attempts to login to 'MyPool' within the past hour."));
+        const QStringList lines = full->GetDescription().split('\n');
+        QCOMPARE(lines.size(), 4);
+        QCOMPARE(lines.at(0), QString("There has been a total of 12 failed login attempts."));
+        QCOMPARE(lines.at(1), QString("2 attempts originated from unknown sources."));
+        QCOMPARE(lines.at(2), QString("The most common attempts originated from the following sources:"));
+        QVERIFY(lines.at(3).startsWith("- IP address: 203.0.113.5, Number of attempts: 10, Last attempt on: "));
+        QVERIFY(lines.at(3).endsWith(", Username: root"));
+
+        auto allUnknown = make("<body><unknown>5</unknown></body>");
+        QCOMPARE(allUnknown->GetDescription(), QString("All 5 attempts originated from unknown sources."));
+
+        // Unparsable body: description falls back to the generic MessageAlert title (C# base.Title);
+        // FriendlyNames has no entry for this type, so that is the raw message name
+        auto broken = make("not xml");
+        QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
     }
 
     void messageAlertText()

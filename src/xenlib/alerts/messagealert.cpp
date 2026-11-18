@@ -29,6 +29,7 @@
 #include "alarmmessagealert.h"
 #include "policyalert.h"
 #include "certificatealert.h"
+#include "failedloginattemptalert.h"
 #include "alertmanager.h"
 #include "../xen/network/connection.h"
 #include "../xen/xenobject.h"
@@ -336,8 +337,10 @@ Alert* MessageAlert::ParseMessage(XenConnection* connection, const QVariantMap& 
         return new CertificateAlert(connection, messageData);
     }
     
+    if (msgType == "FAILED_LOGIN_ATTEMPTS")
+        return new FailedLoginAttemptAlert(connection, messageData);
+
     // TODO: Add more specialized alert types:
-    // - FailedLoginAttemptAlert (FAILED_LOGIN_ATTEMPTS) - parses the XML body into totals/offenders
     // - LeafCoalesceAlert (LEAF_COALESCE_*) - describes the VDI and its VM
     // (CssExpiryAlert for UPDATES_FEATURE_EXPIR* is Citrix-only and intentionally not ported.)
     

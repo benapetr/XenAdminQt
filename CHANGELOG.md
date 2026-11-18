@@ -20,6 +20,9 @@ are omitted.
   Server failed" / "Server 'host1' has failed.") instead of raw message codes,
   and the Location column shows the pool or server name instead of an object
   UUID. Performance alarms have their own titles, such as "CPU Usage Alarm".
+- Failed login attempt alerts now summarise the attempts: totals, attempts from
+  unknown sources, and the most common sources with IP address, attempt count,
+  last attempt time, username, originator and user agent.
 
 ### Fixed
 

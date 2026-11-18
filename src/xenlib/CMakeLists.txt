@@ -3,6 +3,7 @@ set(XENLIB_SOURCES
     alerts/alert.cpp
     alerts/alertmanager.cpp
     alerts/certificatealert.cpp
+    alerts/failedloginattemptalert.cpp
     alerts/messagealert.cpp
     alerts/policyalert.cpp
     customfields/customfielddefinition.cpp
