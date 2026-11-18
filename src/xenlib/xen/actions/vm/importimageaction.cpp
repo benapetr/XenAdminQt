@@ -138,7 +138,9 @@ void ImportImageAction::run()
 
         vmRecord["HVM_boot_params"] = bootParams;
         vmRecord["platform"]        = platform;
-        vmRecord["other_config"] = QVariantMap();
+        // C# Import.CreateVm: the VM has to be created hidden; it is made visible
+        // once all the setup is done (before auto-start). Failures below destroy it.
+        vmRecord["other_config"] = QVariantMap{{"HideFromXenCenter", "true"}};
         if (!this->m_hostRef.isEmpty())
             vmRecord["affinity"] = this->m_hostRef;
 
@@ -239,6 +241,9 @@ void ImportImageAction::run()
             if (!this->applyFixups(vmRef, this->m_fixupIsoSrRef))
                 qWarning() << "ImportImageAction: fixups requested but could not be applied";
         }
+
+        // Make the VM visible now that it is fully set up (C# Import: remove_from_other_config)
+        XenAPI::VM::remove_from_other_config(session, vmRef, "HideFromXenCenter");
 
         this->setPercentCompleteSafe(90);
 

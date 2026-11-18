@@ -352,11 +352,9 @@ void ImportApplianceAction::run()
                 vmRecord["PV_args"] = xenCfg.value("PV_args");
             if (xenCfg.contains("PV_bootloader_args"))
                 vmRecord["PV_bootloader_args"] = xenCfg.value("PV_bootloader_args");
-            // Hide from XenCenter until fully configured — matches C# pattern.
-            // After full setup we call VM.destroy-and-recreate isn't possible;
-            // instead we omit HideFromXenCenter and make the VM visible from the start.
-            // TODO: use VM.add_to_other_config("HideFromXenCenter","true") once that binding is added.
-            vmRecord["other_config"] = QVariantMap();
+            // C# Import.CreateVm: the VM has to be created hidden; it is made visible
+            // at the end, after all the setup is done (step 4e)
+            vmRecord["other_config"] = QVariantMap{{"HideFromXenCenter", "true"}};
             if (!this->m_applianceRef.isEmpty())
                 vmRecord["appliance"] = this->m_applianceRef;
             if (!mapping.targetHostRef.isEmpty())
@@ -383,113 +381,123 @@ void ImportApplianceAction::run()
             if (this->m_importedVmRef.isEmpty())
                 this->m_importedVmRef = vmRef;
 
-            // ── 4b: Upload disks ──────────────────────────────────────────
-            const int diskCount = mapping.diskMappings.size();
-            for (int diskIdx = 0; diskIdx < diskCount; ++diskIdx)
+            // C# Import: on any failure while setting up this VM, destroy it and rethrow
+            try
             {
-                this->checkCancelled();
-
-                const OvfDiskMapping& dm = mapping.diskMappings.at(diskIdx);
-
-                // Resolve SR: per-disk mapping → default SR in mapping → pool default
-                QString srRef = dm.targetSrRef;
-                if (srRef.isEmpty())
-                    srRef = mapping.defaultSrRef;
-                if (srRef.isEmpty())
+                // ── 4b: Upload disks ──────────────────────────────────────────
+                const int diskCount = mapping.diskMappings.size();
+                for (int diskIdx = 0; diskIdx < diskCount; ++diskIdx)
                 {
-                    qWarning() << "ImportApplianceAction: no SR for disk" << dm.diskHref << "— skipping";
-                    continue;
-                }
+                    this->checkCancelled();
 
-                // Build local disk file path.
-                // For .ovf (folder-based), disks are alongside the .ovf.
-                // For .ova, effectiveOvfPath points to the extracted .ovf in a temp dir
-                // and all disk files were extracted to that same dir.
-                QFileInfo ovfFi(effectiveOvfPath);
-                const QString diskPath = ovfFi.absoluteDir().filePath(dm.diskHref);
-                if (!QFile::exists(diskPath))
-                {
-                    this->setError(QString("Disk file not found: %1").arg(diskPath));
-                    this->cleanupVm(vmRef);
-                    this->setState(Failed);
-                    return;
-                }
+                    const OvfDiskMapping& dm = mapping.diskMappings.at(diskIdx);
 
-                const int diskProgressStart = vmProgressBase + (diskIdx * (vmProgressEnd - vmProgressBase) / qMax(diskCount, 1));
-                const int diskProgressEnd   = vmProgressBase + ((diskIdx + 1) * (vmProgressEnd - vmProgressBase) / qMax(diskCount, 1));
+                    // Resolve SR: per-disk mapping → default SR in mapping → pool default
+                    QString srRef = dm.targetSrRef;
+                    if (srRef.isEmpty())
+                        srRef = mapping.defaultSrRef;
+                    if (srRef.isEmpty())
+                    {
+                        qWarning() << "ImportApplianceAction: no SR for disk" << dm.diskHref << "— skipping";
+                        continue;
+                    }
 
-                this->setDescriptionSafe(QString("Uploading disk '%1' (%2/%3)...")
-                                         .arg(dm.diskHref).arg(diskIdx + 1).arg(diskCount));
-                this->setPercentCompleteSafe(diskProgressStart);
+                    // Build local disk file path.
+                    // For .ovf (folder-based), disks are alongside the .ovf.
+                    // For .ova, effectiveOvfPath points to the extracted .ovf in a temp dir
+                    // and all disk files were extracted to that same dir.
+                    QFileInfo ovfFi(effectiveOvfPath);
+                    const QString diskPath = ovfFi.absoluteDir().filePath(dm.diskHref);
+                    if (!QFile::exists(diskPath))
+                    {
+                        this->setError(QString("Disk file not found: %1").arg(diskPath));
+                        this->cleanupVm(vmRef);
+                        this->setState(Failed);
+                        return;
+                    }
 
-                QString vdiRef;
-                try
-                {
-                    vdiRef = this->uploadDisk(srRef, dm.diskHref, diskPath, 0,
-                                              diskProgressStart, diskProgressEnd);
-                }
-                catch (const VmImportActionBase::CancelledException&)
-                {
-                    this->cleanupVm(vmRef);
-                    throw;
-                }
-                catch (const std::exception& e)
-                {
-                    this->setError(QString("Failed to upload disk '%1': %2").arg(dm.diskHref, e.what()));
-                    this->cleanupVm(vmRef);
-                    this->setState(Failed);
-                    return;
-                }
+                    const int diskProgressStart = vmProgressBase + (diskIdx * (vmProgressEnd - vmProgressBase) / qMax(diskCount, 1));
+                    const int diskProgressEnd   = vmProgressBase + ((diskIdx + 1) * (vmProgressEnd - vmProgressBase) / qMax(diskCount, 1));
 
-                // Attach as VBD (first disk is bootable)
-                try
-                {
-                    this->setDescriptionSafe(QString("Attaching disk '%1' (%2/%3)...")
+                    this->setDescriptionSafe(QString("Uploading disk '%1' (%2/%3)...")
                                              .arg(dm.diskHref).arg(diskIdx + 1).arg(diskCount));
-                    this->attachDisk(vmRef, vdiRef, (diskIdx == 0), "RW", "Disk");
-                }
-                catch (const std::exception& e)
-                {
-                    qWarning() << "ImportApplianceAction: VBD attach failed:" << e.what();
-                    // Non-fatal — VM was created and disk uploaded; continue
-                }
-            }
+                    this->setPercentCompleteSafe(diskProgressStart);
 
-            // ── 4c: Create VIFs ───────────────────────────────────────────
-            for (int vifIdx = 0; vifIdx < mapping.networkMappings.size(); ++vifIdx)
+                    QString vdiRef;
+                    try
+                    {
+                        vdiRef = this->uploadDisk(srRef, dm.diskHref, diskPath, 0,
+                                                  diskProgressStart, diskProgressEnd);
+                    }
+                    catch (const VmImportActionBase::CancelledException&)
+                    {
+                        throw; // cleaned up below
+                    }
+                    catch (const std::exception& e)
+                    {
+                        this->setError(QString("Failed to upload disk '%1': %2").arg(dm.diskHref, e.what()));
+                        this->cleanupVm(vmRef);
+                        this->setState(Failed);
+                        return;
+                    }
+
+                    // Attach as VBD (first disk is bootable)
+                    try
+                    {
+                        this->setDescriptionSafe(QString("Attaching disk '%1' (%2/%3)...")
+                                                 .arg(dm.diskHref).arg(diskIdx + 1).arg(diskCount));
+                        this->attachDisk(vmRef, vdiRef, (diskIdx == 0), "RW", "Disk");
+                    }
+                    catch (const std::exception& e)
+                    {
+                        qWarning() << "ImportApplianceAction: VBD attach failed:" << e.what();
+                        // Non-fatal — VM was created and disk uploaded; continue
+                    }
+                }
+
+                // ── 4c: Create VIFs ───────────────────────────────────────────
+                for (int vifIdx = 0; vifIdx < mapping.networkMappings.size(); ++vifIdx)
+                {
+                    this->checkCancelled();
+
+                    const OvfNetworkMapping& nm = mapping.networkMappings.at(vifIdx);
+                    if (nm.targetNetworkRef.isEmpty())
+                        continue;
+
+                    try
+                    {
+                        this->setDescriptionSafe(QString("Creating network interface %1/%2 for '%3'...")
+                                                 .arg(vifIdx + 1)
+                                                 .arg(mapping.networkMappings.size())
+                                                 .arg(vmName));
+                        this->createVif(vmRef, nm.targetNetworkRef, vifIdx, nm.mac);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        qWarning() << "ImportApplianceAction: VIF create failed:" << e.what();
+                    }
+                }
+
+                // ── 4d: OS fixups (optional) ──────────────────────────────────
+                // C# equivalent: OVF.SetRunOnceBootCDROMOSFixup / SetTargetISOSRInRASD
+                // Attach fixup ISO from the selected SR as a CDROM and boot from it first.
+                if (this->m_runFixups)
+                {
+                    this->checkCancelled();
+                    this->setDescriptionSafe(QString("Applying OS fixups for '%1'...").arg(vmName));
+                    if (!this->applyFixups(vmRef, this->m_fixupIsoSrRef))
+                        qWarning() << "ImportApplianceAction: fixups requested but could not be applied for VM" << vmRef;
+                }
+
+                // ── 4e: Make the VM visible now that it is fully set up ─────────
+                XenAPI::VM::remove_from_other_config(session, vmRef, "HideFromXenCenter");
+            }
+            catch (...)
             {
-                this->checkCancelled();
-
-                const OvfNetworkMapping& nm = mapping.networkMappings.at(vifIdx);
-                if (nm.targetNetworkRef.isEmpty())
-                    continue;
-
-                try
-                {
-                    this->setDescriptionSafe(QString("Creating network interface %1/%2 for '%3'...")
-                                             .arg(vifIdx + 1)
-                                             .arg(mapping.networkMappings.size())
-                                             .arg(vmName));
-                    this->createVif(vmRef, nm.targetNetworkRef, vifIdx, nm.mac);
-                }
-                catch (const std::exception& e)
-                {
-                    qWarning() << "ImportApplianceAction: VIF create failed:" << e.what();
-                }
+                qWarning() << "ImportApplianceAction: import interrupted, destroying VM" << vmRef;
+                this->cleanupVm(vmRef);
+                throw;
             }
-
-            // ── 4d: OS fixups (optional) ──────────────────────────────────
-            // C# equivalent: OVF.SetRunOnceBootCDROMOSFixup / SetTargetISOSRInRASD
-            // Attach fixup ISO from the selected SR as a CDROM and boot from it first.
-            if (this->m_runFixups)
-            {
-                this->checkCancelled();
-                this->setDescriptionSafe(QString("Applying OS fixups for '%1'...").arg(vmName));
-                if (!this->applyFixups(vmRef, this->m_fixupIsoSrRef))
-                    qWarning() << "ImportApplianceAction: fixups requested but could not be applied for VM" << vmRef;
-            }
-
-            // ── 4e: VM is already visible (HideFromXenCenter not set above) ────
 
             this->setPercentCompleteSafe(vmProgressEnd);
         }

@@ -720,6 +720,20 @@ namespace XenAPI
             static void set_other_config(Session* session, const QString& vm, const QVariantMap& otherConfig);
 
             /**
+             * @brief Add a key/value pair to other_config
+             *
+             * Matches C# VM.add_to_other_config()
+             */
+            static void add_to_other_config(Session* session, const QString& vm, const QString& key, const QString& value);
+
+            /**
+             * @brief Remove a key from other_config (no error if absent)
+             *
+             * Matches C# VM.remove_from_other_config()
+             */
+            static void remove_from_other_config(Session* session, const QString& vm, const QString& key);
+
+            /**
              * @brief Set VCPUs_params
              * @param session The session
              * @param vm The opaque_ref of the given VM

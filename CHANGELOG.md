@@ -28,6 +28,9 @@ are omitted.
 
 ### Fixed
 
+- OVF/OVA and disk image imports now keep the new VM hidden until it is fully
+  set up, as in C#, and destroy the partly imported VM when an import is
+  cancelled or fails part-way (OVF/OVA imports could leave it behind).
 - The Alerts, Events and Updates entries in the notifications pane and the
   title bar of those pages now show C#'s icons. They used desktop theme icons,
   which are missing on macOS and Windows, and the title bar referenced images
