@@ -60,7 +60,8 @@ bool Query::match(const QVariantMap& objectData, const QString& objectType, XenC
     //           o.Show(XenAdminConfigManager.Provider.ShowHiddenVMs) &&
     //           (filter == null || filter.Match(o) != false));
     //
-    // We skip the "Show(ShowHiddenVMs)" check for now since we don't have that setting yet
+    // The Show(ShowHiddenVMs) check is applied by Search::getMatchedObjects, which has the
+    // resolved object; this overload only receives the object's data map.
 
     QString objectName = objectData.value("name_label", objectData.value("name_description", "(unnamed)").toString()).toString();
 

@@ -77,7 +77,7 @@ class XENLIB_EXPORT Network : public XenObject
          * of a NetworkSriov object.  Matches C# Network.IsSriov().
          */
         bool IsSriov() const;
-        bool Show(bool showHiddenObjects) const;
+        bool Show(bool showHiddenObjects) const override;
 
         //! Get MTU (Maximum Transmission Unit) in bytes
         qint64 GetMTU() const;

@@ -23,6 +23,8 @@
 #include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
 #include "xenlib/xen/actions/vm/vmrebootaction.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
+#include "xenlib/xensearch/group.h"
+#include "xenlib/xen/network.h"
 #include "xenlib/xen/friendlynames.h"
 #include "xenlib/xen/message.h"
 #include "xenlib/alerts/messagealert.h"
@@ -124,6 +126,76 @@ private slots:
         // FriendlyNames has no entry for this type, so that is the raw message name
         auto broken = make("not xml");
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
+    }
+
+    void groupHideMatchesCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        auto obj = [&](XenObjectType type, const QString& ref) { return cache->ResolveObject(type, ref); };
+        const QVariantMap hiddenConfig{{"HideFromXenCenter", "true"}};
+
+        cache->Update(XenObjectType::HostMetrics, "OpaqueRef:m-live", QVariantMap{{"live", true}});
+        cache->Update(XenObjectType::HostMetrics, "OpaqueRef:m-dead", QVariantMap{{"live", false}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:live", QVariantMap{{"name_label", "live"}, {"metrics", "OpaqueRef:m-live"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:dead", QVariantMap{{"name_label", "dead"}, {"metrics", "OpaqueRef:m-dead"}});
+
+        // VMs
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"name_label", "vm"}, {"power_state", "Halted"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm-hidden", QVariantMap{{"name_label", "h"}, {"power_state", "Halted"}, {"other_config", hiddenConfig}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm-gui", QVariantMap{{"name_label", "__gui__temp"}, {"power_state", "Halted"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:dom0", QVariantMap{{"name_label", "dom0"}, {"is_control_domain", true}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm-on-dead", QVariantMap{
+            {"name_label", "d"}, {"power_state", "Running"}, {"resident_on", "OpaqueRef:dead"}});
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vm"), false));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vm-hidden"), false));
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vm-hidden"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vm-gui"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:dom0"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vm-on-dead"), true));
+
+        // vTPM templates are hidden only while a host restricts vTPM
+        cache->Update(XenObjectType::VM, "OpaqueRef:vtpm-tmpl", QVariantMap{
+            {"name_label", "t"}, {"is_a_template", true}, {"platform", QVariantMap{{"vtpm", "true"}}}});
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vtpm-tmpl"), true)); // restrict_vtpm missing = restricted
+        cache->Update(XenObjectType::Host, "OpaqueRef:live", QVariantMap{
+            {"name_label", "live"}, {"metrics", "OpaqueRef:m-live"}, {"license_params", QVariantMap{{"restrict_vtpm", "false"}}}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:dead", QVariantMap{
+            {"name_label", "dead"}, {"metrics", "OpaqueRef:m-dead"}, {"license_params", QVariantMap{{"restrict_vtpm", "false"}}}});
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::VM, "OpaqueRef:vtpm-tmpl"), false));
+
+        // SRs
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr", QVariantMap{{"name_label", "sr"}, {"type", "nfs"}, {"shared", true}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr-hidden", QVariantMap{{"name_label", "h"}, {"type", "nfs"}, {"shared", true}, {"other_config", hiddenConfig}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr-tmpfs", QVariantMap{{"name_label", "mem"}, {"type", "tmpfs"}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr-tools", QVariantMap{{"name_label", "tools"}, {"type", "iso"}, {"is_tools_sr", true}});
+        cache->Update(XenObjectType::PBD, "OpaqueRef:pbd", QVariantMap{{"host", "OpaqueRef:dead"}, {"SR", "OpaqueRef:sr-local"}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr-local", QVariantMap{
+            {"name_label", "local"}, {"type", "ext"}, {"shared", false}, {"PBDs", QVariantList{"OpaqueRef:pbd"}}});
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr"), false));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr-hidden"), false));
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr-hidden"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr-tmpfs"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr-tools"), true));
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::SR, "OpaqueRef:sr-local"), true)); // home server not live
+
+        // Networks: the guest installer network is shown only with hidden objects
+        cache->Update(XenObjectType::Network, "OpaqueRef:himn", QVariantMap{
+            {"name_label", "himn"}, {"other_config", QVariantMap{{"is_guest_installer_network", "true"}}}});
+        QVERIFY(XenSearch::Group::Hide(obj(XenObjectType::Network, "OpaqueRef:himn"), false));
+        QVERIFY(!XenSearch::Group::Hide(obj(XenObjectType::Network, "OpaqueRef:himn"), true));
+
+        // VDI.Show: missing or unmanaged disks are never shown, hidden ones only with hidden objects
+        cache->Update(XenObjectType::VDI, "OpaqueRef:vdi", QVariantMap{{"name_label", "d"}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:vdi-missing", QVariantMap{{"name_label", "d"}, {"missing", true}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:vdi-hidden", QVariantMap{{"name_label", "d"}, {"other_config", hiddenConfig}});
+        QVERIFY(obj(XenObjectType::VDI, "OpaqueRef:vdi")->Show(false));
+        QVERIFY(!obj(XenObjectType::VDI, "OpaqueRef:vdi-missing")->Show(true));
+        QVERIFY(!obj(XenObjectType::VDI, "OpaqueRef:vdi-hidden")->Show(false));
+        QVERIFY(obj(XenObjectType::VDI, "OpaqueRef:vdi-hidden")->Show(true));
+
+        // Unresolvable objects are hidden
+        QVERIFY(XenSearch::Group::Hide(QSharedPointer<XenObject>(), true));
     }
 
     void vmPowerActionTitles()

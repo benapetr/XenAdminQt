@@ -29,11 +29,13 @@
 #include <QDebug>
 #include <QMetaType>
 #include <algorithm>
+#include <atomic>
 #include "search.h"
 #include "queryscope.h"
 #include "queryfilter.h"
 #include "queries.h"
 #include "grouping.h"
+#include "group.h"
 #include "xen/network/connectionsmanager.h"
 #include "../xencache.h"
 #include "../network/comparableaddress.h"
@@ -605,6 +607,21 @@ QueryFilter* Search::FullQueryFor(const QString& text)
     return new GroupQuery(GroupQuery::GroupQueryType::Or, queries);
 }
 
+namespace
+{
+    std::atomic<bool> s_showHiddenObjects{false};
+}
+
+void Search::SetShowHiddenObjects(bool show)
+{
+    s_showHiddenObjects.store(show);
+}
+
+bool Search::GetShowHiddenObjects()
+{
+    return s_showHiddenObjects.load();
+}
+
 bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& adapters)
 {
     // C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
@@ -758,6 +775,8 @@ QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* co
     QueryFilter* filter = this->m_query->getQueryFilter();
     ObjectTypes types = scope->GetObjectTypes();
 
+    const bool showHiddenObjects = Search::GetShowHiddenObjects();
+
     // Get all objects from cache
     QList<QPair<XenObjectType, QString>> allCached = connection->GetCache()->GetXenSearchableObjects();
 
@@ -834,6 +853,11 @@ QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* co
         }
 
         if (!typeMatches)
+            continue;
+
+        // C# Query.Match: o.Show(ShowHiddenVMs), and GroupAlg.Hide(o) applied by Group.GetGrouped
+        QSharedPointer<XenObject> object = connection->GetCache()->ResolveObject(objType, objRef);
+        if (XenSearch::Group::Hide(object, showHiddenObjects) || !object->Show(showHiddenObjects))
             continue;
 
         // Apply query filter

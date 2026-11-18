@@ -124,8 +124,9 @@ class XENLIB_EXPORT VM : public XenObject
         //! Check if this is an internal template (C# IsInternalTemplate)
         bool IsInternalTemplate() const;
 
-        //! Check if this object should be shown in the UI
+        //! Check if this object should be shown in the UI (C# VM.Show)
         bool IsVisible(bool showHiddenVMs) const;
+        bool Show(bool showHiddenObjects) const override { return this->IsVisible(showHiddenObjects); }
 
         //! Check if this is a snapshot
         bool IsSnapshot() const;

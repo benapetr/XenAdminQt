@@ -160,6 +160,15 @@ class XENLIB_EXPORT XenObject : public QObject
         virtual bool IsHidden() const;
 
         /**
+         * @brief Whether this object should be shown in trees, searches and lists
+         * @param showHiddenObjects The "Show hidden objects" view setting
+         *
+         * C# equivalent: IXenObject.Show(bool showHiddenVMs). The base implementation
+         * shows everything; VM, SR, VDI, Network and PIF override it.
+         */
+        virtual bool Show(bool showHiddenObjects) const;
+
+        /**
          * @brief Refresh object data from cache
          *
          * Call this after cache updates to emit dataChanged signal.

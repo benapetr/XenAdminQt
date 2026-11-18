@@ -62,6 +62,11 @@ bool VDI::ReadOnly() const
     return boolProperty("read_only");
 }
 
+bool VDI::Show(bool showHiddenObjects) const
+{
+    return !this->Missing() && this->Managed() && (showHiddenObjects || !this->IsHidden());
+}
+
 bool VDI::CanAttach(bool showHidden, bool* forceReadOnly) const
 {
     if (forceReadOnly)

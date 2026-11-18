@@ -30,6 +30,7 @@
 #include "mainwindow.h"
 #include "globals.h"
 #include "xenlib/utils/encryption.h"
+#include "xenlib/xensearch/search.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDebug>
@@ -95,6 +96,7 @@ void SettingsManager::Load()
     this->m_defaultImportPath = this->m_settings->value("Paths/defaultImport", defaultPath).toString();
     this->m_confirmOnExit = this->m_settings->value("General/confirmOnExit", true).toBool();
     this->m_showHiddenObjects = this->m_settings->value("View/showHiddenObjects", false).toBool();
+    Search::SetShowHiddenObjects(this->m_showHiddenObjects);
     this->m_defaultTemplatesVisible = this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
     this->m_userTemplatesVisible = this->m_settings->value("View/userTemplatesVisible", true).toBool();
     this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
@@ -546,6 +548,8 @@ bool SettingsManager::GetShowHiddenObjects() const
 void SettingsManager::SetShowHiddenObjects(bool show)
 {
     this->m_showHiddenObjects = show;
+    // Searches (tree, search tab) read this from xenlib, like C# XenAdminConfigManager.Provider
+    Search::SetShowHiddenObjects(show);
     emit settingsChanged("View/showHiddenObjects");
 }
 

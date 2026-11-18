@@ -28,6 +28,11 @@ are omitted.
 
 ### Fixed
 
+- View > Show Hidden Objects now works in the tree and searches. Hidden VMs,
+  SRs, disks and networks are left out unless it is enabled (they used to be
+  always shown, grayed), and, as in C#, internal and temporary objects, memory
+  and tools SRs, missing or unmanaged disks, vTPM templates when vTPM is not
+  licensed, and VMs or local SRs whose server is offline are always left out.
 - The VM network tab now uses the VM's own limit on network interfaces (from
   its template's restrictions) instead of always allowing 7, and shows the C#
   error when the limit is reached.

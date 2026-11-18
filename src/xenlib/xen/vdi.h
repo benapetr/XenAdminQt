@@ -71,6 +71,9 @@ class XENLIB_EXPORT VDI : public XenObject
         //! Check if VDI is read-only
         bool ReadOnly() const;
 
+        //! C# VDI.Show: not missing, managed, and not hidden unless hidden objects are shown
+        bool Show(bool showHiddenObjects) const override;
+
         //! C# VDI.Show and AttachDiskDialog eligibility, using cached metadata.
         //! A visible disk may require read-only attachment due to existing VBDs.
         bool CanAttach(bool showHidden, bool* forceReadOnly = nullptr) const;

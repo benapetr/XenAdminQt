@@ -374,6 +374,15 @@ class Search
         static XenSearch::ObjectTypes DefaultObjectTypes();
 
         /**
+         * @brief The "Show hidden objects" view setting used when matching objects
+         *
+         * C# equivalent: XenAdminConfigManager.Provider.ShowHiddenVMs. The UI sets it
+         * from its settings; when false, objects whose Show() is false are left out.
+         */
+        static void SetShowHiddenObjects(bool show);
+        static bool GetShowHiddenObjects();
+
+        /**
          * @brief Get the overview scope (default object types + templates)
          *
          * C# equivalent: GetOverviewScope() - Line 527 in Search.cs

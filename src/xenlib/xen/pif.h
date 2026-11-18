@@ -123,7 +123,7 @@ class PIF : public XenObject
         bool IsSriovLogicalPIF() const;
         bool IsUsedByClustering() const;
         bool SriovCapable() const;
-        bool Show(bool showHiddenObjects) const;
+        bool Show(bool showHiddenObjects) const override;
         QString GetLinkStatusString() const;
 };
 

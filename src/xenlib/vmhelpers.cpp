@@ -28,6 +28,7 @@
 #include "vmhelpers.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/vdi.h"
 #include <QtCore/QDebug>
 
 /**
@@ -166,8 +167,12 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
             continue;
         }
 
-        // TODO: Check VDI.Show(true) - for now assume all VDIs are shown
-        // In C#: if (!theVDI.Show(true)) continue;
+        // C# VM.GetStorageHost: if (!theVDI.Show(true)) continue;
+        QSharedPointer<VDI> vdiObject = cache->ResolveObject<VDI>(vdiRef);
+        if (!vdiObject || !vdiObject->Show(true))
+        {
+            continue;
+        }
 
         // Get SR from VDI
         QString srRef = vdi.value("SR").toString();

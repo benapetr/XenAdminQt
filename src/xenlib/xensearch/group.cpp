@@ -36,6 +36,7 @@
 #include "../xen/network/connection.h"
 #include "../xen/network/connectionsmanager.h"
 #include "../xen/pool.h"
+#include "../xen/folder.h"
 #include "../xen/host.h"
 #include "../xen/vm.h"
 #include "../xen/vmappliance.h"
@@ -226,110 +227,79 @@ namespace XenSearch
 
     bool Group::Hide(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
+        Q_UNUSED(objectData)
         // TODO: Integrate with XenAdminConfigManager equivalent for hidden objects
         // if (XenAdminConfigManager::Provider::ObjectIsHidden(objectRef))
         //     return true;
 
-        if (!conn)
+        if (!conn || !conn->GetCache())
             return true;
 
-        XenCache* cache = conn->GetCache();
-        if (!cache)
+        QSharedPointer<XenObject> object = conn->GetCache()->ResolveObject(XenObject::TypeFromString(objectType), objectRef);
+        return Hide(object, Search::GetShowHiddenObjects());
+    }
+
+    bool Group::Hide(const QSharedPointer<XenObject>& object, bool showHiddenObjects)
+    {
+        // C# Reference: GroupAlg.Hide(IXenObject o)
+        // TODO: C# first checks XenAdminConfigManager.Provider.ObjectIsHidden(o.opaque_ref), a
+        // client-side list of objects temporarily hidden by running operations; not ported yet.
+        if (!object)
             return true;
 
-        if (objectType == "vm")
+        XenCache* cache = object->GetCache();
+
+        switch (object->GetObjectType())
         {
-            bool isTemplate = objectData.value("is_a_template").toBool();
-            bool isControlDomain = objectData.value("is_control_domain").toBool();
-
-            // TODO: Check VTPM restriction when Helpers is ported
-            // if (!Helpers::VtpmCanView(conn))
-            //     return true;
-
-            // Hide control domain VMs
-            if (isControlDomain)
-                return true;
-
-            // Hide templates
-            if (isTemplate)
-                return true;
-
-            // TODO: Check VM visibility using VM.Show() when that method exists
-            // QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", objectRef);
-            // if (vm && !vm->Show(false)) // false = don't show hidden
-            //     return true;
-
-            // Check if VM is on non-live host
-            QString residentOnRef = objectData.value("resident_on").toString();
-            if (!residentOnRef.isEmpty() && residentOnRef != XENOBJECT_NULL)
+            case XenObjectType::VM:
             {
-                QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, residentOnRef);
-                if (host && !host->IsLive())
-                    return true;
-            }
-        }
-        else if (objectType == "sr")
-        {
-            // Check if SR is tools SR
-            QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, objectRef);
-            if (sr)
-            {
-                if (sr->IsToolsSR())
+                QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(object);
+                if (!vm)
                     return true;
 
-                // TODO: Check SR visibility using SR.Show() when that method exists
-                // if (!sr->Show(false))
-                //     return true;
-            }
-
-            // Check if SR is on non-live host (check all PBDs)
-            QVariantList pbdRefs = objectData.value("PBDs").toList();
-            bool hasLiveHost = false;
-
-            for (const QVariant& pbdRefVar : pbdRefs)
-            {
-                QString pbdRef = pbdRefVar.toString();
-                if (pbdRef.isEmpty())
-                    continue;
-
-                QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
-                QString hostRef = pbdData.value("host").toString();
-                if (hostRef.isEmpty())
-                    continue;
-
-                QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
-                if (host && host->IsLive())
+                // Hide vTPM-enabled templates when vTPM is restricted by licensing
+                if (vm->IsTemplate() && vm->GetPlatform().value("vtpm").toString().toLower() == QLatin1String("true") && cache)
                 {
-                    hasLiveHost = true;
-                    break;
+                    for (const QSharedPointer<Host>& host : cache->GetAll<Host>())
+                    {
+                        if (host && host->RestrictVtpm())
+                            return true;
+                    }
                 }
+
+                if (vm->IsControlDomain() || !vm->Show(showHiddenObjects))
+                    return true;
+
+                // Hide VMs on non-live hosts
+                QSharedPointer<Host> host = vm->GetHome();
+                return host && !host->IsLive();
             }
 
-            if (!hasLiveHost)
-                return true;
-        }
-        else if (objectType == "network")
-        {
-            // TODO: Check network visibility using Network.Show() when that method exists
-            // QSharedPointer<Network> network = cache->ResolveObject<Network>("network", objectRef);
-            // if (network && !network->Show(false))
-            //     return true;
-        }
-        else if (objectType == "host")
-        {
-            // Hide offline hosts (TODO: make this configurable)
-            QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, objectRef);
-            if (host && !host->IsLive())
-                return false; // Don't hide offline hosts by default - let them show
-        }
-        else if (objectType == "folder")
-        {
-            // Hide root folder
-            bool isRootFolder = objectData.value("isRootFolder").toBool();
-            return isRootFolder;
-        }
+            case XenObjectType::SR:
+            {
+                QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(object);
+                if (!sr || !sr->Show(showHiddenObjects) || sr->IsToolsSR())
+                    return true;
 
-        return false;
+                // Hide SRs on non-live hosts (only local SRs have a home server)
+                const QString homeRef = sr->HomeRef();
+                QSharedPointer<Host> host = (cache && !homeRef.isEmpty()) ? cache->ResolveObject<Host>(homeRef) : QSharedPointer<Host>();
+                return host && !host->IsLive();
+            }
+
+            case XenObjectType::Network:
+                return !object->Show(showHiddenObjects);
+
+            case XenObjectType::Folder:
+            {
+                // Hide the root folder
+                QSharedPointer<Folder> folder = qSharedPointerDynamicCast<Folder>(object);
+                return folder && folder->IsRootFolder();
+            }
+
+            default:
+                return false;
+        }
     }
 
     int Group::Compare(const QVariant& one, const QVariant& other, Search* search)

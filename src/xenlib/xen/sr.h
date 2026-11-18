@@ -242,6 +242,7 @@ class XENLIB_EXPORT SR : public XenObject
 
         //! C# SR.Show: hide temporary, memory, legacy local and hidden/DR SRs.
         bool IsVisible(bool showHidden) const;
+        bool Show(bool showHiddenObjects) const override { return this->IsVisible(showHiddenObjects); }
 
         //! C# SR.CanBeSeenFrom: an attached PBD must connect the SR to the host.
         bool CanBeSeenFrom(QSharedPointer<Host> host) const;

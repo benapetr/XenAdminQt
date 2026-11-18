@@ -42,6 +42,7 @@ class Grouping;
 class Query;
 class Search;
 class XenConnection;
+class XenObject;
 
 namespace XenSearch
 {
@@ -61,8 +62,11 @@ namespace XenSearch
             bool operator==(const GroupKey& other) const;
             bool operator!=(const GroupKey& other) const { return !(*this == other); }
 
-            // Hash function for QHash
-            friend uint qHash(const GroupKey& key, uint seed);
+            // Hash function for QHash (defined here so it lives in XenSearch, where QHash looks it up)
+            friend uint qHash(const GroupKey& key, uint seed)
+            {
+                return ::qHash(key.GetKey().toString(), seed);
+            }
 
         private:
             Grouping* grouping_;
@@ -87,6 +91,17 @@ namespace XenSearch
              * Matches C# Group.GetGrouped()
              */
             static QSharedPointer<Group> GetGrouped(Search* search);
+
+            /**
+             * @brief Whether an object must be left out of trees and search results
+             * @param object The object (may be null, in which case it is hidden)
+             * @param showHiddenObjects The "Show hidden objects" view setting
+             *
+             * Matches C# GroupAlg.Hide(): control domains, objects whose Show() is false,
+             * vTPM templates when vTPM is restricted, tools SRs, VMs and SRs whose home
+             * server is not live, and the root folder.
+             */
+            static bool Hide(const QSharedPointer<XenObject>& object, bool showHiddenObjects);
 
             /**
              * @brief Compare two objects for sorting
@@ -248,11 +263,5 @@ namespace XenSearch
     };
 
 } // namespace XenSearch
-
-// Hash function implementation
-inline uint qHash(const XenSearch::GroupKey& key, uint seed)
-{
-    return qHash(key.GetKey().toString(), seed);
-}
 
 #endif // XENSEARCH_GROUP_H

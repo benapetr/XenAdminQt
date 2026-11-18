@@ -666,7 +666,8 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVMNode(const QSharedPointer<VM>& vm)
 {
-    // TODO: Check for vTPM restriction and template status
+    // C# AddVMNode also drops vTPM templates when vTPM is restricted; here that is
+    // done earlier by XenSearch::Group::Hide, before the tree is built.
     bool hidden = vm->IsHidden();
     QString name = hidden ? QString("(%1)").arg(vm->GetName()) : vm->GetName();
     QIcon icon = IconManager::instance().GetIconForObject(vm);

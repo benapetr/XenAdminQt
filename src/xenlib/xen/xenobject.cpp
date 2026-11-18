@@ -261,6 +261,12 @@ QString XenObject::GetFolderPath() const
     return otherConfig.value("folder").toString();
 }
 
+bool XenObject::Show(bool showHiddenObjects) const
+{
+    Q_UNUSED(showHiddenObjects)
+    return true;
+}
+
 bool XenObject::IsHidden() const
 {
     QVariantMap otherConfig = this->GetOtherConfig();
