@@ -1,0 +1,46 @@
+{
+  "result": {
+    "events": [
+      {
+        "class": "VM",
+        "operation": "add",
+        "ref": "OpaqueRef:vm-test-001",
+        "snapshot": {
+          "name_label": "Test VM",
+          "name_description": "A test virtual machine",
+          "power_state": "Halted",
+          "is_a_template": false,
+          "is_control_domain": false,
+          "is_a_snapshot": false,
+          "allowed_operations": ["export", "start"],
+          "VCPUs_max": 2,
+          "VCPUs_at_startup": 2,
+          "memory_static_max": 2147483648,
+          "memory_dynamic_max": 2147483648,
+          "HVM_boot_policy": "BIOS order",
+          "HVM_boot_params": {"order": "dc"},
+          "platform": {"nx": "true", "acpi": "1"},
+          "affinity": "",
+          "resident_on": "",
+          "VBDs": [],
+          "VIFs": [],
+          "other_config": {}
+        }
+      },
+      {
+        "class": "host",
+        "operation": "add",
+        "ref": "OpaqueRef:host-test-001",
+        "snapshot": {
+          "name_label": "Test Host",
+          "name_description": "A test XenServer host",
+          "address": "192.0.2.1",
+          "enabled": true,
+          "resident_VMs": ["OpaqueRef:vm-test-001"],
+          "software_version": {"product_version": "8.3.0"},
+          "other_config": {}
+        }
+      }
+    ]
+  }
+}

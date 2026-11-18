@@ -6,10 +6,12 @@ TARGET = xenlib-tests
 
 SOURCES += \
     test_main.cpp \
-    test_helpers.cpp
+    test_helpers.cpp \
+    test_ovfdata.cpp
 
 HEADERS += \
     test_helpers.h \
+    test_ovfdata.h \
     test_transportserver.h
 
 RESOURCES += \

@@ -92,9 +92,10 @@ void CertificateAlert::parseCertificateMessage()
 QString CertificateAlert::GetTitle() const
 {
     // C# Reference: CertificateAlert.cs Title property line 58
-    QString objectName = this->AppliesTo();
+    // C# Reference: XenObject == null ? Messages.UNKNOWN_OBJECT : XenObject.Name()
+    QString objectName = this->getXenObjectName();
     if (objectName.isEmpty())
-        objectName = tr("Unknown");
+        objectName = tr("unknown object");
     
     QString timeStr = this->formatExpiryTime();
     
@@ -126,9 +127,10 @@ QString CertificateAlert::GetTitle() const
 QString CertificateAlert::GetDescription() const
 {
     // C# Reference: CertificateAlert.cs Description property line 149
-    QString objectName = this->AppliesTo();
+    // C# Reference: XenObject == null ? Messages.UNKNOWN_OBJECT : XenObject.Name()
+    QString objectName = this->getXenObjectName();
     if (objectName.isEmpty())
-        objectName = tr("Unknown");
+        objectName = tr("unknown object");
     
     QString timeStr = this->formatExpiryTime();
     

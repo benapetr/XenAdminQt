@@ -33,8 +33,15 @@
 #include "../xen/network/connection.h"
 #include "../xen/xenobject.h"
 #include "../xen/xenobjecttype.h"
+#include "../xen/message.h"
+#include "../xen/host.h"
+#include "../xen/pif.h"
+#include "../xen/pool.h"
 #include "../xencache.h"
+#include "../xen/friendlynames.h"
 #include <QDateTime>
+#include <QRegularExpression>
+#include <QSet>
 
 using namespace XenLib;
 
@@ -43,14 +50,154 @@ MessageAlert::MessageAlert(XenConnection* connection, const QVariantMap& message
     this->parseMessageData();
 }
 
+namespace
+{
+    // C# Reference: Helpers.GetPoolOfOne(connection)
+    QSharedPointer<Pool> poolOfOne(XenConnection* connection)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        return cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    }
+
+    // C# Reference: Helpers.IsPool(connection) - a visible (named or multi-host) pool exists
+    bool isPool(XenConnection* connection)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        return cache && cache->GetPool();
+    }
+
+    QString hostNameByUuid(XenConnection* connection, const QString& uuid)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return QString();
+
+        for (const QSharedPointer<Host>& host : cache->GetAll<Host>())
+        {
+            if (host && host->GetUUID() == uuid)
+                return host->GetName();
+        }
+        return QString();
+    }
+
+    QString fmt(const QString& format, const QStringList& args)
+    {
+        return FriendlyNames::Format(format, args);
+    }
+} // namespace
+
 QString MessageAlert::GetTitle() const
 {
-    return this->m_title;
+    // C# Reference: MessageAlert.Title
+    const QString type = this->GetMessageType();
+
+    if (type == QLatin1String("GFS2_CAPACITY"))
+        return Message::FriendlyName(type);
+
+    QString title = Message::FriendlyName(type);
+    if (title.isEmpty())
+        title = type;
+
+    if (XenObjectTypeFromString(this->GetObjClass()) != XenObjectType::Pool)
+    {
+        QSharedPointer<XenObject> xenObject = this->GetXenObject();
+        const bool isHost = xenObject && xenObject->GetObjectType() == XenObjectType::Host;
+        if (!isHost || isPool(xenObject->GetConnection()))
+        {
+            const QString name = xenObject ? xenObject->GetName() : QString();
+            if (!name.isEmpty())
+                title = QStringLiteral("%1: %2").arg(name, title);
+        }
+    }
+
+    return title;
 }
 
 QString MessageAlert::GetDescription() const
 {
-    return this->m_description;
+    // C# Reference: MessageAlert.Description
+    // If you add something here, be sure the corresponding FriendlyNames entry exists.
+    const QString type = this->GetMessageType();
+    const QString body = this->GetMessageBody();
+    const QSharedPointer<XenObject> xenObject = this->GetXenObject();
+    const QString objectName = xenObject ? xenObject->GetName() : QString();
+    const QString friendlyFormat = Message::FriendlyBody(type);
+
+    static const QSet<QString> nameOnlyTypes = {
+        // applies to hosts, vms and pools where only the name is required
+        "HA_HEARTBEAT_APPROACHING_TIMEOUT", "HA_HOST_FAILED", "HA_HOST_WAS_FENCED",
+        "HA_PROTECTED_VM_RESTART_FAILED", "HA_STATEFILE_APPROACHING_TIMEOUT", "HA_STATEFILE_LOST",
+        "HA_XAPI_HEALTHCHECK_APPROACHING_TIMEOUT", "LICENSE_DOES_NOT_SUPPORT_POOLING",
+        "PBD_PLUG_FAILED_ON_SERVER_START", "VM_CLONED", "VM_CRASHED", "VM_REBOOTED", "VM_RESUMED",
+        "VM_SHUTDOWN", "VM_STARTED", "VM_SUSPENDED", "METADATA_LUN_BROKEN", "METADATA_LUN_HEALTHY",
+        "LICENSE_SERVER_UNREACHABLE", "LICENSE_SERVER_VERSION_OBSOLETE", "GRACE_LICENSE",
+        "LICENSE_NOT_AVAILABLE", "LICENSE_EXPIRED", "LICENSE_SERVER_CONNECTED",
+        "LICENSE_SERVER_UNAVAILABLE", "HOST_CLOCK_WENT_BACKWARDS", "POOL_CPU_FEATURES_UP",
+        "POOL_CPU_FEATURES_DOWN", "HOST_CPU_FEATURES_UP", "HOST_CPU_FEATURES_DOWN",
+        "VDI_CBT_RESIZE_FAILED", "VDI_CBT_SNAPSHOT_FAILED", "VDI_CBT_METADATA_INCONSISTENT",
+        "CLUSTER_HOST_FENCING", "CLUSTER_HOST_ENABLE_FAILED", "VM_SECURE_BOOT_FAILED",
+        "TLS_VERIFICATION_EMERGENCY_DISABLED",
+        // C# LICENSE_EXPIRES_SOON also only uses the object name
+        "LICENSE_EXPIRES_SOON",
+    };
+
+    if (xenObject)
+    {
+        if (type == QLatin1String("HA_POOL_DROP_IN_PLAN_EXISTS_FOR") || type == QLatin1String("HA_POOL_OVERCOMMITTED"))
+        {
+            bool ok = false;
+            const int pef = body.trimmed().toInt(&ok);
+            if (ok)
+            {
+                const QString suffix = pef == 0 ? QStringLiteral("0") : pef == 1 ? QStringLiteral("1") : QStringLiteral("n");
+                const QString f = Message::FriendlyBody(QStringLiteral("ha_pool_drop_in_plan_exists_for-") + suffix);
+                return fmt(f, {objectName, QString::number(pef)});
+            }
+        } else if (nameOnlyTypes.contains(type))
+        {
+            return fmt(friendlyFormat, {objectName});
+        } else if (type == QLatin1String("HOST_CLOCK_SKEW_DETECTED") || type == QLatin1String("POOL_MASTER_TRANSITION"))
+        {
+            // object then pool
+            QSharedPointer<Pool> pool = poolOfOne(xenObject->GetConnection());
+            if (pool)
+                return fmt(friendlyFormat, {objectName, pool->GetName()});
+        } else if (type == QLatin1String("HA_NETWORK_BONDING_ERROR"))
+        {
+            return fmt(friendlyFormat, {this->getManagementBondName(), objectName});
+        } else if (type == QLatin1String("VBD_QOS_FAILED") || type == QLatin1String("VCPU_QOS_FAILED") || type == QLatin1String("VIF_QOS_FAILED"))
+        {
+            return fmt(friendlyFormat, {QString(), objectName});
+        } else if (type == QLatin1String("EXTAUTH_INIT_IN_HOST_FAILED"))
+        {
+            static const QRegularExpression extAuthRegex(QStringLiteral("error=(.*)"));
+            const QRegularExpressionMatch m = extAuthRegex.match(body);
+            return m.hasMatch() ? fmt(friendlyFormat, {objectName, m.captured(1)}) : QString();
+        } else if (type == QLatin1String("EXTAUTH_IN_POOL_IS_NON_HOMOGENEOUS"))
+        {
+            QSharedPointer<Pool> pool = poolOfOne(xenObject->GetConnection());
+            return fmt(friendlyFormat, {pool ? pool->GetName() : QString()});
+        } else if (type == QLatin1String("MULTIPATH_PERIODIC_ALERT"))
+        {
+            return this->extractMultipathCurrentState(friendlyFormat);
+        } else if (type == QLatin1String("WLB_CONSULTATION_FAILED"))
+        {
+            QSharedPointer<Pool> pool = poolOfOne(xenObject->GetConnection());
+            return fmt(friendlyFormat, {pool ? pool->GetName() : QString(), objectName});
+        } else if (type == QLatin1String("WLB_OPTIMIZATION_ALERT"))
+        {
+            static const QRegularExpression wlbOptAlertRegex(QStringLiteral("severity:(.*) mode:(.*)"));
+            const QRegularExpressionMatch m = wlbOptAlertRegex.match(body);
+            QSharedPointer<Pool> pool = poolOfOne(xenObject->GetConnection());
+            return m.hasMatch() ? fmt(friendlyFormat, {pool ? pool->GetName() : QString(), m.captured(2), m.captured(1)}) : QString();
+        } else if (type == QLatin1String("GFS2_CAPACITY"))
+        {
+            return fmt(Message::FriendlyBody(type), {objectName});
+        }
+        // PVS_PROXY_NO_CACHE_SR_AVAILABLE is not ported (PVS is out of scope), so it uses the body
+    }
+
+    return body;
 }
 
 AlertPriority MessageAlert::GetPriority() const
@@ -60,7 +207,10 @@ AlertPriority MessageAlert::GetPriority() const
 
 QString MessageAlert::AppliesTo() const
 {
-    return this->m_appliesTo;
+    // C# Reference: MessageAlert.AppliesTo - the pool (or standalone server) name
+    QSharedPointer<Pool> pool = poolOfOne(this->m_connection);
+    const QString name = pool ? pool->GetName() : QString();
+    return !name.isEmpty() ? name : this->GetObjUUID();
 }
 
 QString MessageAlert::GetName() const
@@ -187,9 +337,9 @@ Alert* MessageAlert::ParseMessage(XenConnection* connection, const QVariantMap& 
     }
     
     // TODO: Add more specialized alert types:
-    // - CssExpiryAlert (UPDATES_FEATURE_EXPIR*)
-    // - FailedLoginAttemptAlert (FAILED_LOGIN_ATTEMPTS)
-    // - LeafCoalesceAlert (LEAF_COALESCE_*)
+    // - FailedLoginAttemptAlert (FAILED_LOGIN_ATTEMPTS) - parses the XML body into totals/offenders
+    // - LeafCoalesceAlert (LEAF_COALESCE_*) - describes the VDI and its VM
+    // (CssExpiryAlert for UPDATES_FEATURE_EXPIR* is Citrix-only and intentionally not ported.)
     
     // Default: basic MessageAlert for unrecognized types
     return new MessageAlert(connection, messageData);
@@ -231,38 +381,88 @@ void MessageAlert::parseMessageData()
         default: this->m_priority = AlertPriority::Unknown; break;
     }
     
-    // Extract name and body
-    QString msgType = this->GetMessageType();
-    QString msgBody = this->GetMessageBody();
-    
-    // Set title to message type
-    this->m_title = msgType;
-    this->m_name = msgType;
-    
-    // Set description
-    this->m_description = this->getFriendlyDescription();
-    
-    // Extract obj_uuid for appliesTo
-    QString objUuid = this->GetObjUUID();
-    if (!objUuid.isEmpty()) {
-        this->m_appliesTo = objUuid;
-    } else {
-        this->m_appliesTo = QString();
-    }
+    this->m_name = this->GetMessageType();
 }
 
-QString MessageAlert::getFriendlyDescription()
+QString MessageAlert::getXenObjectName() const
 {
-    QString msgType = this->GetMessageType();
-    QString msgBody = this->GetMessageBody();
-    
-    // C# MessageAlert has detailed switch statement for each message type
-    // TODO: Port full message type handling from MessageAlert.cs lines 132-300
-    // For now, return basic message body
-    
-    if (!msgBody.isEmpty()) {
-        return msgBody;
+    QSharedPointer<XenObject> xenObject = this->GetXenObject();
+    return xenObject ? xenObject->GetName() : QString();
+}
+
+QString MessageAlert::getManagementBondName() const
+{
+    // C# Reference: NetworkingHelper.GetCoordinatorManagementBond(connection).Name()
+    QSharedPointer<Pool> pool = poolOfOne(this->m_connection);
+    QSharedPointer<Host> coordinator = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    if (coordinator)
+    {
+        for (const QSharedPointer<PIF>& pif : coordinator->GetPIFs())
+        {
+            // A bond's name is the name of its master PIF
+            if (pif && pif->IsManagementInterface())
+                return pif->IsBondMaster() ? pif->GetName() : tr("Unknown");
+        }
     }
-    
-    return msgType;
+    return tr("Unknown");
+}
+
+QString MessageAlert::extractMultipathCurrentState(const QString& format) const
+{
+    /* C# Reference: MessageAlert.extractMultipathCurrentState()
+     * message body format - if this changes you need to alter this method
+     *
+     * Unhealthy paths:
+     * [20090511T16:29:22Z] host=foo; host-name=bar; pbd=whiz; scsi_id=pop; current=1; max=2
+     * ...
+     * Events received during the last 120 seconds:
+     * [20090511T16:29:22Z] host=foo; host-name=bar; pbd=whiz; scsi_id=pop; current=1; max=2
+     * ...
+     */
+    static const QRegularExpression multipathRegex(QStringLiteral("^.*host=(.*); host-name=.*; current=(\\d+); max=(\\d+)$"));
+
+    const QStringList lines = this->GetMessageBody().split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    if (lines.isEmpty())
+        return QString();
+
+    const QString objectName = this->getXenObjectName();
+
+    if (lines.first() == QLatin1String("Events received during the last 120 seconds:"))
+    {
+        // current state is healthy, past errors have been resolved
+        const QString key = isPool(this->m_connection)
+            ? QStringLiteral("Message.body-multipath_periodic_alert_healthy")
+            : QStringLiteral("Message.body-multipath_periodic_alert_healthy_standalone");
+        return fmt(FriendlyNames::getString(key), {objectName});
+    }
+
+    // Skip "unhealthy paths" line and record all lines that describe the current state
+    QStringList currentState;
+    for (int i = 1; i < lines.size() && lines.at(i).startsWith(QLatin1Char('[')); ++i)
+        currentState.append(lines.at(i));
+
+    if (currentState.size() == 1)
+    {
+        // Only one host currently unhealthy, describe its specific current/max paths
+        const QRegularExpressionMatch m = multipathRegex.match(currentState.first());
+        if (m.hasMatch())
+            return fmt(format, {hostNameByUuid(this->m_connection, m.captured(1)), m.captured(2), m.captured(3)});
+        return QString();
+    }
+
+    // Several hosts in pool unhealthy, list their names as a summary
+    QStringList hostUuids;
+    for (const QString& line : currentState)
+    {
+        const QRegularExpressionMatch m = multipathRegex.match(line);
+        if (m.hasMatch() && !hostUuids.contains(m.captured(1)))
+            hostUuids.append(m.captured(1));
+    }
+
+    QStringList hostNames;
+    for (const QString& uuid : hostUuids)
+        hostNames.append(QStringLiteral("'%1'").arg(hostNameByUuid(this->m_connection, uuid)));
+
+    return fmt(FriendlyNames::getString(QStringLiteral("Message.body-multipath_periodic_alert_summary")),
+               {objectName, hostNames.join(QStringLiteral(", "))});
 }

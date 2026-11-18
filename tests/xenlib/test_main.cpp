@@ -7,6 +7,7 @@
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
+#include "test_ovfdata.h"
 #include "test_transportserver.h"
 #include "xenlib/xen/network/connectionworker.h"
 #include "xenlib/xen/jsonrpcclient.h"
@@ -20,6 +21,9 @@
 #include "xenlib/xen/actions/vdi/creatediskaction.h"
 #include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "xenlib/xen/actions/vdi/migratevirtualdiskaction.h"
+#include "xenlib/xen/friendlynames.h"
+#include "xenlib/xen/message.h"
+#include "xenlib/alerts/messagealert.h"
 #include <QTemporaryFile>
 #include <QTextStream>
 
@@ -66,6 +70,63 @@ class XenLibTests : public QObject
     Q_OBJECT
 
 private slots:
+
+    void friendlyNamesFormat()
+    {
+        QCOMPARE(FriendlyNames::Format("Server '{0}' has {1} of {2}", {"h1", "1", "2"}), QString("Server 'h1' has 1 of 2"));
+        // Single pass: placeholders inside arguments are not substituted again
+        QCOMPARE(FriendlyNames::Format("{0} and {1}", {"{1}", "x"}), QString("{1} and x"));
+        // Missing arguments leave the placeholder
+        QCOMPARE(FriendlyNames::Format("{0} {1}", {"a"}), QString("a {1}"));
+    }
+
+    void messageFriendlyLookups()
+    {
+        QCOMPARE(Message::FriendlyName("HA_HOST_FAILED"), QString("Server failed"));
+        QCOMPARE(Message::FriendlyBody("HA_HOST_FAILED"), QString("Server '{0}' has failed."));
+        QCOMPARE(Message::FriendlyAction("PBD_PLUG_FAILED_ON_SERVER_START"), QString("Repair Storage"));
+        QVERIFY(Message::FriendlyName("NOT_A_REAL_MESSAGE").isEmpty());
+    }
+
+    void messageAlertText()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"uuid", "pool-uuid"}, {"name_label", "MyPool"}, {"master", "OpaqueRef:h1"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:h1", QVariantMap{{"uuid", "host-uuid-1"}, {"name_label", "host1"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:h2", QVariantMap{{"uuid", "host-uuid-2"}, {"name_label", "host2"}});
+
+        auto make = [&](const QString& name, const QString& cls, const QString& objUuid, const QString& body)
+        {
+            return QSharedPointer<XenLib::MessageAlert>(new XenLib::MessageAlert(&connection, QVariantMap{
+                {"ref", "OpaqueRef:msg"}, {"name", name}, {"cls", cls}, {"obj_uuid", objUuid},
+                {"body", body}, {"priority", 2}, {"timestamp", 0}}));
+        };
+
+        // Host in a pool: title is prefixed with the host name, body names the host
+        auto hostFailed = make("HA_HOST_FAILED", "Host", "host-uuid-1", "raw body");
+        QCOMPARE(hostFailed->GetTitle(), QString("host1: Server failed"));
+        QCOMPARE(hostFailed->GetDescription(), QString("Server 'host1' has failed."));
+        QCOMPARE(hostFailed->AppliesTo(), QString("MyPool"));
+
+        // Pool message: no name prefix, failover tolerance variant chosen from the body
+        auto dropIn = make("HA_POOL_DROP_IN_PLAN_EXISTS_FOR", "Pool", "pool-uuid", "1");
+        QCOMPARE(dropIn->GetTitle(), Message::FriendlyName("HA_POOL_DROP_IN_PLAN_EXISTS_FOR"));
+        QCOMPARE(dropIn->GetDescription(),
+                 FriendlyNames::Format(Message::FriendlyBody("ha_pool_drop_in_plan_exists_for-1"), {"MyPool", "1"}));
+
+        // Multipath alert with one unhealthy host
+        const QString multipathBody = "Unhealthy paths:\n"
+            "[20090511T16:29:22Z] host=host-uuid-2; host-name=x; pbd=p; scsi_id=s; current=1; max=2\n";
+        auto multipath = make("MULTIPATH_PERIODIC_ALERT", "Host", "host-uuid-1", multipathBody);
+        QCOMPARE(multipath->GetDescription(),
+                 FriendlyNames::Format(Message::FriendlyBody("MULTIPATH_PERIODIC_ALERT"), {"host2", "1", "2"}));
+
+        // Unknown message type and unresolved object: raw name and body
+        auto unknown = make("SOMETHING_NEW", "VM", "missing-uuid", "raw body");
+        QCOMPARE(unknown->GetTitle(), QString("SOMETHING_NEW"));
+        QCOMPARE(unknown->GetDescription(), QString("raw body"));
+    }
     void attachDiskEligibility_data()
     {
         QTest::addColumn<QVariantMap>("properties");
@@ -711,25 +772,7 @@ private slots:
 
     void ovfXenConfig_qtFormat_parsesHvmBootPolicy()
     {
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="myvm">
-    <Name>myvm</Name>
-    <VirtualHardwareSection>
-      <xen:Data ovf:required="false">
-        <xen:Name>HVM_boot_policy</xen:Name>
-        <xen:Value>BIOS order</xen:Value>
-      </xen:Data>
-      <xen:Data ovf:required="false">
-        <xen:Name>platform</xen:Name>
-        <xen:Value>nx=true;acpi=1</xen:Value>
-      </xen:Data>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_qtFormat_parsesHvmBootPolicy);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -741,25 +784,7 @@ private slots:
 
     void ovfXenConfig_qtFormat_pvBootloader()
     {
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="pvvm">
-    <Name>pvvm</Name>
-    <VirtualHardwareSection>
-      <xen:Data ovf:required="false">
-        <xen:Name>PV_bootloader</xen:Name>
-        <xen:Value>pygrub</xen:Value>
-      </xen:Data>
-      <xen:Data ovf:required="false">
-        <xen:Name>PV_args</xen:Name>
-        <xen:Value>quiet splash</xen:Value>
-      </xen:Data>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_qtFormat_pvBootloader);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -776,23 +801,7 @@ private slots:
 
     void ovfXenConfig_csFormat_parsesBootPolicy()
     {
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:citrix="http://schemas.citrix.com/ovf/envelope/1"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="csvm">
-    <Name>csvm</Name>
-    <VirtualHardwareSection>
-      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
-        <Value>BIOS order</Value>
-      </citrix:VirtualSystemOtherConfigurationData>
-      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_params">
-        <Value>order=dc</Value>
-      </citrix:VirtualSystemOtherConfigurationData>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_csFormat_parsesBootPolicy);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -805,23 +814,7 @@ private slots:
     void ovfXenConfig_csFormat_recommendationsKeyExcluded()
     {
         // The "recommendations" entry must be skipped by parseXenConfig (handled by parseRecommendations).
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:citrix="http://schemas.citrix.com/ovf/envelope/1"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="vm1">
-    <Name>vm1</Name>
-    <VirtualHardwareSection>
-      <citrix:VirtualSystemOtherConfigurationData Name="recommendations">
-        <Value><restrictions><restriction field="vcpus-max" value="8"/></restrictions></Value>
-      </citrix:VirtualSystemOtherConfigurationData>
-      <citrix:VirtualSystemOtherConfigurationData Name="HVM_boot_policy">
-        <Value>BIOS order</Value>
-      </citrix:VirtualSystemOtherConfigurationData>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_csFormat_recommendationsKeyExcluded);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -835,15 +828,7 @@ private slots:
 
     void ovfXenConfig_noXenSection_returnsEmptyMap()
     {
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="plainvm">
-    <Name>plainvm</Name>
-    <VirtualHardwareSection/>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_noXenSection_returnsEmptyMap);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -857,32 +842,7 @@ private slots:
 
     void ovfXenConfig_multipleVms_configsAreSeparate()
     {
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystemCollection ovf:id="myvapp">
-    <VirtualSystem ovf:id="vm-hvm">
-      <Name>vm-hvm</Name>
-      <VirtualHardwareSection>
-        <xen:Data ovf:required="false">
-          <xen:Name>HVM_boot_policy</xen:Name>
-          <xen:Value>BIOS order</xen:Value>
-        </xen:Data>
-      </VirtualHardwareSection>
-    </VirtualSystem>
-    <VirtualSystem ovf:id="vm-pv">
-      <Name>vm-pv</Name>
-      <VirtualHardwareSection>
-        <xen:Data ovf:required="false">
-          <xen:Name>PV_bootloader</xen:Name>
-          <xen:Value>pygrub</xen:Value>
-        </xen:Data>
-      </VirtualHardwareSection>
-    </VirtualSystem>
-  </VirtualSystemCollection>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_multipleVms_configsAreSeparate);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());
@@ -898,21 +858,7 @@ private slots:
     void ovfXenConfig_emptyValueAllowed()
     {
         // A key with an empty value should still be stored (it may override a default).
-        const QString xml = R"(<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:xen="http://www.citrix.com/xencenter/2009/xen"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References/>
-  <VirtualSystem ovf:id="uefivm">
-    <Name>uefivm</Name>
-    <VirtualHardwareSection>
-      <xen:Data ovf:required="false">
-        <xen:Name>HVM_boot_policy</xen:Name>
-        <xen:Value></xen:Value>
-      </xen:Data>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>)";
+        const QString xml = QString::fromUtf8(kOvfXml_ovfXenConfig_emptyValueAllowed);
 
         OvfPackage pkg = OvfPackage::FromXml(xml);
         QVERIFY(pkg.IsValid());

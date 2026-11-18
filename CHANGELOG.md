@@ -16,6 +16,10 @@ are omitted.
   Dismiss is only offered when the alert can be dismissed.
 - Added the snapshot schedule panel to the Snapshots tab, showing whether the VM
   is part of a snapshot schedule.
+- Alerts now show C#'s friendly titles and descriptions (for example "host1:
+  Server failed" / "Server 'host1' has failed.") instead of raw message codes,
+  and the Location column shows the pool or server name instead of an object
+  UUID. Performance alarms have their own titles, such as "CPU Usage Alarm".
 
 ### Fixed
 

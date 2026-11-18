@@ -82,6 +82,14 @@ class XENLIB_EXPORT Message : public XenObject
 
         //! Check whether this message type should be hidden from alerts/events views
         bool IsSquelched() const;
+
+        // C# Reference: Message.FriendlyName/FriendlyBody/FriendlyHelp/FriendlyAction.
+        // Look up "Message.<kind>-<type>" in FriendlyNames (type is matched lower-case);
+        // return an empty string when there is no entry.
+        static QString FriendlyName(const QString& type);
+        static QString FriendlyBody(const QString& type);
+        static QString FriendlyHelp(const QString& type);
+        static QString FriendlyAction(const QString& type);
 };
 
 #endif // MESSAGE_H

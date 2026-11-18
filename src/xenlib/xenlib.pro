@@ -109,6 +109,7 @@ HEADERS += \
     xen/network/heartbeat.h \
     xen/failure.h \
     xen/friendlyerrornames.h \
+    xen/friendlynames.h \
     xen/asyncoperation.h \
     xen/xenobject.h \
     xen/pool.h \
@@ -369,6 +370,7 @@ SOURCES += \
     xen/network/heartbeat.cpp \
     xen/failure.cpp \
     xen/friendlyerrornames.cpp \
+    xen/friendlynames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
     xen/vmappliance.cpp \

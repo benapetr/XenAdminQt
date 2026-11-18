@@ -80,14 +80,19 @@ class XENLIB_EXPORT MessageAlert : public Alert
 
     protected:
         QVariantMap m_messageData;
-        QString m_title;
-        QString m_description;
         AlertPriority m_priority;
-        QString m_appliesTo;
         QString m_name;
 
         virtual void parseMessageData();
-        virtual QString getFriendlyDescription();
+
+        // C# Helpers.GetName(XenObject): name of the object the message applies to, or empty
+        QString getXenObjectName() const;
+
+    private:
+        // C# MessageAlert.extractMultipathCurrentState()
+        QString extractMultipathCurrentState(const QString& format) const;
+        // C# MessageAlert.GetManagementBondName()
+        QString getManagementBondName() const;
 };
 } // XenLib
 

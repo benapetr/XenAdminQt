@@ -68,6 +68,7 @@ class XENLIB_EXPORT AlarmMessageAlert : public MessageAlert
 
         // Override alert properties for alarm-specific formatting
         AlertPriority GetPriority() const override;
+        QString GetTitle() const override;
         QString GetDescription() const override;
 
         AlarmType GetAlarmType() const { return this->m_alarmType; }
@@ -77,6 +78,9 @@ class XENLIB_EXPORT AlarmMessageAlert : public MessageAlert
 
     private:
         void parseAlarmMessage();
+
+        // C# Helpers.GetNameAndObject(XenObject), e.g. "VM 'name'" or "server 'name'"
+        QString getNameAndObject() const;
 
         AlarmType m_alarmType;
         double m_currentValue;

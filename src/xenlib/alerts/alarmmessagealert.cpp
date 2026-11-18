@@ -29,6 +29,9 @@
 #include "../xencache.h"
 #include "../xen/network/connection.h"
 #include "../xen/sr.h"
+#include "../xen/host.h"
+#include "../xen/pool.h"
+#include "../xen/vm.h"
 #include <QXmlStreamReader>
 #include <QDebug>
 
@@ -190,12 +193,63 @@ QString AlarmMessageAlert::GetDescription() const
     }
 }
 
+QString AlarmMessageAlert::GetTitle() const
+{
+    // C# Reference: AlarmMessageAlert.Title
+    switch (this->m_alarmType)
+    {
+        case AlarmType::Cpu: return tr("CPU Usage Alarm");
+        case AlarmType::Net: return tr("Network Usage Alarm");
+        case AlarmType::Disk: return tr("Disk Usage Alarm");
+        case AlarmType::FileSystem: return tr("File System on Control Domain Full");
+        case AlarmType::Memory: return tr("Memory Usage Alarm");
+        case AlarmType::Storage: return tr("Storage Throughput Alarm");
+        case AlarmType::Dom0MemoryDemand: return tr("Control Domain Memory Usage");
+        case AlarmType::LogFileSystem: return tr("File System on Logs Partition Full");
+        case AlarmType::SrPhysicalUtilisation: return tr("SR Disk Space Alarm");
+        default: return MessageAlert::GetTitle();
+    }
+}
+
+QString AlarmMessageAlert::getNameAndObject() const
+{
+    // C# Reference: Helpers.GetNameAndObject(XenObject)
+    QSharedPointer<XenObject> xenObject = this->GetXenObject();
+    if (!xenObject)
+        return tr("unknown object");
+
+    switch (xenObject->GetObjectType())
+    {
+        case XenObjectType::Pool:
+            return tr("pool '%1'").arg(xenObject->GetName());
+        case XenObjectType::Host:
+            return tr("server '%1'").arg(xenObject->GetName());
+        case XenObjectType::VM:
+        {
+            QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(xenObject);
+            if (vm && vm->IsControlDomain())
+            {
+                // C# VM.IsControlDomainZero: dom0 alarms are reported against its host
+                QSharedPointer<Host> host = vm->GetResidentOnHost();
+                QSharedPointer<VM> dom0 = host ? host->ControlDomainZero() : QSharedPointer<VM>();
+                if (dom0 && dom0->OpaqueRef() == vm->OpaqueRef())
+                    return tr("server '%1'").arg(host->GetName());
+            }
+            return tr("VM '%1'").arg(xenObject->GetName());
+        }
+        case XenObjectType::SR:
+            return tr("storage repository '%1'").arg(xenObject->GetName());
+        default:
+            return tr("unknown object");
+    }
+}
+
 // Formatting methods (C# Reference: line 162-223)
 
 QString AlarmMessageAlert::formatCpuDescription() const
 {
     return tr("CPU usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->percentageString(this->m_triggerLevel));
@@ -204,7 +258,7 @@ QString AlarmMessageAlert::formatCpuDescription() const
 QString AlarmMessageAlert::formatNetDescription() const
 {
     return tr("Network usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->dataRateString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->dataRateString(this->m_triggerLevel));
@@ -213,7 +267,7 @@ QString AlarmMessageAlert::formatNetDescription() const
 QString AlarmMessageAlert::formatDiskDescription() const
 {
     return tr("Disk usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->dataRateString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->dataRateString(this->m_triggerLevel));
@@ -222,7 +276,7 @@ QString AlarmMessageAlert::formatDiskDescription() const
 QString AlarmMessageAlert::formatFileSystemDescription() const
 {
     return tr("Filesystem usage on %1 was %2 (trigger level %3). This may cause XenServer to stop working.")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -231,7 +285,7 @@ QString AlarmMessageAlert::formatMemoryDescription() const
 {
     // m_currentValue and m_triggerLevel are in KiB (C# comment line 173)
     return tr("Free memory on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->memorySizeString(this->m_currentValue * 1024.0))  // KiB to bytes
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->memorySizeString(this->m_triggerLevel * 1024.0));
@@ -240,7 +294,7 @@ QString AlarmMessageAlert::formatMemoryDescription() const
 QString AlarmMessageAlert::formatDom0MemoryDescription() const
 {
     return tr("Dom0 memory demand on %1 was %2 (trigger level %3)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -248,7 +302,7 @@ QString AlarmMessageAlert::formatDom0MemoryDescription() const
 QString AlarmMessageAlert::formatLogFileSystemDescription() const
 {
     return tr("Log filesystem usage on %1 was %2 (trigger level %3)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -278,7 +332,7 @@ QString AlarmMessageAlert::formatStorageDescription() const
 QString AlarmMessageAlert::formatSrPhysicalDescription() const
 {
     return tr("Physical utilization of SR on %1 was %2 (trigger level %3)")
-        .arg(this->AppliesTo())
+        .arg(this->getNameAndObject())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }

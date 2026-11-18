@@ -160,6 +160,7 @@ set(XENLIB_SOURCES
     xen/feature.cpp
     xen/folder.cpp
     xen/friendlyerrornames.cpp
+    xen/friendlynames.cpp
     xen/gpugroup.cpp
     xen/host.cpp
     xen/hostcpu.cpp

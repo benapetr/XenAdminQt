@@ -27,6 +27,7 @@
 
 #include "message.h"
 #include "network/connection.h"
+#include "friendlynames.h"
 #include <QSet>
 
 Message::Message(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -100,4 +101,24 @@ bool Message::ShowOnGraphs() const
 bool Message::IsSquelched() const
 {
     return this->Name().toUpper() == QStringLiteral("HA_POOL_OVERCOMMITTED");
+}
+
+QString Message::FriendlyName(const QString& type)
+{
+    return FriendlyNames::getString(QStringLiteral("Message.name-%1").arg(type.toLower()));
+}
+
+QString Message::FriendlyBody(const QString& type)
+{
+    return FriendlyNames::getString(QStringLiteral("Message.body-%1").arg(type.toLower()));
+}
+
+QString Message::FriendlyHelp(const QString& type)
+{
+    return FriendlyNames::getString(QStringLiteral("Message.help-%1").arg(type.toLower()));
+}
+
+QString Message::FriendlyAction(const QString& type)
+{
+    return FriendlyNames::getString(QStringLiteral("Message.action-%1").arg(type.toLower()));
 }

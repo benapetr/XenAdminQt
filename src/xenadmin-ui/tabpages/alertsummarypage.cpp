@@ -62,6 +62,7 @@
 #include "xenlib/alerts/certificatealert.h"
 #include "xenlib/xen/actions/general/dismissalertsaction.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/message.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
@@ -192,6 +193,13 @@ namespace
         return link;
     }
 
+    // C# Reference: MessageAlert.FixLinkText - Message.FriendlyAction(type) ?? Messages.DETAILS
+    QString fixLinkText(const QString& messageType)
+    {
+        const QString text = Message::FriendlyAction(messageType);
+        return text.isEmpty() ? QObject::tr("Details") : text;
+    }
+
     // C# Reference: MessageAlert.FixLinkAction / FixLinkText
     AlertFixLink getMessageFixLink(MessageAlert* alert)
     {
@@ -225,8 +233,7 @@ namespace
             if (!pool)
                 return link;
 
-            // FriendlyNames: Message.action-ha_*
-            link.text = QObject::tr("HA Settings");
+            link.text = fixLinkText(type);
             const QList<QSharedPointer<XenObject>> selection { pool };
             link.action = [selection]()
             {
@@ -245,8 +252,7 @@ namespace
             if (selection.isEmpty() || !probe.CanRun())
                 return link;
 
-            // FriendlyNames: Message.action-pbd_plug_failed_on_server_start
-            link.text = QObject::tr("Repair Storage");
+            link.text = fixLinkText(type);
             link.action = [selection]()
             {
                 RepairSRCommand cmd(MainWindow::instance());
