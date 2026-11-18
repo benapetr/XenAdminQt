@@ -9,6 +9,9 @@ are omitted.
 
 ### Added
 
+- Added C#'s status bar buttons for tasks in progress, failed tasks and alerts.
+  Each shows its count only when it is above zero and opens the Events or
+  Alerts page when clicked.
 - Added C# fix actions to the alert Actions menu: HA Settings for HA alerts,
   Repair Storage for failed storage plugs, Alarm Settings for performance alarms
   (opening the Alerts page of the affected host, VM, or SR), and Install

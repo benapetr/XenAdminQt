@@ -40,6 +40,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QToolButton>
+#include <QMovie>
 #include <QToolBar>
 #include <QDebug>
 #include <QCloseEvent>
@@ -256,6 +257,37 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     this->ui->statusbar->addPermanentWidget(this->m_statusLabel);
     this->ui->statusbar->addPermanentWidget(this->m_statusProgressBar);
+
+    // Count buttons (C# statusButtonProgress, statusButtonErrors, statusButtonAlerts):
+    // hidden while zero; clicking opens the matching notifications page
+    auto makeStatusButton = [this](const QIcon& icon, const QString& toolTip, NavigationPane::NotificationsSubMode mode)
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setAutoRaise(true);
+        button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        button->setIcon(icon);
+        button->setToolTip(toolTip);
+        button->setVisible(false);
+        connect(button, &QToolButton::clicked, this, [this, mode]()
+        {
+            this->m_navigationPane->SwitchToNotificationsView(mode);
+        });
+        this->ui->statusbar->addPermanentWidget(button);
+        return button;
+    };
+    this->m_statusButtonProgress = makeStatusButton(QIcon(":/icons/spinning_frame_0.png"), tr("Tasks in progress"), NavigationPane::Events);
+    this->m_statusButtonErrors = makeStatusButton(QIcon(":/icons/notif_events_errors_16.png"), tr("Errors"), NavigationPane::Events);
+    this->m_statusButtonAlerts = makeStatusButton(QIcon(":/icons/alert_16.png"), tr("Alerts"), NavigationPane::Alerts);
+
+    // C# animates the progress button with ajax-loader.gif; keep the static frame if GIFs can't be read
+    this->m_statusProgressMovie = new QMovie(":/icons/ajax_loader.gif", QByteArray(), this);
+    if (this->m_statusProgressMovie->isValid())
+    {
+        connect(this->m_statusProgressMovie, &QMovie::frameChanged, this, [this]()
+        {
+            this->m_statusButtonProgress->setIcon(QIcon(this->m_statusProgressMovie->currentPixmap()));
+        });
+    }
 
     // TODO wire this to settings
     XenCertificateManager::instance()->setValidationPolicy(true, false); // Allow self-signed, not expired
@@ -1956,19 +1988,42 @@ void MainWindow::updateAlertsCount()
     // C# Reference: MainWindow.XenCenterAlerts_CollectionChanged
     const int count = XenLib::AlertManager::instance()->NonDismissingAlertCount();
     this->m_navigationPane->UpdateNotificationsButton(NavigationPane::Alerts, count);
+
+    this->m_statusButtonAlerts->setText(QString::number(count));
+    this->m_statusButtonAlerts->setVisible(count > 0);
     this->refreshNotificationsTitle(NavigationPane::Alerts);
 }
 
 void MainWindow::updateEventsErrorCount()
 {
-    // C# Reference: MainWindow.UpdateErrorStatusButton - completed, unsuccessful, not cancelled
+    // C# Reference: MainWindow.UpdateErrorStatusButton
+    // errors: completed, unsuccessful, not cancelled; progress: not completed yet
     int errorCount = 0;
+    int progressCount = 0;
     for (const OperationManager::OperationRecord* record : OperationManager::instance()->GetRecords())
     {
-        if (record && record->state == AsyncOperation::Failed)
+        if (!record)
+            continue;
+        if (record->state == AsyncOperation::Failed)
             ++errorCount;
+        else if (record->state == AsyncOperation::NotStarted || record->state == AsyncOperation::Running)
+            ++progressCount;
     }
     this->m_navigationPane->UpdateNotificationsButton(NavigationPane::Events, errorCount);
+
+    this->m_statusButtonErrors->setText(QString::number(errorCount));
+    this->m_statusButtonErrors->setVisible(errorCount > 0);
+
+    this->m_statusButtonProgress->setText(QString::number(progressCount));
+    this->m_statusButtonProgress->setVisible(progressCount > 0);
+    if (this->m_statusProgressMovie->isValid())
+    {
+        // Only animate while the button is shown
+        if (progressCount > 0 && this->m_statusProgressMovie->state() != QMovie::Running)
+            this->m_statusProgressMovie->start();
+        else if (progressCount == 0 && this->m_statusProgressMovie->state() == QMovie::Running)
+            this->m_statusProgressMovie->stop();
+    }
     this->refreshNotificationsTitle(NavigationPane::Events);
 }
 

@@ -52,6 +52,7 @@ class QAction;
 class QProgressBar;
 class QLabel;
 class QToolButton;
+class QMovie;
 
 class DebugWindow;
 class AsyncOperation;
@@ -364,6 +365,11 @@ class MainWindow : public QMainWindow
         // Status bar progress (matches C# MainWindow.statusProgressBar)
         QProgressBar* m_statusProgressBar;
         QLabel* m_statusLabel;
+        // Status bar count buttons (C# statusButtonProgress/Errors/Alerts), shown when non-zero
+        QToolButton* m_statusButtonProgress = nullptr;
+        QToolButton* m_statusButtonErrors = nullptr;
+        QToolButton* m_statusButtonAlerts = nullptr;
+        QMovie* m_statusProgressMovie = nullptr;
         AsyncOperation* m_statusBarAction; // Currently tracked action in status bar
 
         QSharedPointer<XenObject> m_currentObject;
