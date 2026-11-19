@@ -31,9 +31,11 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/pooljoinrules.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/hiddenobjects.h"
 #include "xenlib/xen/actions/pool/addhosttopoolaction.h"
 #include "xenlib/xencache.h"
 #include "../../dialogs/warningdialogs/warningdialog.h"
+#include <QCoreApplication>
 #include <QMessageBox>
 
 namespace
@@ -156,7 +158,23 @@ void AddHostToPoolCommand::Run()
         if (!host || !host->GetConnection())
             continue;
 
-        actions.append(new AddHostToPoolAction(poolConnection, host->GetConnection(), host, true, nullptr));
+        AddHostToPoolAction* action = new AddHostToPoolAction(poolConnection, host->GetConnection(), host, true, nullptr);
+
+        // C#: hide the standalone server while it joins and show it again when the action
+        // ends, whether it succeeded or not (the joined server reappears under the pool)
+        const QString hostRef = host->OpaqueRef();
+        connect(action, &AsyncOperation::stateChanged, QCoreApplication::instance(),
+                [hostRef](AsyncOperation::OperationState state)
+        {
+            if (state == AsyncOperation::Completed || state == AsyncOperation::Failed ||
+                state == AsyncOperation::Cancelled)
+            {
+                HiddenObjects::Show(hostRef);
+            }
+        }, Qt::QueuedConnection);
+        actions.append(action);
+
+        HiddenObjects::Hide(hostRef);
     }
 
     if (actions.isEmpty())

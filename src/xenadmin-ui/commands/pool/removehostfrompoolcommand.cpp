@@ -30,9 +30,11 @@
 #include "xenadmin-ui/network/xenconnectionui.h"
 #include "xenlib/xen/actions/pool/ejecthostfrompoolaction.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/hiddenobjects.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
+#include <QCoreApplication>
 #include <QMessageBox>
 #include <QSharedPointer>
 #include <QTcpSocket>
@@ -153,7 +155,18 @@ void RemoveHostFromPoolCommand::Run()
             Xen::ConnectionsManager::instance()->AddConnection(newConnection);
         }
 
+        // C#: the server leaves the pool's tree as soon as the eject starts; it is only shown
+        // again if the eject does not succeed (on success it comes back as its own connection)
+        const QString hostRef = host->OpaqueRef();
+        HiddenObjects::Hide(hostRef);
+
         EjectHostFromPoolAction* action = new EjectHostFromPoolAction(pool, host, nullptr);
+        connect(action, &AsyncOperation::stateChanged, QCoreApplication::instance(),
+                [hostRef](AsyncOperation::OperationState state)
+        {
+            if (state == AsyncOperation::Failed || state == AsyncOperation::Cancelled)
+                HiddenObjects::Show(hostRef);
+        }, Qt::QueuedConnection);
 
         connect(action, &AsyncOperation::completed, this, [action, newConnection, hostname, port]()
         {
