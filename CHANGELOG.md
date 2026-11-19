@@ -31,6 +31,9 @@ are omitted.
 
 ### Fixed
 
+- Opening a console on a pool member no longer asks to accept that member's
+  security certificate. Certificates the pool itself reports for its hosts are
+  trusted automatically, since they come over the already accepted connection.
 - VM consoles are faster and closer to C#: screen updates use the compact
   CopyRect, RRE and CoRRE encodings instead of raw pixels only and are drawn row
   by row; the guest's mouse cursor is shown as the local pointer instead of

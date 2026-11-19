@@ -102,6 +102,12 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
         //! C# X509Certificate.GetCertHashString(): SHA-1 of the DER encoding, upper-case hex
         static QString CertificateHashString(const QSslCertificate& certificate);
 
+        //! The certificate is one that a connected pool reports for one of its hosts
+        //! (Certificate.fingerprint_sha256). Pool members present their own certificates
+        //! to console, metrics and import/export connections; since the pool database was
+        //! read over the already trusted API connection, such a match needs no prompt.
+        static bool IsKnownPoolCertificate(const QSslCertificate& certificate);
+
         //! C# X509Ext.VerifyInAllStores(), shown as "trusted" in the prompt: the only
         //! verification problem is a host name mismatch (e.g. connecting by IP address)
         static bool IsTrustedChain(const QList<QSslError>& errors);

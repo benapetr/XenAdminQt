@@ -214,6 +214,28 @@ private slots:
         QVERIFY(manager->ValidateServerCertificate(cert, {}, host));
         QVERIFY(manager->GetKnownServers().isEmpty());
 
+        // A certificate a known pool reports for one of its hosts (e.g. the member a console
+        // connects to) is accepted without a prompt and remembered for that host name
+        {
+            XenConnection* pool = new XenConnection();
+            Xen::ConnectionsManager::instance()->AddConnection(pool);
+            const auto removePool = qScopeGuard([pool]() { Xen::ConnectionsManager::instance()->RemoveConnection(pool); });
+            QString sha256 = QString::fromLatin1(cert.digest(QCryptographicHash::Sha256).toHex()).toUpper();
+            for (int i = sha256.length() - 2; i > 0; i -= 2)
+                sha256.insert(i, ':'); // XAPI format AA:BB:...
+            pool->GetCache()->Update(XenObjectType::Certificate, "OpaqueRef:cert",
+                                     QVariantMap{{"type", "host"}, {"fingerprint_sha256", sha256}});
+            QVERIFY(XenCertificateManager::IsKnownPoolCertificate(cert));
+
+            manager->SetKnownServers({});
+            manager->SetWarnUnrecognizedCertificate(true);
+            prompts.clear();
+            QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, "member-by-ip.invalid"));
+            QVERIFY(prompts.isEmpty());
+            QCOMPARE(manager->GetKnownServers().value("member-by-ip.invalid"), XenCertificateManager::CertificateHashString(cert));
+        }
+        QVERIFY(!XenCertificateManager::IsKnownPoolCertificate(cert));
+
         // A missing certificate with errors is rejected
         QVERIFY(!manager->ValidateServerCertificate(QSslCertificate(), selfSigned, host));
     }

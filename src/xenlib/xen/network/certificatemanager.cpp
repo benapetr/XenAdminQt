@@ -26,6 +26,10 @@
  */
 
 #include "certificatemanager.h"
+#include "connection.h"
+#include "connectionsmanager.h"
+#include "../xenobject.h"
+#include "../../xencache.h"
 #include <QtCore/QSettings>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QDir>
@@ -135,6 +139,40 @@ QString XenCertificateManager::CertificateHashString(const QSslCertificate& cert
     return QString::fromLatin1(certificate.digest(QCryptographicHash::Sha1).toHex()).toUpper();
 }
 
+bool XenCertificateManager::IsKnownPoolCertificate(const QSslCertificate& certificate)
+{
+    if (certificate.isNull())
+        return false;
+
+    const QString fingerprint = QString::fromLatin1(certificate.digest(QCryptographicHash::Sha256).toHex()).toUpper();
+    auto normalize = [](QString value) { return value.remove(QLatin1Char(':')).trimmed().toUpper(); };
+
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (!manager)
+        return false;
+
+    // Also disconnected ones: their cache still only holds what a trusted pool reported
+    for (XenConnection* connection : manager->GetAllConnections())
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            continue;
+
+        for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Certificate))
+        {
+            if (!object)
+                continue;
+            const QVariantMap data = object->GetData();
+            QString known = data.value(QStringLiteral("fingerprint_sha256")).toString();
+            if (known.isEmpty())
+                known = data.value(QStringLiteral("fingerprint")).toString(); // older XAPI: also SHA-256
+            if (!known.isEmpty() && normalize(known) == fingerprint)
+                return true;
+        }
+    }
+    return false;
+}
+
 bool XenCertificateManager::IsTrustedChain(const QList<QSslError>& errors)
 {
     for (const QSslError& error : errors)
@@ -169,6 +207,25 @@ bool XenCertificateManager::ValidateServerCertificate(const QSslCertificate& cer
         QMutexLocker locker(&this->d->trustMutex);
         if (this->d->knownServers.value(hostname) == hash)
             return true;
+    }
+
+    // A pool member's certificate, as reported by a connected pool: trust it and remember
+    // it for this host name too. C# accepts any certificate on these connections
+    // (HTTP.ValidateServerCertificate returns true); this keeps the check without a prompt.
+    if (IsKnownPoolCertificate(certificate))
+    {
+        bool added = false;
+        {
+            QMutexLocker locker(&this->d->trustMutex);
+            if (this->d->knownServers.value(hostname) != hash)
+            {
+                this->d->knownServers[hostname] = hash;
+                added = true;
+            }
+        }
+        if (added)
+            emit this->trustSettingsChanged();
+        return true;
     }
 
     // C# CertificateValidationLock: one decision (and dialog) at a time, so a second
