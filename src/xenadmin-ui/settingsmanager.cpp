@@ -113,6 +113,7 @@ void SettingsManager::Load()
     this->m_consoleClipboardAndPrinterRedirection = this->m_settings->value("Console/ClipboardAndPrinterRedirection", true).toBool();
     this->m_consoleConnectToServerConsole = this->m_settings->value("Console/ConnectToServerConsole", false).toBool();
     this->m_consolePreserveScaleWhenUndocked = this->m_settings->value("Console/PreserveScaleWhenUndocked", false).toBool();
+    this->m_consolePinConnectionBar = this->m_settings->value("Console/PinConnectionBar", true).toBool();
     this->m_consolePreserveScaleWhenSwitchBackToVNC = this->m_settings->value("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool();
     this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
     this->m_fillAreaUnderGraphs = this->m_settings->value("Display/FillAreaUnderGraphs", false).toBool();
@@ -187,6 +188,7 @@ void SettingsManager::Save()
     this->m_settings->setValue("Console/ClipboardAndPrinterRedirection", this->m_consoleClipboardAndPrinterRedirection);
     this->m_settings->setValue("Console/ConnectToServerConsole", this->m_consoleConnectToServerConsole);
     this->m_settings->setValue("Console/PreserveScaleWhenUndocked", this->m_consolePreserveScaleWhenUndocked);
+    this->m_settings->setValue("Console/PinConnectionBar", this->m_consolePinConnectionBar);
     this->m_settings->setValue("Console/PreserveScaleWhenSwitchBackToVNC", this->m_consolePreserveScaleWhenSwitchBackToVNC);
     this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
     this->m_settings->setValue("Display/FillAreaUnderGraphs", this->m_fillAreaUnderGraphs);
@@ -723,6 +725,17 @@ void SettingsManager::SetConsolePreserveScaleWhenUndocked(bool enabled)
 {
     this->m_consolePreserveScaleWhenUndocked = enabled;
     emit settingsChanged("Console/PreserveScaleWhenUndocked");
+}
+
+bool SettingsManager::GetConsolePinConnectionBar() const
+{
+    return this->m_consolePinConnectionBar;
+}
+
+void SettingsManager::SetConsolePinConnectionBar(bool pinned)
+{
+    this->m_consolePinConnectionBar = pinned;
+    emit settingsChanged("Console/PinConnectionBar");
 }
 
 bool SettingsManager::GetConsolePreserveScaleWhenSwitchBackToVNC() const

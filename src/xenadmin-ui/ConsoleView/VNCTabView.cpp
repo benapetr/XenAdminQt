@@ -28,6 +28,7 @@
 #include "VNCTabView.h"
 #include "ui_VNCTabView.h"
 #include "XSVNCScreen.h"
+#include "FullScreenForm.h"
 #include "../widgets/isodropdownbox.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
@@ -282,9 +283,14 @@ VNCTabView::~VNCTabView()
         this->m_vncScreen = nullptr;
     }
 
-    // Cleanup fullscreen form if it exists (when implemented)
-    // Reference: C# VNCTabView.Designer.cs Dispose() method
-    // Currently fullscreen is handled by Qt window state, not separate form
+    // The full screen window is top-level, so it isn't deleted with this view
+    // (C# VNCTabView.Designer.cs Dispose)
+    if (this->m_fullscreenForm)
+    {
+        this->m_fullscreenForm->hide();
+        delete this->m_fullscreenForm;
+        this->m_fullscreenForm = nullptr;
+    }
 
     delete ui;
 }
@@ -396,7 +402,8 @@ bool VNCTabView::IsRDPControlEnabled() const
 void VNCTabView::Pause()
 {
     qDebug() << "VNCTabView: pause()";
-    if (this->m_vncScreen)
+    // C#: a full screen console is visible even when its tab isn't
+    if (this->m_vncScreen && !this->isFullscreen())
         this->m_vncScreen->Pause();
 }
 
@@ -597,6 +604,8 @@ void VNCTabView::onVMPropertyChanged(const QString& propertyName)
     else if (propertyName == "name_label")
     {
         this->updateHostLabel();
+        if (this->m_fullscreenForm)
+            this->m_fullscreenForm->SetConnectionName(this->connectionName());
     }
 }
 
@@ -741,6 +750,9 @@ void VNCTabView::onScaleCheckBoxChanged(bool checked)
 void VNCTabView::onDockButtonClicked()
 {
     qDebug() << "VNCTabView: onDockButtonClicked()";
+    // C# dockButton_Click: no docking changes while full screen
+    if (this->isFullscreen())
+        return;
     this->toggleDockUnDock();
 }
 
@@ -1101,10 +1113,9 @@ void VNCTabView::onInsKeyTimeout()
 {
     qDebug() << "VNCTabView: onInsKeyTimeout()";
 
-    // C#: Lines 969-983
-    // INS key timeout - reset fullscreen hint
-
-    // TODO: Hide fullscreen hint
+    // C# notInsKeyPressed: Ctrl+Alt without Ins within the timeout means "toggle full
+    // screen" (Ctrl+Alt+Ins sends Ctrl+Alt+Del instead, see cancelWaitForInsKeyAndSendCAD)
+    this->toggleFullscreen();
 }
 
 // ========== Private Methods ==========
@@ -1496,6 +1507,8 @@ void VNCTabView::updateHostLabel()
 
     if (!text.isEmpty())
         this->ui->hostLabel->setText(text);
+    if (this->m_fullscreenForm)
+        this->m_fullscreenForm->SetConnectionName(this->connectionName());
     // The undocked window follows through VNCView::onCacheObjectChanged
 }
 
@@ -1999,8 +2012,6 @@ void VNCTabView::waitForInsKey()
     // Start timer to wait for INS key
 
     this->m_insKeyTimer->start(INS_KEY_TIMEOUT);
-
-    // TODO: Show fullscreen hint
 }
 
 void VNCTabView::cancelWaitForInsKeyAndSendCAD()
@@ -2011,8 +2022,6 @@ void VNCTabView::cancelWaitForInsKeyAndSendCAD()
     // Cancel INS key wait and send Ctrl+Alt+Del
 
     this->m_insKeyTimer->stop();
-
-    // TODO: Hide fullscreen hint
 
     if (this->m_vncScreen)
         this->m_vncScreen->SendCAD();
@@ -2160,14 +2169,79 @@ void VNCTabView::toggleFullscreen()
 
     // C#: Lines 1008-1066
 
-    if (this->m_inToggleFullscreen)
+    if (this->m_inToggleFullscreen || !this->m_vncScreen)
         return;
 
     this->m_inToggleFullscreen = true;
 
-    emit toggleFullscreenRequested();
+    XenConnection* connection = this->m_vm ? this->m_vm->GetConnection() : nullptr;
+
+    if (!this->isFullscreen())
+    {
+        this->m_fullscreenForm = new FullScreenForm(this);
+        // C# FormClosing -> toggleFullscreen (the form is only deleted later, so this is safe
+        // from inside its close event)
+        connect(this->m_fullscreenForm, &FullScreenForm::closeRequested, this, &VNCTabView::toggleFullscreen);
+
+        // C# Connection.BeforeConnectionEnd: leave full screen before the console goes away
+        if (connection)
+            connect(connection, &XenConnection::BeforeConnectionEnd, this, &VNCTabView::toggleFullscreen, Qt::UniqueConnection);
+
+        if (QLayout* layout = this->ui->contentPanel->layout())
+            layout->removeWidget(this->m_vncScreen);
+        this->m_fullscreenForm->AttachConsole(this->m_vncScreen, this->connectionName());
+        this->m_fullscreenForm->ShowFullScreen();
+
+        this->m_vncScreen->setFocus();
+        this->m_vncScreen->CaptureKeyboardAndMouse();
+    } else
+    {
+        if (connection)
+            disconnect(connection, &XenConnection::BeforeConnectionEnd, this, &VNCTabView::toggleFullscreen);
+
+        this->m_fullscreenForm->DetachConsole(this->m_vncScreen);
+        QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(this->ui->contentPanel->layout());
+        if (layout)
+            layout->addWidget(this->m_vncScreen);
+        else
+            this->m_vncScreen->setParent(this->ui->contentPanel);
+        this->m_vncScreen->show();
+
+        FullScreenForm* form = this->m_fullscreenForm;
+        this->m_fullscreenForm = nullptr;
+        form->hide();
+        form->deleteLater();
+
+        // Back in the tab (or undocked window): focus it if that window is active again
+        this->window()->activateWindow();
+        this->FocusVnc();
+        this->m_vncScreen->CaptureKeyboardAndMouse();
+    }
+
+    // C#: always unpause, so a toggle never leaves a paused console visible
+    this->m_vncScreen->Unpause();
 
     this->m_inToggleFullscreen = false;
+}
+
+QString VNCTabView::connectionName() const
+{
+    if (!this->m_vm)
+        return QString();
+
+    if (!this->m_labelObjectRef.isEmpty())
+    {
+        XenCache* cache = this->m_vm->GetCache();
+        if (this->m_vm->IsControlDomain())
+        {
+            if (QSharedPointer<Host> host = cache->ResolveObject<Host>(this->m_labelObjectRef))
+                return tr("Host: %1").arg(host->GetName());
+        } else if (QSharedPointer<SR> sr = cache->ResolveObject<SR>(this->m_labelObjectRef))
+        {
+            return tr("SR driver domain: %1").arg(sr->GetName());
+        }
+    }
+    return this->m_vm->GetName();
 }
 
 void VNCTabView::toggleConsoleFocus()

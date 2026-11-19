@@ -130,6 +130,7 @@ set(XENADMIN_SOURCES
     ConsoleView/VNCTabView.cpp
     ConsoleView/VNCTabView.ui
     ConsoleView/VNCView.cpp
+    ConsoleView/FullScreenForm.cpp
     ConsoleView/XSVNCScreen.cpp
     controls/affinitypicker.cpp
     controls/affinitypicker.ui

@@ -9,6 +9,12 @@ are omitted.
 
 ### Added
 
+- Full screen consoles, as in C#: the Fullscreen button or the configured
+  shortcut (Ctrl+Alt by default, Ctrl+Alt+F, F12 or Ctrl+Enter) shows the
+  console on the whole screen with C#'s connection bar (console name, pin and
+  exit buttons; unpinned it slides away until the mouse touches the top edge)
+  and a fading "Press ... to exit full screen mode" hint. The default Ctrl+Alt
+  shortcut previously did nothing.
 - Undocked VM consoles have C#'s lifecycle button in the header bar, with Shut
   Down, Reboot, Suspend, Force Shut Down and Force Reboot (whichever are
   currently possible); host consoles offer Shut Down and Reboot of the server.

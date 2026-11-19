@@ -57,6 +57,7 @@
 // Forward declarations
 class XSVNCScreen;
 class QToolButton;
+class FullScreenForm;
 class VNCView;
 class XenConnection;
 class XenCache;
@@ -236,12 +237,6 @@ class VNCTabView : public QWidget
          * Reference: VNCTabView.cs line 995
          */
         void toggleDockRequested();
-
-        /**
-         * @brief Emitted when fullscreen mode requested
-         * Reference: VNCTabView.cs line 1008
-         */
-        void toggleFullscreenRequested();
 
         /**
          * @brief Emitted when VM start requested (from power state label click)
@@ -582,9 +577,11 @@ class VNCTabView : public QWidget
 
         // CD/DVD drive state
 
-        // Fullscreen support (forward declare, will implement with VNCView)
-        // FullScreenForm* _fullscreenForm;
-        // FullScreenHint* _fullscreenHint;
+        // Fullscreen support (C# fullscreenForm; the hint lives inside the form)
+        FullScreenForm* m_fullscreenForm = nullptr;
+        bool isFullscreen() const { return this->m_fullscreenForm != nullptr; }
+        //! C# XSVNCScreen.ConnectionName: VM name, "Host: x" or "SR driver domain: x"
+        QString connectionName() const;
 };
 
 #endif // VNCTABVIEW_H

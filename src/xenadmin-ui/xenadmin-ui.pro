@@ -313,6 +313,7 @@ SOURCES += \
     ConsoleView/XSVNCScreen.cpp \
     ConsoleView/VNCTabView.cpp \
     ConsoleView/VNCView.cpp \
+    ConsoleView/FullScreenForm.cpp \
     ConsoleView/ConsolePanel.cpp \
     widgets/isodropdownbox.cpp \
     widgets/cdchanger.cpp \
@@ -634,6 +635,7 @@ HEADERS += \
     ConsoleView/XSVNCScreen.h \
     ConsoleView/VNCTabView.h \
     ConsoleView/VNCView.h \
+    ConsoleView/FullScreenForm.h \
     ConsoleView/ConsolePanel.h
 
 # UI files

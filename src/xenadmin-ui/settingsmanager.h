@@ -144,6 +144,9 @@ class SettingsManager : public QObject
         bool GetConsoleConnectToServerConsole() const;
         void SetConsoleConnectToServerConsole(bool enabled);
         bool GetConsolePreserveScaleWhenUndocked() const;
+        //! C# PinConnectionBar: keep the full screen console's connection bar visible
+        bool GetConsolePinConnectionBar() const;
+        void SetConsolePinConnectionBar(bool pinned);
         void SetConsolePreserveScaleWhenUndocked(bool enabled);
         bool GetConsolePreserveScaleWhenSwitchBackToVNC() const;
         void SetConsolePreserveScaleWhenSwitchBackToVNC(bool enabled);
@@ -317,6 +320,7 @@ class SettingsManager : public QObject
         bool m_consoleClipboardAndPrinterRedirection;
         bool m_consoleConnectToServerConsole;
         bool m_consolePreserveScaleWhenUndocked;
+        bool m_consolePinConnectionBar;
         bool m_consolePreserveScaleWhenSwitchBackToVNC;
         int m_graphUpdateInterval;
         bool m_fillAreaUnderGraphs;
