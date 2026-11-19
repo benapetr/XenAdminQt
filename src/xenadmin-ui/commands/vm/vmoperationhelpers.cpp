@@ -403,25 +403,33 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
 // on failure, the boot diagnosis form (StartDiagnosisForm)
 VMStartAction* VMOperationHelpers::CreateVMStartAction(MainWindow* mainWindow, const QSharedPointer<VM>& vm)
 {
-    XenConnection* conn = vm ? vm->GetConnection() : nullptr;
-    const QString displayName = vm ? vm->GetName() : QString();
-    QPointer<MainWindow> windowPtr = mainWindow;
+    return new VMStartAction(vm, HAInvalidConfigCallback(mainWindow), StartDiagnosisCallback(mainWindow), mainWindow);
+}
 
-    return new VMStartAction(
-        vm,
-        [windowPtr](QSharedPointer<VM> vm, bool isStart) {
-            VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, windowPtr.data());
-        },
-        [conn, displayName, windowPtr, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
-            Q_UNUSED(abstractAction)
+VMStartAbstractAction::WarningDialogHAInvalidConfig VMOperationHelpers::HAInvalidConfigCallback(MainWindow* mainWindow)
+{
+    QPointer<MainWindow> windowPtr = mainWindow;
+    return [windowPtr](QSharedPointer<VM> vm, bool isStart) {
+        VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, windowPtr.data());
+    };
+}
+
+VMStartAbstractAction::StartDiagnosisForm VMOperationHelpers::StartDiagnosisCallback(MainWindow* mainWindow)
+{
+    QPointer<MainWindow> windowPtr = mainWindow;
+    return [windowPtr](VMStartAbstractAction* action, const Failure& failure) {
+        const QSharedPointer<VM> vm = action ? action->GetVM() : QSharedPointer<VM>();
+        if (!windowPtr || !vm)
+            return;
+        XenConnection* conn = vm->GetConnection();
+        const QString vmRef = vm->OpaqueRef();
+        const QString displayName = vm->GetName();
+        const bool isStart = action->IsStart();
+        Failure failureCopy = failure;
+        QMetaObject::invokeMethod(windowPtr, [windowPtr, conn, vmRef, displayName, isStart, failureCopy]() {
             if (!windowPtr)
                 return;
-            Failure failureCopy = failure;
-            QMetaObject::invokeMethod(windowPtr, [windowPtr, conn, vm, displayName, failureCopy]() {
-                if (!windowPtr)
-                    return;
-                VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, windowPtr);
-            }, Qt::QueuedConnection);
-        },
-        mainWindow);
+            VMOperationHelpers::StartDiagnosisForm(conn, vmRef, displayName, isStart, failureCopy, windowPtr);
+        }, Qt::QueuedConnection);
+    };
 }

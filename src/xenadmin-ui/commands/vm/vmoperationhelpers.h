@@ -31,6 +31,7 @@
 #include <QString>
 #include <QObject>
 #include <QSharedPointer>
+#include "xenlib/xen/actions/vm/vmstartabstractaction.h"
 
 class XenConnection;
 class Failure;  // Forward declaration
@@ -54,6 +55,13 @@ class VMOperationHelpers : public QObject
         //! VMStartAction with the HA warning and boot diagnosis callbacks, as C# commands
         //! pass VMOperationCommand.WarningDialogHAInvalidConfig and StartDiagnosisForm
         static VMStartAction* CreateVMStartAction(MainWindow* mainWindow, const QSharedPointer<VM>& vm);
+
+        //! C# VMOperationCommand.WarningDialogHAInvalidConfig, for actions that start VMs
+        static VMStartAbstractAction::WarningDialogHAInvalidConfig HAInvalidConfigCallback(MainWindow* mainWindow);
+
+        //! C# VMOperationCommand.StartDiagnosisForm, for actions that start VMs; diagnoses the
+        //! VM of the failed start action
+        static VMStartAbstractAction::StartDiagnosisForm StartDiagnosisCallback(MainWindow* mainWindow);
 
         // Show the HA warning on the UI thread and wait for the decision.
         // Throws VMStartAbstractAction::CancelledByUser on Cancel/window closure.

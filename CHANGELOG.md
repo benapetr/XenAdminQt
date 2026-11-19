@@ -52,6 +52,10 @@ are omitted.
 
 - If the New VM wizard fails while creating a VM, the half-created VM and its
   disks are now deleted, as in C#, instead of being left behind.
+- Starting the VM at the end of the New VM wizard now shows the HA warning and,
+  if the VM can't boot, the boot diagnosis, like VM > Start. The start no longer
+  depends on the wizard's own progress, which could cancel it once the wizard
+  finished.
 - Deleting a VM together with its snapshots now also deletes the snapshots'
   own disks, as in C#.
 - Templates created from a snapshot are now marked as instant templates, as in

@@ -39,6 +39,7 @@
 #include "vifdialog.h"
 #include "newsrwizard.h"
 #include "mainwindow.h"
+#include "../commands/vm/vmoperationhelpers.h"
 #include "../widgets/wizardnavigationpane.h"
 #include "../widgets/isodropdownbox.h"
 #include "../settingsmanager.h"
@@ -1400,6 +1401,8 @@ void NewVMWizard::createVirtualMachine()
         this->m_assignVtpm,
         vgpuData,
         modifyVgpuSettings,
+        VMOperationHelpers::HAInvalidConfigCallback(MainWindow::instance()),
+        VMOperationHelpers::StartDiagnosisCallback(MainWindow::instance()),
         this);
 
     ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);

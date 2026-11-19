@@ -41,6 +41,7 @@
 #include "../../hiddenobjects.h"
 #include "../../../vmhelpers.h"
 #include "../../../xencache.h"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QSet>
 #include <stdexcept>
@@ -93,6 +94,8 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
                                bool assignVtpm,
                                const QVariantList& vgpuData,
                                bool modifyVgpuSettings,
+                               VMStartAbstractAction::WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
+                               VMStartAbstractAction::StartDiagnosisForm startDiagnosisForm,
                                QObject* parent)
     : AsyncOperation(connection,
                      QString("Creating VM '%1'").arg(nameLabel),
@@ -118,7 +121,9 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
       m_startAfter(startAfter),
       m_assignVtpm(assignVtpm),
       m_vgpuData(vgpuData),
-      m_modifyVgpuSettings(modifyVgpuSettings)
+      m_modifyVgpuSettings(modifyVgpuSettings),
+      m_warningDialogHAInvalidConfig(std::move(warningDialogHAInvalidConfig)),
+      m_startDiagnosisForm(std::move(startDiagnosisForm))
 {
     // RBAC dependencies (matches C# CreateVMAction)
     if (this->m_startAfter)
@@ -360,9 +365,23 @@ void CreateVMAction::run()
 
         if (this->m_startAfter)
         {
-            VM* vmInstance = new VM(this->GetConnection(), newVmRef);
-            VMStartAction* startAction = new VMStartAction(QSharedPointer<VM>(vmInstance), nullptr, nullptr, this);
-            startAction->RunAsync();
+            // C#: a separate VMStartAction, so the HA warning and the boot diagnosis work as
+            // for VM > Start. It is created on the GUI thread and owns itself, because this
+            // action may be deleted while the VM is still starting.
+            this->SetDescription(tr("Starting VM..."));
+            XenConnection* connection = this->GetConnection();
+            QSharedPointer<VM> vm = connection && connection->GetCache()
+                ? connection->GetCache()->ResolveObject<VM>(newVmRef)
+                : QSharedPointer<VM>();
+            if (vm)
+            {
+                auto warning = this->m_warningDialogHAInvalidConfig;
+                auto diagnosis = this->m_startDiagnosisForm;
+                QMetaObject::invokeMethod(QCoreApplication::instance(), [vm, warning, diagnosis]() {
+                    VMStartAction* startAction = new VMStartAction(vm, warning, diagnosis, nullptr);
+                    startAction->RunAsync(true);
+                }, Qt::QueuedConnection);
+            }
         }
 
         if (this->HasError() || this->IsCancelled())

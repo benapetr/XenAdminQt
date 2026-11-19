@@ -29,6 +29,7 @@
 #define CREATEVMACTION_H
 
 #include "../../asyncoperation.h"
+#include "vmstartabstractaction.h"
 #include <QString>
 #include <QList>
 #include <QVariant>
@@ -102,6 +103,8 @@ class CreateVMAction : public AsyncOperation
                        bool assignVtpm,
                        const QVariantList& vgpuData,
                        bool modifyVgpuSettings,
+                       VMStartAbstractAction::WarningDialogHAInvalidConfig warningDialogHAInvalidConfig = nullptr,
+                       VMStartAbstractAction::StartDiagnosisForm startDiagnosisForm = nullptr,
                        QObject* parent = nullptr);
 
     protected:
@@ -139,6 +142,10 @@ class CreateVMAction : public AsyncOperation
         QList<VifConfig> m_vifs;
         bool m_startAfter;
         bool m_assignVtpm;
+        // Passed to the VMStartAction run when m_startAfter is set (C# _warningDialogHAInvalidConfig,
+        // _startDiagnosisForm)
+        VMStartAbstractAction::WarningDialogHAInvalidConfig m_warningDialogHAInvalidConfig;
+        VMStartAbstractAction::StartDiagnosisForm m_startDiagnosisForm;
         QVariantList m_vgpuData;
         bool m_modifyVgpuSettings;
 };
