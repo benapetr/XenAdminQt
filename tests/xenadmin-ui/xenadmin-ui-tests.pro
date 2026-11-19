@@ -16,7 +16,10 @@ SOURCES += \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.cpp \
     ../../src/xenadmin-ui/dialogs/savesearchdialog.cpp \
     ../../src/xenadmin-ui/settingspanels/ieditpage.cpp \
-    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp \
+    ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.cpp \
+    ../../src/xenadmin-ui/dialogs/newcustomfielddialog.cpp \
+    ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.cpp
 
 # Search editor widgets (moc)
 HEADERS += \
@@ -30,12 +33,17 @@ HEADERS += \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.h \
     ../../src/xenadmin-ui/dialogs/savesearchdialog.h \
     ../../src/xenadmin-ui/settingspanels/ieditpage.h \
-    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h \
+    ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.h \
+    ../../src/xenadmin-ui/dialogs/newcustomfielddialog.h \
+    ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.h
 
 FORMS += \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.ui \
     ../../src/xenadmin-ui/dialogs/savesearchdialog.ui \
-    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.ui
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.ui \
+    ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.ui \
+    ../../src/xenadmin-ui/dialogs/newcustomfielddialog.ui
 
 INCLUDEPATH += \
     ../../src \

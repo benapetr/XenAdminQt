@@ -206,6 +206,7 @@ set(XENLIB_SOURCES
     xensearch/searchmarshalling.cpp
     xensearch/searchmanager.cpp
     xen/actions/general/searchaction.cpp
+    xen/actions/general/customfieldactions.cpp
     xensearch/sort.cpp
     xen/session.cpp
     xen/sm.cpp

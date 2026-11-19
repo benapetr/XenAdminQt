@@ -51,6 +51,7 @@
 #include <QMenu>
 #include <algorithm>
 #include <QDateTime>
+#include "xenlib/customfields/customfieldsmanager.h"
 
 namespace
 {
@@ -138,6 +139,13 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
 
     connect(this->ui->expandAllButton, &QToolButton::clicked, this, &GeneralTabPage::onExpandAllClicked);
     connect(this->ui->collapseAllButton, &QToolButton::clicked, this, &GeneralTabPage::onCollapseAllClicked);
+
+    // C# CustomFieldsManager.CustomFieldsChanged: a field added or deleted on the pool
+    connect(CustomFieldsManager::instance(), &CustomFieldsManager::customFieldsChanged, this, [this]()
+    {
+        if (this->m_object)
+            this->refreshContent();
+    });
 }
 
 GeneralTabPage::~GeneralTabPage()
@@ -875,31 +883,25 @@ void GeneralTabPage::populateNetworkProperties()
                            network->IsManaged() ? tr("Yes") : tr("No"));
 }
 
+// C# GenerateCustomFieldsBox: the pool's custom fields that have a value on this object
 void GeneralTabPage::populateCustomFieldsSection()
 {
     if (!this->m_object)
         return;
 
-    QVariantMap otherConfig = this->m_object->GetOtherConfig();
+    const QVariantMap otherConfig = this->m_object->GetOtherConfig();
     if (otherConfig.isEmpty())
         return;
 
-    // TODO: Use CustomFieldsManager definitions once gui_config parsing is implemented.
-    QStringList keys = otherConfig.keys();
-    keys.sort();
-
-    const QString prefix = "XenCenter.CustomFields.";
-    for (const QString& key : keys)
+    const QList<CustomFieldDefinition> definitions = CustomFieldsManager::instance()->getCustomFields(this->m_object->GetConnection());
+    for (const CustomFieldDefinition& definition : definitions)
     {
-        if (!key.startsWith(prefix))
+        const QVariant value = CustomFieldsManager::GetCustomFieldValue(otherConfig, definition);
+        if (value.isNull())
             continue;
 
-        QString fieldName = key.mid(prefix.length());
-        QString value = otherConfig.value(key).toString();
-        if (value.isEmpty())
-            value = tr("None");
-
-        this->addProperty(this->ui->pdSectionCustomFields, fieldName, value);
+        this->addProperty(this->ui->pdSectionCustomFields, definition.GetName(),
+                          CustomFieldsManager::ValueToDisplayString(definition.GetType(), value));
     }
 }
 

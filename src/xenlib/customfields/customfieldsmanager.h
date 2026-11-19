@@ -68,6 +68,20 @@ class CustomFieldsManager : public QObject
         static QString getCustomFieldKey(const CustomFieldDefinition& definition);
         static bool hasCustomFields(const QVariantMap& otherConfig, XenConnection* connection);
 
+        //! C# GetCustomFieldDefinitionXML: the gui_config value listing the definitions
+        static QString DefinitionsToXml(const QList<CustomFieldDefinition>& definitions);
+        //! The definitions in that XML
+        static QList<CustomFieldDefinition> DefinitionsFromXml(const QString& xml);
+
+        //! C# ParseValue: a QString, a QDateTime (UTC) for a date field, or null if unset or unparseable
+        static QVariant ParseValue(CustomFieldDefinition::Type type, const QString& value);
+        //! C# CustomField.ValueAsInvariantString: dates as UTC "yyyy-MM-dd HH:mm:ssZ"; empty if unset
+        static QString ValueToInvariantString(CustomFieldDefinition::Type type, const QVariant& value);
+        //! C# GetCustomFieldValue, from an object's other_config
+        static QVariant GetCustomFieldValue(const QVariantMap& otherConfig, const CustomFieldDefinition& definition);
+        //! A value as shown on the General tab (dates in local time)
+        static QString ValueToDisplayString(CustomFieldDefinition::Type type, const QVariant& value);
+
     signals:
         /**
          * Emitted when custom field definitions change (add/remove/modify)

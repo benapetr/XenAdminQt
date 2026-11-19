@@ -32,6 +32,9 @@
 #include "../xencache.h"
 #include "../otherconfig/otherconfigandtagswatcher.h"
 #include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+#include <QDateTime>
+#include <QLocale>
 #include <QMutexLocker>
 #include <QDebug>
 
@@ -185,6 +188,69 @@ QList<CustomFieldDefinition> CustomFieldsManager::getCustomFieldsFromGuiConfig(X
     }
 
     return this->parseCustomFieldDefinitions(customFieldsXml);
+}
+
+QString CustomFieldsManager::DefinitionsToXml(const QList<CustomFieldDefinition>& definitions)
+{
+    QString xml;
+    QXmlStreamWriter writer(&xml);
+    writer.writeStartElement("CustomFieldDefinitions");
+    for (const CustomFieldDefinition& definition : definitions)
+        definition.ToXml(writer);
+    writer.writeEndElement();
+    return xml;
+}
+
+QList<CustomFieldDefinition> CustomFieldsManager::DefinitionsFromXml(const QString& xml)
+{
+    return instance()->parseCustomFieldDefinitions(xml);
+}
+
+QVariant CustomFieldsManager::ParseValue(CustomFieldDefinition::Type type, const QString& value)
+{
+    if (value.isEmpty())
+        return QVariant();
+
+    if (type == CustomFieldDefinition::Type::String)
+        return value;
+
+    // C# writes the "u" format; accept ISO and plain dates too, as CustomFieldDateQuery does
+    QDateTime date = QDateTime::fromString(value, QStringLiteral("yyyy-MM-dd HH:mm:ss'Z'"));
+    if (date.isValid())
+    {
+        date.setTimeSpec(Qt::UTC);
+        return date;
+    }
+    date = QDateTime::fromString(value, Qt::ISODate);
+    if (!date.isValid())
+        date = QDateTime::fromString(value, QStringLiteral("yyyyMMdd"));
+    return date.isValid() ? QVariant(date.toUTC()) : QVariant();
+}
+
+QString CustomFieldsManager::ValueToInvariantString(CustomFieldDefinition::Type type, const QVariant& value)
+{
+    if (!value.isValid() || value.isNull())
+        return QString();
+
+    if (type == CustomFieldDefinition::Type::Date)
+    {
+        const QDateTime date = value.toDateTime();
+        return date.isValid() ? date.toUTC().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss'Z'")) : QString();
+    }
+
+    return value.toString();
+}
+
+QVariant CustomFieldsManager::GetCustomFieldValue(const QVariantMap& otherConfig, const CustomFieldDefinition& definition)
+{
+    return ParseValue(definition.GetType(), otherConfig.value(getCustomFieldKey(definition)).toString());
+}
+
+QString CustomFieldsManager::ValueToDisplayString(CustomFieldDefinition::Type type, const QVariant& value)
+{
+    if (type == CustomFieldDefinition::Type::Date)
+        return QLocale().toString(value.toDateTime().toLocalTime(), QLocale::ShortFormat);
+    return value.toString();
 }
 
 QList<CustomFieldDefinition> CustomFieldsManager::parseCustomFieldDefinitions(const QString& xml) const

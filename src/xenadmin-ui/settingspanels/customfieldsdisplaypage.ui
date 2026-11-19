@@ -14,7 +14,7 @@
    <item>
     <widget class="QLabel" name="labelInfo">
      <property name="text">
-      <string>Custom fields allow you to add additional metadata to objects.</string>
+      <string>Custom fields allow you to define extra text and date/time fields for your resources. Any custom fields that you define are displayed on the General tab and properties sheet for all resources in the pool, and can be used to organize your resources in any way you want.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -22,11 +22,31 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="fieldsWidget">
+      <layout class="QGridLayout" name="fieldsLayout" columnstretch="0,1,0">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
      <item>
       <widget class="QPushButton" name="buttonAdd">
        <property name="text">
-        <string>Add Field</string>
+        <string>&amp;New Custom Field...</string>
        </property>
       </widget>
      </item>
@@ -44,31 +64,6 @@
       </spacer>
      </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QTableWidget" name="tableWidgetFields">
-     <property name="columnCount">
-      <number>3</number>
-     </property>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-     <column>
-      <property name="text">
-       <string>Field Name</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Value</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Actions</string>
-      </property>
-     </column>
-    </widget>
    </item>
   </layout>
  </widget>

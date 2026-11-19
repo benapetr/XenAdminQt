@@ -27,29 +27,40 @@
 
 #include "customfieldsdisplaypage.h"
 #include "ui_customfieldsdisplaypage.h"
-#include "xenlib/xen/xenobject.h"
-#include "xenlib/xen/asyncoperation.h"
+#include "../dialogs/newcustomfielddialog.h"
+#include "../dialogs/warningdialogs/warningdialog.h"
+#include "xenlib/customfields/customfieldsmanager.h"
+#include "xenlib/xen/actions/general/customfieldactions.h"
 #include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/session.h"
-#include "xenlib/xen/api.h"
-#include <QInputDialog>
-#include <QPushButton>
+#include "xenlib/xen/xenobject.h"
+#include <QCheckBox>
+#include <QDateTimeEdit>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
+
+namespace
+{
+    QString ellipsise(const QString& text, int maxChars)
+    {
+        return text.length() > maxChars ? text.left(maxChars - 1) + QChar(0x2026) : text;
+    }
+}
 
 CustomFieldsDisplayPage::CustomFieldsDisplayPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::CustomFieldsDisplayPage)
 {
     this->ui->setupUi(this);
-
-    this->ui->tableWidgetFields->setColumnWidth(0, 150);
-    this->ui->tableWidgetFields->setColumnWidth(1, 250);
-    this->ui->tableWidgetFields->setColumnWidth(2, 80);
-
-    this->connect(this->ui->buttonAdd, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onAddFieldClicked);
+    this->ui->fieldsLayout->setRowStretch(0, 1);
+    connect(this->ui->buttonAdd, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onNewFieldClicked);
 }
 
 CustomFieldsDisplayPage::~CustomFieldsDisplayPage()
 {
+    QObject::disconnect(this->m_fieldsChangedConnection);
     delete this->ui;
 }
 
@@ -58,29 +69,20 @@ QString CustomFieldsDisplayPage::GetText() const
     return tr("Custom Fields");
 }
 
+// C# SubText: "name: value" for every field with a value
 QString CustomFieldsDisplayPage::GetSubText() const
 {
-    QMap<QString, QString> fields = this->getCurrentFields();
-    if (fields.isEmpty())
+    QStringList fields;
+    for (const FieldRow& row : this->m_rows)
     {
-        return tr("None");
+        const QVariant value = rowValue(row);
+        if (value.isNull())
+            continue;
+        fields << QString("%1: %2").arg(row.definition.GetName(),
+                                        CustomFieldsManager::ValueToDisplayString(row.definition.GetType(), value));
     }
 
-    QStringList fieldList;
-    for (auto it = fields.constBegin(); it != fields.constEnd(); ++it)
-    {
-        if (!it.value().isEmpty())
-        {
-            fieldList << QString("%1: %2").arg(it.key(), it.value());
-        }
-    }
-
-    if (fieldList.isEmpty())
-    {
-        return tr("None");
-    }
-
-    return fieldList.join(", ");
+    return fields.isEmpty() ? tr("None") : fields.join(", ");
 }
 
 QIcon CustomFieldsDisplayPage::GetImage() const
@@ -90,108 +92,167 @@ QIcon CustomFieldsDisplayPage::GetImage() const
 
 void CustomFieldsDisplayPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
+    Q_UNUSED(objectDataCopy);
     this->m_object = object;
-    this->m_objectRef = object.isNull() ? QString() : object->OpaqueRef();
-    this->m_objectTypeApiName = object.isNull() ? QString() : object->GetObjectTypeName().toLower();
-    this->m_objectType = object.isNull() ? XenObjectType::Null : object->GetObjectType();
-    this->m_objectDataBefore = objectDataBefore;
-    this->m_objectDataCopy = objectDataCopy;
+    this->m_otherConfig = objectDataBefore.value("other_config").toMap();
+    if (this->m_otherConfig.isEmpty() && object)
+        this->m_otherConfig = object->GetOtherConfig();
 
-    // Extract custom fields from other_config
-    // Custom fields are stored with "XenCenter.CustomFields." prefix
-    QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
-    this->m_origCustomFields.clear();
-
-    for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
-    {
-        if (it.key().startsWith("XenCenter.CustomFields."))
-        {
-            QString fieldName = it.key().mid(23); // Remove "XenCenter.CustomFields." prefix
-            this->m_origCustomFields[fieldName] = it.value().toString();
-        }
-    }
-
-    this->populateFields();
+    // C#: rebuild when the pool's definitions change, keeping what was typed
+    QObject::disconnect(this->m_fieldsChangedConnection);
+    this->m_fieldsChangedConnection = connect(CustomFieldsManager::instance(), &CustomFieldsManager::customFieldsChanged,
+                                              this, [this]() { this->rebuild(false); });
+    this->rebuild(true);
 }
 
+void CustomFieldsDisplayPage::rebuild(bool resetValues)
+{
+    XenConnection* connection = this->m_object ? this->m_object->GetConnection() : nullptr;
+    this->SetDefinitions(CustomFieldsManager::instance()->getCustomFields(connection), resetValues);
+}
+
+// C# Rebuild: add rows for new fields, drop rows for deleted ones
+void CustomFieldsDisplayPage::SetDefinitions(const QList<CustomFieldDefinition>& definitions, bool resetValues)
+{
+    for (const CustomFieldDefinition& definition : definitions)
+    {
+        int index = -1;
+        for (int i = 0; i < this->m_rows.size(); ++i)
+        {
+            if (this->m_rows.at(i).definition == definition)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1)
+            this->addRow(definition);
+        else if (resetValues)
+            setRowValue(this->m_rows[index], this->currentValue(definition));
+    }
+
+    for (int i = this->m_rows.size() - 1; i >= 0; --i)
+    {
+        if (!definitions.contains(this->m_rows.at(i).definition))
+            this->removeRow(i);
+    }
+
+    // Keep the rows at the top
+    QGridLayout* layout = this->ui->fieldsLayout;
+    for (int row = 0; row < layout->rowCount(); ++row)
+        layout->setRowStretch(row, 0);
+    layout->setRowStretch(layout->rowCount(), 1);
+
+    emit this->populated();
+}
+
+void CustomFieldsDisplayPage::addRow(const CustomFieldDefinition& definition)
+{
+    QGridLayout* layout = this->ui->fieldsLayout;
+    const int gridRow = layout->rowCount();
+    QWidget* parent = this->ui->fieldsWidget;
+
+    FieldRow row(definition);
+    row.label = new QLabel(ellipsise(definition.GetName(), 45), parent);
+    row.label->setTextFormat(Qt::PlainText);
+    row.label->setToolTip(definition.GetName());
+    layout->addWidget(row.label, gridRow, 0);
+
+    if (definition.GetType() == CustomFieldDefinition::Type::Date)
+    {
+        // C# DateTimePicker with ShowCheckBox: unchecked means no value
+        QWidget* editor = new QWidget(parent);
+        QHBoxLayout* editorLayout = new QHBoxLayout(editor);
+        editorLayout->setContentsMargins(0, 0, 0, 0);
+        row.dateSet = new QCheckBox(editor);
+        row.dateSet->setToolTip(tr("Set a value"));
+        row.date = new QDateTimeEdit(QDateTime::currentDateTime(), editor);
+        row.date->setCalendarPopup(true);
+        row.date->setDisplayFormat(QLocale().dateFormat(QLocale::ShortFormat) + QStringLiteral(" HH:mm:ss"));
+        row.date->setEnabled(false);
+        editorLayout->addWidget(row.dateSet);
+        editorLayout->addWidget(row.date, 1);
+        layout->addWidget(editor, gridRow, 1);
+
+        QDateTimeEdit* date = row.date;
+        connect(row.dateSet, &QCheckBox::toggled, date, &QWidget::setEnabled);
+        connect(row.dateSet, &QCheckBox::toggled, this, &IEditPage::populated);
+        connect(row.date, &QDateTimeEdit::dateTimeChanged, this, &IEditPage::populated);
+    } else
+    {
+        row.text = new QLineEdit(parent);
+        layout->addWidget(row.text, gridRow, 1);
+        connect(row.text, &QLineEdit::textChanged, this, &IEditPage::populated);
+    }
+
+    row.deleteButton = new QPushButton(tr("Delete"), parent);
+    row.deleteButton->setToolTip(tr("Delete this custom field from the pool"));
+    layout->addWidget(row.deleteButton, gridRow, 2);
+    connect(row.deleteButton, &QPushButton::clicked, this, [this, definition]() { this->onDeleteFieldClicked(definition); });
+
+    setRowValue(row, this->currentValue(definition));
+    this->m_rows.append(row);
+}
+
+void CustomFieldsDisplayPage::removeRow(int index)
+{
+    FieldRow row = this->m_rows.takeAt(index);
+    delete row.label;
+    if (row.date)
+        delete row.date->parentWidget(); // the checkbox and editor container
+    delete row.text;
+    delete row.deleteButton;
+}
+
+QVariant CustomFieldsDisplayPage::currentValue(const CustomFieldDefinition& definition) const
+{
+    return CustomFieldsManager::GetCustomFieldValue(this->m_otherConfig, definition);
+}
+
+// C# CustomFieldRow.GetValue: the text, or the date and time if set; null otherwise
+QVariant CustomFieldsDisplayPage::rowValue(const FieldRow& row)
+{
+    if (row.text)
+        return row.text->text().isEmpty() ? QVariant() : QVariant(row.text->text());
+    if (row.date && row.dateSet && row.dateSet->isChecked())
+        return row.date->dateTime().toUTC();
+    return QVariant();
+}
+
+void CustomFieldsDisplayPage::setRowValue(FieldRow& row, const QVariant& value)
+{
+    if (row.text)
+    {
+        row.text->setText(value.toString());
+        return;
+    }
+
+    if (row.date && row.dateSet)
+    {
+        row.dateSet->setChecked(!value.isNull());
+        if (!value.isNull())
+            row.date->setDateTime(value.toDateTime().toLocalTime());
+    }
+}
+
+// C# SaveSettings: every field whose value is or was set
 AsyncOperation* CustomFieldsDisplayPage::SaveSettings()
 {
-    if (!this->HasChanged())
-    {
+    if (!this->m_object || !this->HasChanged())
         return nullptr;
+
+    QList<SaveCustomFieldsAction::FieldValue> values;
+    for (const FieldRow& row : std::as_const(this->m_rows))
+    {
+        const QVariant current = this->currentValue(row.definition);
+        const QVariant value = rowValue(row);
+        if (current.isNull() && value.isNull())
+            continue;
+        values.append(qMakePair(row.definition, value));
     }
 
-    // Get current fields from table
-    QMap<QString, QString> currentFields = this->getCurrentFields();
-
-    // Update objectDataCopy with new custom fields
-    QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
-
-    // Remove old custom fields
-    QStringList keysToRemove;
-    for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
-    {
-        if (it.key().startsWith("XenCenter.CustomFields."))
-        {
-            keysToRemove << it.key();
-        }
-    }
-    for (const QString& key : keysToRemove)
-    {
-        otherConfig.remove(key);
-    }
-
-    // Add new custom fields
-    for (auto it = currentFields.constBegin(); it != currentFields.constEnd(); ++it)
-    {
-        QString key = "XenCenter.CustomFields." + it.key();
-        otherConfig[key] = it.value();
-    }
-
-    this->m_objectDataCopy["other_config"] = otherConfig;
-
-    // Return inline AsyncOperation
-    class CustomFieldsOperation : public AsyncOperation
-    {
-    public:
-        CustomFieldsOperation(XenConnection* conn,
-                              const QString& objectRef,
-                              const QString& objectType,
-                              const QVariantMap& otherConfig,
-                              QObject* parent)
-            : AsyncOperation(conn, tr("Update Custom Fields"),
-                             tr("Updating custom fields..."), parent),
-              m_objectRef(objectRef), m_objectType(objectType), m_otherConfig(otherConfig)
-        {}
-
-    protected:
-        void run() override
-        {
-            XenAPI::Session* session = this->GetSession();
-            if (!session || !session->IsLoggedIn())
-                throw std::runtime_error("No valid session");
-            XenRpcAPI api(session);
-
-            SetPercentComplete(30);
-
-            // Build method name based on object type
-            QString methodName = m_objectType + ".set_other_config";
-
-            QVariantList params;
-            params << session->GetSessionID() << this->m_objectRef << this->m_otherConfig;
-            QByteArray request = api.BuildJsonRpcCall(methodName, params);
-            session->SendApiRequest(QString::fromUtf8(request));
-
-            SetPercentComplete(100);
-        }
-
-    private:
-        QString m_objectRef;
-        QString m_objectType;
-        QVariantMap m_otherConfig;
-    };
-
-    return new CustomFieldsOperation(this->m_connection, this->m_objectRef, this->m_objectTypeApiName, otherConfig, this);
+    return new SaveCustomFieldsAction(this->m_object, values, this);
 }
 
 bool CustomFieldsDisplayPage::IsValidToSave() const
@@ -201,125 +262,53 @@ bool CustomFieldsDisplayPage::IsValidToSave() const
 
 void CustomFieldsDisplayPage::ShowLocalValidationMessages()
 {
-    // No validation needed
 }
 
 void CustomFieldsDisplayPage::HideLocalValidationMessages()
 {
-    // No validation messages
 }
 
 void CustomFieldsDisplayPage::Cleanup()
 {
-    // Nothing to clean up
+    QObject::disconnect(this->m_fieldsChangedConnection);
 }
 
+// Compared as stored, so a date only differs if it does to the second
 bool CustomFieldsDisplayPage::HasChanged() const
 {
-    QMap<QString, QString> currentFields = this->getCurrentFields();
-
-    if (currentFields.size() != this->m_origCustomFields.size())
+    for (const FieldRow& row : this->m_rows)
     {
-        return true;
-    }
-
-    for (auto it = currentFields.constBegin(); it != currentFields.constEnd(); ++it)
-    {
-        if (!this->m_origCustomFields.contains(it.key()) ||
-            this->m_origCustomFields[it.key()] != it.value())
-        {
+        const CustomFieldDefinition::Type type = row.definition.GetType();
+        if (CustomFieldsManager::ValueToInvariantString(type, this->currentValue(row.definition))
+            != CustomFieldsManager::ValueToInvariantString(type, rowValue(row)))
             return true;
-        }
     }
-
     return false;
 }
 
-void CustomFieldsDisplayPage::onAddFieldClicked()
+void CustomFieldsDisplayPage::onNewFieldClicked()
 {
-    bool ok;
-    QString fieldName = QInputDialog::getText(this, tr("Add Custom Field"),
-                                              tr("Field name:"), QLineEdit::Normal,
-                                              "", &ok);
-    if (ok && !fieldName.isEmpty())
-    {
-        int row = this->ui->tableWidgetFields->rowCount();
-        this->ui->tableWidgetFields->insertRow(row);
+    XenConnection* connection = this->m_object ? this->m_object->GetConnection() : nullptr;
+    if (!connection)
+        return;
 
-        // Field name
-        QTableWidgetItem* nameItem = new QTableWidgetItem(fieldName);
-        this->ui->tableWidgetFields->setItem(row, 0, nameItem);
-
-        // Value
-        QTableWidgetItem* valueItem = new QTableWidgetItem("");
-        this->ui->tableWidgetFields->setItem(row, 1, valueItem);
-
-        // Delete button
-        QPushButton* deleteBtn = new QPushButton(tr("Delete"));
-        this->connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
-        this->ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
-    }
+    NewCustomFieldDialog dialog(connection, this);
+    if (dialog.exec() == QDialog::Accepted)
+        (new AddCustomFieldAction(connection, dialog.GetDefinition()))->RunAsync(true);
 }
 
-void CustomFieldsDisplayPage::onDeleteFieldClicked()
+void CustomFieldsDisplayPage::onDeleteFieldClicked(const CustomFieldDefinition& definition)
 {
-    QPushButton* button = qobject_cast<QPushButton*>(sender());
-    if (button)
-    {
-        for (int row = 0; row < this->ui->tableWidgetFields->rowCount(); ++row)
-        {
-            if (this->ui->tableWidgetFields->cellWidget(row, 2) == button)
-            {
-                this->ui->tableWidgetFields->removeRow(row);
-                break;
-            }
-        }
-    }
-}
+    const QString name = ellipsise(definition.GetName(), 50);
+    if (WarningDialog::ShowYesNo(tr("This will delete '%1' permanently, making it unavailable to all resources in the pool "
+                                    "and destroying all data associated with it. Do you want to continue?").arg(name),
+                                 tr("Delete Custom Field"), this) != WarningDialog::Result::Yes)
+        return;
 
-void CustomFieldsDisplayPage::populateFields()
-{
-    this->ui->tableWidgetFields->setRowCount(0);
-
-    for (auto it = this->m_origCustomFields.constBegin(); it != this->m_origCustomFields.constEnd(); ++it)
-    {
-        int row = this->ui->tableWidgetFields->rowCount();
-        this->ui->tableWidgetFields->insertRow(row);
-
-        // Field name
-        QTableWidgetItem* nameItem = new QTableWidgetItem(it.key());
-        this->ui->tableWidgetFields->setItem(row, 0, nameItem);
-
-        // Value
-        QTableWidgetItem* valueItem = new QTableWidgetItem(it.value());
-        this->ui->tableWidgetFields->setItem(row, 1, valueItem);
-
-        // Delete button
-        QPushButton* deleteBtn = new QPushButton(tr("Delete"));
-        this->connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
-        this->ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
-    }
-}
-
-QMap<QString, QString> CustomFieldsDisplayPage::getCurrentFields() const
-{
-    QMap<QString, QString> fields;
-
-    for (int row = 0; row < this->ui->tableWidgetFields->rowCount(); ++row)
-    {
-        QTableWidgetItem* nameItem = this->ui->tableWidgetFields->item(row, 0);
-        QTableWidgetItem* valueItem = this->ui->tableWidgetFields->item(row, 1);
-
-        if (nameItem && valueItem)
-        {
-            QString name = nameItem->text().trimmed();
-            QString value = valueItem->text().trimmed();
-            if (!name.isEmpty())
-            {
-                fields[name] = value;
-            }
-        }
-    }
-
-    return fields;
+    XenConnection* connection = this->m_object ? this->m_object->GetConnection() : nullptr;
+    if (connection && connection->IsConnected())
+        (new RemoveCustomFieldAction(connection, definition))->RunAsync(true);
+    else
+        QMessageBox::critical(this, tr("Delete Custom Field"),
+                              tr("The server was disconnected before the action could be started."));
 }

@@ -28,6 +28,7 @@
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/searchmarshalling.h"
 #include "xenlib/xensearch/searchmanager.h"
+#include "xenlib/customfields/customfieldsmanager.h"
 #include <QSignalSpy>
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/query.h"
@@ -408,6 +409,34 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void customFieldDefinitionsAndValuesMatchCSharp()
+    {
+        // C# GetCustomFieldDefinitionXML, as XenCenter stores it in gui_config
+        const QList<CustomFieldDefinition> definitions{
+            CustomFieldDefinition("Owner", CustomFieldDefinition::Type::String),
+            CustomFieldDefinition("Expires", CustomFieldDefinition::Type::Date)};
+        const QString xml = CustomFieldsManager::DefinitionsToXml(definitions);
+        QCOMPARE(xml, QString("<CustomFieldDefinitions>"
+                              "<CustomFieldDefinition name=\"Owner\" type=\"String\" defaultValue=\"\"/>"
+                              "<CustomFieldDefinition name=\"Expires\" type=\"Date\" defaultValue=\"\"/>"
+                              "</CustomFieldDefinitions>"));
+        const QList<CustomFieldDefinition> parsed = CustomFieldsManager::DefinitionsFromXml(xml);
+        QCOMPARE(parsed.size(), 2);
+        QCOMPARE(parsed.at(1).GetName(), QString("Expires"));
+        QVERIFY(parsed.at(1).GetType() == CustomFieldDefinition::Type::Date);
+
+        // Values: dates are stored in UTC with C#'s "u" format
+        const CustomFieldDefinition expires = definitions.at(1);
+        const QDateTime when(QDate(2026, 3, 4), QTime(5, 6, 7), Qt::UTC);
+        QCOMPARE(CustomFieldsManager::ValueToInvariantString(expires.GetType(), when), QString("2026-03-04 05:06:07Z"));
+        const QVariantMap otherConfig{{"XenCenter.CustomFields.Expires", "2026-03-04 05:06:07Z"},
+                                      {"XenCenter.CustomFields.Owner", ""}};
+        QCOMPARE(CustomFieldsManager::GetCustomFieldValue(otherConfig, expires).toDateTime(), when);
+        QVERIFY(CustomFieldsManager::GetCustomFieldValue(otherConfig, definitions.at(0)).isNull());
+        QVERIFY(CustomFieldsManager::ParseValue(CustomFieldDefinition::Type::Date, "not a date").isNull());
+        QVERIFY(CustomFieldsManager::ValueToInvariantString(CustomFieldDefinition::Type::String, QVariant()).isEmpty());
     }
 
     void filteredSearchDoesNotShareBaseFilter()

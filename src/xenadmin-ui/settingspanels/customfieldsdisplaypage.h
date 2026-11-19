@@ -29,11 +29,16 @@
 #define CUSTOMFIELDSDISPLAYPAGE_H
 
 #include "ieditpage.h"
-#include "xenlib/xen/xenobjecttype.h"
-#include <QVariantMap>
-#include <QMap>
+#include "xenlib/customfields/customfielddefinition.h"
+#include <QList>
+#include <QMetaObject>
+#include <QVariant>
 
-class AsyncOperation;
+class QCheckBox;
+class QDateTimeEdit;
+class QLabel;
+class QLineEdit;
+class QPushButton;
 
 namespace Ui
 {
@@ -41,10 +46,11 @@ namespace Ui
 }
 
 /**
- * @brief Custom fields display and editing page
+ * @brief Values of the pool's custom fields for one object
  *
- * Matches C# XenAdmin.SettingsPanels.CustomFieldsDisplayPage
- * Allows viewing and editing custom fields stored in other_config
+ * Qt port of C# XenAdmin.SettingsPanels.CustomFieldsDisplayPage: one row per field defined in the
+ * pool's gui_config (shared with XenCenter), a text box or an optional date and time for its
+ * value, and buttons to add a field to the pool or delete one from it.
  */
 class CustomFieldsDisplayPage : public IEditPage
 {
@@ -68,23 +74,36 @@ class CustomFieldsDisplayPage : public IEditPage
         void Cleanup() override;
         bool HasChanged() const override;
 
-    private slots:
-        void onAddFieldClicked();
-        void onDeleteFieldClicked();
+        //! Show these definitions (normally the pool's, as CustomFieldsManager reports them)
+        void SetDefinitions(const QList<CustomFieldDefinition>& definitions, bool resetValues);
 
     private:
-        void populateFields();
-        QMap<QString, QString> getCurrentFields() const;
+        //! C# CustomFieldRow
+        struct FieldRow
+        {
+            explicit FieldRow(const CustomFieldDefinition& fieldDefinition) : definition(fieldDefinition) {}
+
+            CustomFieldDefinition definition;
+            QLabel* label = nullptr;
+            QLineEdit* text = nullptr;
+            QCheckBox* dateSet = nullptr;
+            QDateTimeEdit* date = nullptr;
+            QPushButton* deleteButton = nullptr;
+        };
+
+        void rebuild(bool resetValues);
+        void addRow(const CustomFieldDefinition& definition);
+        void removeRow(int index);
+        QVariant currentValue(const CustomFieldDefinition& definition) const;
+        static QVariant rowValue(const FieldRow& row);
+        static void setRowValue(FieldRow& row, const QVariant& value);
+        void onNewFieldClicked();
+        void onDeleteFieldClicked(const CustomFieldDefinition& definition);
 
         Ui::CustomFieldsDisplayPage* ui;
-        QString m_objectRef;
-        QString m_objectTypeApiName;
-        XenObjectType m_objectType = XenObjectType::Null;
-        QVariantMap m_objectDataBefore;
-        QVariantMap m_objectDataCopy;
-
-        // Original custom fields from other_config
-        QMap<QString, QString> m_origCustomFields;
+        QVariantMap m_otherConfig;
+        QList<FieldRow> m_rows;
+        QMetaObject::Connection m_fieldsChangedConnection;
 };
 
 #endif // CUSTOMFIELDSDISPLAYPAGE_H

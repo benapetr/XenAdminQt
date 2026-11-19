@@ -100,6 +100,7 @@ HEADERS += \
     xensearch/searchmarshalling.h \
     xensearch/searchmanager.h \
     xen/actions/general/searchaction.h \
+    xen/actions/general/customfieldactions.h \
     xensearch/sort.h \
     xensearch/iacceptgroups.h \
     xen/network/connection.h \
@@ -372,6 +373,7 @@ SOURCES += \
     xensearch/searchmarshalling.cpp \
     xensearch/searchmanager.cpp \
     xen/actions/general/searchaction.cpp \
+    xen/actions/general/customfieldactions.cpp \
     xensearch/sort.cpp \
     xen/network/connection.cpp \
     xen/network/connectionworker.cpp \

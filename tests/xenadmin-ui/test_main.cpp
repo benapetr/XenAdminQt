@@ -5,6 +5,9 @@
 #include "iconmanager.h"
 #include "dialogs/savesearchdialog.h"
 #include "settingspanels/perfmonalertoptionspage.h"
+#include "settingspanels/customfieldsdisplaypage.h"
+#include "dialogs/newcustomfielddialog.h"
+#include <QDateTimeEdit>
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
 #include "controls/xensearch/searcher.h"
@@ -374,6 +377,69 @@ private slots:
         QVERIFY(buttons->button(QDialogButtonBox::Save)->isEnabled());
         name->setText("   ");
         QVERIFY(!buttons->button(QDialogButtonBox::Save)->isEnabled());
+    }
+
+    void newCustomFieldDialogRejectsBlankAndDuplicateNames()
+    {
+        NewCustomFieldDialog dialog(nullptr);
+        dialog.SetExistingFields({CustomFieldDefinition("Owner", CustomFieldDefinition::Type::String)});
+        QPushButton* ok = dialog.findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok);
+        QLineEdit* name = dialog.findChild<QLineEdit*>("nameLineEdit");
+        QLabel* duplicate = dialog.findChild<QLabel*>("duplicateLabel");
+        QComboBox* type = dialog.findChild<QComboBox*>("typeComboBox");
+        QVERIFY(ok && name && duplicate && type);
+
+        QVERIFY(!ok->isEnabled());
+        name->setText(" Owner ");
+        QVERIFY(!ok->isEnabled());
+        QVERIFY(!duplicate->isHidden());
+        name->setText("  Expires ");
+        type->setCurrentIndex(1);
+        QVERIFY(ok->isEnabled());
+        QVERIFY(duplicate->isHidden());
+        QCOMPARE(dialog.GetDefinition(), CustomFieldDefinition("Expires", CustomFieldDefinition::Type::Date));
+    }
+
+    void customFieldsPageShowsPoolDefinitions()
+    {
+        const CustomFieldDefinition owner("Owner", CustomFieldDefinition::Type::String);
+        const CustomFieldDefinition expires("Expires", CustomFieldDefinition::Type::Date);
+        CustomFieldsDisplayPage page;
+        page.SetXenObject(QSharedPointer<XenObject>(),
+                          QVariantMap{{"other_config", QVariantMap{{"XenCenter.CustomFields.Owner", "alice"},
+                                                                   {"XenCenter.CustomFields.Stale", "x"}}}},
+                          QVariantMap());
+
+        // One row per definition, whatever other keys the object has
+        auto textEditors = [&page]()
+        {
+            QList<QLineEdit*> editors;
+            for (QLineEdit* edit : page.findChildren<QLineEdit*>())
+            {
+                if (!qobject_cast<QDateTimeEdit*>(edit->parentWidget()))
+                    editors.append(edit);
+            }
+            return editors;
+        };
+        page.SetDefinitions({owner, expires}, true);
+        QList<QLineEdit*> texts = textEditors();
+        QCOMPARE(texts.size(), 1);
+        QCOMPARE(texts.first()->text(), QString("alice"));
+        QCOMPARE(page.findChildren<QDateTimeEdit*>().size(), 1);
+        QCOMPARE(page.GetSubText(), QString("Owner: alice"));
+        QVERIFY(!page.HasChanged());
+
+        texts.first()->setText("bob");
+        QVERIFY(page.HasChanged());
+        texts.first()->setText("alice");
+        QVERIFY(!page.HasChanged());
+        page.findChild<QCheckBox*>()->setChecked(true); // give Expires a value
+        QVERIFY(page.HasChanged());
+
+        // A field deleted from the pool loses its row
+        page.SetDefinitions({expires}, false);
+        QVERIFY(textEditors().isEmpty());
+        QCOMPARE(page.findChildren<QDateTimeEdit*>().size(), 1);
     }
 
     void emailNotificationsPageFollowsCheckbox()
