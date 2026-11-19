@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+New VM from Snapshot opens the New VM wizard with the chosen snapshot selected, instead of the first template
 Crash when clicking a group in the navigation tree of a saved search, and possible crashes in the Tags, Folders and vApps views or while filtering them with the search box
 - Search conditions read the same values as C#, so conditions on values held
   by related records now match: Operating System, Start Time, Tools Status,

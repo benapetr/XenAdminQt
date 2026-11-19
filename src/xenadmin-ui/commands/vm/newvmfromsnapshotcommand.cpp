@@ -93,7 +93,9 @@ void NewVMFromSnapshotCommand::Run()
         return;
     }
 
-    NewVMWizard wizard(connection, QString(), MainWindow::instance());
+    // C# RunCore: NewVMCommand with the snapshot as the template; the wizard lists snapshots
+    // with the templates and starts with this one selected
+    NewVMWizard wizard(connection, snapshot->OpaqueRef(), MainWindow::instance());
     wizard.exec();
 }
 
