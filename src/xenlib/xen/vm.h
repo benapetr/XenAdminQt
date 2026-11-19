@@ -179,6 +179,9 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get list of snapshot children (if this VM has snapshots)
         QStringList GetSnapshotRefs() const;
 
+        //! Snapshots of this VM that are in the cache
+        QList<QSharedPointer<VM>> GetSnapshots() const;
+
         //! Get memory target in bytes
         qint64 MemoryTarget() const;
 

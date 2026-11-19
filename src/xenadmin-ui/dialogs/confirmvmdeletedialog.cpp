@@ -204,18 +204,12 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
         }
 
         // Process snapshots
-        // TODO add GetSnapshots to VM class
-        QVariantList snapshotRefs = vm->GetData().value("snapshots").toList();
-        for (const QVariant& snapshotRefVar : snapshotRefs)
+        const QList<QSharedPointer<VM>> snapshots = vm->GetSnapshots();
+        for (const QSharedPointer<VM>& snapshot : snapshots)
         {
-            QString snapshotRef = snapshotRefVar.toString();
-            QVariantMap snapshotData = cache->ResolveObjectData(XenObjectType::VM, snapshotRef);
-            
-            if (snapshotData.isEmpty())
-                continue;
-
+            const QString snapshotRef = snapshot->OpaqueRef();
             QTreeWidgetItem* item = new QTreeWidgetItem(snapshotsGroup);
-            QString snapshotName = snapshotData.value("name_label").toString();
+            QString snapshotName = snapshot->GetName();
             if (snapshotName.isEmpty())
                 snapshotName = snapshotRef;
 

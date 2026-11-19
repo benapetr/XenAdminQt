@@ -535,6 +535,26 @@ QStringList VM::GetSnapshotRefs() const
     return stringListProperty("snapshots");
 }
 
+QList<QSharedPointer<VM>> VM::GetSnapshots() const
+{
+    QList<QSharedPointer<VM>> snapshots;
+
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return snapshots;
+
+    const QStringList snapshotRefs = this->GetSnapshotRefs();
+    for (const QString& snapshotRef : snapshotRefs)
+    {
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
+        if (snapshot && snapshot->IsValid())
+            snapshots.append(snapshot);
+    }
+
+    return snapshots;
+}
+
 qint64 VM::MemoryTarget() const
 {
     return longProperty("memory_target", 0);
