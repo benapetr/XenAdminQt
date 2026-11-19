@@ -40,6 +40,12 @@ are omitted.
 
 ### Fixed
 
+- The console tab now follows changes like C#: the CD drive list updates when
+  drives are added or removed, host and storage driver domain consoles pick up
+  renames, the SSH button follows IP address changes after the VM boots, and
+  "Click here to start it" / "resume it" is only offered when a host that can
+  run the VM is enabled, updating as hosts are enabled or disabled. Deleting a
+  VM whose console is undocked closes the undocked window.
 - Undocked consoles: closing the window now puts the console back into the
   Console tab instead of leaving it in a hidden window, minimizing pauses the
   console again, a remembered position that is now off-screen (for example on a

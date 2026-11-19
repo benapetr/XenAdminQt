@@ -35,6 +35,8 @@
 #include "xenlib/xen/hostmetrics.h"
 #include "xenlib/xen/vmguestmetrics.h"
 #include "xenlib/xencache.h"
+#include "xenlib/vmhelpers.h"
+#include "VNCView.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "../commands/vm/startvmcommand.h"
@@ -97,12 +99,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     // if (guestMetrics != null)
     //     guestMetrics.PropertyChanged += guestMetrics_PropertyChanged;
     this->_guestMetricsRef = vm->GetGuestMetricsRef();
-    if (!this->_guestMetricsRef.isEmpty() && this->_guestMetricsRef != XENOBJECT_NULL)
-    {
-        // TODO: Wire up guestMetrics.PropertyChanged event handler
-        // Will be implemented in registerEventListeners()
-        qDebug() << "VNCTabView: VM has guest_metrics:" << this->_guestMetricsRef;
-    }
+    // Changes to it (and to the VM, its host or SR) are followed in registerEventListeners()
 
     // Register event listeners
     this->registerEventListeners();
@@ -138,9 +135,6 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
             // C#: HostLabel.Text = string.Format(Messages.CONSOLE_HOST, host.Name());
             this->ui->hostLabel->setText(tr("Host: %1").arg(host->GetName()));
             this->ui->hostLabel->setVisible(true);
-
-            // TODO: Register Server_PropertyChanged event listener on host
-            // TODO: Register Server_PropertyChanged event listener on host.metrics
         }
     } else if (isSRDriverDomain(vm, &srRef))
     {
@@ -154,17 +148,11 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
             // C#: HostLabel.Text = string.Format(Messages.CONSOLE_SR_DRIVER_DOMAIN, sr.Name());
             this->ui->hostLabel->setText(tr("SR driver domain: %1").arg(sr->GetName()));
             this->ui->hostLabel->setVisible(true);
-
-            // TODO: Register Server_PropertyChanged event listener on SR
         }
     } else
     {
         // Regular VM (not control domain)
         this->ui->hostLabel->setVisible(false);
-
-        // TODO: Register Host_CollectionChanged event listener
-        // TODO: Get target host from VM.GetStorageHost(false)
-        // TODO: Register Server_EnabledPropertyChanged on all hosts
     }
 
     // Update power state after initialization is complete
@@ -605,28 +593,10 @@ void VNCTabView::onVMPropertyChanged(const QString& propertyName)
     {
         this->updateOpenSSHConsoleButtonState();
     }
-    // C#: Handle name_label (update window title for control domains)
+    // C#: Handle name_label (dom0/driver domain label; the undocked title follows in VNCView)
     else if (propertyName == "name_label")
     {
-        if (this->m_vm && this->m_vm->GetConnection() && this->m_vm->IsControlDomain())
-        {
-            QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
-            if (!host)
-            {
-                QString hostRef = this->m_vm->GetResidentOnRef();
-                if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
-                    host = this->m_vm->GetCache()->ResolveObject<Host>(hostRef);
-            }
-
-            if (host)
-            {
-                this->ui->hostLabel->setText(tr("Console - %1").arg(host->GetName()));
-            }
-        } else if (this->m_vm && this->m_vm->GetConnection() && isSRDriverDomain(this->m_vm))
-        {
-            // SR driver domain naming would require additional XenLib method
-            this->ui->hostLabel->setText(tr("Console - Storage Driver Domain"));
-        }
+        this->updateHostLabel();
     }
 }
 
@@ -1288,9 +1258,7 @@ void VNCTabView::deregisterShortcutKeys()
 
 void VNCTabView::registerEventListeners()
 {
-    // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 117-159
-    qDebug() << "VNCTabView: registerEventListeners()";
-
+    // Reference: XenAdmin/ConsoleView/VNCTabView.cs constructor (lines 117-159)
     if (!this->m_vm || !this->m_vm->GetConnection() || this->m_vm->OpaqueRef().isEmpty())
     {
         qWarning() << "VNCTabView: Cannot register event listeners - connection or vmRef is null";
@@ -1298,103 +1266,237 @@ void VNCTabView::registerEventListeners()
     }
 
     XenCache* cache = this->m_vm->GetCache();
+    const QString vmRef = this->m_vm->OpaqueRef();
+    this->m_lastVmState = this->m_vm->GetData();
+    this->_guestMetricsRef = this->m_vm->GetGuestMetricsRef();
 
-    // C#: source.PropertyChanged += Server_PropertyChanged;
-    // Qt: Connect to cache objectChanged signal for this VM
-    connect(cache, &XenCache::objectChanged, this, [this](QSharedPointer<XenObject> object)
+    const bool isControlDomain = this->m_vm->IsControlDomain();
+    QString srRef;
+    if (isControlDomain)
     {
-        if (object == this->m_vm)
+        QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
+        if (host)
         {
-            // Check what changed and update UI accordingly
-            // C#: Server_PropertyChanged checks specific properties
-            this->updatePowerState();
-            // TODO: Check other properties like allowed_operations, is_control_domain, etc.
+            this->m_labelObjectRef = host->OpaqueRef();
+            this->m_hostMetricsRef = host->GetMetricsRef();
+        }
+    } else if (this->isSRDriverDomain(this->m_vm, &srRef))
+    {
+        this->m_labelObjectRef = srRef;
+    }
+
+    // Hosts that can start/resume the VM (C# Server_EnabledPropertyChanged on every host)
+    if (!isControlDomain)
+    {
+        for (const QSharedPointer<Host>& host : cache->GetAll<Host>())
+            if (host)
+                this->m_hostEnabled.insert(host->OpaqueRef(), host->IsEnabled());
+    }
+
+    // The cache can change while it is notifying, so the handlers run from the event loop
+    connect(cache, &XenCache::objectChanged, this, [this, vmRef](QSharedPointer<XenObject> object)
+    {
+        if (!object)
+            return;
+
+        const QString ref = object->OpaqueRef();
+        switch (object->GetObjectType())
+        {
+            case XenObjectType::VM:
+                if (ref == vmRef)
+                    QTimer::singleShot(0, this, &VNCTabView::onVmObjectChanged);
+                break;
+
+            case XenObjectType::VMGuestMetrics:
+                if (ref == this->_guestMetricsRef)
+                {
+                    QTimer::singleShot(0, this, [this]()
+                    {
+                        // RDP availability is in 'other' (C# guestMetrics_PropertyChanged)
+                        this->onDetectRDP();
+
+                        QSharedPointer<XenObject> metrics = this->m_vm->GetCache()->ResolveObject(XenObjectType::VMGuestMetrics, this->_guestMetricsRef);
+                        const QVariant networks = metrics ? metrics->GetData().value("networks") : QVariant();
+                        if (networks != this->m_lastGuestNetworks)
+                        {
+                            this->m_lastGuestNetworks = networks;
+                            this->onGuestMetricsPropertyChanged("networks");
+                        }
+                    });
+                }
+                break;
+
+            case XenObjectType::Host:
+                QTimer::singleShot(0, this, [this, object]() { this->onHostObjectChanged(object); });
+                break;
+
+            case XenObjectType::HostMetrics:
+                // 'live' of the host whose console this is
+                if (!this->m_hostMetricsRef.isEmpty() && ref == this->m_hostMetricsRef)
+                    QTimer::singleShot(0, this, &VNCTabView::updatePowerState);
+                break;
+
+            case XenObjectType::SR:
+                // name of the SR whose driver domain this is
+                if (ref == this->m_labelObjectRef)
+                    QTimer::singleShot(0, this, &VNCTabView::updateHostLabel);
+                break;
+
+            default:
+                break;
         }
     });
 
-    // C#: guestMetrics.PropertyChanged += guestMetrics_PropertyChanged;
-    // Use deferred update to avoid infinite loop (don't call cache queries inside cache callbacks)
-    QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
+    connect(cache, &XenCache::objectRemoved, this, [this, vmRef](QSharedPointer<XenObject> object)
     {
-        connect(cache, &XenCache::objectChanged, this, [this, guestMetricsRef](QSharedPointer<XenObject> object)
-        {
-            if (object && object->GetObjectType() == XenObjectType::VMGuestMetrics && object->OpaqueRef() == guestMetricsRef)
-            {
-                // Guest metrics changed - update RDP/SSH availability
-                // C#: guestMetrics_PropertyChanged updates RDP button state
-                qDebug() << "VNCTabView: Guest metrics changed for" << this->m_vm->OpaqueRef();
+        if (!object)
+            return;
 
-                // Defer update to next event loop iteration to avoid calling cache queries
-                // inside cache update callback (which causes infinite loops)
-                QTimer::singleShot(0, this, [this]()
-                {
-                    // Update RDP availability based on new guest metrics
-                    // Reference: C# VNCTabView.cs lines 565-580
-                    // Check if RDP became available and auto-switch if enabled
-                    onDetectRDP();
-                });
-            }
-        });
-    }
-
-    // C#: For control domain, register host property changes
-    // CRITICAL: Check isControlDomainZero() ONCE before creating connection, not inside lambda!
-    // Otherwise it triggers API calls on every cache update → infinite loop
-    QString hostRef = this->m_vm->GetResidentOnRef();
-    bool isControlDomain = this->m_vm->IsControlDomain();
-    if (isControlDomain && !hostRef.isEmpty())
-    {
-        qDebug() << "VNCTabView: Registering host property listener for control domain on" << hostRef;
-        connect(cache, &XenCache::objectChanged, this, [this, hostRef](QSharedPointer<XenObject> object)
+        if (object->GetObjectType() == XenObjectType::Host)
         {
-            if (object && object->GetObjectType() == XenObjectType::Host && object->OpaqueRef() == hostRef)
-            {
-                // Host changed - update power state
-                this->updatePowerState();
-            }
-        });
-
-        // C#: Also register host_metrics property changes
-        QSharedPointer<Host> host = cache->ResolveObject<Host>(hostRef);
-        QString hostMetricsRef = host ? host->GetMetricsRef() : QString();
-        if (!hostMetricsRef.isEmpty() && hostMetricsRef != XENOBJECT_NULL)
+            this->m_hostEnabled.remove(object->OpaqueRef());
+        } else if (object->GetObjectType() == XenObjectType::VM && object->OpaqueRef() == vmRef)
         {
-            qDebug() << "VNCTabView: Registering host_metrics listener for" << hostMetricsRef;
-            connect(cache, &XenCache::objectChanged, this, [this, hostMetricsRef](QSharedPointer<XenObject> object)
+            // C# VM_CollectionChanged: the VM is gone; re-dock an undocked console so the
+            // window doesn't linger until the tab itself is destroyed
+            QTimer::singleShot(0, this, [this]()
             {
-                if (object && object->GetObjectType() == XenObjectType::HostMetrics && object->OpaqueRef() == hostMetricsRef)
-                {
-                    // Host metrics changed - update power state (check 'live' field)
-                    this->updatePowerState();
-                }
+                if (this->m_parentVNCView && !this->m_parentVNCView->IsDocked())
+                    this->m_parentVNCView->DockUnDock();
             });
         }
-    }
+    });
+}
 
-    // C#: For SR driver domain, register SR property changes
-    // Use deferred update to avoid infinite loop (isSRDriverDomain() triggers cache queries)
-    QString srRef;
-    bool isSRDriver = isSRDriverDomain(this->m_vm, &srRef);
-    if (isSRDriver && !srRef.isEmpty())
+void VNCTabView::onVmObjectChanged()
+{
+    // C# Server_PropertyChanged gets the name of the changed property; work it out by
+    // comparing with the values seen last time
+    if (!this->m_vm)
+        return;
+
+    static const QStringList tracked {
+        "power_state", "allowed_operations", "VBDs", "guest_metrics", "VIFs", "name_label", "resident_on"
+    };
+
+    const QVariantMap data = this->m_vm->GetData();
+    if (data.isEmpty())
+        return;
+
+    QStringList changed;
+    for (const QString& key : tracked)
     {
-        qDebug() << "VNCTabView: Registering SR property listener for SR driver domain on" << srRef;
-        connect(cache, &XenCache::objectChanged, this, [this, srRef](QSharedPointer<XenObject> object)
-        {
-            if (object && object->GetObjectType() == XenObjectType::SR && object->OpaqueRef() == srRef)
-            {
-                // SR changed - may need to update labels
-                // Defer update to avoid calling cache queries inside cache callback
-                QTimer::singleShot(0, this, [this]() { this->updatePowerState(); });
-            }
-        });
+        if (data.value(key) != this->m_lastVmState.value(key))
+            changed.append(key);
+    }
+    this->m_lastVmState = data;
+
+    if (changed.contains("guest_metrics"))
+    {
+        this->_guestMetricsRef = this->m_vm->GetGuestMetricsRef();
+        this->m_lastGuestNetworks = QVariant();
     }
 
-    // Note: C# also registers Host_CollectionChanged and VM_CollectionChanged for migration targets
-    // This is more complex and involves tracking all hosts for migration capability
-    // We'll implement this when migration UI is ported
+    // power_state and allowed_operations both lead to one updatePowerState
+    bool powerStateDone = false;
+    for (const QString& key : changed)
+    {
+        if (key == "power_state" || key == "allowed_operations")
+        {
+            if (powerStateDone)
+                continue;
+            powerStateDone = true;
+        }
+        if (key == "resident_on")
+        {
+            // A dom0 console doesn't move; for a VM the possible start targets may change
+            if (!this->m_vm->IsControlDomain() && !powerStateDone)
+            {
+                powerStateDone = true;
+                this->updatePowerState();
+            }
+            continue;
+        }
+        this->onVMPropertyChanged(key);
+    }
+}
 
-    qDebug() << "VNCTabView: Event listeners registered for" << this->m_vm->OpaqueRef();
+void VNCTabView::onHostObjectChanged(const QSharedPointer<XenObject>& object)
+{
+    if (!object || !this->m_vm)
+        return;
+
+    const QString ref = object->OpaqueRef();
+
+    if (this->m_vm->IsControlDomain())
+    {
+        // C# Server_PropertyChanged on the host: name for the label, the rest for power state
+        if (ref == this->m_labelObjectRef)
+        {
+            this->updateHostLabel();
+            QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(object);
+            const QString metricsRef = host ? host->GetMetricsRef() : QString();
+            if (metricsRef != this->m_hostMetricsRef)
+            {
+                this->m_hostMetricsRef = metricsRef;
+                this->updatePowerState();
+            }
+        }
+        return;
+    }
+
+    // C# Server_EnabledPropertyChanged: a host was enabled or disabled (or added), which
+    // decides whether the "Click here to start it" link is offered
+    QSharedPointer<Host> host = this->m_vm->GetCache()->ResolveObject<Host>(ref);
+    if (!host)
+        return;
+
+    const bool enabled = host->IsEnabled();
+    const bool known = this->m_hostEnabled.contains(ref);
+    if (known && this->m_hostEnabled.value(ref) == enabled)
+        return;
+    this->m_hostEnabled.insert(ref, enabled);
+
+    QSharedPointer<Host> target = this->targetHost();
+    if (!target || target->OpaqueRef() == ref)
+        this->updatePowerState();
+}
+
+QSharedPointer<Host> VNCTabView::targetHost() const
+{
+    // C# targetHost = source.GetStorageHost(false): a VM on local storage can only start there
+    if (!this->m_vm || !this->m_vm->GetConnection())
+        return QSharedPointer<Host>();
+
+    const QString hostRef = VMHelpers::getVMStorageHost(this->m_vm->GetConnection(), this->m_vm->GetData(), false);
+    if (hostRef.isEmpty() || hostRef == XENOBJECT_NULL)
+        return QSharedPointer<Host>();
+    return this->m_vm->GetCache()->ResolveObject<Host>(hostRef);
+}
+
+void VNCTabView::updateHostLabel()
+{
+    // C# Server_PropertyChanged("name_label"): HostLabel and the undocked window title
+    if (!this->m_vm || this->m_labelObjectRef.isEmpty())
+        return;
+
+    XenCache* cache = this->m_vm->GetCache();
+    QString text;
+    if (this->m_vm->IsControlDomain())
+    {
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(this->m_labelObjectRef);
+        if (host)
+            text = tr("Host: %1").arg(host->GetName());
+    } else
+    {
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(this->m_labelObjectRef);
+        if (sr)
+            text = tr("SR driver domain: %1").arg(sr->GetName());
+    }
+
+    if (!text.isEmpty())
+        this->ui->hostLabel->setText(text);
+    // The undocked window follows through VNCView::onCacheObjectChanged
 }
 
 void VNCTabView::unregisterEventListeners()
@@ -1566,13 +1668,22 @@ void VNCTabView::hideTopBarContents()
 
         QStringList allowedOps = this->m_vm->GetAllowedOperations();
 
-        // C#: Also check Helpers.EnabledTargetExists(targetHost, source.Connection)
-        // For now, assume target exists if not control domain
+        // C# Helpers.EnabledTargetExists(targetHost, source.Connection): the VM's storage
+        // host must be enabled, or for shared storage any host in the pool
+        bool enabledTargetExists = false;
+        if (QSharedPointer<Host> target = this->targetHost())
+        {
+            enabledTargetExists = target->IsEnabled();
+        } else
+        {
+            for (const QSharedPointer<Host>& host : this->m_vm->GetCache()->GetAll<Host>())
+                enabledTargetExists = enabledTargetExists || (host && host->IsEnabled());
+        }
 
         if (powerState == "Halted")
         {
             // Check if VM can be started
-            if (allowedOps.contains("start"))
+            if (allowedOps.contains("start") && enabledTargetExists)
             {
                 // C#: EnablePowerStateLabel(Messages.CONSOLE_POWER_STATE_HALTED_START);
                 this->enablePowerStateLabel(tr("This VM is currently shut down.  Click here to start it."));
@@ -1589,7 +1700,7 @@ void VNCTabView::hideTopBarContents()
         } else if (powerState == "Suspended")
         {
             // Check if VM can be resumed
-            if (allowedOps.contains("resume"))
+            if (allowedOps.contains("resume") && enabledTargetExists)
             {
                 // C#: EnablePowerStateLabel(Messages.CONSOLE_POWER_STATE_SUSPENDED_RESUME);
                 this->enablePowerStateLabel(tr("This VM is currently suspended.  Click here to resume it."));

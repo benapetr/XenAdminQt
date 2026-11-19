@@ -45,6 +45,8 @@
 #define VNCTABVIEW_H
 
 #include <QWidget>
+#include <QHash>
+#include <QVariantMap>
 #include <QSize>
 #include <QString>
 #include <QImage>
@@ -59,6 +61,8 @@ class VNCView;
 class XenConnection;
 class XenCache;
 class VM;
+class Host;
+class XenObject;
 
 namespace Ui
 {
@@ -540,6 +544,20 @@ class VNCTabView : public QWidget
 
         QSharedPointer<VM> m_vm;
         QString _guestMetricsRef; ///< Guest metrics OpaqueRef
+        //! Last seen values of the VM fields C# Server_PropertyChanged reacts to; the cache only
+        //! says that an object changed, so these are compared to find out what did
+        QVariantMap m_lastVmState;
+        //! Last seen 'enabled' of each host (C# Server_EnabledPropertyChanged)
+        QHash<QString, bool> m_hostEnabled;
+        //! Last seen 'networks' of the guest metrics (C# guestMetrics_PropertyChanged)
+        QVariant m_lastGuestNetworks;
+        QString m_hostMetricsRef; ///< host_metrics of the host, for a control domain console
+        QString m_labelObjectRef; ///< Host or SR named in the header label of a dom0/driver domain console
+
+        void onVmObjectChanged();
+        void onHostObjectChanged(const QSharedPointer<XenObject>& host);
+        void updateHostLabel();
+        QSharedPointer<Host> targetHost() const;
         QString _targetHostRef;   ///< Target host OpaqueRef (for non-control-domain VMs)
 
         QSize m_lastDesktopSize;     ///< Last known desktop size
