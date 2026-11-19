@@ -9,6 +9,8 @@ are omitted.
 
 ### Added
 
+- The title bar shows "Filters are ON" or "Filters are OFF" on the Alerts and
+  Events pages, as in C#.
 - Quick Create (Templates menu and template context menu), as in C#: creates a
   VM named "<template> (n)" from an instant template and starts it straight
   away. The menu item used to show "Not Implemented". While the VM is being
@@ -50,6 +52,10 @@ are omitted.
 
 ### Fixed
 
+- The Memory tab now also updates when a VM's guest agent reports changes
+  (ballooning support, the Edit button), batches bursts of changes into one
+  redraw, skips redraws while hidden and, on a server, hides VMs that are
+  hidden in the tree, as in C#.
 - If the New VM wizard fails while creating a VM, the half-created VM and its
   disks are now deleted, as in C#, instead of being left behind.
 - While a server is being added to or removed from a pool it is hidden from the
