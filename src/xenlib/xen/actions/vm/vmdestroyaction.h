@@ -32,6 +32,11 @@
 #include "../../vm.h"
 #include <QStringList>
 
+namespace XenAPI
+{
+    class Session;
+}
+
 /**
  * @brief VMDestroyAction - Destroys a VM and optionally its disks
  *
@@ -69,17 +74,29 @@ class VMDestroyAction : public AsyncOperation
          */
         explicit VMDestroyAction(QSharedPointer<VM> vm, bool deleteAllOwnerDisks = false, QObject* parent = nullptr);
 
+        /**
+         * @brief Destroy a VM, its suspend image and optionally all disks it owns
+         *
+         * C# VMDestroyAction.DestroyVM(Session, VM, bool). Disk ownership is read from the
+         * server rather than the cache so it also works for a VM created moments ago, whose
+         * VBDs may not have reached the cache yet (CreateVMAction clean-up).
+         * @throws std::exception on failure (the first error if several occurred)
+         */
+        static void DestroyVM(XenAPI::Session* session, const QString& vmRef, bool deleteAllOwnerDisks);
+
     protected:
         void run() override;
 
     private:
         /**
-         * @brief Internal destroy method (can be called recursively for snapshots)
-         * @param vmRef VM opaque reference
-         * @param vbdRefsToDelete VBD refs to delete
-         * @param snapshotRefsToDelete Snapshot VM refs to delete
+         * @brief Destroy snapshots (with their own disks), then the VM, its suspend VDI and the given VDIs
          */
-        void destroyVM(const QString& vmRef, const QStringList& vbdRefsToDelete, const QStringList& snapshotRefsToDelete);
+        static void destroyVM(XenAPI::Session* session,
+                              const QString& vmRef,
+                              const QStringList& vdiRefsToDelete,
+                              const QStringList& snapshotRefsToDelete);
+
+        static QStringList ownerVdiRefs(XenAPI::Session* session, const QString& vmRef);
 
         QSharedPointer<VM> m_vm;
         QStringList m_vbdsToDelete;

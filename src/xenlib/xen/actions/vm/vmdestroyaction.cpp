@@ -32,6 +32,8 @@
 #include "../../vdi.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_VDI.h"
+#include "../../xenapi/xenapi_VBD.h"
+#include "../../failure.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
@@ -103,38 +105,64 @@ void VMDestroyAction::run()
 {
     try
     {
-        destroyVM(m_vm->OpaqueRef(), m_vbdsToDelete, m_snapshotsToDelete);
-        SetDescription("VM destroyed");
+        // The disks to delete were picked from the cache by the caller, as VBDs
+        QStringList vdiRefs;
+        XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+        for (const QString& vbdRef : this->m_vbdsToDelete)
+        {
+            QSharedPointer<VBD> vbd = cache ? cache->ResolveObject<VBD>(vbdRef) : QSharedPointer<VBD>();
+            const QString vdiRef = vbd ? vbd->GetVDIRef() : QString();
+            if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
+                vdiRefs.append(vdiRef);
+        }
 
+        destroyVM(this->GetSession(), this->m_vm->OpaqueRef(), vdiRefs, this->m_snapshotsToDelete);
+        this->SetDescription(tr("VM destroyed"));
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to destroy VM: %1").arg(e.what()));
+        this->setError(QString("Failed to destroy VM: %1").arg(e.what()));
     }
 }
 
-void VMDestroyAction::destroyVM(const QString& vmRef,
-                                const QStringList& vbdRefsToDelete,
+void VMDestroyAction::DestroyVM(XenAPI::Session* session, const QString& vmRef, bool deleteAllOwnerDisks)
+{
+    destroyVM(session, vmRef, deleteAllOwnerDisks ? ownerVdiRefs(session, vmRef) : QStringList(), QStringList());
+}
+
+QStringList VMDestroyAction::ownerVdiRefs(XenAPI::Session* session, const QString& vmRef)
+{
+    QStringList vdiRefs;
+    const QVariantList vbdRefs = XenAPI::VM::get_record(session, vmRef).value("VBDs").toList();
+    for (const QVariant& vbdRefVar : vbdRefs)
+    {
+        const QVariantMap vbdRecord = XenAPI::VBD::get_record(session, vbdRefVar.toString());
+        // C# VBD.GetIsOwner
+        if (!vbdRecord.value("other_config").toMap().contains("owner"))
+            continue;
+        const QString vdiRef = vbdRecord.value("VDI").toString();
+        if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
+            vdiRefs.append(vdiRef);
+    }
+    return vdiRefs;
+}
+
+void VMDestroyAction::destroyVM(XenAPI::Session* session,
+                                const QString& vmRef,
+                                const QStringList& vdiRefsToDelete,
                                 const QStringList& snapshotRefsToDelete)
 {
     QStringList errors;
 
-    // Step 1: Destroy snapshots
     for (const QString& snapshotRef : snapshotRefsToDelete)
     {
         try
         {
-            QSharedPointer<VM> snapshot = GetConnection()->GetCache()->ResolveObject<VM>(snapshotRef);
-            QString powerState = snapshot ? snapshot->GetPowerState() : QString();
+            const QVariantMap snapshotRecord = XenAPI::VM::get_record(session, snapshotRef);
+            if (snapshotRecord.value("power_state").toString() == "Suspended")
+                XenAPI::VM::hard_shutdown(session, snapshotRef);
 
-            // If snapshot is suspended, hard shutdown first
-            if (powerState == "Suspended")
-            {
-                XenAPI::VM::hard_shutdown(GetSession(), snapshotRef);
-            }
-
-            // Recursively destroy snapshot (with all its disks)
-            destroyVM(snapshotRef, QStringList(), QStringList());
-
+            // C# deletes the snapshot together with the disks it owns
+            DestroyVM(session, snapshotRef, true);
         } catch (const std::exception& e)
         {
             qWarning() << "Failed to delete snapshot" << snapshotRef << ":" << e.what();
@@ -142,59 +170,38 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
         }
     }
 
-    // Step 2: Collect VDIs to delete
-    QStringList vdiRefsToDelete;
+    QStringList vdiRefs = vdiRefsToDelete;
 
-    // Add VDIs from specified VBDs
-    for (const QString& vbdRef : vbdRefsToDelete)
-    {
-        QSharedPointer<VBD> vbd = GetConnection()->GetCache()->ResolveObject<VBD>(vbdRef);
-        QString vdiRef = vbd ? vbd->GetVDIRef() : QString();
+    // CA-91072: delete the suspend image VDI too
+    const QString suspendVdiRef = XenAPI::VM::get_record(session, vmRef).value("suspend_VDI").toString();
+    if (!suspendVdiRef.isEmpty() && suspendVdiRef != XENOBJECT_NULL && !vdiRefs.contains(suspendVdiRef))
+        vdiRefs.append(suspendVdiRef);
 
-        if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
-        {
-            vdiRefsToDelete.append(vdiRef);
-        }
-    }
+    XenAPI::VM::destroy(session, vmRef);
 
-    // Add suspend VDI if present
-    QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
-    QString suspendVdiRef = vm ? vm->GetSuspendVDIRef() : QString();
-    if (!suspendVdiRef.isEmpty() && suspendVdiRef != XENOBJECT_NULL)
-    {
-        vdiRefsToDelete.append(suspendVdiRef);
-    }
-
-    // Step 3: Destroy the VM itself
-    XenAPI::VM::destroy(GetSession(), vmRef);
-
-    // Step 4: Destroy VDIs
-    for (const QString& vdiRef : vdiRefsToDelete)
+    for (const QString& vdiRef : vdiRefs)
     {
         try
         {
-            XenAPI::VDI::destroy(GetSession(), vdiRef);
-
+            XenAPI::VDI::destroy(session, vdiRef);
         } catch (const std::exception& e)
         {
-            QString error = e.what();
-
             // CA-115249: XenAPI could have already deleted the VDI
-            // Ignore HANDLE_INVALID errors
-            if (error.contains("HANDLE_INVALID"))
+            const Failure* failure = dynamic_cast<const Failure*>(&e);
+            const bool handleInvalid = failure
+                ? (!failure->errorDescription().isEmpty() && failure->errorDescription().first() == Failure::HANDLE_INVALID)
+                : QString::fromUtf8(e.what()).contains(Failure::HANDLE_INVALID);
+            if (handleInvalid)
             {
                 qDebug() << "VDI" << vdiRef << "has already been deleted; ignoring";
             } else
             {
-                qWarning() << "Failed to delete VDI" << vdiRef << ":" << error;
-                errors.append(QString("Failed to delete VDI: %1").arg(error));
+                qWarning() << "Failed to delete VDI" << vdiRef << ":" << e.what();
+                errors.append(QString("Failed to delete VDI: %1").arg(e.what()));
             }
         }
     }
 
-    // If there were any errors, throw the first one
     if (!errors.isEmpty())
-    {
         throw std::runtime_error(errors.first().toStdString());
-    }
 }

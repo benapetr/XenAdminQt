@@ -26,6 +26,7 @@
  */
 
 #include "createvmaction.h"
+#include "vmdestroyaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -162,6 +163,10 @@ void CreateVMAction::run()
 
     // VM kept out of the tree while it is being set up (C# SetXenCenterProperties)
     QString hiddenVmRef;
+    // The new VM, destroyed again if creation fails before the point of no return
+    // (C# CleanOnError)
+    QString createdVmRef;
+    bool pointOfNoReturn = false;
 
     try
     {
@@ -173,6 +178,7 @@ void CreateVMAction::run()
         QString newVmRef = this->GetResult();
         if (newVmRef.isEmpty())
             throw std::runtime_error("Clone returned empty VM ref");
+        createdVmRef = newVmRef;
 
         QSharedPointer<VM> cachedVm = this->GetConnection()->WaitForCacheObject<VM>(
             "vm",
@@ -348,6 +354,7 @@ void CreateVMAction::run()
         // C#: ShowObject after AddNetworks, the point of no return
         HiddenObjects::Show(hiddenVmRef);
         hiddenVmRef.clear();
+        pointOfNoReturn = true;
 
         this->assignVgpu(session, newVmRef);
 
@@ -365,9 +372,23 @@ void CreateVMAction::run()
     }
     catch (const std::exception& e)
     {
-        // C# destroys the unfinished VM here (CleanOnError); this port doesn't yet, so the VM
-        // is made visible again rather than lingering out of sight
-        if (!hiddenVmRef.isEmpty())
+        // C# CleanOnError: destroy the unfinished VM and the disks it owns. It stays hidden
+        // while it goes away; only if that fails is it shown, so the user can deal with it.
+        bool destroyed = false;
+        if (!createdVmRef.isEmpty() && !pointOfNoReturn &&
+            this->GetConnection() && this->GetConnection()->IsConnected())
+        {
+            try
+            {
+                VMDestroyAction::DestroyVM(session, createdVmRef, true);
+                destroyed = true;
+            } catch (const std::exception& cleanupError)
+            {
+                // If the clean-up fails for whatever reason, log it and give up
+                qWarning() << "CreateVMAction: failed to destroy unfinished VM" << createdVmRef << ":" << cleanupError.what();
+            }
+        }
+        if (!hiddenVmRef.isEmpty() && !destroyed)
             HiddenObjects::Show(hiddenVmRef);
         this->setError(QString("Failed to create VM: %1").arg(e.what()));
     }

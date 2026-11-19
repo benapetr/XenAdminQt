@@ -50,6 +50,10 @@ are omitted.
 
 ### Fixed
 
+- If the New VM wizard fails while creating a VM, the half-created VM and its
+  disks are now deleted, as in C#, instead of being left behind.
+- Deleting a VM together with its snapshots now also deletes the snapshots'
+  own disks, as in C#.
 - Templates created from a snapshot are now marked as instant templates, as in
   C#, so Quick Create is offered for them.
 - VM > Uninstall VM now deletes the VM through the usual delete confirmation
