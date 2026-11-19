@@ -42,6 +42,7 @@ class XenCertificateManager;
 class ConnectTask;
 class MetricUpdater;
 class XenObject;
+class AsyncOperation;
 
 namespace XenAPI
 {
@@ -101,7 +102,13 @@ class XENLIB_EXPORT XenConnection : public QObject
 
         void BeginConnect(bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword = PasswordPrompt());
         void EndConnect(bool clearCache = true, bool exiting = false);
-        void Interrupt();
+        /**
+         * C# Interrupt: treat the connection as lost now (cancel its operations unless a disruption
+         * is expected, clear the cache, schedule the reconnect or coordinator search), as after
+         * rebooting or restarting the toolstack of the coordinator. The initiator, if any, is not
+         * cancelled. May be called from an operation's thread.
+         */
+        void Interrupt(AsyncOperation* initiator = nullptr);
         // Route heartbeat failure through the logical connection recovery flow.
         void HandleHeartbeatConnectionLost();
         ConnectTask* GetConnectTask() const;
@@ -240,7 +247,9 @@ class XENLIB_EXPORT XenConnection : public QObject
     private:
         //! Connection orchestration thread: login / cache warm / event loop
         void connectWorkerThread();
-        void handleConnectionLostNewFlow();
+        void handleConnectionLostNewFlow(AsyncOperation* initiator = nullptr);
+        //! C# ConnectionsManager.CancelAllActions: cancel this connection's unfinished operations
+        void cancelOperations(AsyncOperation* except);
         int reconnectHostTimeoutMs() const;
         QVariantMap fetchObjectRecord(const QString& cacheType, const QString& ref) const;
         void startReconnectSingleHostTimer();

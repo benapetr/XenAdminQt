@@ -60,7 +60,7 @@ void RestartToolstackAction::run()
         if (this->m_host->IsMaster())
         {
             qDebug() << "RestartToolstackAction: Host is coordinator, interrupting connection to force reconnect";
-            this->GetConnection()->Interrupt();
+            this->GetConnection()->Interrupt(this);
         }
 
         this->SetDescription(QString("Toolstack restarted on '%1'.").arg(this->m_host->GetName()));

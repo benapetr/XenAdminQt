@@ -154,7 +154,7 @@ void InstallServerCertificateAction::run()
         {
             this->SetDescription(tr("Waiting for server to reconnect after certificate installation..."));
             this->SetPercentComplete(60);
-            connection->Interrupt();
+            connection->Interrupt(this);
             reconnectSession = this->waitForReconnect();
             session = reconnectSession;
         } else
@@ -233,8 +233,10 @@ XenAPI::Session* InstallServerCertificateAction::waitForReconnect()
     if (!connection)
         throw std::runtime_error(tr("No active XenAPI connection is available.").toLocal8Bit().constData());
 
+    // The connection retries a lost host every 120 seconds (C# RECONNECT_HOST_TIMEOUT_MS), so
+    // allow for a failed first attempt
     const QDateTime start = QDateTime::currentDateTimeUtc();
-    while (start.msecsTo(QDateTime::currentDateTimeUtc()) < 120000)
+    while (start.msecsTo(QDateTime::currentDateTimeUtc()) < 300000)
     {
         if (connection->IsConnected() && connection->GetSession() && connection->GetSession()->IsLoggedIn())
         {

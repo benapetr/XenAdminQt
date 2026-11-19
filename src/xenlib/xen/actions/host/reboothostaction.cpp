@@ -92,7 +92,7 @@ void RebootHostAction::run()
         {
             XenConnection* connection = this->GetConnection();
             if (connection)
-                connection->Interrupt();
+                connection->Interrupt(this);
         }
     } catch (const Failure& failure)
     {

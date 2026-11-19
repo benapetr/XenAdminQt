@@ -36,6 +36,8 @@
 #include "../../xencache.h"
 #include "../pool.h"
 #include "metricupdater.h"
+#include "../asyncoperation.h"
+#include "../../operations/operationmanager.h"
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
 
@@ -555,15 +557,35 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
     emit this->ConnectionStateChanged();
 }
 
-void XenConnection::Interrupt()
+void XenConnection::Interrupt(AsyncOperation* initiator)
 {
-    if (!this->d->connectTask)
-        return;
+    // C# Interrupt: only a connected task is interrupted, then handled as a lost connection.
+    // The handling owns timers and the cache, so it runs on this object's thread; the caller
+    // (usually an operation's thread) waits for it, so it no longer sees itself connected.
+    QPointer<AsyncOperation> spared(initiator);
+    auto handle = [this, spared]()
+    {
+        if (!this->d->connectTask || !this->d->connectTask->Connected)
+            return;
+        this->d->connectTask->Cancelled = true;
+        this->handleConnectionLostNewFlow(spared.data());
+    };
 
-    this->d->connectTask->Cancelled = true;
-    // TODO: port HandleConnectionLost behavior (cancel actions, cache clear, reconnection scheduling).
-    emit this->ConnectionLost();
-    emit this->ConnectionStateChanged();
+    if (QThread::currentThread() == this->thread())
+        handle();
+    else
+        QMetaObject::invokeMethod(this, handle, Qt::BlockingQueuedConnection);
+}
+
+void XenConnection::cancelOperations(AsyncOperation* except)
+{
+    for (OperationManager::OperationRecord* record : OperationManager::instance()->GetRecords())
+    {
+        AsyncOperation* operation = record ? record->operation.data() : nullptr;
+        if (!operation || operation == except || operation->GetConnection() != this || operation->IsCompleted())
+            continue;
+        operation->Cancel();
+    }
 }
 
 void XenConnection::onCacheUpdateTimer()
@@ -742,12 +764,18 @@ void XenConnection::onEventPollerConnectionLost()
     this->handleConnectionLostNewFlow();
 }
 
-void XenConnection::handleConnectionLostNewFlow()
+void XenConnection::handleConnectionLostNewFlow(AsyncOperation* initiator)
 {
     if (!this->d->connectTask)
         return;
 
     this->d->connectTask->Connected = false;
+    qWarning() << "XenConnection: Lost connection to" << this->d->host;
+
+    // C# HandleConnectionLost: cancel this connection's operations, unless something (a network
+    // reconfiguration, a certificate change) said the drop was coming
+    if (!this->d->expectDisruption)
+        this->cancelOperations(initiator);
 
     QString poolName;
     bool haEnabled = false;
