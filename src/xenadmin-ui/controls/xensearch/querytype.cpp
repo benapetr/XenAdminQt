@@ -298,15 +298,20 @@ void EnumPropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryEle
         return;
     
     queryElement->setMatchTypeSelection(enumQuery->isNegated() ? "Is not" : "Is");
-    queryElement->setComboBoxSelection(enumQuery->getValue());
+    // Match the stored name to an offered one regardless of case or flag spacing
+    for (const auto& entry : PropertyAccessors::EnumValues(this->property_))
+    {
+        if (QString(entry.second).remove(' ').compare(QString(enumQuery->getValue()).remove(' '), Qt::CaseInsensitive) == 0)
+            queryElement->setComboBoxValue(entry.second);
+    }
 }
 
 QueryFilter* EnumPropertyQueryType::GetQuery(QueryElement* queryElement) const
 {
-    QString matchType = queryElement->getMatchTypeSelection();
-    bool negated = (matchType == "Is not");
-    QString value = queryElement->getComboBoxSelection();
-    
+    const bool negated = (queryElement->getMatchTypeSelection() == "Is not");
+    const QString value = queryElement->getComboBoxValue().toString();
+    if (value.isEmpty())
+        return nullptr;
     return new EnumQuery(this->property_, value, negated);
 }
 
@@ -334,34 +339,10 @@ QVariantList EnumPropertyQueryType::getComboButtonEntries(QueryElement* queryEle
 
 QVariantList EnumPropertyQueryType::getEnumValues() const
 {
+    // C# PropertyAccessors.Geti18nFor: labels for the C# enum names the query stores
     QVariantList values;
-    
-    switch (this->property_)
-    {
-        case PropertyNames::power_state:
-            values << "Running" << "Halted" << "Suspended" << "Paused";
-            break;
-        
-        case PropertyNames::virtualisation_status:
-            values << "Not installed" << "Out of date" << "Up to date" << "Unknown";
-            break;
-        
-        case PropertyNames::type:
-            values << "Pool" << "Server" << "VM" << "Storage" << "Network" << "vApp";
-            break;
-        
-        case PropertyNames::sr_type:
-            values << "ISO" << "NFS" << "LVM" << "EXT" << "CIFS";
-            break;
-        
-        case PropertyNames::ha_restart_priority:
-            values << "Restart" << "Best effort" << "Do not restart";
-            break;
-        
-        default:
-            break;
-    }
-    
+    for (const auto& entry : PropertyAccessors::EnumValues(this->property_))
+        values.append(QueryElement::ComboEntry(entry.first, entry.second));
     return values;
 }
 
@@ -465,10 +446,23 @@ DatePropertyQueryType::DatePropertyQueryType(int group, ObjectTypes appliesTo, P
 bool DatePropertyQueryType::ForQuery(QueryFilter* query) const
 {
     DateQuery* dateQuery = dynamic_cast<DateQuery*>(query);
-    if (!dateQuery)
-        return false;
-    
-    return dateQuery->getProperty() == this->property_;
+    return dateQuery && dateQuery->getProperty() == this->property_;
+}
+
+QueryFilter* DatePropertyQueryType::GetQuery(QueryElement* queryElement) const
+{
+    QDateTime dateTime;
+    DateQuery::ComparisonType type;
+    dateQueryFrom(queryElement, dateTime, type);
+    return new DateQuery(this->property_, dateTime, type);
+}
+
+// C# DatePropertyQueryType.GetQuery: the chosen type with the picker's date
+void DatePropertyQueryType::dateQueryFrom(QueryElement* queryElement, QDateTime& dateTime,
+                                          DateQuery::ComparisonType& type)
+{
+    type = comparisonTypeFromString(queryElement->getMatchTypeSelection());
+    dateTime = queryElement->getDateTimeValue();
 }
 
 void DatePropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
@@ -481,52 +475,8 @@ void DatePropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryEle
 void DatePropertyQueryType::showDateQuery(QueryElement* queryElement, const QDateTime& dateTime,
                                           DateQuery::ComparisonType type)
 {
-    ComparisonType uiComparisonType = ComparisonType::Exact;
-    if (type == DateQuery::ComparisonType::Before)
-        uiComparisonType = ComparisonType::Before;
-    else if (type == DateQuery::ComparisonType::After)
-        uiComparisonType = ComparisonType::After;
-
-    queryElement->setMatchTypeSelection(comparisonTypeToString(uiComparisonType));
+    queryElement->setMatchTypeSelection(comparisonTypeToString(type));
     queryElement->setDateTimeValue(dateTime);
-}
-
-QueryFilter* DatePropertyQueryType::GetQuery(QueryElement* queryElement) const
-{
-    QDateTime dateTime;
-    DateQuery::ComparisonType type;
-    dateQueryFrom(queryElement, dateTime, type);
-    return new DateQuery(this->property_, dateTime, type);
-}
-
-void DatePropertyQueryType::dateQueryFrom(QueryElement* queryElement, QDateTime& dateTime,
-                                          DateQuery::ComparisonType& queryComparisonType)
-{
-    const ComparisonType comparisonType = comparisonTypeFromString(queryElement->getMatchTypeSelection());
-
-    // Relative ranges become "after" a moment computed now
-    if (comparisonType == ComparisonType::Last24Hours)
-    {
-        dateTime = QDateTime::currentDateTime().addDays(-1);
-        queryComparisonType = DateQuery::ComparisonType::After;
-    } else if (comparisonType == ComparisonType::Last7Days)
-    {
-        dateTime = QDateTime::currentDateTime().addDays(-7);
-        queryComparisonType = DateQuery::ComparisonType::After;
-    } else if (comparisonType == ComparisonType::LastMonth)
-    {
-        dateTime = QDateTime::currentDateTime().addMonths(-1);
-        queryComparisonType = DateQuery::ComparisonType::After;
-    } else
-    {
-        dateTime = queryElement->getDateTimeValue();
-        if (comparisonType == ComparisonType::Before)
-            queryComparisonType = DateQuery::ComparisonType::Before;
-        else if (comparisonType == ComparisonType::After)
-            queryComparisonType = DateQuery::ComparisonType::After;
-        else
-            queryComparisonType = DateQuery::ComparisonType::Exact;
-    }
 }
 
 QString DatePropertyQueryType::toString() const
@@ -539,9 +489,9 @@ bool DatePropertyQueryType::showDateTimePicker(QueryElement* queryElement) const
     return showsDateTimePicker(queryElement);
 }
 
+// C# ShouldShowDateTimePicker: only before, after and exact use a date
 bool DatePropertyQueryType::showsDateTimePicker(QueryElement* queryElement)
 {
-    // Only absolute comparisons need a date
     const ComparisonType type = comparisonTypeFromString(queryElement->getMatchTypeSelection());
     return type == ComparisonType::Before || type == ComparisonType::After || type == ComparisonType::Exact;
 }
@@ -551,53 +501,42 @@ QStringList DatePropertyQueryType::getMatchTypeComboButtonEntries() const
     return matchTypeEntries();
 }
 
+// C# DatePropertyQueryType.MatchTypeEntries
 QStringList DatePropertyQueryType::matchTypeEntries()
 {
-    return QStringList()
-        << comparisonTypeToString(ComparisonType::Before)
-        << comparisonTypeToString(ComparisonType::After)
-        << comparisonTypeToString(ComparisonType::Exact)
-        << comparisonTypeToString(ComparisonType::Last24Hours)
-        << comparisonTypeToString(ComparisonType::Last7Days)
-        << comparisonTypeToString(ComparisonType::LastMonth);
+    QStringList entries;
+    for (ComparisonType type : {ComparisonType::Today, ComparisonType::Yesterday, ComparisonType::ThisWeek,
+                                ComparisonType::LastWeek, ComparisonType::Before, ComparisonType::After,
+                                ComparisonType::Exact})
+        entries << comparisonTypeToString(type);
+    return entries;
 }
 
 DatePropertyQueryType::ComparisonType DatePropertyQueryType::comparisonTypeFromString(const QString& str)
 {
-    if (str == "before" || str == "Before")
-        return ComparisonType::Before;
-    if (str == "after" || str == "After")
-        return ComparisonType::After;
-    if (str == "exact" || str == "Exact")
-        return ComparisonType::Exact;
-    if (str == "in the last 24 hours" || str == "In the last 24 hours")
-        return ComparisonType::Last24Hours;
-    if (str == "in the last 7 days" || str == "In the last 7 days")
-        return ComparisonType::Last7Days;
-    if (str == "in the last month" || str == "In the last month")
-        return ComparisonType::LastMonth;
-    
-    return ComparisonType::After;
+    for (ComparisonType type : {ComparisonType::Today, ComparisonType::Yesterday, ComparisonType::ThisWeek,
+                                ComparisonType::LastWeek, ComparisonType::Before, ComparisonType::After,
+                                ComparisonType::Exact})
+    {
+        if (comparisonTypeToString(type) == str)
+            return type;
+    }
+    return ComparisonType::Today;
 }
 
 QString DatePropertyQueryType::comparisonTypeToString(ComparisonType type)
 {
     switch (type)
     {
-        case ComparisonType::Before:
-            return "Before";
-        case ComparisonType::After:
-            return "After";
-        case ComparisonType::Exact:
-            return "Exact";
-        case ComparisonType::Last24Hours:
-            return "In the last 24 hours";
-        case ComparisonType::Last7Days:
-            return "In the last 7 days";
-        case ComparisonType::LastMonth:
-            return "In the last month";
+        case ComparisonType::Today:     return QObject::tr("is today");
+        case ComparisonType::Yesterday: return QObject::tr("was yesterday");
+        case ComparisonType::ThisWeek:  return QObject::tr("is this week");
+        case ComparisonType::LastWeek:  return QObject::tr("was last week");
+        case ComparisonType::Before:    return QObject::tr("is before");
+        case ComparisonType::After:     return QObject::tr("is after");
+        case ComparisonType::Exact:     return QObject::tr("exactly matches");
     }
-    return "After";
+    return QObject::tr("is today");
 }
 
 // ============================================================================

@@ -682,18 +682,6 @@ bool VAppGrouping::equals(const Grouping* other) const
 
 namespace
 {
-    // C# VM.HaRestartPriority names for the xapi values
-    QString haRestartPriorityName(const QString& value)
-    {
-        if (value == "restart")
-            return QObject::tr("Restart");
-        if (value == "best-effort")
-            return QObject::tr("Restart if possible");
-        if (value.isEmpty())
-            return QObject::tr("Do not restart");
-        return value;
-    }
-
     QVariant listOrValue(const QVariant& value)
     {
         if (value.userType() == QMetaType::QStringList)
@@ -745,16 +733,10 @@ QVariant PropertyGrouping::getGroup(const QVariantMap& objectData, const QString
 
 QString PropertyGrouping::getGroupName(const QVariant& group) const
 {
-    // C#: the translated name of an enum value, otherwise the value itself
-    if (this->m_property == XenSearch::PropertyNames::ha_restart_priority)
-        return haRestartPriorityName(group.toString());
-
-    const QMap<QString, QVariant> i18n = XenSearch::PropertyAccessors::GetI18nFor(this->m_property);
-    for (auto it = i18n.constBegin(); it != i18n.constEnd(); ++it)
-    {
-        if (it.value() == group || it.value().toString() == group.toString())
-            return it.key();
-    }
+    // C#: the label of an enum value, otherwise the value itself
+    if (!XenSearch::PropertyAccessors::EnumValues(this->m_property).isEmpty())
+        return XenSearch::PropertyAccessors::EnumDisplayName(this->m_property,
+                                                             XenSearch::PropertyAccessors::EnumName(this->m_property, group));
     return Grouping::getGroupName(group);
 }
 
@@ -764,9 +746,8 @@ QueryFilter* PropertyGrouping::getSubquery(const QVariant& parent, const QVarian
     // C# PropertyGrouping.GetSubquery
     if (this->m_property == XenSearch::PropertyNames::tags)
         return new TagQuery(group.toString(), false);
-    if (!XenSearch::PropertyAccessors::GetI18nFor(this->m_property).isEmpty() ||
-        this->m_property == XenSearch::PropertyNames::ha_restart_priority)
-        return new EnumQuery(this->m_property, group.toString(), false);
+    if (!XenSearch::PropertyAccessors::EnumValues(this->m_property).isEmpty())
+        return new EnumQuery(this->m_property, XenSearch::PropertyAccessors::EnumName(this->m_property, group), false);
     if (group.userType() == QMetaType::QString)
         return new ValuePropertyQuery(this->m_property, group.toString(), true);
     return nullptr;

@@ -249,16 +249,8 @@ namespace XenSearch
     class DatePropertyQueryType : public QueryType
     {
         public:
-            // Extended enum for UI - includes relative time ranges
-            enum class ComparisonType
-            {
-                Before,
-                After,
-                Exact,
-                Last24Hours,
-                Last7Days,
-                LastMonth
-            };
+            // C# DatePropertyQuery.PropertyQueryType
+            using ComparisonType = DateQuery::ComparisonType;
 
             DatePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 

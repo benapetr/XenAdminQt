@@ -192,7 +192,7 @@ QVariant StringPropertyQuery::Match(const QVariantMap& objectData, const QString
     Q_UNUSED(objectType);
     
     // Get property value
-    QVariant propValue = getPropertyValue(objectData, this->property_);
+    QVariant propValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     if (!propValue.isValid())
         return false;
     
@@ -251,17 +251,13 @@ EnumQuery::EnumQuery(PropertyNames property, const QString& value, bool negated)
 
 QVariant EnumQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
-    Q_UNUSED(conn);
-    Q_UNUSED(objectType);
-    
-    // Get property value
-    QVariant propValue = getPropertyValue(objectData, this->property_);
+    // C# EnumPropertyQuery<T>: the property's enum value equals the query (both as C# names)
+    const QVariant propValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     if (!propValue.isValid())
-        return false;
-    
-    QString value = propValue.toString();
-    bool matches = (value.compare(this->value_, Qt::CaseInsensitive) == 0);
-    
+        return false; // C# PropertyQuery nullProtect
+
+    auto normalise = [](QString name) { return name.remove(' ').toLower(); };
+    const bool matches = normalise(PropertyAccessors::EnumName(this->property_, propValue)) == normalise(this->value_);
     return this->negated_ ? !matches : matches;
 }
 
@@ -300,7 +296,7 @@ QVariant NumericQuery::Match(const QVariantMap& objectData, const QString& objec
     Q_UNUSED(objectType);
     
     // Get property value
-    QVariant propValue = getPropertyValue(objectData, this->property_);
+    QVariant propValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     if (!propValue.isValid())
         return false;
     
@@ -356,32 +352,37 @@ DateQuery::DateQuery(PropertyNames property, const QDateTime& value, ComparisonT
 
 QVariant DateQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
-    Q_UNUSED(conn);
-    Q_UNUSED(objectType);
-    
-    // Get property value
-    QVariant propValue = getPropertyValue(objectData, this->property_);
-    if (!propValue.isValid())
-        return false;
-    
-    QDateTime value = propValue.toDateTime();
+    const QVariant propValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
+    const QDateTime value = propValue.toDateTime();
     if (!value.isValid())
-        return false;
-    
-    // Perform comparison
-    switch (this->comparisonType_)
+        return false; // C# PropertyQuery nullProtect
+
+    return MatchDate(value, this->value_, this->comparisonType_);
+}
+
+bool DateQuery::MatchDate(const QDateTime& value, const QDateTime& query, ComparisonType type, const QDateTime& now)
+{
+    const QDate day = value.toLocalTime().date();
+    const QDate today = now.toLocalTime().date();
+    const qint64 daysAgo = day.daysTo(today);
+
+    switch (type)
     {
+        case ComparisonType::Today:
+            return daysAgo == 0;
+        case ComparisonType::Yesterday:
+            return daysAgo == 1;
+        case ComparisonType::ThisWeek:
+            return daysAgo >= 0 && daysAgo < 7;
+        case ComparisonType::LastWeek:
+            return daysAgo >= 7 && daysAgo < 14;
         case ComparisonType::Before:
-            return value < this->value_;
-        
+            return day <= query.date();
         case ComparisonType::After:
-            return value > this->value_;
-        
+            return day >= query.date();
         case ComparisonType::Exact:
-            // Match same date (ignoring time)
-            return value.date() == this->value_.date();
+            return day == query.date();
     }
-    
     return false;
 }
 
@@ -419,7 +420,7 @@ QVariant BoolQuery::Match(const QVariantMap& objectData, const QString& objectTy
     Q_UNUSED(objectType);
     
     // Get property value
-    QVariant propValue = getPropertyValue(objectData, this->property_);
+    QVariant propValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     if (!propValue.isValid())
         return false;
     
@@ -507,7 +508,7 @@ QVariant IPAddressQuery::Match(const QVariantMap& objectData, const QString& obj
     Q_UNUSED(objectType);
     Q_UNUSED(conn);
     
-    QVariant value = getPropertyValue(objectData, this->property_);
+    QVariant value = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     if (!value.isValid())
         return false;
     
@@ -564,7 +565,7 @@ QVariant NullPropertyQuery::Match(const QVariantMap& objectData, const QString& 
     Q_UNUSED(objectType);
     Q_UNUSED(conn);
     
-    QVariant value = getPropertyValue(objectData, this->property_);
+    QVariant value = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     
     // Check if property value is null/empty
     // C# checks (o == null), we check for invalid/null/empty variants
@@ -615,25 +616,11 @@ RecursivePropertyQuery::~RecursivePropertyQuery()
 
 namespace
 {
-    // C# RecursivePropertyQuery reads the relationship through PropertyAccessors on the typed
-    // object. Use the typed accessor where one exists; fall back to the raw-record helper for
-    // properties that only have that (folders).
+    // C# RecursivePropertyQuery reads the relationship through PropertyAccessors on the typed object
     QVariant relationshipValue(const QVariantMap& objectData, const QString& objectType,
                                PropertyNames property, XenConnection* conn)
     {
-        const std::function<QVariant(XenObject*)> accessor = PropertyAccessors::Get(property);
-        if (accessor && conn && conn->GetCache())
-        {
-            QString ref = objectData.value("ref").toString();
-            if (ref.isEmpty())
-                ref = objectData.value("opaque_ref").toString();
-            QSharedPointer<XenObject> object = ref.isEmpty()
-                ? QSharedPointer<XenObject>()
-                : conn->GetCache()->ResolveObject(objectType, ref);
-            if (object)
-                return accessor(object.data());
-        }
-        return getPropertyValue(objectData, property);
+        return PropertyAccessors::GetValue(property, objectData, objectType, conn);
     }
 }
 
@@ -803,26 +790,23 @@ XenModelObjectPropertyQuery::XenModelObjectPropertyQuery(PropertyNames property,
 
 QVariant XenModelObjectPropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(objectType);
-    Q_UNUSED(conn);
-    
     if (this->uuid_.isEmpty() || this->uuid_ == "invalid")
         return false;
-    
-    // Get the property value (should be an opaque ref)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
-    
-    if (!propertyValue.isValid() || propertyValue.toString().isEmpty())
+
+    // C# XenModelObjectPropertyQuery<T>: compares the related object's UUID
+    const QString ref = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn).toString();
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return false;
-    
-    QString ref = propertyValue.toString();
-    
-    // Get UUID from the referenced object
-    // Note: In C#, they look up the object and get its UUID
-    // For simplicity, we'll compare the opaque ref directly
-    // TODO: Implement proper UUID lookup when XenObject cache is complete
-    
-    bool matches = (ref == this->uuid_);
+
+    QString uuid = ref;
+    if (conn && conn->GetCache())
+    {
+        const QString related = conn->GetCache()->ResolveObjectData(getObjectTypeFromPropertyName(this->property_), ref).value("uuid").toString();
+        if (!related.isEmpty())
+            uuid = related;
+    }
+
+    const bool matches = (uuid == this->uuid_ || ref == this->uuid_);
     return this->equals_ ? matches : !matches;
 }
 
@@ -855,35 +839,28 @@ XenModelObjectListContainsQuery::XenModelObjectListContainsQuery(PropertyNames p
 
 QVariant XenModelObjectListContainsQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(objectType);
-    Q_UNUSED(conn);
-    
-    // Get the property value (should be a list of opaque refs)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
-    
-    QVariantList refList;
-    if (propertyValue.canConvert<QVariantList>())
-    {
-        refList = propertyValue.toList();
-    }
-    else if (propertyValue.canConvert<QStringList>())
-    {
-        QStringList strList = propertyValue.toStringList();
-        for (const QString& str : strList)
-            refList.append(str);
-    }
-    
+    // C# XenModelObjectListContainsQuery<T>: does the list hold the object with this UUID?
+    const QVariantList refList = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn).toList();
+    const QString refType = getObjectTypeFromPropertyName(this->property_);
+
     bool found = false;
     for (const QVariant& refVariant : refList)
     {
-        QString ref = refVariant.toString();
-        if (ref == this->uuid_)
+        const QString ref = refVariant.toString();
+        QString uuid = ref;
+        if (conn && conn->GetCache())
+        {
+            const QString related = conn->GetCache()->ResolveObjectData(refType, ref).value("uuid").toString();
+            if (!related.isEmpty())
+                uuid = related;
+        }
+        if (uuid == this->uuid_ || ref == this->uuid_)
         {
             found = true;
             break;
         }
     }
-    
+
     return this->contains_ ? found : !found;
 }
 
@@ -920,7 +897,7 @@ QVariant XenModelObjectListContainsNameQuery::Match(const QVariantMap& objectDat
     Q_UNUSED(objectType);
     
     // Get the property value (should be a list of opaque refs)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    QVariant propertyValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     
     QVariantList refList;
     if (propertyValue.canConvert<QVariantList>())
@@ -1020,7 +997,7 @@ QVariant ListEmptyQuery::Match(const QVariantMap& objectData, const QString& obj
     Q_UNUSED(conn);
     
     // Get the property value (should be a list)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    QVariant propertyValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     
     int count = 0;
     if (propertyValue.canConvert<QVariantList>())
@@ -1163,21 +1140,8 @@ QVariant CustomFieldDateQuery::Match(const QVariantMap& objectData, const QStrin
     if (!fieldDate.isValid())
         return false;  // Invalid date format
     
-    // Match date using same logic as DateQuery
-    switch (this->type_)
-    {
-        case DateQuery::ComparisonType::Before:
-            return fieldDate < this->query_;
-        
-        case DateQuery::ComparisonType::After:
-            return fieldDate > this->query_;
-        
-        case DateQuery::ComparisonType::Exact:
-            // Same day in local time (C# parses the stored UTC time to local)
-            return fieldDate.toLocalTime().date() == this->query_.toLocalTime().date();
-    }
-    
-    return false;
+    // C# CustomFieldDateQuery: DatePropertyQuery.MatchDate
+    return DateQuery::MatchDate(fieldDate, this->query_, this->type_);
 }
 
 bool CustomFieldDateQuery::Equals(const QueryFilter* other) const
@@ -1212,7 +1176,7 @@ QVariant ValuePropertyQuery::Match(const QVariantMap& objectData, const QString&
     Q_UNUSED(conn);
     
     // Get property value
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    QVariant propertyValue = PropertyAccessors::GetValue(this->property_, objectData, objectType, conn);
     
     if (!propertyValue.isValid())
         return QVariant();  // Indeterminate

@@ -75,6 +75,12 @@ are omitted.
 
 ### Fixed
 
+- Search conditions read the same values as C#, so conditions on values held
+  by related records now match: Operating System, Start Time, Tools Status,
+  Memory and HA Restart Priority never matched before. Enum conditions offer
+  the C# choices (for example "Fully optimized" for tools status), and date
+  conditions offer "is today", "was yesterday", "is this week", "was last
+  week", "is before", "is after" and "exactly matches", matched as in C#.
 - Search "Group by" works as in C#: grouping by operating system, power state,
   tools status, HA restart priority, read caching, Windows Update capable,
   network, SR, virtual disk, VM, vApp and custom fields now groups by those

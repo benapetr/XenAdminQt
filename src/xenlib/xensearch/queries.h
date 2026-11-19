@@ -345,14 +345,27 @@ class NumericQuery : public QueryFilter
 class DateQuery : public QueryFilter
 {
     public:
+        //! C# DatePropertyQuery.PropertyQueryType, in the same order
         enum class ComparisonType
         {
+            Today,
+            Yesterday,
+            ThisWeek,
+            LastWeek,
             Before,
             After,
             Exact
         };
 
         DateQuery(XenSearch::PropertyNames property, const QDateTime& value, ComparisonType comparisonType);
+
+        /**
+         * C# DatePropertyQuery.MatchDate: compares local dates only (times never matter). "This week"
+         * is today and the six days before; "last week" the seven days before that. Before and after
+         * include the day itself.
+         */
+        static bool MatchDate(const QDateTime& value, const QDateTime& query, ComparisonType type,
+                              const QDateTime& now = QDateTime::currentDateTime());
 
         QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const override;
         bool Equals(const QueryFilter* other) const override;

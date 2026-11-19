@@ -404,6 +404,41 @@ private slots:
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
     }
 
+    void conditionsReadTypedPropertiesLikeCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        const QDateTime started = QDateTime::currentDateTimeUtc().addDays(-1);
+        cache->Update(XenObjectType::VMGuestMetrics, "OpaqueRef:gm", QVariantMap{
+            {"os_version", QVariantMap{{"name", "Debian 12"}}}});
+        cache->Update(XenObjectType::VMMetrics, "OpaqueRef:m", QVariantMap{{"start_time", started.toString("yyyyMMdd'T'HH:mm:ss'Z'")}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"uuid", "vm-uuid"}, {"name_label", "web"},
+            {"power_state", "Running"}, {"guest_metrics", "OpaqueRef:gm"}, {"metrics", "OpaqueRef:m"}});
+        const QVariantMap vm = cache->ResolveObjectData(XenObjectType::VM, "OpaqueRef:vm");
+        auto match = [&](const QueryFilter& q) { return q.Match(vm, "vm", &connection); };
+
+        // Enum conditions carry the C# names
+        QCOMPARE(match(EnumQuery(XenSearch::PropertyNames::power_state, "Running")).toBool(), true);
+        QCOMPARE(match(EnumQuery(XenSearch::PropertyNames::power_state, "Halted")).toBool(), false);
+        QCOMPARE(XenSearch::PropertyAccessors::EnumName(XenSearch::PropertyNames::virtualisation_status, 12),
+                 QString("IoDriversInstalled, ManagementInstalled"));
+        QCOMPARE(XenSearch::PropertyAccessors::EnumName(XenSearch::PropertyNames::ha_restart_priority, "best-effort"),
+                 QString("BestEffort"));
+
+        // Values that live on related records (guest metrics, metrics)
+        QCOMPARE(match(ValuePropertyQuery(XenSearch::PropertyNames::os_name, "Debian 12", true)).toBool(), true);
+        QCOMPARE(match(DateQuery(XenSearch::PropertyNames::start_time, QDateTime(), DateQuery::ComparisonType::Yesterday)).toBool(), true);
+        QCOMPARE(match(DateQuery(XenSearch::PropertyNames::start_time, QDateTime(), DateQuery::ComparisonType::Today)).toBool(), false);
+        QCOMPARE(match(DateQuery(XenSearch::PropertyNames::start_time, QDateTime(), DateQuery::ComparisonType::ThisWeek)).toBool(), true);
+
+        // C# MatchDate: before and after include the day itself
+        const QDateTime noon(QDate(2026, 5, 4), QTime(12, 0));
+        QVERIFY(DateQuery::MatchDate(noon, noon, DateQuery::ComparisonType::Before));
+        QVERIFY(DateQuery::MatchDate(noon, noon, DateQuery::ComparisonType::After));
+        QVERIFY(DateQuery::MatchDate(noon.addDays(-8), QDateTime(), DateQuery::ComparisonType::LastWeek, noon));
+        QVERIFY(!DateQuery::MatchDate(noon.addDays(-8), QDateTime(), DateQuery::ComparisonType::ThisWeek, noon));
+    }
+
     void genericGroupingsGroupLikeCSharp()
     {
         XenConnection connection;

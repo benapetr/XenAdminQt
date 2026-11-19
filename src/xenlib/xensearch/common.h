@@ -289,6 +289,30 @@ class PropertyAccessors
          * @return Localized display string
          */
         static QString GetObjectTypeDisplayName(ObjectTypes type);
+
+        /**
+         * The value of a property of an object, as C# PropertyAccessors.Get(property)(o) gives it:
+         * through the typed object when the connection can resolve it, otherwise from the record.
+         */
+        static QVariant GetValue(PropertyNames property, const QVariantMap& objectData,
+                                 const QString& objectType, XenConnection* conn);
+
+        /**
+         * The C# enum member name of an enum-valued property (power_state, virtualisation_status,
+         * type, ha_restart_priority, sr_type), as C# writes it in saved searches. Flags combine as
+         * "IoDriversInstalled, ManagementInstalled".
+         */
+        static QString EnumName(PropertyNames property, const QVariant& value);
+
+        //! The values an enum property can take, as (label, C# name), in C# order
+        static QList<QPair<QString, QString>> EnumValues(PropertyNames property);
+
+        //! The label of a C# enum name (falls back to the name)
+        static QString EnumDisplayName(PropertyNames property, const QString& name);
+
+        //! C# ObjectTypes member names ("VM", "RemoteSR", ...)
+        static QString ObjectTypeName(ObjectTypes type);
+        static ObjectTypes ObjectTypeFromName(const QString& name);
         
         
     private:

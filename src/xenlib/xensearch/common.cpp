@@ -26,6 +26,7 @@
  */
 
 #include "common.h"
+#include "queries.h"
 #include "propertyaccessorhelper.h"
 #include "../xen/xenobject.h"
 #include "../xen/vm.h"
@@ -236,7 +237,8 @@ void PropertyAccessors::Initialize()
     
     // VM-specific properties (continued)
     properties_[PropertyNames::tags] = [](XenObject* o) -> QVariant {
-        return o ? o->GetTags().join(", ") : QVariant();
+        // C# Tags.GetTagList: a list
+        return o ? QVariant(o->GetTags()) : QVariant();
     };
     
     properties_[PropertyNames::start_time] = [](XenObject* o) -> QVariant {
@@ -251,10 +253,14 @@ void PropertyAccessors::Initialize()
     };
     
     properties_[PropertyNames::ha_restart_priority] = [](XenObject* o) -> QVariant {
+        // C#: only while the pool has HA enabled
         VM* vm = qobject_cast<VM*>(o);
-        if (vm && vm->IsRealVM())
-            return vm->HARestartPriority();
-        return QVariant();
+        if (!vm || !vm->IsRealVM() || !vm->GetConnection() || !vm->GetConnection()->GetCache())
+            return QVariant();
+        QSharedPointer<Pool> pool = vm->GetConnection()->GetCache()->GetPool();
+        if (!pool || !pool->HAEnabled())
+            return QVariant();
+        return vm->HARestartPriority();
     };
     
     properties_[PropertyNames::read_caching_enabled] = [](XenObject* o) -> QVariant {
@@ -1142,6 +1148,186 @@ QString PropertyWrapper::ToString() const
         return "-";
     
     return value.toString();
+}
+
+} // namespace XenSearch
+
+// ============================================================================
+// Typed values and C# enum names
+// ============================================================================
+
+namespace XenSearch
+{
+
+QVariant PropertyAccessors::GetValue(PropertyNames property, const QVariantMap& objectData,
+                                     const QString& objectType, XenConnection* conn)
+{
+    const std::function<QVariant(XenObject*)> accessor = Get(property);
+    if (accessor && conn && conn->GetCache())
+    {
+        QString ref = objectData.value("ref").toString();
+        if (ref.isEmpty())
+            ref = objectData.value("opaque_ref").toString();
+        QSharedPointer<XenObject> object = ref.isEmpty()
+            ? QSharedPointer<XenObject>()
+            : conn->GetCache()->ResolveObject(objectType, ref);
+        if (object)
+            return accessor(object.data());
+    }
+    return getPropertyValue(objectData, property);
+}
+
+namespace
+{
+    const QList<QPair<ObjectTypes, QString>>& objectTypeNames()
+    {
+        static const QList<QPair<ObjectTypes, QString>> names = {
+            {ObjectTypes::Pool, "Pool"}, {ObjectTypes::Server, "Server"},
+            {ObjectTypes::DisconnectedServer, "DisconnectedServer"}, {ObjectTypes::VM, "VM"},
+            {ObjectTypes::Snapshot, "Snapshot"}, {ObjectTypes::UserTemplate, "UserTemplate"},
+            {ObjectTypes::DefaultTemplate, "DefaultTemplate"}, {ObjectTypes::RemoteSR, "RemoteSR"},
+            {ObjectTypes::LocalSR, "LocalSR"}, {ObjectTypes::VDI, "VDI"}, {ObjectTypes::Network, "Network"},
+            {ObjectTypes::Folder, "Folder"}, {ObjectTypes::Appliance, "Appliance"},
+            {ObjectTypes::DockerContainer, "DockerContainer"}};
+        return names;
+    }
+
+    // C# VM.VirtualizationStatus ([Flags]) members by value
+    const QList<QPair<int, QString>>& virtualizationStatusNames()
+    {
+        static const QList<QPair<int, QString>> names = {
+            {1, "Unknown"}, {2, "PvDriversOutOfDate"}, {4, "IoDriversInstalled"}, {8, "ManagementInstalled"}};
+        return names;
+    }
+}
+
+QString PropertyAccessors::ObjectTypeName(ObjectTypes type)
+{
+    for (const auto& entry : objectTypeNames())
+    {
+        if (entry.first == type)
+            return entry.second;
+    }
+    return QString();
+}
+
+ObjectTypes PropertyAccessors::ObjectTypeFromName(const QString& name)
+{
+    // C# also accepts "SR" for remote SRs in old searches
+    if (name == "SR")
+        return ObjectTypes::RemoteSR;
+    for (const auto& entry : objectTypeNames())
+    {
+        if (entry.second == name)
+            return entry.first;
+    }
+    return ObjectTypes::None;
+}
+
+QString PropertyAccessors::EnumName(PropertyNames property, const QVariant& value)
+{
+    if (!value.isValid())
+        return QString();
+
+    switch (property)
+    {
+        case PropertyNames::virtualisation_status:
+        {
+            const int flags = value.toInt();
+            if (flags == 0)
+                return "NotInstalled";
+            QStringList names;
+            for (const auto& entry : virtualizationStatusNames())
+            {
+                if (flags & entry.first)
+                    names.append(entry.second);
+            }
+            return names.join(", ");
+        }
+        case PropertyNames::type:
+            return value.canConvert<ObjectTypes>() ? ObjectTypeName(value.value<ObjectTypes>()) : value.toString();
+        case PropertyNames::ha_restart_priority:
+        {
+            // xapi values to C# VM.HaRestartPriority
+            const QString priority = value.toString();
+            if (priority == "restart")
+                return "Restart";
+            if (priority == "best-effort")
+                return "BestEffort";
+            if (priority.isEmpty())
+                return "DoNotRestart";
+            if (priority == "always_restart_high_priority")
+                return "AlwaysRestartHighPriority";
+            if (priority == "always_restart")
+                return "AlwaysRestart";
+            return priority;
+        }
+        case PropertyNames::sr_type:
+            return value.toString().toLower();
+        default:
+            return value.toString();
+    }
+}
+
+QList<QPair<QString, QString>> PropertyAccessors::EnumValues(PropertyNames property)
+{
+    Initialize();
+    QList<QPair<QString, QString>> values;
+    switch (property)
+    {
+        case PropertyNames::power_state:
+            values = {{QObject::tr("Halted"), "Halted"}, {QObject::tr("Paused"), "Paused"},
+                      {QObject::tr("Running"), "Running"}, {QObject::tr("Suspended"), "Suspended"}};
+            break;
+        case PropertyNames::virtualisation_status:
+            values = {{QObject::tr("Not optimized"), "NotInstalled"},
+                      {QObject::tr("Out of date"), "PvDriversOutOfDate"},
+                      {QObject::tr("Unknown"), "Unknown"},
+                      {QObject::tr("I/O optimized only"), "IoDriversInstalled"},
+                      {QObject::tr("Management Agent installed only"), "ManagementInstalled"},
+                      {QObject::tr("Fully optimized"), "IoDriversInstalled, ManagementInstalled"}};
+            break;
+        case PropertyNames::type:
+            values = {{QObject::tr("VMs"), "VM"}, {QObject::tr("XenServer Templates"), "DefaultTemplate"},
+                      {QObject::tr("Custom Templates"), "UserTemplate"}, {QObject::tr("Pools"), "Pool"},
+                      {QObject::tr("Servers"), "Server"}, {QObject::tr("Disconnected servers"), "DisconnectedServer"},
+                      {QObject::tr("Local Storage Repositories"), "LocalSR"},
+                      {QObject::tr("Remote Storage Repositories"), "RemoteSR"}, {QObject::tr("Networks"), "Network"},
+                      {QObject::tr("Snapshots"), "Snapshot"}, {QObject::tr("Virtual Disks"), "VDI"},
+                      {QObject::tr("Folders"), "Folder"}, {QObject::tr("vApp"), "Appliance"}};
+            break;
+        case PropertyNames::ha_restart_priority:
+            // C# VM.GetAvailableRestartPriorities
+            values = {{QObject::tr("Restart"), "Restart"}, {QObject::tr("Restart if possible"), "BestEffort"},
+                      {QObject::tr("Do not restart"), "DoNotRestart"}};
+            break;
+        case PropertyNames::sr_type:
+            // C# SR.SRTypes with their friendly names (one entry per name, as the C# dictionary)
+            values = {{QObject::tr("Local"), "local"}, {QObject::tr("File"), "file"}, {QObject::tr("Ext3"), "ext"},
+                      {QObject::tr("Ext4"), "ext4"}, {QObject::tr("LVM over iSCSI"), "lvmoiscsi"},
+                      {QObject::tr("ISO"), "iso"}, {QObject::tr("NFS"), "nfs"}, {QObject::tr("LVM"), "lvm"},
+                      {QObject::tr("udev"), "udev"}, {QObject::tr("Hardware HBA"), "lvmohba"},
+                      {QObject::tr("Egenera Virtual Storage"), "egenera"},
+                      {QObject::tr("Egenera Virtual DVD Drive"), "egeneracd"}, {QObject::tr("Unknown"), "unknown"},
+                      {QObject::tr("Local Performance Monitoring"), "shm"},
+                      {QObject::tr("VDI-per-LUN iSCSI"), "iscsi"}, {QObject::tr("XFS"), "xfs"},
+                      {QObject::tr("Elastic Block Storage"), "ebs"}, {QObject::tr("LUN-per-VDI"), "rawhba"},
+                      {QObject::tr("SMB"), "smb"}, {QObject::tr("FCoE"), "lvmofcoe"}, {QObject::tr("GFS2"), "gfs2"}};
+            break;
+        default:
+            break;
+    }
+    return values;
+}
+
+QString PropertyAccessors::EnumDisplayName(PropertyNames property, const QString& name)
+{
+    for (const auto& entry : EnumValues(property))
+    {
+        if (entry.second.compare(name, Qt::CaseInsensitive) == 0)
+            return entry.first;
+    }
+    return name;
 }
 
 } // namespace XenSearch
