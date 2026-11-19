@@ -28,6 +28,8 @@
         <file alias="org_view_24.png">images/org_view_24.png</file>
         <file alias="saved_searches_16.png">images/saved_searches_16.png</file>
         <file alias="saved_searches_24.png">images/saved_searches_24.png</file>
+        <file alias="search_16.png">images/000_Search_h32bit_16.png</file>
+        <file alias="default_search_16.png">images/000_defaultSpyglass_h32bit_16.png</file>
         <file alias="notif_none_16.png">images/notif_none_16.png</file>
         <file alias="notif_none_24.png">images/notif_none_24.png</file>
         <file alias="notif_events_16.png">images/notif_events_16.png</file>

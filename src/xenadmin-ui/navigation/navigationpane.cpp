@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "xenlib/xensearch/searchmanager.h"
 #include "navigationpane.h"
 #include "ui_navigationpane.h"
 #include "navigationbuttons.h"
@@ -190,6 +191,11 @@ void NavigationPane::setupNavigationButtons()
     // Populate dropdown menus
     this->populateOrganizationDropDown();
     this->populateSearchDropDown();
+    connect(SearchManager::instance(), &SearchManager::SearchesChanged, this, [this]() {
+        this->populateSearchDropDown();
+        if (this->m_currentMode == SavedSearch)
+            this->m_currentNavigationView->RequestRefreshTreeView();
+    });
 
     // Connect big button signals
     connect(this->m_buttonInfraBig, &NavigationButtonBig::navigationViewChanged,
@@ -248,11 +254,25 @@ void NavigationPane::populateOrganizationDropDown()
     this->m_buttonOrganizationSmall->setItemList(items);
 }
 
+// C# PopulateSearchDropDown: one item per search, sorted, default searches with their own icon
 void NavigationPane::populateSearchDropDown()
 {
-    // TODO: Implement when Search infrastructure is ported
-    // Matches C# NavigationPane.PopulateSearchDropDown
-    // Should populate from Search.Searches array
+    // The menus do not own these actions; drop the previous set
+    qDeleteAll(this->m_searchActions);
+    this->m_searchActions.clear();
+
+    QList<QAction*> items;
+    for (const SearchManager::Entry& entry : SearchManager::instance()->GetSearches())
+    {
+        QAction* action = new QAction(QIcon(entry.isDefault ? ":/icons/default_search_16.png" : ":/icons/search_16.png"),
+                                      QString(entry.name).replace("&", "&&"), this);
+        action->setData(entry.uuid);
+        connect(action, &QAction::triggered, this, &NavigationPane::onSearchMenuItemTriggered);
+        items.append(action);
+    }
+    this->m_searchActions = items;
+    this->m_buttonSearchesBig->setItemList(items);
+    this->m_buttonSearchesSmall->setItemList(items);
 }
 
 void NavigationPane::onNavigationButtonChecked()
@@ -300,9 +320,22 @@ void NavigationPane::onOrganizationMenuItemTriggered()
     }
 } 
 
+// C# NavigationViewChanged with a Search: show its results in the tree
 void NavigationPane::onSearchMenuItemTriggered()
 {
-    // TODO: Implement when Search infrastructure is ported
+    QAction* action = qobject_cast<QAction*>(this->sender());
+    if (!action)
+        return;
+
+    this->m_currentNavigationView->SetSavedSearch(action->data().toString());
+    this->m_buttonSearchesBig->setChecked(true);
+
+    const bool modeChanged = this->m_currentMode != SavedSearch;
+    this->m_currentMode = SavedSearch;
+    this->onNavigationModeChanged();
+    if (modeChanged)
+        emit navigationModeChanged(this->m_currentMode);
+    this->m_currentNavigationView->RequestRefreshTreeView();
 }
 
 void NavigationPane::onNavigationModeChanged()

@@ -25,6 +25,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "xenlib/xensearch/searchmanager.h"
+#include <memory>
 #include "navigationview.h"
 #include "globals.h"
 #include "ui_navigationview.h"
@@ -174,6 +176,9 @@ void NavigationView::RequestRefreshTreeView()
         case NavigationPane::vApps:
             this->buildOrganizationTree();
             break;
+        case NavigationPane::SavedSearch:
+            this->buildSavedSearchTree();
+            break;
         default:
             this->buildInfrastructureTree();
             break;
@@ -228,6 +233,34 @@ void NavigationView::SetNavigationMode(NavigationPane::NavigationMode mode)
         this->m_navigationMode = mode;
         this->updateDragDropAvailability();
     }
+}
+
+void NavigationView::SetSavedSearch(const QString& uuid)
+{
+    this->m_savedSearchUuid = uuid;
+}
+
+// C# NavigationView with CurrentSearch set to a saved search: its results, grouped as it says
+void NavigationView::buildSavedSearchTree()
+{
+    std::unique_ptr<Search> baseSearch(SearchManager::instance()->CreateSearch(this->m_savedSearchUuid));
+    if (!baseSearch)
+    {
+        // The search is gone (deleted, or its pool disconnected)
+        this->buildInfrastructureTree();
+        return;
+    }
+
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
+    XenConnection* connection = this->primaryConnection();
+    if (Grouping* grouping = effectiveSearch->GetGrouping())
+        grouping->SetConnection(connection);
+
+    QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(effectiveSearch, MainWindowTreeBuilder::NavigationMode::SavedSearch, connection);
+    this->m_treeBuilder->RefreshTreeView(root, this->GetSearchText(), MainWindowTreeBuilder::NavigationMode::SavedSearch);
+
+    if (effectiveSearch != baseSearch.get())
+        delete effectiveSearch;
 }
 
 void NavigationView::updateDragDropAvailability()

@@ -191,6 +191,7 @@ class NavigationPane : public QWidget
         NotificationsView* m_currentNotificationsView = nullptr;
 
         NavigationMode m_currentMode;
+        QList<QAction*> m_searchActions; // Saved Searches menu items
         NotificationsSubMode m_lastNotificationsMode;
         int m_buttonPanelHeight = 0;
 

@@ -87,6 +87,8 @@ class NavigationView : public QWidget
 
         // Navigation mode (matches C# NavigationView.NavigationMode property line 114)
         void SetNavigationMode(NavigationPane::NavigationMode mode);
+        //! The saved search shown in SavedSearch mode (C# NavigationView.CurrentSearch)
+        void SetSavedSearch(const QString& uuid);
         NavigationPane::NavigationMode GetNavigationMode() const
         {
             return this->m_navigationMode;
@@ -149,6 +151,7 @@ class NavigationView : public QWidget
         void buildInfrastructureTree();
         void buildObjectsTree();
         void buildOrganizationTree();
+        void buildSavedSearchTree();
         void showEmptyTreePlaceholder(const QString& rootText);
         void scheduleRefresh(); // Debounced refresh
         void connectCacheSignals(XenConnection* connection);
@@ -173,6 +176,7 @@ class NavigationView : public QWidget
         class TypeGrouping* m_typeGrouping;
         MainWindowTreeBuilder* m_treeBuilder = nullptr;
         Search* m_objectsSearch = nullptr;
+        QString m_savedSearchUuid;
 
         // State preservation for tree refresh
         QString m_savedSelectionType;
