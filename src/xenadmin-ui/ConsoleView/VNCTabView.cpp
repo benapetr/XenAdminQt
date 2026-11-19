@@ -280,6 +280,12 @@ VNCTabView::~VNCTabView()
 
 // ========== Public Methods ==========
 
+void VNCTabView::FocusVnc()
+{
+    if (this->m_vncScreen && this->m_vncScreen->isVisible() && this->m_vncScreen->window()->isActiveWindow())
+        this->m_vncScreen->setFocus();
+}
+
 bool VNCTabView::IsScaled() const
 {
     return this->ui->scaleCheckBox->isChecked();

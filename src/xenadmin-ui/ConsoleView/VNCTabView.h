@@ -177,6 +177,13 @@ class VNCTabView : public QWidget
         QImage Snapshot() const;
 
         /**
+         * @brief Give the console keyboard focus, if its window is the active one
+         * Reference: VNCTabView.cs focus_vnc() / FocusVNC() - only focus when the console
+         * is where the user is, so it doesn't steal the keyboard (CA-41120)
+         */
+        void FocusVnc();
+
+        /**
          * @brief Update parent VNCView minimum size based on content
          * Reference: VNCTabView.cs lines 350-358
          */

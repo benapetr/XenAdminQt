@@ -27,6 +27,7 @@
 
 #include "VNCView.h"
 #include "VNCTabView.h"
+#include "../settingsmanager.h"
 #include "xenlib/xencache.h"
 #include "xen/vm.h"
 #include "xenlib/xen/host.h"
@@ -40,6 +41,8 @@
 #include <QThread>
 #include <QScreen>
 #include <QWindow>
+#include <QCloseEvent>
+#include <QGuiApplication>
 
 /**
  * @brief Constructor
@@ -81,10 +84,17 @@ VNCView::~VNCView()
 
     this->unregisterEventListeners();
 
-    // Cleanup undocked window
+    // Cleanup undocked window; take the console back first so it is deleted with this view
+    // instead of outliving it inside the window until deleteLater runs
     if (this->m_undockedForm)
     {
+        this->m_undockedForm->removeEventFilter(this);
         this->m_undockedForm->hide();
+        if (this->m_vncTabView && this->m_vncTabView->parent() == this->m_undockedForm)
+        {
+            this->m_undockedForm->takeCentralWidget();
+            this->m_vncTabView->setParent(this);
+        }
         this->m_undockedForm->deleteLater();
         this->m_undockedForm = nullptr;
     }
@@ -132,33 +142,12 @@ void VNCView::DockUnDock()
             this->m_undockedForm->setWindowTitle(undockedWindowTitle());
             this->m_undockedForm->setWindowIcon(this->window()->windowIcon());
 
-            // Connect close event to re-dock
-            connect(this->m_undockedForm, &QMainWindow::destroyed, this, [this]()
-            {
-                qDebug() << "VNCView: Undocked window destroyed, re-docking";
-                if (!this->IsDocked())
-                    this->DockUnDock();
-            });
+            // Like C#'s undocked forms, it must not keep the application running once the
+            // main window is closed
+            this->m_undockedForm->setAttribute(Qt::WA_QuitOnClose, false);
 
-            // Handle window state changes (minimize → pause)
-            connect(this->m_undockedForm, &QWidget::windowTitleChanged, this, [this]()
-            {
-                // Window state changed
-                Qt::WindowStates state = this->m_undockedForm->windowState();
-
-                if (state & Qt::WindowMinimized)
-                {
-                    qDebug() << "VNCView: Undocked window minimized, pausing console";
-                    this->m_vncTabView->Pause();
-                } else
-                {
-                    qDebug() << "VNCView: Undocked window restored, unpausing console";
-                    this->m_vncTabView->Unpause();
-                }
-            });
-
-            // C#: Set up Resize event
-            // Qt doesn't have ResizeEnd, so we'll use resizeEvent + timer
+            // C# FormClosing re-docks, Resize pauses while minimized; see eventFilter()
+            this->m_undockedForm->installEventFilter(this);
             this->m_undockedFormResized = false;
         }
 
@@ -185,27 +174,31 @@ void VNCView::DockUnDock()
         QSize growSize = this->m_vncTabView->GrowToFit();
         this->m_undockedForm->resize(growSize);
 
-        // Restore previous geometry if available and on-screen
-        if (!this->m_oldUndockedSize.isEmpty() && !this->m_oldUndockedLocation.isNull())
+        // Restore the previous geometry, unless it is (partly) off-screen now, for example
+        // because the monitor it was on is gone; then the window opens centred (C# CenterScreen)
+        if (!this->m_oldUndockedSize.isEmpty()
+            && !this->m_oldUndockedLocation.isNull()
+            && VNCView::windowIsOnScreen(this->m_oldUndockedLocation, this->m_oldUndockedSize))
         {
-            // TODO: Check if window is on screen
-            // C#: HelpersGUI.WindowIsOnScreen(oldUndockedLocation, oldUndockedSize)
-
-            bool isOnScreen = true; // Placeholder
-
-            if (isOnScreen)
+            this->m_undockedForm->resize(this->m_oldUndockedSize);
+            this->m_undockedForm->move(this->m_oldUndockedLocation);
+        } else
+        {
+            QScreen* screen = this->screen() ? this->screen() : QGuiApplication::primaryScreen();
+            if (screen)
             {
-                this->m_undockedForm->resize(this->m_oldUndockedSize);
-                this->m_undockedForm->move(this->m_oldUndockedLocation);
+                QRect frame(QPoint(), this->m_undockedForm->size());
+                frame.moveCenter(screen->availableGeometry().center());
+                this->m_undockedForm->move(frame.topLeft());
             }
         }
 
         // Show undocked window
         this->m_undockedForm->show();
+        this->m_undockedForm->activateWindow();
 
-        // TODO: Preserve scale setting when undocked
-        // C#: if(Properties.Settings.Default.PreserveScaleWhenUndocked)
-        //         vncTabView.IsScaled = oldScaledSetting;
+        if (SettingsManager::instance().GetConsolePreserveScaleWhenUndocked())
+            this->m_vncTabView->SetScaled(this->m_oldScaledSetting);
 
         // Show find/reattach buttons in this widget
         this->m_findConsoleButton->show();
@@ -219,15 +212,15 @@ void VNCView::DockUnDock()
         this->m_oldUndockedLocation = this->m_undockedForm->pos();
         this->m_oldUndockedSize = this->m_undockedForm->size();
 
-        // TODO: Restore scale setting when docking
-        // C#: if (!Properties.Settings.Default.PreserveScaleWhenUndocked)
-        //         vncTabView.IsScaled = oldScaledSetting;
+        if (!SettingsManager::instance().GetConsolePreserveScaleWhenUndocked())
+            this->m_vncTabView->SetScaled(this->m_oldScaledSetting);
 
         // Hide find/reattach buttons
         this->m_findConsoleButton->hide();
         this->m_reattachConsoleButton->hide();
 
         // Hide undocked window
+        this->m_undockedForm->removeEventFilter(this);
         this->m_undockedForm->hide();
 
         // TODO: Hide header bar
@@ -264,8 +257,7 @@ void VNCView::DockUnDock()
     // Always unpause when docking/undocking (ensure visible console is not paused)
     this->m_vncTabView->Unpause();
 
-    // TODO: Focus VNC
-    // C#: vncTabView.focus_vnc();
+    this->m_vncTabView->FocusVnc();
 
     // TODO: Reconnect RDP with new dimensions
     // C#: UpdateRDPResolution();
@@ -287,9 +279,7 @@ void VNCView::FocusConsole()
 
     if (this->m_vncTabView)
     {
-        // TODO: Implement focus_vnc() in VNCTabView
-        // this->_vncTabView->focus_vnc();
-        this->m_vncTabView->setFocus();
+        this->m_vncTabView->FocusVnc();
     }
 }
 
@@ -393,21 +383,48 @@ void VNCView::onReattachConsoleButtonClicked()
     this->DockUnDock();
 }
 
-void VNCView::onUndockedWindowStateChanged(Qt::WindowStates oldState, Qt::WindowStates newState)
+bool VNCView::eventFilter(QObject* watched, QEvent* event)
 {
-    qDebug() << "VNCView: onUndockedWindowStateChanged()";
+    if (this->m_undockedForm && watched == this->m_undockedForm)
+    {
+        switch (event->type())
+        {
+            case QEvent::Close:
+                // C# FormClosing: closing the window puts the console back into the tab
+                event->ignore();
+                if (!this->IsDocked())
+                    this->DockUnDock();
+                return true;
 
-    // TODO: Implement window state monitoring
+            case QEvent::WindowStateChange:
+                // C# Resize handler: no point decoding frames for a minimized window
+                if (this->m_undockedForm->windowState() & Qt::WindowMinimized)
+                    this->m_vncTabView->Pause();
+                else
+                    this->m_vncTabView->Unpause();
+                break;
+
+            case QEvent::Resize:
+                this->m_undockedFormResized = true;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    return QWidget::eventFilter(watched, event);
 }
 
-void VNCView::onUndockedWindowResizeEnd()
+bool VNCView::windowIsOnScreen(const QPoint& location, const QSize& size)
 {
-    qDebug() << "VNCView: onUndockedWindowResizeEnd()";
-
-    // TODO: Update RDP resolution on resize
-    // if (this->_undockedFormResized)
-    //     updateRDPResolution();
-    // this->_undockedFormResized = false;
+    for (QScreen* screen : QGuiApplication::screens())
+    {
+        const QRect area = screen->availableGeometry();
+        if (area.contains(location))
+            return area.contains(QRect(location, size));
+    }
+    return false;
 }
 
 // ========== Private Methods ==========

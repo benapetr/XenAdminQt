@@ -205,17 +205,9 @@ class VNCView : public QWidget
          */
         void onReattachConsoleButtonClicked();
 
-        /**
-         * @brief Handle undocked window state changes (minimize → pause)
-         * Internal slot for QMainWindow state monitoring
-         */
-        void onUndockedWindowStateChanged(Qt::WindowStates oldState, Qt::WindowStates newState);
-
-        /**
-         * @brief Handle undocked window resize end
-         * Internal slot for RDP resolution update
-         */
-        void onUndockedWindowResizeEnd();
+    protected:
+        //! Watches the undocked window: closing re-docks, minimizing pauses (C# FormClosing/Resize)
+        bool eventFilter(QObject* watched, QEvent* event) override;
 
     private:
         /**
@@ -258,8 +250,11 @@ class VNCView : public QWidget
         QPoint m_oldUndockedLocation; ///< Last undocked window position
         bool m_oldScaledSetting = false;      ///< Scale checkbox state before undocking
 
-        // Resize tracking (C#: undockedFormResized)
+        // Resize tracking (C#: undockedFormResized), for the RDP resolution update once RDP is done
         bool m_undockedFormResized = false; ///< Helper to detect actual resize (not just move)
+
+        //! C# HelpersGUI.WindowIsOnScreen: the whole rectangle fits in the screen holding its corner
+        static bool windowIsOnScreen(const QPoint& location, const QSize& size);
 };
 
 #endif // VNCVIEW_H

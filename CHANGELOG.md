@@ -37,6 +37,12 @@ are omitted.
 
 ### Fixed
 
+- Undocked consoles: closing the window now puts the console back into the
+  Console tab instead of leaving it in a hidden window, minimizing pauses the
+  console again, a remembered position that is now off-screen (for example on a
+  disconnected monitor) is ignored in favour of a centred window, the "Preserve
+  scale when console is undocked" option takes effect, and an open undocked
+  console no longer keeps the application running after the main window closes.
 - Opening a console on a pool member no longer asks to accept that member's
   security certificate. Certificates the pool itself reports for its hosts are
   trusted automatically, since they come over the already accepted connection.
