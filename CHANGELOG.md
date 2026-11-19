@@ -46,6 +46,9 @@ are omitted.
 
 ### Fixed
 
+- VM > Uninstall VM now deletes the VM through the usual delete confirmation
+  (choosing which disks and snapshots to remove), as in C#, instead of showing
+  a "Not Implemented" message.
 - The console tab now follows changes like C#: the CD drive list updates when
   drives are added or removed, host and storage driver domain consoles pick up
   renames, the SSH button follows IP address changes after the VM boots, and

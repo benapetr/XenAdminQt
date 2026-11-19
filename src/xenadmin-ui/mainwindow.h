@@ -236,7 +236,6 @@ class MainWindow : public QMainWindow
         void onDeleteVM();
         void onDisableChangedBlockTracking();
         void onInstallTools();
-        void onUninstallVM();
         void onVMProperties();
         void onTakeSnapshot();
         void onConvertToTemplate();

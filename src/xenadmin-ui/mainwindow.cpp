@@ -164,7 +164,6 @@
 #include "commands/vm/copyvmcommand.h"
 #include "commands/vm/movevmcommand.h"
 #include "commands/vm/installtoolscommand.h"
-#include "commands/vm/uninstallvmcommand.h"
 #include "commands/vm/deletevmcommand.h"
 #include "commands/vm/deletevmsandtemplatescommand.h"
 #include "commands/vm/convertvmtotemplatecommand.h"
@@ -2899,7 +2898,8 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
     this->ui->disableCbtToolStripMenuItem->setEnabled(this->m_commands["DisableChangedBlockTracking"]->CanRun());
     this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->m_consolePanel != nullptr);
-    this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
+    // C# uninstallToolStripMenuItem.Command = new DeleteVMCommand()
+    this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
     this->ui->deleteVmToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
     this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
     this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
@@ -3449,12 +3449,6 @@ void MainWindow::onInstallTools()
         this->m_commands["InstallTools"]->Run();
 }
 
-void MainWindow::onUninstallVM()
-{
-    if (this->m_commands.contains("UninstallVM"))
-        this->m_commands["UninstallVM"]->Run();
-}
-
 void MainWindow::onVMProperties()
 {
     if (this->m_commands.contains("VMProperties"))
@@ -3671,7 +3665,6 @@ void MainWindow::initializeCommands()
     this->m_commands["CopyVM"] = new CopyVMCommand(this, this);
     this->m_commands["MoveVM"] = new MoveVMCommand(this, this);
     this->m_commands["InstallTools"] = new InstallToolsCommand(this, this);
-    this->m_commands["UninstallVM"] = new UninstallVMCommand(this, this);
     this->m_commands["DeleteVM"] = new DeleteVMCommand(this, this);
     this->m_commands["DeleteVMsAndTemplates"] = new DeleteVMsAndTemplatesCommand(this, this);
     this->m_commands["ConvertVMToTemplate"] = new ConvertVMToTemplateCommand(this, this);
@@ -3790,7 +3783,7 @@ void MainWindow::connectMenuActions()
     connect(this->ui->disableCbtToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisableChangedBlockTracking);
     connect(this->ui->installToolsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onInstallTools);
     connect(this->ui->sendCtrlAltDelToolStripMenuItem, &QAction::triggered, this, &MainWindow::sendCADToConsole);
-    connect(this->ui->uninstallToolStripMenuItem, &QAction::triggered, this, &MainWindow::onUninstallVM);
+    connect(this->ui->uninstallToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeleteVM);
     connect(this->ui->VMPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onVMProperties);
     connect(this->ui->snapshotToolStripMenuItem, &QAction::triggered, this, &MainWindow::onTakeSnapshot);
     connect(this->ui->convertToTemplateToolStripMenuItem, &QAction::triggered, this, &MainWindow::onConvertToTemplate);

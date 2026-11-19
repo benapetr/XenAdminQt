@@ -110,7 +110,6 @@ set(XENADMIN_SOURCES
     commands/vm/stopvmcommand.cpp
     commands/vm/suspendvmcommand.cpp
     commands/vm/takesnapshotcommand.cpp
-    commands/vm/uninstallvmcommand.cpp
     commands/vm/unpausevmcommand.cpp
     commands/vm/vappexportcommand.cpp
     commands/vm/vapppropertiescommand.cpp

@@ -194,7 +194,6 @@ SOURCES += \
     commands/vm/copyvmcommand.cpp \
     commands/vm/movevmcommand.cpp \
     commands/vm/installtoolscommand.cpp \
-    commands/vm/uninstallvmcommand.cpp \
     commands/vm/deletevmcommand.cpp \
     commands/vm/deletevmsandtemplatescommand.cpp \
     commands/vm/convertvmtotemplatecommand.cpp \
@@ -515,7 +514,6 @@ HEADERS += \
     commands/vm/copyvmcommand.h \
     commands/vm/movevmcommand.h \
     commands/vm/installtoolscommand.h \
-    commands/vm/uninstallvmcommand.h \
     commands/vm/deletevmcommand.h \
     commands/vm/deletevmsandtemplatescommand.h \
     commands/vm/convertvmtotemplatecommand.h \

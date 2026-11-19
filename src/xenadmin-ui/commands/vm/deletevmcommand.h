@@ -40,8 +40,7 @@
  *
  * The VM must be in a halted state before it can be deleted.
  * Matches the C# XenAdmin DeleteVMCommand behavior with ConfirmVMDeleteDialog.
- *
- * @see UninstallVMCommand for unconditional VM+disk deletion without choice
+ * Also behind VM > Uninstall VM, as in C#.
  */
 class DeleteVMCommand : public VMCommand
 {
