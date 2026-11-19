@@ -58,6 +58,9 @@ are omitted.
 
 ### Fixed
 
+- The General tab now shows the Trusted Platform Module row for VMs with a
+  vTPM. The client received vTPM records but never turned them into objects,
+  so VMs always looked as if they had no vTPM.
 - The General tab's read caching status now uses the per-server state the
   storage manager reports, as C# does; it could say "Enabled" when the VM was
   not using read caching.

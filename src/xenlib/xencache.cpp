@@ -38,6 +38,7 @@
 #include "xen/hostmetrics.h"
 #include "xen/vmguestmetrics.h"
 #include "xen/vmmetrics.h"
+#include "xen/vtpm.h"
 #include "xen/message.h"
 #include "xen/network_sriov.h"
 #include "xen/folder.h"
@@ -527,7 +528,8 @@ QStringList XenCache::GetKnownTypes() const
         XenCache::TypeToCacheString(XenObjectType::VLAN),
         XenCache::TypeToCacheString(XenObjectType::VM),
         XenCache::TypeToCacheString(XenObjectType::VMGuestMetrics),
-        XenCache::TypeToCacheString(XenObjectType::VMMetrics)
+        XenCache::TypeToCacheString(XenObjectType::VMMetrics),
+        XenCache::TypeToCacheString(XenObjectType::VTPM)
     };
 }
 
@@ -599,6 +601,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(XenObjectType type, cons
         return QSharedPointer<XenObject>(new VMGuestMetrics(this->m_connection, ref));
     if (type == XenObjectType::VMMetrics)
         return QSharedPointer<XenObject>(new VMMetrics(this->m_connection, ref));
+    if (type == XenObjectType::VTPM)
+        return QSharedPointer<XenObject>(new VTPM(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }
