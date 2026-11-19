@@ -37,10 +37,14 @@
  * Matches C# XenAdmin.Actions.VMActions.CreateVMFastAction
  *
  * This action:
- * 1. Clones a template using VM.async_clone (with hidden name)
- * 2. Provisions the VM using VM.async_provision
- * 3. Sets the final name
- * 4. Returns the ref of the created VM in result()
+ * 1. Clones a template using VM.async_clone (with a "__gui__" hidden name)
+ * 2. Waits for the clone in the cache and hides it (HiddenObjects) while it is set up
+ * 3. Provisions the VM using VM.async_provision
+ * 4. Names it "<template> (n)" (VMHelpers::DefaultVMName) and shows it again
+ * 5. Returns the ref of the created VM in GetResult()
+ *
+ * C#'s VM.IsBeingCreated flag is not ported: nothing in C# reads it besides raising
+ * PropertyChanged.
  *
  * C# location: XenModel/Actions/VM/CreateVMFastAction.cs
  */
@@ -63,13 +67,6 @@ class CreateVMFastAction : public AsyncOperation
         void run() override;
 
     private:
-        /**
-         * @brief Generate a unique VM name based on template name
-         * @param baseName Base name from template
-         * @return Unique VM name
-         */
-        QString generateUniqueName(const QString& baseName);
-
         QSharedPointer<VM> m_template;
 };
 

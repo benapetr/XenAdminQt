@@ -33,6 +33,7 @@
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
 #include "xenlib/xen/hiddenobjects.h"
+#include "xenlib/vmhelpers.h"
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QScopeGuard>
@@ -324,6 +325,21 @@ private slots:
         QVERIFY(!HiddenObjects::IsHidden("OpaqueRef:new-vm"));
         QVERIFY(!XenSearch::Group::Hide(vm, false));
         QCOMPARE(changed.count(), 2);
+    }
+
+    void defaultVmNameSkipsTakenAndHiddenNames()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        QCOMPARE(VMHelpers::MakeHiddenName("Debian"), QString("__gui__Debian"));
+
+        // C# Helpers.DefaultVMName always numbers, starting at 1
+        QCOMPARE(VMHelpers::DefaultVMName("Debian", &connection), QString("Debian (1)"));
+
+        cache->Update(XenObjectType::VM, "OpaqueRef:a", QVariantMap{{"name_label", "Debian (1)"}});
+        // A VM still being created under the next name holds it too
+        cache->Update(XenObjectType::VM, "OpaqueRef:b", QVariantMap{{"name_label", "__gui__Debian (2)"}});
+        QCOMPARE(VMHelpers::DefaultVMName("Debian", &connection), QString("Debian (3)"));
     }
 
     void groupHideMatchesCSharp()

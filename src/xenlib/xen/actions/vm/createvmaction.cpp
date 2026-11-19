@@ -37,6 +37,8 @@
 #include "../vm/vmstartaction.h"
 #include "../../jsonrpcclient.h"
 #include "../../vm.h"
+#include "../../hiddenobjects.h"
+#include "../../../vmhelpers.h"
 #include "../../../xencache.h"
 #include <QDebug>
 #include <QSet>
@@ -44,11 +46,6 @@
 
 namespace
 {
-    QString makeHiddenName(const QString& name)
-    {
-        return QString("__gui__%1").arg(name);
-    }
-
     bool isHvmVm(const QVariantMap& vmRecord)
     {
         return vmRecord.contains("HVM_boot_policy") &&
@@ -163,10 +160,13 @@ void CreateVMAction::run()
         return;
     }
 
+    // VM kept out of the tree while it is being set up (C# SetXenCenterProperties)
+    QString hiddenVmRef;
+
     try
     {
         this->SetDescription(QString("Cloning template"));
-        QString hiddenName = makeHiddenName(this->m_nameLabel);
+        QString hiddenName = VMHelpers::MakeHiddenName(this->m_nameLabel);
         QString cloneTask = XenAPI::VM::async_clone(session, this->m_templateRef, hiddenName);
         this->pollToCompletion(cloneTask, 0, 10);
 
@@ -181,6 +181,11 @@ void CreateVMAction::run()
             [this]() { return this->IsCancelled(); });
         if (!cachedVm)
             throw std::runtime_error("VM did not appear in cache after clone");
+
+        // C# SetXenCenterProperties: keep the half-made VM out of the tree until its disks
+        // and networks are in place
+        hiddenVmRef = newVmRef;
+        HiddenObjects::Hide(hiddenVmRef);
 
         QVariantMap templateRecord = XenAPI::VM::get_record(session, this->m_templateRef);
         QVariantMap vmRecord = XenAPI::VM::get_record(session, newVmRef);
@@ -340,6 +345,10 @@ void CreateVMAction::run()
             XenAPI::VIF::create(session, vifRecord);
         }
 
+        // C#: ShowObject after AddNetworks, the point of no return
+        HiddenObjects::Show(hiddenVmRef);
+        hiddenVmRef.clear();
+
         this->assignVgpu(session, newVmRef);
 
         if (this->m_startAfter)
@@ -356,6 +365,10 @@ void CreateVMAction::run()
     }
     catch (const std::exception& e)
     {
+        // C# destroys the unfinished VM here (CleanOnError); this port doesn't yet, so the VM
+        // is made visible again rather than lingering out of sight
+        if (!hiddenVmRef.isEmpty())
+            HiddenObjects::Show(hiddenVmRef);
         this->setError(QString("Failed to create VM: %1").arg(e.what()));
     }
 }

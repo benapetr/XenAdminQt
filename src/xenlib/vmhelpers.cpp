@@ -29,6 +29,8 @@
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/vdi.h"
+#include "xen/vm.h"
+#include <QSet>
 #include <QtCore/QDebug>
 
 /**
@@ -221,4 +223,28 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
     }
 
     return QString(); // No storage host found
+}
+
+QString VMHelpers::MakeHiddenName(const QString& name)
+{
+    return QStringLiteral("__gui__") + name;
+}
+
+QString VMHelpers::DefaultVMName(const QString& baseName, XenConnection* connection)
+{
+    QSet<QString> taken;
+    if (connection && connection->GetCache())
+    {
+        for (const QSharedPointer<VM>& vm : connection->GetCache()->GetAll<VM>())
+            if (vm)
+                taken.insert(vm->GetName());
+    }
+
+    for (int i = 1;; ++i)
+    {
+        // Messages.NEWVM_DEFAULTNAME is "{0} ({1})"
+        const QString name = QStringLiteral("%1 (%2)").arg(baseName).arg(i);
+        if (!taken.contains(name) && !taken.contains(VMHelpers::MakeHiddenName(name)))
+            return name;
+    }
 }

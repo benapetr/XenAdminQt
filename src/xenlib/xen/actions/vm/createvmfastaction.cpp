@@ -30,14 +30,18 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include "../../../vmhelpers.h"
+#include "../../hiddenobjects.h"
 #include <QDebug>
 
 CreateVMFastAction::CreateVMFastAction(XenConnection* connection,
                                        QSharedPointer<VM> templateVM,
                                        QObject* parent)
+    // CA-339370: the VM's name is only worked out once the clone exists, so that VMs created
+    // in quick succession don't get the same name; the title therefore names the template
     : AsyncOperation(connection,
-                     QString("Creating VM from template '%1'").arg(templateVM ? templateVM->GetName() : ""),
-                     "",
+                     QObject::tr("Creating VM quickly from template '%1'").arg(templateVM ? templateVM->GetName() : QString()),
+                     QString(),
                      parent),
       m_template(templateVM)
 {
@@ -53,69 +57,43 @@ CreateVMFastAction::CreateVMFastAction(XenConnection* connection,
 
 void CreateVMFastAction::run()
 {
+    // C# CreateVMFastAction.Run
+    QString newVmRef;
     try
     {
-        QString originalName = m_template->GetName();
+        const QString originalName = m_template->GetName();
 
-        // Clone template with hidden name (matches C# MakeHiddenName)
-        SetDescription(QString("Cloning template '%1'").arg(originalName));
-        QString hiddenName = QString("__gui__%1").arg(originalName);
-
-        QString taskRef = XenAPI::VM::async_clone(GetSession(), m_template->OpaqueRef(), hiddenName);
+        SetDescription(QObject::tr("Cloning template '%1'").arg(originalName));
+        QString taskRef = XenAPI::VM::async_clone(GetSession(), m_template->OpaqueRef(), VMHelpers::MakeHiddenName(originalName));
         pollToCompletion(taskRef, 0, 80);
 
-        QString newVmRef = GetResult();
-        qDebug() << "CreateVMFastAction: Cloned VM ref:" << newVmRef;
+        newVmRef = GetResult();
+        if (newVmRef.isEmpty())
+            throw std::runtime_error("Clone returned empty VM ref");
 
-        // Provision the VM
-        SetDescription("Provisioning VM");
+        // C# Connection.WaitForCache: the VM must be known before it is renamed and shown
+        GetConnection()->WaitForCacheObject<VM>("vm", newVmRef, 60000, [this]() { return this->IsCancelled(); });
+
+        // Keep it out of the tree until it is provisioned and named (C# HideObject)
+        HiddenObjects::Hide(newVmRef);
+
+        SetDescription(QObject::tr("Provisioning VM"));
         taskRef = XenAPI::VM::async_provision(GetSession(), newVmRef);
         pollToCompletion(taskRef, 80, 90);
 
-        // Generate unique name and set it
-        SetDescription("Saving VM properties");
-        QString newName = generateUniqueName(originalName);
+        SetDescription(QObject::tr("Saving VM properties"));
+        const QString newName = VMHelpers::DefaultVMName(originalName, GetConnection());
         XenAPI::VM::set_name_label(GetSession(), newVmRef, newName);
+        HiddenObjects::Show(newVmRef);
 
-        // Store the created VM ref as result
         SetResult(newVmRef);
-
-        SetDescription(QString("VM '%1' created successfully").arg(newName));
-
+        SetDescription(QObject::tr("Created VM '%1'").arg(newName));
     } catch (const std::exception& e)
     {
+        // Don't leave the VM out of sight; C# leaves it hidden until restart, but it is a
+        // real VM on the server (named "__gui__...", which VM::IsVisible still filters)
+        if (!newVmRef.isEmpty())
+            HiddenObjects::Show(newVmRef);
         setError(QString("Failed to create VM: %1").arg(e.what()));
     }
-}
-
-QString CreateVMFastAction::generateUniqueName(const QString& baseName)
-{
-    // Get all existing VMs
-    QList<QVariantMap> allVMs = GetConnection()->GetCache()->GetAllData("vm");
-
-    // Build set of existing names
-    QSet<QString> existingNames;
-    for (const QVariantMap& vmData : allVMs)
-    {
-        existingNames.insert(vmData.value("name_label").toString());
-    }
-
-    // Try base name first
-    if (!existingNames.contains(baseName))
-    {
-        return baseName;
-    }
-
-    // Try numbered variants
-    for (int i = 1; i < 1000; i++)
-    {
-        QString candidate = QString("%1 (%2)").arg(baseName).arg(i);
-        if (!existingNames.contains(candidate))
-        {
-            return candidate;
-        }
-    }
-
-    // Fallback: append timestamp
-    return QString("%1 (%2)").arg(baseName).arg(QDateTime::currentDateTime().toString("yyyyMMddHHmmss"));
 }

@@ -76,6 +76,22 @@ class XENLIB_EXPORT VMHelpers
          */
         static QString getVMStorageHost(XenConnection *conn, const QVariantMap& vmRecord, bool ignoreCDs = false);
 
+        /**
+         * @brief Name for an object that is still being set up (C# Helpers.MakeHiddenName)
+         *
+         * The "__gui__" prefix keeps it out of the tree (see VM::IsVisible) and out of
+         * DefaultVMName's choices.
+         */
+        static QString MakeHiddenName(const QString& name);
+
+        /**
+         * @brief First free "<base> (n)" VM name, n counting from 1 (C# Helpers.DefaultVMName)
+         *
+         * A name counts as taken when a VM has it, or has its hidden form (a VM still being
+         * created under that name).
+         */
+        static QString DefaultVMName(const QString& baseName, XenConnection* connection);
+
     private:
         VMHelpers() = delete; // Static class, no instances
         ~VMHelpers() = delete;
