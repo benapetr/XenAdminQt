@@ -52,6 +52,8 @@ are omitted.
 
 ### Fixed
 
+- VM > Send Ctrl+Alt+Del is now only enabled while the Console tab shows a
+  running VM, as in C#.
 - The Memory tab now also updates when a VM's guest agent reports changes
   (ballooning support, the Edit button), batches bursts of changes into one
   redraw, skips redraws while hidden and, on a server, hides VMs that are

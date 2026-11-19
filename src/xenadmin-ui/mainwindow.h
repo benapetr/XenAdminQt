@@ -118,8 +118,7 @@ class MainWindow : public QMainWindow
         void showNewNetworkWizard();
         void showNewStorageRepositoryWizard();
 
-        // Console operations (Reference: C# MainWindow.cs line 2051)
-        // TODO should be wired or removed
+        // VM > Send Ctrl+Alt+Del (C# sendCtrlAltDelToolStripMenuItem_Click)
         void sendCADToConsole();
 
         void onConnectionStateChanged(XenConnection *conn, bool connected);
@@ -269,6 +268,8 @@ class MainWindow : public QMainWindow
 
     private:
         //! Set the title bar text and icon from a notifications sub-mode item, if its page is shown
+        //! C# MainMenuBar_MenuActivate: the Console tab is selected and shows a running VM
+        bool canSendCADToConsole() const;
         void refreshNotificationsTitle(NavigationPane::NotificationsSubMode mode, bool force = false);
         //! C# SetFiltersLabel: "Filters are ON/OFF" while a notifications page is shown
         void setFiltersLabel();

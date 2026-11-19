@@ -590,22 +590,30 @@ void MainWindow::showXenCacheExplorer()
 }
 
 /**
- * @brief Send Ctrl+Alt+Delete to active console
- * Reference: C# MainWindow.cs lines 2051-2054
- *
- * This sends Ctrl+Alt+Del to the currently active console (VNC or RDP).
- * Useful for logging into Windows VMs that require Ctrl+Alt+Del.
- *
- * To wire this up to a menu action:
- * 1. Add menu action in mainwindow.ui (e.g., "actionSendCAD" under VM menu)
- * 2. Connect signal: connect(ui->actionSendCAD, &QAction::triggered, this, &MainWindow::sendCADToConsole);
+ * @brief Send Ctrl+Alt+Delete to the active console (VNC or RDP)
+ * Reference: C# MainWindow.sendCtrlAltDelToolStripMenuItem_Click
  */
 void MainWindow::sendCADToConsole()
 {
-    if (this->m_consolePanel)
-    {
+    if (this->m_consolePanel && this->canSendCADToConsole())
         this->m_consolePanel->SendCAD();
-    }
+}
+
+bool MainWindow::canSendCADToConsole() const
+{
+    // C#: (TheTabControl.SelectedTab == TabPageConsole) && FirstIsRealVM && !Locked && Running
+    if (!this->m_consolePanel || !this->ui->mainTabWidget->isVisible())
+        return false;
+
+    const BaseTabPage* currentTab = qobject_cast<const BaseTabPage*>(this->ui->mainTabWidget->currentWidget());
+    if (!currentTab || currentTab->GetType() != BaseTabPage::Type::Console)
+        return false;
+
+    const QList<QSharedPointer<XenObject>> selection = this->m_selectionManager
+        ? this->m_selectionManager->SelectedObjects()
+        : QList<QSharedPointer<XenObject>>();
+    const QSharedPointer<VM> vm = selection.isEmpty() ? QSharedPointer<VM>() : qSharedPointerDynamicCast<VM>(selection.first());
+    return vm && vm->IsRealVM() && !vm->IsLocked() && vm->GetPowerState() == "Running";
 }
 
 void MainWindow::showOptions()
@@ -2930,7 +2938,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->MoveVMToolStripMenuItem->setText(this->m_commands["MoveVM"]->MenuText());
     this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
     this->ui->disableCbtToolStripMenuItem->setEnabled(this->m_commands["DisableChangedBlockTracking"]->CanRun());
-    this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->m_consolePanel != nullptr);
+    this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->canSendCADToConsole());
     // C# uninstallToolStripMenuItem.Command = new DeleteVMCommand()
     this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
     this->ui->deleteVmToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
@@ -3816,6 +3824,12 @@ void MainWindow::connectMenuActions()
     connect(this->ui->disableCbtToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisableChangedBlockTracking);
     connect(this->ui->installToolsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onInstallTools);
     connect(this->ui->sendCtrlAltDelToolStripMenuItem, &QAction::triggered, this, &MainWindow::sendCADToConsole);
+    // C# MainMenuBar_MenuActivate re-evaluates it whenever the menu opens (power state and
+    // tab can change without a selection change)
+    connect(this->ui->menuVM, &QMenu::aboutToShow, this, [this]()
+    {
+        this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->canSendCADToConsole());
+    });
     connect(this->ui->uninstallToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeleteVM);
     connect(this->ui->VMPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onVMProperties);
     connect(this->ui->snapshotToolStripMenuItem, &QAction::triggered, this, &MainWindow::onTakeSnapshot);
