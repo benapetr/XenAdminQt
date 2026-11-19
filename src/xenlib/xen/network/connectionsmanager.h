@@ -75,18 +75,11 @@ namespace Xen
             // Connection state management
             void ConnectAll();
             void DisconnectAll();
-            void CancelAllOperations(XenConnection* connection = nullptr);
 
             // Monitoring and health
             void StartConnectionMonitoring();
             void StopConnectionMonitoring();
             bool IsMonitoring() const;
-
-            // Reconnection management
-            void EnableAutoReconnection(bool enabled);
-            bool IsAutoReconnectionEnabled() const;
-            void ReconnectConnection(XenConnection* connection);
-            void ReconnectAll();
 
         signals:
             void connectionAdded(XenConnection* connection);
@@ -100,7 +93,6 @@ namespace Xen
             void onConnectionDisconnected();
             void onConnectionError(const QString& error);
             void onMonitoringTimer();
-            void onReconnectionTimer();
             void onHeartbeatConnectionLost(XenConnection* connection);
 
         private:
@@ -113,21 +105,13 @@ namespace Xen
             void startHeartbeat(XenConnection* connection);
             void stopHeartbeat(XenConnection* connection);
 
-            // Pool member failover methods
-            void startCoordinatorSearchTimer(XenConnection* connection, int timeoutMs);
-            void tryNextPoolMember(XenConnection* connection);
-
             ObservableList<XenConnection*>* m_connections;
             QMutex m_connectionsMutex;
             QTimer* m_monitoringTimer;
             QHash<XenConnection*, QString> m_connectionStates; // Track last known states
             bool m_isMonitoring;
 
-            // Reconnection management
-            QHash<XenConnection*, QTimer*> m_reconnectionTimers;
             QHash<XenConnection*, XenHeartbeat*> m_heartbeats;
-            QHash<XenConnection*, QDateTime> m_lastConnectionAttempt; // Track reconnection attempts
-            bool m_autoReconnectionEnabled;
 
             // Session pool for duplicate sessions
             QHash<XenConnection*, QList<XenAPI::Session*>> m_sessionPool;
@@ -137,13 +121,6 @@ namespace Xen
             // Default connection parameters
             static const int DEFAULT_PORT = 443;
             static const int MONITORING_INTERVAL_MS = 30000;       // 30 seconds
-            static const int RECONNECTION_TIMEOUT_MS = 120000;     // 2 minutes
-            static const int RECONNECTION_SHORT_TIMEOUT_MS = 5000; // 5 seconds
-
-            // Pool member failover timeouts (matching C# XenConnection)
-            static const int SEARCH_NEW_COORDINATOR_TIMEOUT_MS = 60000;     // 60 seconds - initial wait before searching
-            static const int SEARCH_NEXT_SUPPORTER_TIMEOUT_MS = 15000;      // 15 seconds - between each supporter try
-            static const int SEARCH_NEW_COORDINATOR_STOP_AFTER_MS = 360000; // 6 minutes - total search time
     };
 }
 
