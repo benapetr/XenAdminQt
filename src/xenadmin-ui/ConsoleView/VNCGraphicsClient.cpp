@@ -753,12 +753,20 @@ void VNCGraphicsClient::sendSetPixelFormat()
 void VNCGraphicsClient::sendSetEncodings()
 {
     // SetEncodings message (matches C# VNCStream)
+    // C# advertises (preferred first): CoRRE, RRE, CopyRect, Raw, Cursor, DesktopSize,
+    // XenCenter, QEMU extended key. Only the ones decoded here are advertised.
+    const qint32 encodings[] = {
+        RAW_ENCODING,
+        // Lets the server announce resolution changes (e.g. while the guest boots)
+        // instead of the console keeping the old size and showing only part of the screen
+        DESKTOP_SIZE_PSEUDO_ENCODING,
+    };
+
     writeU8(2);  // Message type
     writeU8(0);  // Padding
-    writeU16(1); // Number of encodings
-
-    // Encoding types (we only support Raw for now)
-    writeU32(0); // Raw encoding
+    writeU16(sizeof(encodings) / sizeof(encodings[0])); // Number of encodings
+    for (qint32 encoding : encodings)
+        writeU32(static_cast<quint32>(encoding));
 
     this->m_vncStream->flush();
 }
@@ -780,7 +788,10 @@ void VNCGraphicsClient::requestFramebufferUpdate()
 {
     if (this->m_connected && this->m_state == Normal && !this->m_helperIsPaused)
     {
-        sendFramebufferUpdateRequest(true);
+        // After a desktop size change the whole new screen is needed, not just changes
+        const bool incremental = !this->m_forceFullUpdate;
+        this->m_forceFullUpdate = false;
+        sendFramebufferUpdateRequest(incremental);
     }
 }
 
@@ -869,6 +880,9 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
 
             // Data is available, advance offset
             offset += dataSize;
+        } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
+        {
+            // No pixel data: width/height are the new desktop size
         } else
         {
             qWarning() << "VNCGraphicsClient: Unsupported encoding:" << encoding;
@@ -926,12 +940,42 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
 
             // Record damage (matches C# Damage method)
             damage(x, y, width, height);
+        } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
+        {
+            // C# VNCStream: DesktopSize(width, height); _incremental = false;
+            applyDesktopSize(width, height);
+            this->m_forceFullUpdate = true;
         }
     }
 
     // Render damage to screen
     renderDamage();
     return true;
+}
+
+void VNCGraphicsClient::applyDesktopSize(int width, int height)
+{
+    // C# Reference: VNCGraphicsClient.ClientDesktopSize
+    width = qMax(width, 1);
+    height = qMax(height, 1);
+    if (width == this->m_fbWidth && height == this->m_fbHeight)
+        return;
+
+    qDebug() << "VNCGraphicsClient: Desktop size changed from" << this->m_fbWidth << "x" << this->m_fbHeight
+             << "to" << width << "x" << height;
+
+    {
+        QMutexLocker locker(&this->m_backBufferMutex);
+        this->m_fbWidth = width;
+        this->m_fbHeight = height;
+        this->m_backBuffer = QImage(width, height, QImage::Format_RGB32);
+        this->m_backBuffer.fill(Qt::black);
+        this->m_backBufferInteresting = false;
+    }
+
+    updateScale();
+    emit desktopResized();
+    update();
 }
 
 bool VNCGraphicsClient::handleSetColorMapEntries()

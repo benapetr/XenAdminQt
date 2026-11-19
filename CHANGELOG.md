@@ -31,6 +31,10 @@ are omitted.
 
 ### Fixed
 
+- VM consoles now follow guest resolution changes, e.g. while a VM boots. The
+  console only told the server it understood raw pixel updates, so the server
+  could not announce a new screen size and the console kept the old one,
+  showing only the top part of the screen until the tab was reopened.
 - Options > Consoles "Enable clipboard and printer redirection" now controls
   clipboard sharing with VNC consoles, as in C#. The clipboard was always shared
   in both directions, and the option was disabled in builds without FreeRDP.

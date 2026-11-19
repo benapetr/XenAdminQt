@@ -62,6 +62,8 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
 
     public:
         static constexpr int BORDER_PADDING = 5;
+        static constexpr qint32 RAW_ENCODING = 0;
+        static constexpr qint32 DESKTOP_SIZE_PSEUDO_ENCODING = -223; // C# VNCStream.DESKTOP_SIZE_PSEUDO_ENCODING
         static constexpr int BORDER_WIDTH = 1;
         static constexpr int MOUSE_EVENTS_BEFORE_UPDATE = 2;
         static constexpr int MOUSE_EVENTS_DROPPED = 5;
@@ -153,6 +155,8 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         void handleSecurityResult();
         void handleServerInit();
         bool handleFramebufferUpdate();
+        //! C# VNCStream.DesktopSize / VNCGraphicsClient.ClientDesktopSize
+        void applyDesktopSize(int width, int height);
         bool handleSetColorMapEntries();
         bool handleBell();
         bool handleServerCutText();
@@ -234,6 +238,8 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         bool m_useSource = false; // Text console mode
         bool m_displayBorder = true;
         bool m_useQemuExtKeyEncoding = false;
+        // Next FramebufferUpdateRequest must be non-incremental (C# VNCStream._incremental = false)
+        bool m_forceFullUpdate = false;
         QSet<Qt::Key> m_pressedKeys;
         QSet<int> m_pressedScans;
         int m_currentMouseState = 0;
