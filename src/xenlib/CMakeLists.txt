@@ -99,6 +99,7 @@ set(XENLIB_SOURCES
     xen/actions/vdi/migratevirtualdiskaction.cpp
     xen/actions/vdi/movevirtualdiskaction.cpp
     xen/actions/vdi/vdidisablecbtaction.cpp
+    xen/actions/vm/vtpmaction.cpp
     xen/actions/vif/createvifaction.cpp
     xen/actions/vif/deletevifaction.cpp
     xen/actions/vif/plugvifaction.cpp

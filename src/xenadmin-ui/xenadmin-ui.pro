@@ -58,6 +58,7 @@ SOURCES += \
     dialogs/bondpropertiesdialog.cpp \
     dialogs/vifdialog.cpp \
     dialogs/vmsnapshotdialog.cpp \
+    dialogs/vtpmmanagementdialog.cpp \
     dialogs/vdipropertiesdialog.cpp \
     dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
@@ -212,6 +213,7 @@ SOURCES += \
     commands/vm/newvmfromsnapshotcommand.cpp \
     commands/vm/newtemplatefromsnapshotcommand.cpp \
     commands/vm/disablechangedblocktrackingcommand.cpp \
+    commands/vm/vtpmcommand.cpp \
     commands/vm/importvmcommand.cpp \
     commands/template/deletetemplatecommand.cpp \
     commands/template/templatecommand.cpp \
@@ -369,6 +371,7 @@ HEADERS += \
     dialogs/bondpropertiesdialog.h \
     dialogs/vifdialog.h \
     dialogs/vmsnapshotdialog.h \
+    dialogs/vtpmmanagementdialog.h \
     dialogs/vdipropertiesdialog.h \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
@@ -532,6 +535,7 @@ HEADERS += \
     commands/vm/newvmfromsnapshotcommand.h \
     commands/vm/newtemplatefromsnapshotcommand.h \
     commands/vm/disablechangedblocktrackingcommand.h \
+    commands/vm/vtpmcommand.h \
     commands/vm/importvmcommand.h \
     commands/template/deletetemplatecommand.h \
     commands/template/templatecommand.h \

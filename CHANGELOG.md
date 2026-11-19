@@ -9,6 +9,9 @@ are omitted.
 
 ### Added
 
+- vTPM manager (VM > Trusted Platform Module Manager..., the VM right-click
+  menu and the General tab's Trusted Platform Module row): attach, remove and
+  inspect vTPMs of UEFI VMs, as in C#.
 - General tab: VMs show their boot mode (BIOS, UEFI or UEFI Secure Boot, in red
   when the pool lacks UEFI certificates), servers booting over multipath show
   how many boot paths are active, and running VMs list their read-cached disks

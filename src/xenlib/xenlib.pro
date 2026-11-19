@@ -204,6 +204,7 @@ HEADERS += \
     xen/actions/vdi/movevirtualdiskaction.h \
     xen/actions/vdi/migratevirtualdiskaction.h \
     xen/actions/vdi/vdidisablecbtaction.h \
+    xen/actions/vm/vtpmaction.h \
     xen/actions/vbd/vbdcreateandplugaction.h \
     xen/actions/vbd/vbdeditaction.h \
     xen/actions/general/generaleditpageaction.h \
@@ -462,6 +463,7 @@ SOURCES += \
     xen/actions/vdi/movevirtualdiskaction.cpp \
     xen/actions/vdi/migratevirtualdiskaction.cpp \
     xen/actions/vdi/vdidisablecbtaction.cpp \
+    xen/actions/vm/vtpmaction.cpp \
     xen/actions/vbd/vbdcreateandplugaction.cpp \
     xen/actions/vbd/vbdeditaction.cpp \
     xen/actions/general/generaleditpageaction.cpp \

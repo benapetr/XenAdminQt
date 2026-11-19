@@ -401,6 +401,44 @@ private slots:
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
     }
 
+    void vtpmRulesMatchCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        auto setXapi = [&](const QString& version)
+        {
+            cache->Update(XenObjectType::Host, "OpaqueRef:h", QVariantMap{{"software_version", QVariantMap{{"xapi", version}}}});
+            cache->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{{"master", "OpaqueRef:h"}});
+        };
+
+        // Before xapi 23.11: halted, below the limit of one vTPM
+        setXapi("22.27.0");
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"power_state", "Halted"}, {"VTPMs", QVariantList()}});
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>("OpaqueRef:vm");
+        QString reason;
+        QVERIFY(vm->CanAddVtpm(&reason));
+        QVERIFY(reason.isEmpty());
+        QVERIFY(vm->CanRemoveVtpm());
+
+        cache->Update(XenObjectType::VTPM, "OpaqueRef:t", QVariantMap{{"VM", "OpaqueRef:vm"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"power_state", "Halted"}, {"VTPMs", QVariantList{"OpaqueRef:t"}}});
+        QVERIFY(!vm->CanAddVtpm(&reason));
+        QVERIFY(reason.contains("maximum number of vTPMs"));
+
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"power_state", "Running"}, {"VTPMs", QVariantList()}});
+        QVERIFY(!vm->CanAddVtpm(&reason));
+        QVERIFY(reason.contains("shut down"));
+        QVERIFY(!vm->CanRemoveVtpm(&reason));
+
+        // xapi 23.11+: allowed_operations decides, even for a running VM
+        setXapi("23.11.0");
+        QVERIFY(!vm->CanAddVtpm(&reason));
+        QVERIFY(reason.contains("not allowed"));
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{
+            {"power_state", "Running"}, {"VTPMs", QVariantList()}, {"allowed_operations", QVariantList{"create_vtpm"}}});
+        QVERIFY(vm->CanAddVtpm(&reason));
+    }
+
     void groupHideMatchesCSharp()
     {
         XenConnection connection;

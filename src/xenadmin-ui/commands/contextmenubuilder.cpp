@@ -78,6 +78,7 @@
 #include "template/instantvmfromtemplatecommand.h"
 #include "vm/vmpropertiescommand.h"
 #include "vm/takesnapshotcommand.h"
+#include "vm/vtpmcommand.h"
 #include "vm/deletesnapshotcommand.h"
 #include "vm/reverttosnapshotcommand.h"
 #include "vm/exportsnapshotastemplatecommand.h"
@@ -796,6 +797,11 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     // Snapshot operations
     TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm, this->m_mainWindow, this);
     this->addCommand(menu, takeSnapshotCmd);
+
+    this->addSeparator(menu);
+
+    // C# ContextMenuBuilder: items.AddIfEnabled(new VtpmCommand(mainWindow, selection))
+    this->addCommand(menu, new VtpmCommand(this->m_mainWindow, this));
 
     this->addSeparator(menu);
 

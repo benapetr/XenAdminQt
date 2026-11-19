@@ -166,6 +166,16 @@ class XENLIB_EXPORT VM : public XenObject
         QSharedPointer<Host> GetHome() const;
         QList<QSharedPointer<VUSB>> GetVUSBs() const;
         QList<QSharedPointer<VTPM>> GetVTPMs() const;
+
+        //! C# VM.MAX_ALLOWED_VTPMS
+        static constexpr int MAX_ALLOWED_VTPMS = 1;
+
+        //! C# VM.CanAddVtpm: xapi 23.11+ decides via allowed_operations, older ones need a
+        //! halted VM below the vTPM limit
+        bool CanAddVtpm(QString* cannotReason = nullptr) const;
+
+        //! C# VM.CanRemoveVtpm (used before xapi 23.11): the VM must be halted
+        bool CanRemoveVtpm(QString* cannotReason = nullptr) const;
         QList<QSharedPointer<Blob>> GetBlobs() const;
         QSharedPointer<VM> GetParent() const;
         QList<QSharedPointer<PCI>> GetAttachedPCIDevices() const;

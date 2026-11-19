@@ -92,6 +92,7 @@ set(XENADMIN_SOURCES
     commands/vm/deletevmcommand.cpp
     commands/vm/deletevmsandtemplatescommand.cpp
     commands/vm/disablechangedblocktrackingcommand.cpp
+    commands/vm/vtpmcommand.cpp
     commands/vm/exportsnapshotastemplatecommand.cpp
     commands/vm/exportvmcommand.cpp
     commands/vm/forcerebootvmcommand.cpp
@@ -292,6 +293,7 @@ set(XENADMIN_SOURCES
     dialogs/vmappliancepropertiesdialog.cpp
     dialogs/vmpropertiesdialog.cpp
     dialogs/vmsnapshotdialog.cpp
+    dialogs/vtpmmanagementdialog.cpp
     dialogs/vmsnapshotdialog.ui
     dialogs/warningdialogs/closexencenterwarningdialog.cpp
     dialogs/warningdialogs/closexencenterwarningdialog.ui

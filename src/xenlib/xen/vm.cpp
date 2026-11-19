@@ -1913,3 +1913,44 @@ qint64 VM::GetUptime() const
 
     return uptimeSeconds;
 }
+
+bool VM::CanAddVtpm(QString* cannotReason) const
+{
+    auto fail = [cannotReason](const QString& reason)
+    {
+        if (cannotReason)
+            *cannotReason = reason;
+        return false;
+    };
+    if (cannotReason)
+        cannotReason->clear();
+
+    if (Host::XapiEqualOrGreater(this->GetConnection(), "23.11.0"))
+    {
+        if (this->GetAllowedOperations().contains("create_vtpm"))
+            return true;
+        return fail(QObject::tr("Attaching a new vTPM to this VM is currently not allowed."));
+    }
+
+    if (this->GetVTPMs().size() >= MAX_ALLOWED_VTPMS)
+        return fail(QObject::tr("The maximum number of vTPMs that can be attached to this VM is %1.").arg(MAX_ALLOWED_VTPMS));
+
+    if (this->GetPowerState() != "Halted")
+        return fail(QObject::tr("You need to shut down this VM before you can attach a new vTPM to it."));
+
+    return true;
+}
+
+bool VM::CanRemoveVtpm(QString* cannotReason) const
+{
+    if (cannotReason)
+        cannotReason->clear();
+
+    if (this->GetPowerState() != "Halted")
+    {
+        if (cannotReason)
+            *cannotReason = QObject::tr("You need to shut down the VM before you can remove this vTPM.");
+        return false;
+    }
+    return true;
+}

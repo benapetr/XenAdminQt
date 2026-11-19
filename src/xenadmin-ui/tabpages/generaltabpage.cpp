@@ -47,6 +47,7 @@
 #include "dialogs/storagepropertiesdialog.h"
 #include "dialogs/networkpropertiesdialog.h"
 #include "mainwindow.h"
+#include "commands/vm/vtpmcommand.h"
 #include <QMenu>
 #include <algorithm>
 #include <QDateTime>
@@ -1163,11 +1164,23 @@ void GeneralTabPage::populateDeviceSecuritySection()
     if (vtpms.isEmpty())
         return;
 
-    QString value = vtpms.count() == 1
-        ? tr("1 attached")
-        : tr("%1 attached").arg(vtpms.count());
-    this->addProperty(this->ui->pdSectionDeviceSecurity, tr("vTPM"), value);
-    // TODO: Add VTPM command actions and feature gating once Helpers.FeatureForbidden is ported.
+    // C# GenerateDeviceSecurityBox (licence restriction not ported)
+    if (!Host::XapiEqualOrGreater(vm->GetConnection(), "22.26.0"))
+        return;
+
+    const QString value = vtpms.count() == 1
+        ? tr("A vTPM is attached to this VM.")
+        : tr("%1 vTPMs are attached to this VM.").arg(vtpms.count());
+
+    VtpmCommand* command = new VtpmCommand(MainWindow::instance(), this);
+    command->SetSelectionOverride(QList<QSharedPointer<XenObject>>() << vm);
+    this->m_rowMenuObjects.append(command);
+    QAction* manage = this->createRowAction(command->MenuText());
+    manage->setEnabled(command->CanRun());
+    connect(manage, &QAction::triggered, command, &VtpmCommand::Run);
+
+    this->addProperty(this->ui->pdSectionDeviceSecurity, tr("Trusted Platform Module"), value,
+                      QList<QAction*>() << manage);
 }
 
 // === Host Section Population Methods ===

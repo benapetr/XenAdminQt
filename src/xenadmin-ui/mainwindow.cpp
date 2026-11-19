@@ -157,6 +157,7 @@
 #include "commands/vm/forceshutdownvmcommand.h"
 #include "commands/vm/forcerebootvmcommand.h"
 #include "commands/vm/disablechangedblocktrackingcommand.h"
+#include "commands/vm/vtpmcommand.h"
 #include "commands/vm/vmrecoverymodecommand.h"
 #include "commands/vm/vappstartcommand.h"
 #include "commands/vm/vappshutdowncommand.h"
@@ -2972,7 +2973,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
     this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
     this->ui->assignToVappToolStripMenuItem->setEnabled(false);
-    this->ui->vtpmManagerToolStripMenuItem->setEnabled(false);
+    this->ui->vtpmManagerToolStripMenuItem->setEnabled(this->m_commands["Vtpm"]->CanRun());
     this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
     this->ui->disablePvsReadCachingToolStripMenuItem->setEnabled(false);
 
@@ -3723,6 +3724,7 @@ void MainWindow::initializeCommands()
     this->m_commands["ForceRebootVM"] = new ForceRebootVMCommand(this, this);
     this->m_commands["VMRecoveryMode"] = new VMRecoveryModeCommand(this, this);
     this->m_commands["DisableChangedBlockTracking"] = new DisableChangedBlockTrackingCommand(this, this);
+    this->m_commands["Vtpm"] = new VtpmCommand(this, this);
     this->m_commands["VappStart"] = new VappStartCommand(this, this);
     this->m_commands["VappShutDown"] = new VappShutDownCommand(this, this);
     this->m_commands["CloneVM"] = new CloneVMCommand(this, this);
@@ -3846,6 +3848,10 @@ void MainWindow::connectMenuActions()
     connect(this->ui->MoveVMToolStripMenuItem, &QAction::triggered, this, &MainWindow::onMoveVM);
     connect(this->ui->deleteVmToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeleteVM);
     connect(this->ui->disableCbtToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisableChangedBlockTracking);
+    connect(this->ui->vtpmManagerToolStripMenuItem, &QAction::triggered, this, [this]()
+    {
+        this->m_commands["Vtpm"]->Run();
+    });
     connect(this->ui->installToolsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onInstallTools);
     connect(this->ui->sendCtrlAltDelToolStripMenuItem, &QAction::triggered, this, &MainWindow::sendCADToConsole);
     // C# MainMenuBar_MenuActivate re-evaluates it whenever the menu opens (power state and
