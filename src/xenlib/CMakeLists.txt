@@ -203,6 +203,7 @@ set(XENLIB_SOURCES
     xensearch/queryfilter.cpp
     xensearch/queryscope.cpp
     xensearch/search.cpp
+    xensearch/searchmarshalling.cpp
     xensearch/sort.cpp
     xen/session.cpp
     xen/sm.cpp

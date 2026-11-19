@@ -97,6 +97,7 @@ HEADERS += \
     xensearch/propertyaccessorhelper.h \
     xensearch/query.h \
     xensearch/search.h \
+    xensearch/searchmarshalling.h \
     xensearch/sort.h \
     xensearch/iacceptgroups.h \
     xen/network/connection.h \
@@ -366,6 +367,7 @@ SOURCES += \
     xensearch/propertyaccessorhelper.cpp \
     xensearch/query.cpp \
     xensearch/search.cpp \
+    xensearch/searchmarshalling.cpp \
     xensearch/sort.cpp \
     xen/network/connection.cpp \
     xen/network/connectionworker.cpp \

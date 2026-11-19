@@ -26,6 +26,10 @@
 #include "xenlib/xensearch/group.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/searchmarshalling.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xen/network/certificatemanager.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/friendlynames.h"
@@ -402,6 +406,86 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void savedSearchesReadAndWriteXenCenterXml()
+    {
+        // As C# SearchToXML stores it in a pool's gui_config ("xensearch.Search-<uuid>")
+        const QString xml =
+            "<Search uuid=\"1234\" name=\"Running web VMs\" major_version=\"2\" minor_version=\"0\">"
+            "<Query><QueryScope><VM /><Snapshot /></QueryScope>"
+            "<GroupQuery type=\"And\">"
+            "<EnumPropertyQuery property=\"power_state\" equals=\"yes\" query=\"Running\" />"
+            "<EnumPropertyQuery property=\"virtualisation_status\" equals=\"no\" query=\"IoDriversInstalled, ManagementInstalled\" />"
+            "<StringPropertyQuery property=\"label\" casesensitive=\"no\" query=\"web\" type=\"startswith\" />"
+            "<RecursiveXMOPropertyQuery property=\"pool\"><StringPropertyQuery property=\"uuid\" casesensitive=\"no\" query=\"pool-uuid\" type=\"exactmatch\" /></RecursiveXMOPropertyQuery>"
+            "<DatePropertyQuery property=\"start_time\" query=\"20260301\" type=\"lastweek\" />"
+            "<IntPropertyQuery property=\"memory\" query=\"1073741824\" type=\"gt\" />"
+            "<BooleanQuery property=\"read_caching_enabled\" query=\"yes\" />"
+            "<StringListContainsQuery property=\"tags\" contains=\"yes\" query=\"production\" />"
+            "<CustomFieldQuery query=\"alice\" type=\"exactmatch\"><CustomFieldDefinition name=\"owner\" type=\"String\" defaultValue=\"\" /></CustomFieldQuery>"
+            "</GroupQuery></Query>"
+            "<XenModelObjectPropertyGrouping property=\"pool\"><PropertyGrouping property=\"os_name\" /></XenModelObjectPropertyGrouping>"
+            "<columns><column name=\"name\" width=\"200\" /><column name=\"state\" width=\"10\" /></columns>"
+            "<sorting><sort column=\"name\" ascending=\"yes\" /></sorting>"
+            "</Search>";
+
+        std::unique_ptr<Search> search(SearchMarshalling::LoadSearch(xml));
+        QVERIFY(search);
+        QCOMPARE(search->GetName(), QString("Running web VMs"));
+        QCOMPARE(search->GetUUID(), QString("1234"));
+        QCOMPARE(search->GetQuery()->getQueryScope()->getObjectTypes(),
+                 XenSearch::ObjectTypes::VM | XenSearch::ObjectTypes::Snapshot);
+        auto* group = dynamic_cast<GroupQuery*>(search->GetQuery()->getQueryFilter());
+        QVERIFY(group);
+        QCOMPARE(group->getSubQueries().size(), 9);
+        auto* tools = dynamic_cast<EnumQuery*>(group->getSubQueries().at(1));
+        QVERIFY(tools && tools->isNegated());
+        QCOMPARE(tools->getValue(), QString("IoDriversInstalled, ManagementInstalled"));
+        QVERIFY(dynamic_cast<RecursiveXMOPropertyQuery*>(group->getSubQueries().at(3)));
+        auto* date = dynamic_cast<DateQuery*>(group->getSubQueries().at(4));
+        QVERIFY(date);
+        QCOMPARE(date->getComparisonType(), DateQuery::ComparisonType::LastWeek);
+        QVERIFY(dynamic_cast<TagQuery*>(group->getSubQueries().at(7)));
+        auto* owner = dynamic_cast<CustomFieldQuery*>(group->getSubQueries().at(8));
+        QVERIFY(owner);
+        QCOMPARE(owner->getFieldName(), QString("owner"));
+        QVERIFY(dynamic_cast<PoolGrouping*>(search->GetGrouping()));
+        auto* byOs = dynamic_cast<PropertyGrouping*>(search->GetGrouping()->subgrouping());
+        QVERIFY(byOs);
+        QCOMPARE(byOs->property(), XenSearch::PropertyNames::os_name);
+        QCOMPARE(search->GetColumns().size(), 1); // the obsolete "state" column is dropped (CA-25116)
+        QCOMPARE(search->GetSorting().size(), 1);
+
+        // Writing and reading again gives the same search
+        const QString written = SearchMarshalling::SearchToXml(search.get());
+        QVERIFY(written.startsWith("<Search "));
+        QVERIFY(written.contains("type=\"lastweek\""));
+        QVERIFY(written.contains("<XenModelObjectPropertyGrouping property=\"pool\">"));
+        std::unique_ptr<Search> again(SearchMarshalling::LoadSearch(written));
+        QVERIFY(again);
+        QVERIFY(again->GetQuery()->getQueryFilter()->Equals(search->GetQuery()->getQueryFilter()));
+        QCOMPARE(SearchMarshalling::SearchToXml(again.get()), written);
+
+        // A file as C# SearchesToXML writes it (namespace, doctype); placeholders are not saved
+        std::unique_ptr<Search> withPlaceholder(new Search(new Query(new QueryScope(XenSearch::ObjectTypes::Server),
+            new GroupQuery(GroupQuery::GroupQueryType::Or, {new DummyQuery(),
+                new StringPropertyQuery(XenSearch::PropertyNames::label, "x", StringPropertyQuery::MatchType::Contains)})),
+            nullptr, "servers", "5678"));
+        const QString file = SearchMarshalling::SearchesToXml({search.get(), withPlaceholder.get()});
+        QVERIFY(file.startsWith("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE xensearch"));
+        QVERIFY(file.contains("xmlns=\"http://www.citrix.com/XenCenter/XenSearch/schema\""));
+        QVERIFY(!file.contains("DummyQuery"));
+        bool ok = false;
+        QList<Search*> loaded = SearchMarshalling::LoadSearches(file, &ok);
+        QVERIFY(ok);
+        QCOMPARE(loaded.size(), 2);
+        QCOMPARE(loaded.at(1)->GetName(), QString("servers"));
+        qDeleteAll(loaded);
+
+        // Unknown future versions are refused, as C# does
+        QVERIFY(!SearchMarshalling::LoadSearch("<Search uuid=\"u\" name=\"n\" major_version=\"3\" minor_version=\"0\"><Query><QueryScope><VM/></QueryScope></Query></Search>"));
+        QVERIFY(!SearchMarshalling::LoadSearch("null"));
     }
 
     void conditionsReadTypedPropertiesLikeCSharp()
