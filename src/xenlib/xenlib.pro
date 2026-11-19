@@ -98,6 +98,8 @@ HEADERS += \
     xensearch/query.h \
     xensearch/search.h \
     xensearch/searchmarshalling.h \
+    xensearch/searchmanager.h \
+    xen/actions/general/searchaction.h \
     xensearch/sort.h \
     xensearch/iacceptgroups.h \
     xen/network/connection.h \
@@ -368,6 +370,8 @@ SOURCES += \
     xensearch/query.cpp \
     xensearch/search.cpp \
     xensearch/searchmarshalling.cpp \
+    xensearch/searchmanager.cpp \
+    xen/actions/general/searchaction.cpp \
     xensearch/sort.cpp \
     xen/network/connection.cpp \
     xen/network/connectionworker.cpp \

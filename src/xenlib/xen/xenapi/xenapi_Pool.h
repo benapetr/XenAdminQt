@@ -185,6 +185,12 @@ namespace XenAPI
              */
             static void set_gui_config(Session* session, const QString& pool, const QVariantMap& guiConfig);
 
+            //! pool.add_to_gui_config (C# Pool.add_to_gui_config)
+            static void add_to_gui_config(Session* session, const QString& pool, const QString& key, const QString& value);
+
+            //! pool.remove_from_gui_config (C# Pool.remove_from_gui_config)
+            static void remove_from_gui_config(Session* session, const QString& pool, const QString& key);
+
             /**
              * @brief Set pool other_config map
              * @param session Active XenSession

@@ -211,6 +211,13 @@ class Search
          * C# equivalent: Columns property (Search.cs lines 206-209)
          * @return List of (column name, width) pairs
          */
+        //! Stop deleting the query and grouping (they were handed to another owner)
+        void ReleaseOwnership()
+        {
+            this->m_ownsQuery = false;
+            this->m_ownsGrouping = false;
+        }
+
         QList<QPair<QString, int>> GetColumns() const
         {
             return this->m_columns;

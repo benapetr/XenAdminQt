@@ -204,6 +204,8 @@ set(XENLIB_SOURCES
     xensearch/queryscope.cpp
     xensearch/search.cpp
     xensearch/searchmarshalling.cpp
+    xensearch/searchmanager.cpp
+    xen/actions/general/searchaction.cpp
     xensearch/sort.cpp
     xen/session.cpp
     xen/sm.cpp

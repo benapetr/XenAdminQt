@@ -27,6 +27,8 @@
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/searchmarshalling.h"
+#include "xenlib/xensearch/searchmanager.h"
+#include <QSignalSpy>
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/query.h"
 #include "xenlib/xensearch/queryscope.h"
@@ -406,6 +408,46 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void searchManagerListsBuiltInAndPoolSearches()
+    {
+        SearchManager* manager = SearchManager::instance();
+        QSignalSpy changed(manager, &SearchManager::SearchesChanged);
+
+        // C#'s seven built-in searches
+        int builtIn = 0;
+        for (const SearchManager::Entry& entry : manager->GetSearches())
+            builtIn += entry.isDefault ? 1 : 0;
+        QCOMPARE(builtIn, 7);
+        std::unique_ptr<Search> byOs(manager->CreateSearch("dead-beef-1234-vmsbyos"));
+        QVERIFY(byOs);
+        QVERIFY(byOs->IsDefaultSearch());
+        QVERIFY(dynamic_cast<PropertyGrouping*>(byOs->GetGrouping()));
+
+        // A search saved on a pool appears once its connection is known
+        const QString xml = "<Search uuid=\"abc\" name=\"Mine\" major_version=\"2\" minor_version=\"0\">"
+                            "<Query><QueryScope><VM /></QueryScope></Query><sorting /></Search>";
+        XenConnection* connection = new XenConnection(nullptr);
+        connection->GetCache()->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{
+            {"name_label", "pool"}, {"gui_config", QVariantMap{{SearchManager::GuiConfigKey("abc"), xml}}}});
+        Xen::ConnectionsManager::instance()->AddConnection(connection);
+        QTRY_VERIFY(manager->Contains("abc"));
+        QVERIFY(changed.count() >= 1);
+        QCOMPARE(manager->ConnectionsHolding("abc"), QList<XenConnection*>({connection}));
+        std::unique_ptr<Search> mine(manager->CreateSearch("abc"));
+        QVERIFY(mine);
+        QCOMPARE(mine->GetName(), QString("Mine"));
+        QCOMPARE(mine->GetConnection(), connection);
+        QVERIFY(!mine->IsDefaultSearch());
+
+        // ... and goes when the pool no longer has it
+        connection->GetCache()->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{
+            {"name_label", "pool"}, {"gui_config", QVariantMap()}});
+        QTRY_VERIFY(!manager->Contains("abc"));
+
+        Xen::ConnectionsManager::instance()->RemoveConnection(connection);
+        delete connection;
     }
 
     void savedSearchesReadAndWriteXenCenterXml()
