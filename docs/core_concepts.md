@@ -57,6 +57,12 @@ using them. `ResolveObjectData()` exposes raw records when needed;
 `opaque_ref` is the canonical reference key. Refresh views through cache
 notifications rather than the removed `XenLib::requestObjectData()` API.
 
+The cache stores every class it receives as raw records, but only creates typed
+objects for types registered in `XenCache::createObjectForType()`. A class
+missing there compiles fine, yet `ResolveObject<T>()` and `GetAll<T>()` return
+nothing for it. When adding an object class, register it in every place listed
+under "Adding a typed object class" in `.github/copilot-instructions.md`.
+
 ## API bindings and workflows
 
 Static bindings in `namespace XenAPI` mirror the C# object classes. Most files

@@ -71,6 +71,37 @@ if (vm && vm->IsValid())
 - Use typed formatting helpers rather than duplicating display logic.
 - Let cache signals refresh views. There is no `XenLib::requestObjectData()`.
 
+#### Adding a typed object class
+
+A new `XenObject` subclass (usually ported from a C# `XenAPI` class) must be
+registered in all of these places:
+
+1. `src/xenlib/xen/xenobjecttype.h`: the `XenObjectType` value.
+2. `src/xenlib/xen/xenobject.cpp`: `TypeFromString()` (the XAPI class name, as
+   sent by `event.from`) and `TypeToString()`.
+3. `src/xenlib/xen/xenobjecttraits.h`: forward declaration and
+   `XEN_OBJECT_TRAIT`, so `ResolveObject<T>(ref)` works without a type argument.
+4. `src/xenlib/xencache.cpp`: the include, a case in `createObjectForType()`
+   and an entry in `GetKnownTypes()`.
+5. `src/xenlib/xenlib.pro` and `src/xenlib/CMakeLists.txt`: the sources.
+
+Step 4 is easy to miss because everything still compiles without it: records
+of that class are cached as raw data, but `ResolveObject<T>()` and `GetAll<T>()`
+return nothing, so every feature using the class silently does nothing. The
+`cacheBuildsEveryKnownType` test checks that each listed type resolves.
+
+### XenAPI bindings and errors
+
+Bindings send requests through `XenAPI::Session::SendApiRequest()`, which
+throws `Failure` (`src/xenlib/xen/failure.h`) for XAPI errors and
+`std::runtime_error` for transport problems. Actions catch exceptions in
+`run()` and report them with `setError()`. Inspect `Failure::errorDescription()`
+for specific codes such as `Failure::HANDLE_INVALID`.
+
+Prefer the per-key `add_to_*` / `remove_from_*` bindings over replacing a whole
+map (for example `other_config`) so concurrent changes to other keys survive;
+add the binding to `xen/xenapi/` if it is missing.
+
 ### Action lifecycle and progress
 
 Derive user mutations and long-running workflows from `AsyncOperation`.
@@ -107,6 +138,27 @@ object through `SetObject(QSharedPointer<XenObject>)`, and implement
 `OnPageHidden()`, and dirty-state handling for updates. Register new pages in
 `MainWindow` alongside existing pages.
 
+## Porting from C#
+
+Equivalents for C# helpers that come up often:
+
+- `Helpers.XapiEqualOrGreater_x_y_z(conn)`: `Host::XapiEqualOrGreater(conn, "x.y.z")`.
+- `Helpers.<Release>OrGreater(conn)` (platform version checks):
+  `Host::PlatformVersionAtLeast()` and the named wrappers such as
+  `Host::NaplesOrGreater()` and `Host::CloudOrGreater()`. Add a wrapper with the
+  C# version string when a new one is needed. Both return true when the
+  coordinator is unknown, as in C#.
+- `Helpers.GetCoordinator(conn)`: `Host::GetCoordinator(conn)`.
+- `Helpers.GetPool(conn)` (visible pools only): `XenCache::GetPool()`.
+  `GetPoolOfOne()` also returns the implicit pool of a standalone server, so it
+  cannot tell a standalone server from a pool.
+- `XenAdminConfigManager.Provider.HideObject/ShowObject`: `HiddenObjects::Hide`
+  and `HiddenObjects::Show` (`src/xenlib/xen/hiddenobjects.h`), a client-side list
+  that keeps objects out of the tree while an operation runs.
+- `Helpers.FeatureForbidden()` and `Host.Restrict*` licence checks: the client
+  targets XCP-ng, which has no such licensing. Do not port them; treat features
+  as allowed and mention the omission in a comment.
+
 ## UI Conventions
 
 All new dialogs and layouts must use Qt Designer `.ui` files. Instantiate the
@@ -135,6 +187,14 @@ make -j12
 ```
 
 Qt 6 is the primary target, with Qt 5 compatibility in the qmake projects.
+CI builds both Qt 6 and Qt 5.15.2 on Linux and macOS, so keep code Qt 5
+compatible:
+
+- Include what you use. Qt 6 headers pull in more indirectly; for example
+  `qInfo() << ...` needs `<QDebug>` on Qt 5.
+- Guard Qt 6-only API with `QT_VERSION_CHECK` (for example `enterEvent()` takes
+  `QEnterEvent*` in Qt 6 but `QEvent*` in Qt 5).
+
 CMake is also supported and requires Qt 6:
 
 ```bash
@@ -149,17 +209,23 @@ source lists in sync. qmake supports `CONFIG+=no_crypto` and
 
 QtTest projects live in `tests/xenlib/` and `tests/xenadmin-ui/`; see
 `docs/testing.md` for setup and current limitations. Run relevant checks for
-code changes. Live-server behavior requires integration testing.
+code changes and add tests for new library logic (cache-backed model code can
+be tested offline by filling a `XenConnection`'s cache). Live-server behavior
+requires integration testing.
 
 ## Development Workflow
 
 1. Find the corresponding C# implementation under `xenadmin/XenAdmin/` or
    `xenadmin/XenModel/` when porting a feature.
 2. Add missing API bindings in `xen/xenapi/` and workflows in `xen/actions/`.
+   Register any new object class as described under "Adding a typed object
+   class".
 3. Wire commands, Designer forms, and tab pages into the UI.
 4. Update both build systems for new files.
 5. Build and run appropriate tests; validate server workflows against a test
    XCP-ng/XenServer environment when available.
+6. Record user-visible changes in `CHANGELOG.md` under `## [Unreleased]`, in the
+   `Added` or `Fixed` section.
 
 ## Documentation
 
