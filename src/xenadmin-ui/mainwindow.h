@@ -270,6 +270,8 @@ class MainWindow : public QMainWindow
     private:
         //! Set the title bar text and icon from a notifications sub-mode item, if its page is shown
         void refreshNotificationsTitle(NavigationPane::NotificationsSubMode mode, bool force = false);
+        //! C# SetFiltersLabel: "Filters are ON/OFF" while a notifications page is shown
+        void setFiltersLabel();
         static MainWindow *g_instance;
 
         void updateActions();

@@ -441,6 +441,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     alertPage->hide();
     eventsPage->hide();
 
+    // C# OnShown: page.FiltersChanged += NotificationsPage_FiltersChanged
+    for (NotificationsBasePage* page : this->m_notificationPages)
+        connect(page, &NotificationsBasePage::filtersChanged, this, &MainWindow::setFiltersLabel);
+
     // Create placeholder widget
     this->m_placeholderWidget = new PlaceholderWidget();
 
@@ -1893,7 +1897,7 @@ void MainWindow::onNavigationModeChanged(int mode)
     // Update search for new mode (matches C# ViewSettingsChanged line 1981)
     this->m_navigationPane->UpdateSearch();
 
-    // TODO: SetFiltersLabel() - update filters indicator in title bar
+    this->setFiltersLabel();
     this->updateViewMenu(navMode);
 }
 
@@ -2026,6 +2030,27 @@ void MainWindow::refreshNotificationsTitle(NavigationPane::NotificationsSubMode 
     this->m_titleBar->SetIcon(this->m_navigationPane->GetNotificationsSubModeIcon(mode));
 }
 
+void MainWindow::setFiltersLabel()
+{
+    if (!this->m_titleBar)
+        return;
+
+    bool pageShown = false;
+    bool filterIsOn = false;
+    for (NotificationsBasePage* page : this->m_notificationPages)
+    {
+        if (!page->isVisible())
+            continue;
+        pageShown = true;
+        if (page->GetFilterIsOn())
+            filterIsOn = true;
+    }
+
+    this->m_titleBar->SetFiltersText(pageShown
+        ? (filterIsOn ? tr("Filters are ON") : tr("Filters are OFF"))
+        : QString());
+}
+
 void MainWindow::updateAlertsCount()
 {
     // C# Reference: MainWindow.XenCenterAlerts_CollectionChanged
@@ -2099,8 +2124,7 @@ void MainWindow::onNotificationsSubModeChanged(int subMode)
     // C# Reference: TitleLabel.Text = submodeItem.Text; TitleIcon.Image = submodeItem.Image;
     this->refreshNotificationsTitle(mode, true);
 
-    // TODO: Update filters label in title bar
-    // C# SetFiltersLabel();
+    this->setFiltersLabel();
     
     qDebug() << "Switched to notifications sub-mode:" << subMode;
 }

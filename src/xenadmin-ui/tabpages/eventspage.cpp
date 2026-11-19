@@ -177,6 +177,9 @@ void EventsPage::buildRowList()
 
     TableClipboardUtils::RestoreSortState(this->ui->eventsTable, sortState, 4, Qt::DescendingOrder);
 
+    // C# BuildRowList: OnFiltersChanged
+    this->onFiltersChanged();
+
     this->updateButtons();
 }
 

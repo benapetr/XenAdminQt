@@ -436,6 +436,9 @@ void AlertSummaryPage::buildAlertList()
 
     this->ui->alertsTable->setUpdatesEnabled(true);
     TableClipboardUtils::RestoreSortState(this->ui->alertsTable, sortState, 4, Qt::DescendingOrder);
+
+    // C# _Rebuild: OnFiltersChanged
+    this->onFiltersChanged();
 }
 
 bool AlertSummaryPage::filterAlert(Alert* alert) const

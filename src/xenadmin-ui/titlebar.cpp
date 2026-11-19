@@ -61,6 +61,12 @@ TitleBar::TitleBar(QWidget* parent) : QWidget(parent)
     // Add stretch to push everything to the left
     this->m_layout->addStretch();
 
+    // Filters state of the notification pages, on the right (C# labelFiltersOnOff)
+    this->m_filtersLabel = new QLabel(this);
+    this->m_filtersLabel->setStyleSheet("color: white;");
+    this->m_filtersLabel->hide();
+    this->m_layout->addWidget(this->m_filtersLabel);
+
     this->setLayout(this->m_layout);
 }
 
@@ -101,6 +107,12 @@ void TitleBar::SetText(const QString& text)
 {
     this->m_text = text;
     this->m_textLabel->setText(text);
+}
+
+void TitleBar::SetFiltersText(const QString& text)
+{
+    this->m_filtersLabel->setText(text);
+    this->m_filtersLabel->setVisible(!text.isEmpty());
 }
 
 void TitleBar::Clear()

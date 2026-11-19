@@ -56,6 +56,9 @@ class TitleBar : public QWidget
         void SetIcon(const QIcon& icon);
         void SetText(const QString& text);
 
+        //! Right-hand note such as "Filters are ON" (C# labelFiltersOnOff); empty hides it
+        void SetFiltersText(const QString& text);
+
         // Clear the title
         void Clear();
 
@@ -69,6 +72,7 @@ class TitleBar : public QWidget
     private:
         QLabel* m_iconLabel;
         QLabel* m_textLabel;
+        QLabel* m_filtersLabel;
         QHBoxLayout* m_layout;
 
         QString m_text;
