@@ -70,6 +70,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         static constexpr qint32 CURSOR_PSEUDO_ENCODING = -239;
         static constexpr qint32 DESKTOP_SIZE_PSEUDO_ENCODING = -223; // C# VNCStream.DESKTOP_SIZE_PSEUDO_ENCODING
         static constexpr qint32 XENCENTER_ENCODING = -254;
+        static constexpr qint32 QEMU_EXT_KEY_ENCODING = -258;
         static constexpr int BORDER_WIDTH = 1;
         static constexpr int MOUSE_EVENTS_BEFORE_UPDATE = 2;
         static constexpr int MOUSE_EVENTS_DROPPED = 5;
@@ -163,6 +164,13 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         bool handleFramebufferUpdate();
         //! C# VNCStream.DesktopSize / VNCGraphicsClient.ClientDesktopSize
         void applyDesktopSize(int width, int height);
+        //! Physical key of the event as a QEMU "QNum" scan code (set 1; extended keys | 0x80),
+        //! or 0 if unknown on this platform. C# gets this from a Windows keyboard hook.
+        static quint32 physicalScanCode(const QKeyEvent* event);
+        //! Send the key as a scan code if possible; false if the caller should use keysyms
+        bool sendPhysicalKey(const QKeyEvent* event, Qt::Key mappedKey, bool down);
+        //! C# OnLostFocus: release every key still held so nothing stays pressed in the guest
+        void releasePressedKeys();
         //! C# ReadCursorPseudoEncoding + ClientSetCursor: pixels plus 1-bit mask, hotspot x/y
         void applyRemoteCursor(int hotX, int hotY, int width, int height, const QByteArray& pixels, const QByteArray& mask);
         //! C# OnMouseMove cursor choice: remote/local cursor over the guest screen, else default
@@ -205,7 +213,6 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         quint32 qtKeyToKeysymWithModifiers(Qt::Key key, Qt::KeyboardModifiers modifiers, const QString& text);
         quint32 qtKeyToKeysym(Qt::Key key);
         quint32 qtKeyToScanCode(Qt::Key key);
-        void sendScanCodes(Qt::Key key, bool down);
 
         // Clipboard helpers
         bool redirectingClipboard();

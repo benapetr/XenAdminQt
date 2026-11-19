@@ -504,17 +504,11 @@ void XSVNCScreen::initSubControl()
         // Set key handler
         this->_remoteConsole->SetKeyHandler(this->_keyHandler);
 
-        // PV VMs use keysyms, HVM VMs use scan codes
-        // This is critical for proper keyboard input!
-
-        //this->_remoteConsole->setSendScanCodes(!this->_sourceIsPv);
-
-        // This actually needs to be forced to false - when it's true it just doesn't work and connection crashes
-        // it was tested that this is working fine for both PV and HVM
-        this->_remoteConsole->SetSendScanCodes(false);
-
-        //qDebug() << "XSVNCScreen: SendScanCodes set to" << !this->_sourceIsPv
-        //         << "(PV:" << this->_sourceIsPv << ")";
+        // C# XSVNCScreen: PV VMs use keysyms, HVM VMs use scan codes. Scan codes are only
+        // sent once the server confirms QEMU extended key events (VNCGraphicsClient); before,
+        // enabling them sent the old XenCenter scan event, which QEMU answered by dropping
+        // the connection.
+        this->_remoteConsole->SetSendScanCodes(!this->_sourceIsPv);
     }
 
     // Layout the console widget to fill parent
@@ -1817,6 +1811,9 @@ void XSVNCScreen::invokeConnection(VNCGraphicsClient* vncClient, QTcpSocket* str
             // Small delay to ensure dispose completes and widget repaints black screen
             QThread::msleep(10);
             
+            // C#: v.SendScanCodes = UseSource && !_sourceIsPv; (not for in-guest VNC servers)
+            vncClient->SetSendScanCodes(this->_useSource && !this->_sourceIsPv);
+
             // Connect the VNC client with the stream
             // C#: v.Connect(stream, console?.location);
             QString password = QString::fromUtf8(this->_vncPassword);

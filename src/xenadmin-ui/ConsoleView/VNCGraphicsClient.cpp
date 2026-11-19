@@ -32,6 +32,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QApplication>
+#include <QGuiApplication>
 #include <QClipboard>
 #include <QtEndian>
 #include <QtMath>
@@ -110,6 +111,8 @@ void VNCGraphicsClient::DisconnectAndDispose()
 
     // C# disposes _remoteCursor here: a new connection starts with the local cursor
     this->m_hasRemoteCursor = false;
+    // Each server has to confirm extended key events again
+    this->m_useQemuExtKeyEncoding = false;
     if (this->m_cursorOver)
         this->unsetCursor();
     this->m_cursorOver = false;
@@ -776,6 +779,8 @@ void VNCGraphicsClient::sendSetEncodings()
         // Identifies the client as XenCenter to the server; C# advertises it but never
         // receives rectangles of this type either
         XENCENTER_ENCODING,
+        // QEMU confirms with a rectangle of this type; then keys can be sent as scan codes
+        QEMU_EXT_KEY_ENCODING,
     };
 
     writeU8(2);  // Message type
@@ -981,6 +986,12 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
             const QByteArray pixels = readBytes(width * height * bytesPerPixel());
             const QByteArray mask = readBytes(((width + 7) / 8) * height);
             applyRemoteCursor(x, y, width, height, pixels, mask);
+        } else if (encoding == QEMU_EXT_KEY_ENCODING)
+        {
+            // C# VNCStream: qemu_ext_key_encoding = true
+            if (!this->m_useQemuExtKeyEncoding)
+                qDebug() << "VNCGraphicsClient: Server supports QEMU extended key events";
+            this->m_useQemuExtKeyEncoding = true;
         } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
         {
             // C# VNCStream: DesktopSize(width, height); _incremental = false;
@@ -1529,10 +1540,10 @@ void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
     if (!isRepeat && this->m_keyHandler && this->m_keyHandler->handleKeyEvent(mappedKey, true))
         return;
 
-    if (this->m_sendScanCodes)
-    {
-        sendScanCodes(mappedKey, true);
-    } else
+    // Scan codes (C# SendScanCodes) need the server's QEMU extended key event support:
+    // without it they would go out as the old XenCenter scan event (254), which current
+    // QEMU does not understand and answers by dropping the connection.
+    if (!(this->m_sendScanCodes && this->m_useQemuExtKeyEncoding && sendPhysicalKey(event, mappedKey, true)))
     {
         // Get the keysym by trying text first, then fallback to key mapping
         // This matches C# KeyMap.translateKey() behavior
@@ -1542,10 +1553,10 @@ void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
         {
             sendKeyEvent(keysym, true);
         }
-    }
 
-    if (!isRepeat)
-        this->m_pressedKeys.insert(mappedKey);
+        if (!isRepeat)
+            this->m_pressedKeys.insert(mappedKey);
+    }
 }
 
 void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
@@ -1558,10 +1569,7 @@ void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
     if (this->m_keyHandler && this->m_keyHandler->handleKeyEvent(mappedKey, false))
         return;
 
-    if (this->m_sendScanCodes)
-    {
-        sendScanCodes(mappedKey, false);
-    } else
+    if (!(this->m_sendScanCodes && this->m_useQemuExtKeyEncoding && sendPhysicalKey(event, mappedKey, false)))
     {
         // Get the keysym by trying text first, then fallback to key mapping
         // This matches C# KeyMap.translateKey() behavior
@@ -1571,9 +1579,9 @@ void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
         {
             sendKeyEvent(keysym, false);
         }
-    }
 
-    this->m_pressedKeys.remove(mappedKey);
+        this->m_pressedKeys.remove(mappedKey);
+    }
 }
 
 void VNCGraphicsClient::focusInEvent(QFocusEvent* event)
@@ -1593,6 +1601,9 @@ void VNCGraphicsClient::focusOutEvent(QFocusEvent* event)
     // C# OnLostFocus: back to the normal pointer
     this->m_cursorOver = false;
     this->unsetCursor();
+
+    // C# OnLostFocus: release held keys, or e.g. Alt from Alt+Tab stays down in the guest
+    this->releasePressedKeys();
     // Could release all keys here to prevent stuck keys
 }
 
@@ -2020,35 +2031,210 @@ quint32 VNCGraphicsClient::qtKeyToScanCode(Qt::Key key)
     }
 }
 
-void VNCGraphicsClient::sendScanCodes(Qt::Key key, bool down)
+bool VNCGraphicsClient::sendPhysicalKey(const QKeyEvent* event, Qt::Key mappedKey, bool down)
 {
-    // Matches C# SendScanCodes behavior - uses scan codes for low-level key events
-    quint32 scanCode = qtKeyToScanCode(key);
+    // C# Reference: VNCGraphicsClient.KeyScan / VNCStream.keyScanEvent with QEMU extended keys
+    const quint32 scanCode = physicalScanCode(event);
+    if (scanCode == 0)
+        return false;
 
-    if (scanCode != 0)
+    if (down)
+        this->m_pressedScans.insert(scanCode);
+    else
+        this->m_pressedScans.remove(scanCode);
+
+    // The keysym is informational for QEMU (it uses the scan code); C# sends -1 when unknown
+    const quint32 keysym = qtKeyToKeysym(mappedKey);
+    sendScanCodeEvent(scanCode, keysym > 0 ? keysym : 0xFFFFFFFFu, down);
+    return true;
+}
+
+void VNCGraphicsClient::releasePressedKeys()
+{
+    if (this->m_connected)
     {
-        if (down)
+        for (quint32 scanCode : std::as_const(this->m_pressedScans))
+            sendScanCodeEvent(scanCode, 0xFFFFFFFFu, false);
+        for (Qt::Key key : std::as_const(this->m_pressedKeys))
         {
-            this->m_pressedScans.insert(scanCode);
-        } else
-        {
-            this->m_pressedScans.remove(scanCode);
-        }
-
-        // Get keysym for the key as well (used in QEMU extended encoding)
-        quint32 keysym = qtKeyToKeysym(key);
-
-        // Send using scan code event (message type 254 or QEMU extended)
-        sendScanCodeEvent(scanCode, keysym, down);
-    } else
-    {
-        // Fall back to regular keysym for unmapped keys
-        quint32 keysym = qtKeyToKeysym(key);
-        if (keysym > 0)
-        {
-            sendKeyEvent(keysym, down);
+            const quint32 keysym = qtKeyToKeysym(key);
+            if (keysym > 0)
+                sendKeyEvent(keysym, false);
         }
     }
+    this->m_pressedScans.clear();
+    this->m_pressedKeys.clear();
+}
+
+quint32 VNCGraphicsClient::physicalScanCode(const QKeyEvent* event)
+{
+    // QEMU "QNum" codes: PC/XT set 1 scan codes, keys with an 0xE0 prefix as code | 0x80
+    // (the RFB QEMU Extended Key Event encoding, as C# KeyMap.HookCallback produces).
+    const QString platform = QGuiApplication::platformName();
+
+    if (platform == QLatin1String("windows"))
+    {
+        // Set 1 scan code; bit 8 is the "extended" (0xE0) flag
+        const quint32 native = event->nativeScanCode();
+        const quint32 code = native & 0x7f;
+        if (code == 0)
+            return 0;
+        // C#: Right Shift and Num Lock report "extended" but have no 0xE0 prefix
+        if (code == 0x36 || code == 0x45)
+            return code;
+        return (native & 0x100) ? (code | 0x80) : code;
+    }
+
+    if (platform == QLatin1String("xcb") || platform == QLatin1String("wayland"))
+    {
+        // XKB keycode = Linux evdev code + 8. For evdev 1..88 the code equals set 1.
+        const quint32 native = event->nativeScanCode();
+        if (native < 9)
+            return 0;
+        const quint32 evdev = native - 8;
+        if (evdev <= 88)
+            return evdev;
+        switch (evdev)
+        {
+            case 96:  return 0x9c; // KP Enter
+            case 97:  return 0x9d; // Right Ctrl
+            case 98:  return 0xb5; // KP Divide
+            case 99:  return 0xb7; // SysRq / Print Screen
+            case 100: return 0xb8; // Right Alt / AltGr
+            case 102: return 0xc7; // Home
+            case 103: return 0xc8; // Up
+            case 104: return 0xc9; // Page Up
+            case 105: return 0xcb; // Left
+            case 106: return 0xcd; // Right
+            case 107: return 0xcf; // End
+            case 108: return 0xd0; // Down
+            case 109: return 0xd1; // Page Down
+            case 110: return 0xd2; // Insert
+            case 111: return 0xd3; // Delete
+            case 117: return 0x59; // KP Equal
+            case 119: return 0xc6; // Pause
+            case 125: return 0xdb; // Left Meta / Windows
+            case 126: return 0xdc; // Right Meta / Windows
+            case 127: return 0xdd; // Menu
+            default:  return 0;
+        }
+    }
+
+    if (platform == QLatin1String("cocoa"))
+    {
+        // macOS virtual key codes (kVK_*) are positions on the keyboard. 0 is kVK_ANSI_A,
+        // so don't trust a 0 on an event that is not the A key (no native code available).
+        if (event->nativeVirtualKey() == 0 && event->key() != Qt::Key_A)
+            return 0;
+        switch (event->nativeVirtualKey())
+        {
+            case 0x00: return 0x1e; // A
+            case 0x01: return 0x1f; // S
+            case 0x02: return 0x20; // D
+            case 0x03: return 0x21; // F
+            case 0x04: return 0x23; // H
+            case 0x05: return 0x22; // G
+            case 0x06: return 0x2c; // Z
+            case 0x07: return 0x2d; // X
+            case 0x08: return 0x2e; // C
+            case 0x09: return 0x2f; // V
+            case 0x0A: return 0x56; // ISO section (key left of Z on ISO keyboards)
+            case 0x0B: return 0x30; // B
+            case 0x0C: return 0x10; // Q
+            case 0x0D: return 0x11; // W
+            case 0x0E: return 0x12; // E
+            case 0x0F: return 0x13; // R
+            case 0x10: return 0x15; // Y
+            case 0x11: return 0x14; // T
+            case 0x12: return 0x02; // 1
+            case 0x13: return 0x03; // 2
+            case 0x14: return 0x04; // 3
+            case 0x15: return 0x05; // 4
+            case 0x16: return 0x07; // 6
+            case 0x17: return 0x06; // 5
+            case 0x18: return 0x0d; // =
+            case 0x19: return 0x0a; // 9
+            case 0x1A: return 0x08; // 7
+            case 0x1B: return 0x0c; // -
+            case 0x1C: return 0x09; // 8
+            case 0x1D: return 0x0b; // 0
+            case 0x1E: return 0x1b; // ]
+            case 0x1F: return 0x18; // O
+            case 0x20: return 0x16; // U
+            case 0x21: return 0x1a; // [
+            case 0x22: return 0x17; // I
+            case 0x23: return 0x19; // P
+            case 0x24: return 0x1c; // Return
+            case 0x25: return 0x26; // L
+            case 0x26: return 0x24; // J
+            case 0x27: return 0x28; // '
+            case 0x28: return 0x25; // K
+            case 0x29: return 0x27; // ;
+            case 0x2A: return 0x2b; // backslash
+            case 0x2B: return 0x33; // ,
+            case 0x2C: return 0x35; // /
+            case 0x2D: return 0x31; // N
+            case 0x2E: return 0x32; // M
+            case 0x2F: return 0x34; // .
+            case 0x30: return 0x0f; // Tab
+            case 0x31: return 0x39; // Space
+            case 0x32: return 0x29; // `
+            case 0x33: return 0x0e; // Backspace
+            case 0x35: return 0x01; // Escape
+            case 0x36: return 0xdc; // Right Command -> right Windows key
+            case 0x37: return 0xdb; // Command -> left Windows key
+            case 0x38: return 0x2a; // Shift
+            case 0x39: return 0x3a; // Caps Lock
+            case 0x3A: return 0x38; // Option -> Alt
+            case 0x3B: return 0x1d; // Control
+            case 0x3C: return 0x36; // Right Shift
+            case 0x3D: return 0xb8; // Right Option -> AltGr
+            case 0x3E: return 0x9d; // Right Control
+            case 0x41: return 0x53; // KP .
+            case 0x43: return 0x37; // KP *
+            case 0x45: return 0x4e; // KP +
+            case 0x47: return 0x45; // KP Clear -> Num Lock
+            case 0x4B: return 0xb5; // KP /
+            case 0x4C: return 0x9c; // KP Enter
+            case 0x4E: return 0x4a; // KP -
+            case 0x51: return 0x59; // KP =
+            case 0x52: return 0x52; // KP 0
+            case 0x53: return 0x4f; // KP 1
+            case 0x54: return 0x50; // KP 2
+            case 0x55: return 0x51; // KP 3
+            case 0x56: return 0x4b; // KP 4
+            case 0x57: return 0x4c; // KP 5
+            case 0x58: return 0x4d; // KP 6
+            case 0x59: return 0x47; // KP 7
+            case 0x5B: return 0x48; // KP 8
+            case 0x5C: return 0x49; // KP 9
+            case 0x60: return 0x3f; // F5
+            case 0x61: return 0x40; // F6
+            case 0x62: return 0x41; // F7
+            case 0x63: return 0x3d; // F3
+            case 0x64: return 0x42; // F8
+            case 0x65: return 0x43; // F9
+            case 0x67: return 0x57; // F11
+            case 0x6D: return 0x44; // F10
+            case 0x6F: return 0x58; // F12
+            case 0x72: return 0xd2; // Help -> Insert
+            case 0x73: return 0xc7; // Home
+            case 0x74: return 0xc9; // Page Up
+            case 0x75: return 0xd3; // Forward Delete
+            case 0x76: return 0x3e; // F4
+            case 0x77: return 0xcf; // End
+            case 0x78: return 0x3c; // F2
+            case 0x79: return 0xd1; // Page Down
+            case 0x7A: return 0x3b; // F1
+            case 0x7B: return 0xcb; // Left
+            case 0x7C: return 0xcd; // Right
+            case 0x7D: return 0xd0; // Down
+            case 0x7E: return 0xc8; // Up
+            default:   return 0;
+        }
+    }
+
+    return 0;
 }
 
 int VNCGraphicsClient::rectDataSize(qint32 encoding, int width, int height, int offset) const
@@ -2078,6 +2264,8 @@ int VNCGraphicsClient::rectDataSize(qint32 encoding, int width, int height, int 
             return width * height * bpp + ((width + 7) / 8) * height;
         case DESKTOP_SIZE_PSEUDO_ENCODING:
             return 0; // width/height are the new desktop size
+        case QEMU_EXT_KEY_ENCODING:
+            return 0; // acknowledgement only
         default:
             return -2;
     }
