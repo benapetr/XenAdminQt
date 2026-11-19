@@ -107,6 +107,12 @@ void VNCGraphicsClient::DisconnectAndDispose()
 {
     // Matches C# Disconnect() method
     this->m_connected = false;
+
+    // C# disposes _remoteCursor here: a new connection starts with the local cursor
+    this->m_hasRemoteCursor = false;
+    if (this->m_cursorOver)
+        this->unsetCursor();
+    this->m_cursorOver = false;
     this->m_terminated = true;
 
     // Disable mouse tracking and focus when disconnecting
@@ -762,6 +768,8 @@ void VNCGraphicsClient::sendSetEncodings()
         RRE_ENCODING,
         COPY_RECTANGLE_ENCODING,
         RAW_ENCODING,
+        // Server sends the cursor shape and stops drawing it into the picture
+        CURSOR_PSEUDO_ENCODING,
         // Lets the server announce resolution changes (e.g. while the guest boots)
         // instead of the console keeping the old size and showing only part of the screen
         DESKTOP_SIZE_PSEUDO_ENCODING,
@@ -964,6 +972,12 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
             this->m_backBufferInteresting = true;
             locker.unlock();
             damage(x, y, width, height);
+        } else if (encoding == CURSOR_PSEUDO_ENCODING)
+        {
+            // C# ReadCursorPseudoEncoding: x/y are the hotspot
+            const QByteArray pixels = readBytes(width * height * bytesPerPixel());
+            const QByteArray mask = readBytes(((width + 7) / 8) * height);
+            applyRemoteCursor(x, y, width, height, pixels, mask);
         } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
         {
             // C# VNCStream: DesktopSize(width, height); _incremental = false;
@@ -1000,6 +1014,56 @@ void VNCGraphicsClient::applyDesktopSize(int width, int height)
     updateScale();
     emit desktopResized();
     update();
+}
+
+void VNCGraphicsClient::applyRemoteCursor(int hotX, int hotY, int width, int height,
+                                          const QByteArray& pixels, const QByteArray& mask)
+{
+    // C# Reference: VNCStream.CreateImage(cursor=true) and VNCGraphicsClient.ClientSetCursor
+    if (width <= 0 || height <= 0)
+    {
+        // An empty cursor: the guest hides its pointer
+        this->m_remoteCursor = QCursor(Qt::BlankCursor);
+    } else
+    {
+        const int bpp = bytesPerPixel();
+        const int maskStride = (width + 7) / 8;
+        QImage image(width, height, QImage::Format_ARGB32);
+        for (int row = 0; row < height; ++row)
+        {
+            QRgb* dst = reinterpret_cast<QRgb*>(image.scanLine(row));
+            const uchar* src = reinterpret_cast<const uchar*>(pixels.constData()) + row * width * bpp;
+            const uchar* maskRow = reinterpret_cast<const uchar*>(mask.constData()) + row * maskStride;
+            for (int col = 0; col < width; ++col, src += bpp)
+            {
+                // Mask bit set = opaque, most significant bit first
+                const bool opaque = (maskRow[col >> 3] >> (7 - (col & 7))) & 1;
+                dst[col] = opaque ? (decodePixel(src) | 0xff000000u) : 0u;
+            }
+        }
+        this->m_remoteCursor = QCursor(QPixmap::fromImage(image), qBound(0, hotX, width - 1), qBound(0, hotY, height - 1));
+    }
+    this->m_hasRemoteCursor = true;
+
+    if (this->m_cursorOver)
+        this->setCursor(this->m_remoteCursor);
+}
+
+void VNCGraphicsClient::updateCursor(const QPoint& pos)
+{
+    // C# Reference: VNCGraphicsClient.OnMouseMove - only replace the pointer over the
+    // guest screen itself, not over the borders around a scaled or smaller screen
+    const QRectF screen(this->m_dx, this->m_dy, this->m_fbWidth * this->m_scale, this->m_fbHeight * this->m_scale);
+    const bool over = this->hasFocus() && this->m_connected && screen.contains(pos);
+    if (over)
+    {
+        static const QCursor localCursor(QPixmap(":/icons/vnc_local_cursor.png"), 2, 2);
+        this->setCursor(this->m_hasRemoteCursor ? this->m_remoteCursor : localCursor);
+    } else if (this->m_cursorOver)
+    {
+        this->unsetCursor();
+    }
+    this->m_cursorOver = over;
 }
 
 bool VNCGraphicsClient::handleSetColorMapEntries()
@@ -1433,6 +1497,8 @@ void VNCGraphicsClient::mouseMoveEvent(QMouseEvent* event)
     if (!this->m_connected)
         return;
 
+    this->updateCursor(event->pos());
+
     // Implement mouse throttling (matches C# MOUSE_EVENTS_BEFORE_UPDATE logic)
     this->m_mouseMoved++;
     if (this->m_mouseMoved > MOUSE_EVENTS_BEFORE_UPDATE && this->m_mouseNotMoved < MOUSE_EVENTS_DROPPED)
@@ -1521,6 +1587,9 @@ void VNCGraphicsClient::focusInEvent(QFocusEvent* event)
 void VNCGraphicsClient::focusOutEvent(QFocusEvent* event)
 {
     Q_UNUSED(event);
+    // C# OnLostFocus: back to the normal pointer
+    this->m_cursorOver = false;
+    this->unsetCursor();
     // Could release all keys here to prevent stuck keys
 }
 
@@ -2001,6 +2070,9 @@ int VNCGraphicsClient::rectDataSize(qint32 encoding, int width, int height, int 
             const qint64 size = 4 + bpp + qint64(count) * perSubrect;
             return size > INT_MAX ? -2 : int(size);
         }
+        case CURSOR_PSEUDO_ENCODING:
+            // Pixels, then a 1-bit transparency mask with rows padded to whole bytes
+            return width * height * bpp + ((width + 7) / 8) * height;
         case DESKTOP_SIZE_PSEUDO_ENCODING:
             return 0; // width/height are the new desktop size
         default:

@@ -33,6 +33,7 @@
         <file alias="notif_events_16.png">images/notif_events_16.png</file>
         <file alias="notif_events_errors_16.png">images/notif_events_errors_16.png</file>
         <file alias="ajax_loader.gif">images/ajax-loader.gif</file>
+        <file alias="vnc_local_cursor.png">images/vnc_local_cursor.png</file>
 
         <file alias="app.ico">images/AppIcon.ico</file>
         <file alias="back.png">images/001_Back_h32bit_24.png</file>

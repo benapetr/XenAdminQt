@@ -29,6 +29,7 @@
 #define VNCGRAPHICSCLIENT_H
 
 #include <QWidget>
+#include <QCursor>
 #include <QTcpSocket>
 #include <QImage>
 #include <QPainter>
@@ -66,6 +67,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         static constexpr qint32 COPY_RECTANGLE_ENCODING = 1;
         static constexpr qint32 RRE_ENCODING = 2;
         static constexpr qint32 CORRE_ENCODING = 4;
+        static constexpr qint32 CURSOR_PSEUDO_ENCODING = -239;
         static constexpr qint32 DESKTOP_SIZE_PSEUDO_ENCODING = -223; // C# VNCStream.DESKTOP_SIZE_PSEUDO_ENCODING
         static constexpr int BORDER_WIDTH = 1;
         static constexpr int MOUSE_EVENTS_BEFORE_UPDATE = 2;
@@ -160,6 +162,10 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         bool handleFramebufferUpdate();
         //! C# VNCStream.DesktopSize / VNCGraphicsClient.ClientDesktopSize
         void applyDesktopSize(int width, int height);
+        //! C# ReadCursorPseudoEncoding + ClientSetCursor: pixels plus 1-bit mask, hotspot x/y
+        void applyRemoteCursor(int hotX, int hotY, int width, int height, const QByteArray& pixels, const QByteArray& mask);
+        //! C# OnMouseMove cursor choice: remote/local cursor over the guest screen, else default
+        void updateCursor(const QPoint& pos);
         bool handleSetColorMapEntries();
         bool handleBell();
         bool handleServerCutText();
@@ -253,6 +259,12 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         bool m_useQemuExtKeyEncoding = false;
         // Next FramebufferUpdateRequest must be non-incremental (C# VNCStream._incremental = false)
         bool m_forceFullUpdate = false;
+
+        // Mouse cursor (C# _remoteCursor / _localCursor / _cursorOver): the server's cursor
+        // shape once it sends one, otherwise a small local cursor, while over the guest screen
+        QCursor m_remoteCursor;
+        bool m_hasRemoteCursor = false;
+        bool m_cursorOver = false;
         QSet<Qt::Key> m_pressedKeys;
         QSet<int> m_pressedScans;
         int m_currentMouseState = 0;
