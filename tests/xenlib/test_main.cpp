@@ -410,6 +410,27 @@ private slots:
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
     }
 
+    void filteredSearchDoesNotShareBaseFilter()
+    {
+        // The navigation tree keeps saved and organization searches and deletes the copy made for
+        // the search box; that copy must not own (and so free) the base search's filter
+        QueryFilter* baseFilter = new BoolQuery(XenSearch::PropertyNames::in_any_appliance, true);
+        Search base(new Query(new QueryScope(XenSearch::ObjectTypes::AllIncFolders), baseFilter), new VAppGrouping(nullptr), "", "", false);
+
+        Search* filtered = base.AddFullTextFilter("web");
+        QVERIFY(filtered != &base);
+        QCOMPARE(filtered->GetGrouping(), base.GetGrouping()); // shared, not owned by the copy
+        GroupQuery* combined = dynamic_cast<GroupQuery*>(filtered->GetQuery()->getQueryFilter());
+        QVERIFY(combined);
+        QCOMPARE(combined->getSubQueries().size(), 2);
+        QVERIFY(combined->getSubQueries().at(0) != baseFilter);
+        QVERIFY(combined->getSubQueries().at(0)->Equals(baseFilter));
+        delete filtered;
+
+        QCOMPARE(base.GetQuery()->getQueryFilter(), baseFilter);
+        QVERIFY(base.GetGrouping());
+    }
+
     void searchManagerListsBuiltInAndPoolSearches()
     {
         SearchManager* manager = SearchManager::instance();

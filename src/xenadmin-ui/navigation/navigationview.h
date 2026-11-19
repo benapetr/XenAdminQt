@@ -177,6 +177,10 @@ class NavigationView : public QWidget
         MainWindowTreeBuilder* m_treeBuilder = nullptr;
         Search* m_objectsSearch = nullptr;
         QString m_savedSearchUuid;
+        // The tree's GroupingTags and the saved expansion state point at these searches'
+        // groupings, so they live as long as the view (C# leaves this to the GC)
+        QHash<int, Search*> m_organizationSearches; // by NavigationPane::NavigationMode
+        QHash<QString, Search*> m_savedSearches;    // by the saved search's XML
 
         // State preservation for tree refresh
         QString m_savedSelectionType;

@@ -26,7 +26,6 @@
  */
 
 #include "xenlib/xensearch/searchmanager.h"
-#include <memory>
 #include "navigationview.h"
 #include "globals.h"
 #include "ui_navigationview.h"
@@ -133,6 +132,8 @@ NavigationView::~NavigationView()
 {
     delete this->m_typeGrouping;
     delete this->m_objectsSearch;
+    qDeleteAll(this->m_organizationSearches);
+    qDeleteAll(this->m_savedSearches);
     delete this->ui;
 }
 
@@ -243,7 +244,26 @@ void NavigationView::SetSavedSearch(const QString& uuid)
 // C# NavigationView with CurrentSearch set to a saved search: its results, grouped as it says
 void NavigationView::buildSavedSearchTree()
 {
-    std::unique_ptr<Search> baseSearch(SearchManager::instance()->CreateSearch(this->m_savedSearchUuid));
+    // Reuse the Search built from this XML before: the tree from the last refresh still points
+    // at its grouping. An edited search gets a new one.
+    QString xml;
+    for (const SearchManager::Entry& entry : SearchManager::instance()->GetSearches())
+    {
+        if (entry.uuid == this->m_savedSearchUuid)
+        {
+            xml = entry.xml;
+            break;
+        }
+    }
+
+    Search* baseSearch = xml.isEmpty() ? nullptr : this->m_savedSearches.value(xml);
+    if (!baseSearch && !xml.isEmpty())
+    {
+        baseSearch = SearchManager::instance()->CreateSearch(this->m_savedSearchUuid);
+        if (baseSearch)
+            this->m_savedSearches.insert(xml, baseSearch);
+    }
+
     if (!baseSearch)
     {
         // The search is gone (deleted, or its pool disconnected)
@@ -259,7 +279,8 @@ void NavigationView::buildSavedSearchTree()
     QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(effectiveSearch, MainWindowTreeBuilder::NavigationMode::SavedSearch, connection);
     this->m_treeBuilder->RefreshTreeView(root, this->GetSearchText(), MainWindowTreeBuilder::NavigationMode::SavedSearch);
 
-    if (effectiveSearch != baseSearch.get())
+    // The filtered copy shares the base search's grouping and does not own it
+    if (effectiveSearch != baseSearch)
         delete effectiveSearch;
 }
 
@@ -588,7 +609,7 @@ QString NavigationView::buildDragDropCommandKey(QTreeWidgetItem* targetItem) con
 void NavigationView::buildOrganizationTree()
 {
     MainWindowTreeBuilder::NavigationMode mode = MainWindowTreeBuilder::NavigationMode::Tags;
-    Search* baseSearch = nullptr;
+    Search* baseSearch = this->m_organizationSearches.value(this->m_navigationMode);
     Query* query = nullptr;
     Grouping* grouping = nullptr;
 
@@ -617,7 +638,17 @@ void NavigationView::buildOrganizationTree()
             return;
     }
 
-    baseSearch = new Search(query, grouping, "", "", false);
+    // Built once per view: the tree's GroupingTags keep pointing at its grouping
+    if (baseSearch)
+    {
+        delete query;
+        delete grouping;
+    } else
+    {
+        baseSearch = new Search(query, grouping, "", "", false);
+        this->m_organizationSearches.insert(this->m_navigationMode, baseSearch);
+    }
+
     Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
     XenConnection* connection = this->primaryConnection();
     if (Grouping* grouping = effectiveSearch->GetGrouping())
@@ -628,7 +659,6 @@ void NavigationView::buildOrganizationTree()
 
     if (effectiveSearch != baseSearch)
         delete effectiveSearch;
-    delete baseSearch;
 }
 
 // ========== Tree State Preservation Methods ==========

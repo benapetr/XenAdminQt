@@ -72,6 +72,8 @@ class XENLIB_EXPORT SearchMarshalling
         static QDomElement QueryFilterToElement(QDomDocument& document, const QueryFilter* filter);
         //! Null for elements that are not a known filter
         static QueryFilter* QueryFilterFromElement(const QDomElement& element);
+        //! A deep copy (owned by the caller), by a round trip through the XML form
+        static QueryFilter* CloneQueryFilter(const QueryFilter* filter);
 
         static QDomElement GroupingToElement(QDomDocument& document, const Grouping* grouping);
         static Grouping* GroupingFromElement(const QDomElement& element);

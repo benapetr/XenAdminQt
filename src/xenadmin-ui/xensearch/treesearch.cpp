@@ -46,9 +46,12 @@ Search* TreeSearch::DefaultTreeSearch()
 
 void TreeSearch::ResetDefaultTreeSearch()
 {
+    // Kept, not deleted: the current tree's GroupingTags and saved expansion state may still
+    // point at its grouping. This only runs when the view filters change.
+    static QList<Search*> retired;
     if (s_defaultTreeSearch)
     {
-        delete s_defaultTreeSearch;
+        retired.append(s_defaultTreeSearch);
         s_defaultTreeSearch = nullptr;
     }
 }

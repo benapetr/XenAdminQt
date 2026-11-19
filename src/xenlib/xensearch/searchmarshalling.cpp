@@ -363,6 +363,18 @@ QDomElement SearchMarshalling::QueryFilterToElement(QDomDocument& document, cons
     return QDomElement();
 }
 
+QueryFilter* SearchMarshalling::CloneQueryFilter(const QueryFilter* filter)
+{
+    if (!filter)
+        return nullptr;
+    // Not saved to XML, so not copied that way either
+    if (dynamic_cast<const DummyQuery*>(filter))
+        return new DummyQuery();
+
+    QDomDocument document;
+    return QueryFilterFromElement(QueryFilterToElement(document, filter));
+}
+
 QueryFilter* SearchMarshalling::QueryFilterFromElement(const QDomElement& node)
 {
     if (node.isNull())

@@ -36,6 +36,7 @@
 #include "queries.h"
 #include "grouping.h"
 #include "group.h"
+#include "searchmarshalling.h"
 #include "xen/network/connectionsmanager.h"
 #include "../xencache.h"
 #include "../network/comparableaddress.h"
@@ -569,13 +570,16 @@ Search* Search::AddFilter(QueryFilter* addFilter) const
     if (this->m_query && this->m_query->getQueryScope())
         scope = new QueryScope(this->m_query->getQueryScope()->getObjectTypes());
 
+    // The new Search owns its query, so it gets its own copy of this search's filter: sharing it
+    // freed the filter under this search when the new one was deleted (C# leaves this to the GC)
+    QueryFilter* ownFilter = this->m_query ? SearchMarshalling::CloneQueryFilter(this->m_query->getQueryFilter()) : nullptr;
     QueryFilter* filter = nullptr;
-    if (!this->m_query || !this->m_query->getQueryFilter())
+    if (!ownFilter)
         filter = addFilter;
     else if (!addFilter)
-        filter = this->m_query->getQueryFilter();
+        filter = ownFilter;
     else
-        filter = new GroupQuery(GroupQuery::GroupQueryType::And, QList<QueryFilter*>() << this->m_query->getQueryFilter() << addFilter);
+        filter = new GroupQuery(GroupQuery::GroupQueryType::And, QList<QueryFilter*>() << ownFilter << addFilter);
 
     return new Search(new Query(scope, filter), this->m_grouping, "", "", this->m_defaultSearch,
                       this->m_columns, this->m_sorting, true, false);
