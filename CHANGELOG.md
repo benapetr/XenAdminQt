@@ -31,6 +31,12 @@ are omitted.
 
 ### Fixed
 
+- VM consoles are faster and closer to C#: screen updates use the compact
+  CopyRect, RRE and CoRRE encodings instead of raw pixels only and are drawn row
+  by row; the guest's mouse cursor is shown as the local pointer instead of
+  being drawn into the picture; and HVM guests get physical key scan codes
+  (QEMU extended key events) so non-US layouts and AltGr behave like the guest
+  expects. Keys held when the console loses focus are released.
 - VM consoles now follow guest resolution changes, e.g. while a VM boots. The
   console only told the server it understood raw pixel updates, so the server
   could not announce a new screen size and the console kept the old one,
