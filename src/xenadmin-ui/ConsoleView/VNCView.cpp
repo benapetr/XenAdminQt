@@ -167,8 +167,7 @@ void VNCView::DockUnDock()
         // Save scaled setting
         this->m_oldScaledSetting = this->m_vncTabView->IsScaled();
 
-        // TODO: Show header bar
-        // C#: vncTabView.showHeaderBar(!source.is_control_domain, true);
+        this->m_vncTabView->ShowHeaderBar(!this->m_vm->IsControlDomain(), true);
 
         // Calculate size to fit console
         QSize growSize = this->m_vncTabView->GrowToFit();
@@ -223,8 +222,7 @@ void VNCView::DockUnDock()
         this->m_undockedForm->removeEventFilter(this);
         this->m_undockedForm->hide();
 
-        // TODO: Hide header bar
-        // C#: vncTabView.showHeaderBar(true, false);
+        this->m_vncTabView->ShowHeaderBar(true, false);
 
         // Remove VNCTabView from undocked window
         this->m_undockedForm->takeCentralWidget();

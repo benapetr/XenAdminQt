@@ -54,6 +54,7 @@
 
 // Forward declarations
 class XSVNCScreen;
+class QToolButton;
 class VNCView;
 class XenConnection;
 class XenCache;
@@ -184,6 +185,13 @@ class VNCTabView : public QWidget
         void FocusVnc();
 
         /**
+         * @brief Show or hide the header bar and its lifecycle (power) button
+         * Reference: VNCTabView.cs showHeaderBar(); the undocked window shows the button,
+         * since it has no main window toolbar next to it
+         */
+        void ShowHeaderBar(bool showHeaderBar, bool showLifecycleIcon);
+
+        /**
          * @brief Update parent VNCView minimum size based on content
          * Reference: VNCTabView.cs lines 350-358
          */
@@ -248,6 +256,8 @@ class VNCTabView : public QWidget
         void consoleResized();
 
     private slots:
+        //! C# LifeCycleButton_MouseClick: shutdown/reboot/suspend menu for the console's VM or host
+        void showLifecycleMenu();
         /**
          * @brief Handle VM property changes
          * Reference: VNCTabView.cs lines 511-563
@@ -514,6 +524,8 @@ class VNCTabView : public QWidget
         void toggleConsoleFocus();
 
     private:
+        QToolButton* m_lifecycleButton = nullptr; ///< C# pictureBox1 in the header bar
+        QList<QObject*> m_lifecycleCommands;      ///< Commands of the last lifecycle menu
         bool isSRDriverDomain(const QSharedPointer<VM> &vm, QString* outSRRef = nullptr) const;
         bool hasRDP(QSharedPointer<VM> vm) const;
         bool rdpControlEnabledForVm(QSharedPointer<VM> vm) const;

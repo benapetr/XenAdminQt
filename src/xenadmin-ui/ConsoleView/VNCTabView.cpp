@@ -39,9 +39,18 @@
 #include "xenlib/xen/session.h"
 #include "../commands/vm/startvmcommand.h"
 #include "../commands/vm/resumevmcommand.h"
+#include "../commands/vm/stopvmcommand.h"
+#include "../commands/vm/restartvmcommand.h"
+#include "../commands/vm/suspendvmcommand.h"
+#include "../commands/vm/forceshutdownvmcommand.h"
+#include "../commands/vm/forcerebootvmcommand.h"
+#include "../commands/host/shutdownhostcommand.h"
+#include "../commands/host/reboothostcommand.h"
 #include "../mainwindow.h"
 #include "../settingsmanager.h"
 #include <QDebug>
+#include <QMenu>
+#include <QToolButton>
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QApplication>
@@ -97,6 +106,20 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
 
     // Register event listeners
     this->registerEventListeners();
+
+    // C# pictureBox1: lifecycle button next to HostLabel, only shown in the undocked window
+    QIcon lifecycleIcon;
+    lifecycleIcon.addFile(":/icons/lifecycle_24.png", QSize(), QIcon::Normal);
+    lifecycleIcon.addFile(":/icons/lifecycle_hot.png", QSize(), QIcon::Active);
+    lifecycleIcon.addFile(":/icons/lifecycle_pressed.png", QSize(), QIcon::Selected);
+    this->m_lifecycleButton = new QToolButton(this->ui->gradientPanel);
+    this->m_lifecycleButton->setIcon(lifecycleIcon);
+    this->m_lifecycleButton->setIconSize(QSize(28, 28));
+    this->m_lifecycleButton->setAutoRaise(true);
+    this->m_lifecycleButton->setToolTip(tr("Shut down, reboot or suspend"));
+    this->m_lifecycleButton->setVisible(false);
+    this->ui->topBarLayout->insertWidget(this->ui->topBarLayout->indexOf(this->ui->hostLabel) + 1, this->m_lifecycleButton);
+    connect(this->m_lifecycleButton, &QToolButton::clicked, this, &VNCTabView::showLifecycleMenu);
 
     // Check if VM is control domain zero or SR driver domain
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 127-159
@@ -284,6 +307,80 @@ void VNCTabView::FocusVnc()
 {
     if (this->m_vncScreen && this->m_vncScreen->isVisible() && this->m_vncScreen->window()->isActiveWindow())
         this->m_vncScreen->setFocus();
+}
+
+void VNCTabView::ShowHeaderBar(bool showHeaderBar, bool showLifecycleIcon)
+{
+    this->ui->gradientPanel->setVisible(showHeaderBar);
+    if (this->m_lifecycleButton)
+        this->m_lifecycleButton->setVisible(showLifecycleIcon);
+}
+
+void VNCTabView::showLifecycleMenu()
+{
+    if (!this->m_vm)
+        return;
+
+    MainWindow* mainWindow = MainWindow::instance();
+    QMenu* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    const QList<QSharedPointer<XenObject>> vmSelection { this->m_vm };
+
+    // The commands belong to this view rather than the menu, since a command may still be
+    // working (confirmation dialog, action callbacks) after the menu is gone; they are
+    // replaced the next time the menu opens
+    qDeleteAll(this->m_lifecycleCommands);
+    this->m_lifecycleCommands.clear();
+
+    // onlyIfEnabled mirrors C# ContextMenuItemCollection.AddIfEnabled
+    auto addCommand = [this, menu](Command* command, bool onlyIfEnabled)
+    {
+        this->m_lifecycleCommands.append(command);
+        const bool canRun = command->CanRun();
+        if (onlyIfEnabled && !canRun)
+            return;
+        QAction* action = menu->addAction(command->GetIcon(), command->MenuText());
+        action->setEnabled(canRun);
+        QObject::connect(action, &QAction::triggered, command, [command]() { command->Run(); });
+    };
+
+    QSharedPointer<Host> host = this->m_vm->IsControlDomain() ? this->m_vm->GetResidentOnHost() : QSharedPointer<Host>();
+    if (host)
+    {
+        // Host console: shut down or reboot the server
+        if (host->GetConnection() && host->GetConnection()->IsConnected())
+        {
+            const QList<QSharedPointer<XenObject>> hostSelection { host };
+            Command* shutdown = new ShutdownHostCommand(mainWindow, this);
+            shutdown->SetSelectionOverride(hostSelection);
+            addCommand(shutdown, false);
+            Command* reboot = new RebootHostCommand(mainWindow, this);
+            reboot->SetSelectionOverride(hostSelection);
+            addCommand(reboot, false);
+        }
+    } else
+    {
+        const QList<Command*> commands {
+            new StopVMCommand(mainWindow, this),
+            new RestartVMCommand(mainWindow, this),
+            new SuspendVMCommand(mainWindow, this),
+            new ForceShutdownVMCommand(mainWindow, this),
+            new ForceRebootVMCommand(mainWindow, this),
+        };
+        for (Command* command : commands)
+        {
+            command->SetSelectionOverride(vmSelection);
+            addCommand(command, true);
+        }
+    }
+
+    if (menu->isEmpty())
+    {
+        delete menu;
+        return;
+    }
+
+    menu->popup(this->m_lifecycleButton->mapToGlobal(QPoint(0, this->m_lifecycleButton->height())));
 }
 
 bool VNCTabView::IsScaled() const

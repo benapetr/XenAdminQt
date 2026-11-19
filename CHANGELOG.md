@@ -9,6 +9,9 @@ are omitted.
 
 ### Added
 
+- Undocked VM consoles have C#'s lifecycle button in the header bar, with Shut
+  Down, Reboot, Suspend, Force Shut Down and Force Reboot (whichever are
+  currently possible); host consoles offer Shut Down and Reboot of the server.
 - The client now writes an application log file, like C#'s, and Help > View
   Application Log Files opens its folder (the multipath alert's View Log Files
   link does the same). A new Logging page in Options can turn the log off,

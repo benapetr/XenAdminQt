@@ -98,6 +98,9 @@
         <file alias="patch_16.png">images/000_Patch_h32bit_16.png</file>
         <file alias="dc_16.png">images/DC_16.png</file>
         <file alias="log_destination_16.png">images/log_destination_16.png</file>
+        <file alias="lifecycle_24.png">images/001_LifeCycle_h32bit_24.png</file>
+        <file alias="lifecycle_hot.png">images/lifecycle_hot.png</file>
+        <file alias="lifecycle_pressed.png">images/lifecycle_pressed.png</file>
         <file alias="enable_power_control_16.png">images/000_EnablePowerControl_h32bit_16.png</file>
         <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
         <file alias="storage_default.png">images/000_StorageDefault_h32bit_16.png</file>
