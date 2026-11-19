@@ -3,6 +3,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/network/connection.h"
 #include "iconmanager.h"
+#include "dialogs/savesearchdialog.h"
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
 #include "controls/xensearch/searcher.h"
@@ -15,6 +16,7 @@
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include <QComboBox>
+#include <QDialogButtonBox>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPushButton>
@@ -349,6 +351,27 @@ private slots:
         picker.setSelectedUuid("pool-uuid");
         QCOMPARE(picker.selectedRef(), QString("OpaqueRef:p"));
         QCOMPARE(picker.text(), QString("Prod"));
+    }
+
+    void saveSearchDialogNeedsNameAndConnectedPool()
+    {
+        // No connected pool to save on (C# CA-40307): Save stays disabled whatever the name
+        SaveSearchDialog dialog("  My search  ");
+        QDialogButtonBox* buttons = dialog.findChild<QDialogButtonBox*>();
+        QVERIFY(buttons);
+        QCOMPARE(dialog.GetName(), QString("My search"));
+        QVERIFY(!dialog.GetConnection());
+        QVERIFY(!buttons->button(QDialogButtonBox::Save)->isEnabled());
+
+        // With somewhere to save, only a blank name keeps it disabled
+        QComboBox* location = dialog.findChild<QComboBox*>("locationCombo");
+        QVERIFY(location);
+        location->addItem("Pool", QVariant::fromValue(quintptr(0)));
+        QLineEdit* name = dialog.findChild<QLineEdit*>("nameEdit");
+        name->setText("Other");
+        QVERIFY(buttons->button(QDialogButtonBox::Save)->isEnabled());
+        name->setText("   ");
+        QVERIFY(!buttons->button(QDialogButtonBox::Save)->isEnabled());
     }
 };
 

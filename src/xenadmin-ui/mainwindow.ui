@@ -63,6 +63,7 @@
     <addaction name="disconnectAction"/>
     <addaction name="separator"/>
     <addaction name="importAction"/>
+    <addaction name="importSearchAction"/>
     <addaction name="exportAction"/>
     <addaction name="separator"/>
     <addaction name="exitAction"/>
@@ -683,6 +684,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="importSearchAction">
+   <property name="text">
+    <string>Import &amp;Search...</string>
+   </property>
+   <property name="statusTip">
+    <string>Open a saved search exported to a file</string>
    </property>
   </action>
   <action name="exportAction">

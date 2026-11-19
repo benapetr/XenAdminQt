@@ -13,7 +13,8 @@ SOURCES += \
     ../../src/xenadmin-ui/controls/xensearch/resourceselectbutton.cpp \
     ../../src/xenadmin-ui/controls/xensearch/searcher.cpp \
     ../../src/xenadmin-ui/controls/xensearch/groupingcontrol.cpp \
-    ../../src/xenadmin-ui/dialogs/customsearchdialog.cpp
+    ../../src/xenadmin-ui/dialogs/customsearchdialog.cpp \
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.cpp
 
 # Search editor widgets (moc)
 HEADERS += \
@@ -24,10 +25,12 @@ HEADERS += \
     ../../src/xenadmin-ui/controls/xensearch/resourceselectbutton.h \
     ../../src/xenadmin-ui/controls/xensearch/searcher.h \
     ../../src/xenadmin-ui/controls/xensearch/groupingcontrol.h \
-    ../../src/xenadmin-ui/dialogs/customsearchdialog.h
+    ../../src/xenadmin-ui/dialogs/customsearchdialog.h \
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.h
 
 FORMS += \
-    ../../src/xenadmin-ui/dialogs/customsearchdialog.ui
+    ../../src/xenadmin-ui/dialogs/customsearchdialog.ui \
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.ui
 
 INCLUDEPATH += \
     ../../src \

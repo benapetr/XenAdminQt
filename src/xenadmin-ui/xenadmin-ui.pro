@@ -59,6 +59,7 @@ SOURCES += \
     dialogs/vifdialog.cpp \
     dialogs/vmsnapshotdialog.cpp \
     dialogs/vtpmmanagementdialog.cpp \
+    dialogs/savesearchdialog.cpp \
     dialogs/vdipropertiesdialog.cpp \
     dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
@@ -373,6 +374,7 @@ HEADERS += \
     dialogs/vifdialog.h \
     dialogs/vmsnapshotdialog.h \
     dialogs/vtpmmanagementdialog.h \
+    dialogs/savesearchdialog.h \
     dialogs/vdipropertiesdialog.h \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
@@ -666,6 +668,7 @@ FORMS += \
     dialogs/repairsrdialog.ui \
     dialogs/vifdialog.ui \
     dialogs/vmsnapshotdialog.ui \
+    dialogs/savesearchdialog.ui \
     dialogs/vdipropertiesdialog.ui \
     dialogs/attachvirtualdiskdialog.ui \
     dialogs/newvirtualdiskdialog.ui \

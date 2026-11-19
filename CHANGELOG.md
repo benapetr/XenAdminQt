@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+Saved searches: save the current search to a pool (XenCenter-compatible, so XenCenter sees it too), delete it, pick saved and built-in searches from the Search tab and navigation pane, and export or import .xensearch files (File > Import Search...).
 - Search editor: custom fields can be searched, as in C#. Each custom field
   appears as a condition (text fields with contains/starts with/...; date
   fields with before/after/on and recent periods), and the list follows custom

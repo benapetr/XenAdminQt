@@ -37,6 +37,8 @@ class Search;
 class Searcher;
 class SearchOutput;
 class QTreeWidgetItem;
+class QPushButton;
+class DropDownButton;
 
 /**
  * @brief SearchTabPage - Search panel tab using Searcher + SearchOutput
@@ -78,11 +80,28 @@ class SearchTabPage : public BaseTabPage
         void onQueryPanelSearchChanged();
         void onItemDoubleClicked(QTreeWidgetItem* item, int column);
         void onSaveRequested();
+        void onNewSearch();
+        void onEditSearch();
+        void onExport();
+        void populateSavedSearchesMenu();
+        void updateEditButton();
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override;
 
     private:
+        //! The search shown, for the default search (C# Search.SearchFor(xenObjects))
+        Search* defaultSearch() const;
+        void deleteSavedSearch(const QString& uuid, const QString& name);
+
         Search* m_search;
         Searcher* m_searcher;
         SearchOutput* m_output;
+        QPushButton* m_newSearchButton = nullptr;
+        QPushButton* m_editSearchButton = nullptr;
+        DropDownButton* m_savedSearchesButton = nullptr;
+        QPushButton* m_exportButton = nullptr;
+        QPushButton* m_importButton = nullptr;
         bool m_ignoreSearchUpdate;
 };
 

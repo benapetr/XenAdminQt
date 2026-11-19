@@ -51,6 +51,8 @@
 #include <QCursor>
 #include <QSet>
 #include <QDesktopServices>
+#include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QUrl>
 
@@ -99,6 +101,7 @@
 #include "xenlib/xen/sr.h"
 #include "metricupdater.h"
 #include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/searchmarshalling.h"
 #include "xenlib/xensearch/groupingtag.h"
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xen/network/connection.h"
@@ -1003,6 +1006,47 @@ void MainWindow::DoSearch(Search* search)
 {
     // Tags and folders span all connections, so no particular connection is preferred
     this->showSearch(nullptr, search);
+}
+
+bool MainWindow::DoSearch(const QString& fileName)
+{
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+
+    bool ok = false;
+    QList<Search*> searches = SearchMarshalling::LoadSearches(QString::fromUtf8(file.readAll()), &ok);
+    if (!ok || searches.isEmpty())
+    {
+        qDeleteAll(searches);
+        return false;
+    }
+
+    this->DoSearch(searches.takeFirst());
+    qDeleteAll(searches);
+    return true;
+}
+
+void MainWindow::ImportSearch(QWidget* parent, const QString& fileName)
+{
+    QString path = fileName;
+    if (path.isEmpty())
+    {
+        path = QFileDialog::getOpenFileName(parent ? parent : this, tr("Import Search"), QString(),
+                                            tr("Saved Searches (*.xensearch)"));
+        if (path.isEmpty())
+            return;
+    }
+
+    qInfo() << "Importing search from" << path;
+    if (path.endsWith(".xensearch", Qt::CaseInsensitive) && this->DoSearch(path))
+        return;
+
+    qWarning() << "Failed to import search from" << path;
+    QMessageBox::critical(parent ? parent : this, tr("Import Search"),
+                          tr("%1 was unable to import a saved search from file '%2'.\n\n"
+                             "Verify that the file is a valid %3 export.")
+                              .arg(QCoreApplication::applicationName(), path, QStringLiteral("xensearch")));
 }
 
 void MainWindow::SearchForTag(const QString& tag)
@@ -3854,6 +3898,7 @@ void MainWindow::connectMenuActions()
     });
     connect(this->ui->installToolsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onInstallTools);
     connect(this->ui->sendCtrlAltDelToolStripMenuItem, &QAction::triggered, this, &MainWindow::sendCADToConsole);
+    connect(this->ui->importSearchAction, &QAction::triggered, this, [this]() { this->ImportSearch(this); });
     // C# MainMenuBar_MenuActivate re-evaluates it whenever the menu opens (power state and
     // tab can change without a selection change)
     connect(this->ui->menuVM, &QMenu::aboutToShow, this, [this]()

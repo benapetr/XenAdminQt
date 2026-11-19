@@ -110,6 +110,10 @@ class MainWindow : public QMainWindow
         //! Show the results of a search in place of the object tabs (C# DoSearch). Takes
         //! ownership of the search.
         void DoSearch(class Search* search);
+        //! Show the first search of a .xensearch file (C# DoSearch(filename)); false if unreadable
+        bool DoSearch(const QString& fileName);
+        //! C# ImportSearchCommand: pick a .xensearch file (unless given) and show its search
+        void ImportSearch(QWidget* parent, const QString& fileName = QString());
         //! C# MainWindow.SearchForTag / SearchForFolder (General tab "View tag/folder...")
         void SearchForTag(const QString& tag);
         void SearchForFolder(const QString& path);
