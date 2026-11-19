@@ -33,6 +33,7 @@ set(XENLIB_SOURCES
     xen/actions/general/generaleditpageaction.cpp
     xen/actions/general/getdatasourcesaction.cpp
     xen/actions/general/perfmondefinitionaction.cpp
+    xen/actions/general/perfmonoptionsdefinitionaction.cpp
     xen/actions/general/savechangesaction.cpp
     xen/actions/general/savedatasourcestateaction.cpp
     xen/actions/general/dismissalertsaction.cpp

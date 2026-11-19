@@ -344,6 +344,7 @@ set(XENADMIN_SOURCES
     settingspanels/networkoptionseditpage.cpp
     settingspanels/networkoptionseditpage.ui
     settingspanels/perfmonalerteditpage.cpp
+    settingspanels/perfmonalertoptionspage.cpp
     settingspanels/perfmonalerteditpage.ui
     settingspanels/pooladvancededitpage.cpp
     settingspanels/pooladvancededitpage.ui

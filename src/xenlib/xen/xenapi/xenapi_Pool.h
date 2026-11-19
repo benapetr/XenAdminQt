@@ -193,6 +193,12 @@ namespace XenAPI
              */
             static void set_other_config(Session* session, const QString& pool, const QVariantMap& otherConfig);
 
+            //! pool.add_to_other_config (C# Pool.add_to_other_config)
+            static void add_to_other_config(Session* session, const QString& pool, const QString& key, const QString& value);
+
+            //! pool.remove_from_other_config (C# Pool.remove_from_other_config)
+            static void remove_from_other_config(Session* session, const QString& pool, const QString& key);
+
             /**
              * @brief Set migration compression flag
              * @param session Active XenSession

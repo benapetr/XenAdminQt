@@ -45,6 +45,7 @@
         <file alias="vm_create_16.png">images/001_CreateVM_h32bit_16.png</file>
         <file alias="migrate_vm.png">images/000_MigrateVM_h32bit_16.png</file>
         <file alias="tpm.png">images/tpm.png</file>
+        <file alias="email_16.png">images/000_Email_h32bit_16.png</file>
         <file alias="server_wlb_16.png">images/000_ServerWlb_h32bit_16.png</file>
         <file alias="start_vm.png">images/000_StartVM_h32bit_16.png</file>
         <file alias="shutdown.png">images/001_ShutDown_h32bit_16.png</file>

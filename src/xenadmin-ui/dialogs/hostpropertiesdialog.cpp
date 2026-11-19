@@ -35,6 +35,7 @@
 #include "../settingspanels/hostautostarteditpage.h"
 #include "../settingspanels/logdestinationeditpage.h"
 #include "../settingspanels/poolgpueditpage.h"
+#include "../settingspanels/perfmonalertoptionspage.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xencache.h"
@@ -71,11 +72,14 @@ void HostPropertiesDialog::build()
     // Shown for VMs, Hosts, and SRs (C# line 149)
     this->showTab(new PerfmonAlertEditPage());
 
-    // Tab 4: Performance Alert Options
-    // Shown only for pool coordinators and standalone hosts (C# line 154)
-    // TODO: Create PerfmonAlertOptionsPage class
-    // TODO: Add conditional: if (isPoolOrStandalone)
-    // this->showTab(new PerfmonAlertOptionsPage());
+    // Tab 4: Email notifications for the alerts, for pools and standalone servers
+    // C#: isPoolOrStandalone = isPool || (isHost && Helpers.GetPool(connection) == null)
+    {
+        XenConnection* hostConnection = this->m_host ? this->m_host->GetConnection() : nullptr;
+        XenCache* hostCache = hostConnection ? hostConnection->GetCache() : nullptr;
+        if (hostCache && hostCache->GetPool().isNull())
+            this->showTab(new PerfmonAlertOptionsPage());
+    }
 
     // Tab 5: Multipath
     // Shown for all hosts to configure multipath storage (C# line 158-161)

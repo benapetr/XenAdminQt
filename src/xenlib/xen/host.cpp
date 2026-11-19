@@ -1047,7 +1047,7 @@ bool Host::XapiEqualOrGreater(XenConnection* connection, const QString& version)
     return !coordinator || Misc::ProductVersionCompare(coordinator->GetXapiVersion(), version) >= 0;
 }
 
-bool Host::NaplesOrGreater(XenConnection* connection)
+bool Host::PlatformVersionAtLeast(XenConnection* connection, const QString& version)
 {
     if (!connection)
         return true;
@@ -1055,5 +1055,5 @@ bool Host::NaplesOrGreater(XenConnection* connection)
     if (!coordinator)
         return true;
     const QString platformVersion = coordinator->PlatformVersion();
-    return !platformVersion.isEmpty() && Misc::ProductVersionCompare(platformVersion, "2.9.50") >= 0;
+    return !platformVersion.isEmpty() && Misc::ProductVersionCompare(platformVersion, version) >= 0;
 }

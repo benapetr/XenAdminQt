@@ -9,6 +9,9 @@ are omitted.
 
 ### Added
 
+- Email notifications page in Pool Properties (and Server Properties for a
+  standalone server): send performance alert emails to an address through an
+  SMTP server, in English, Chinese or Japanese, as in C#.
 - vTPM manager (VM > Trusted Platform Module Manager..., the VM right-click
   menu and the General tab's Trusted Platform Module row): attach, remove and
   inspect vTPMs of UEFI VMs, as in C#.

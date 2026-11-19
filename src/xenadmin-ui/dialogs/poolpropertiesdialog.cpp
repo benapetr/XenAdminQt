@@ -29,6 +29,7 @@
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
 #include "../settingspanels/perfmonalerteditpage.h"
+#include "../settingspanels/perfmonalertoptionspage.h"
 #include "../settingspanels/hostpoweroneditpage.h"
 #include "../settingspanels/pooladvancededitpage.h"
 #include "../settingspanels/securityeditpage.h"
@@ -108,12 +109,8 @@ void PoolPropertiesDialog::build()
     // C# line 149 - shown for VM, Host, SR
     this->showTab(new PerfmonAlertEditPage());
 
-    // Performance Alert Options tab
-    // C# line 155: if (isPoolOrStandalone)
-    // TODO: Create PerfmonAlertOptionsPage class
-    // Reference: xenadmin/XenAdmin/SettingsPanels/PerfmonAlertOptionsPage.cs
-    // Condition: Pool or standalone host
-    // this->showTab(new PerfmonAlertOptionsPage());
+    // Email notifications for the alerts (C# isPoolOrStandalone)
+    this->showTab(new PerfmonAlertOptionsPage());
 
     // Power On tab
     // C# line 165: if (isHost || isPool)

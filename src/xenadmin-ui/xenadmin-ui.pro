@@ -128,6 +128,7 @@ SOURCES += \
     settingspanels/vmhaeditpage.cpp \
     settingspanels/customfieldsdisplaypage.cpp \
     settingspanels/perfmonalerteditpage.cpp \
+    settingspanels/perfmonalertoptionspage.cpp \
     settingspanels/homeservereditpage.cpp \
     settingspanels/vmadvancededitpage.cpp \
     settingspanels/vmenlightenmenteditpage.cpp \
@@ -450,6 +451,7 @@ HEADERS += \
     settingspanels/vmhaeditpage.h \
     settingspanels/customfieldsdisplaypage.h \
     settingspanels/perfmonalerteditpage.h \
+    settingspanels/perfmonalertoptionspage.h \
     settingspanels/homeservereditpage.h \
     settingspanels/vmadvancededitpage.h \
     settingspanels/vmenlightenmenteditpage.h \

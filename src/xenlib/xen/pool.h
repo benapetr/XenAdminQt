@@ -157,6 +157,11 @@ class XENLIB_EXPORT Pool : public XenObject
         //! Get master host object (Shared pointer to pool master/coordinator host)
         QSharedPointer<Host> GetMasterHost() const;
 
+        //! other_config keys of the performance alert email settings (C# Pool constants)
+        static constexpr const char* MAIL_DESTINATION_KEY_NAME = "mail-destination";
+        static constexpr const char* SMTP_MAILHUB_KEY_NAME = "ssmtp-mailhub";
+        static constexpr const char* MAIL_LANGUAGE_KEY_NAME = "mail-language";
+
         //! uefi_certificates (C# Pool.uefi_certificates)
         QString GetUefiCertificates() const;
 

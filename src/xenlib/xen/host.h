@@ -377,8 +377,18 @@ class XENLIB_EXPORT Host : public XenObject
         //! true when the coordinator is not known
         static bool XapiEqualOrGreater(XenConnection* connection, const QString& version);
 
-        //! C# Helpers.NaplesOrGreater(IXenConnection): platform version 2.9.50 or later
-        static bool NaplesOrGreater(XenConnection* connection);
+        //! The coordinator's platform version is at least version; true when the connection
+        //! or coordinator is not known (C# Helpers.XxxOrGreater(IXenConnection))
+        static bool PlatformVersionAtLeast(XenConnection* connection, const QString& version);
+
+        //! C# Helpers.InvernessOrGreater: platform version 2.3.50 or later
+        static bool InvernessOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "2.3.50"); }
+        //! C# Helpers.NaplesOrGreater: platform version 2.9.50 or later
+        static bool NaplesOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "2.9.50"); }
+        //! C# Helpers.StockholmOrGreater: platform version 3.1.50 or later
+        static bool StockholmOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "3.1.50"); }
+        //! C# Helpers.CloudOrGreater: platform version 3.2.50 or later
+        static bool CloudOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "3.2.50"); }
 
         //! Get product brand string from software_version
         QString ProductBrand() const;
