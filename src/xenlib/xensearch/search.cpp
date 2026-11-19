@@ -657,16 +657,8 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
         return false;
 
     auto setGroupingConnection = [](Grouping* grouping, XenConnection* connection) {
-        while (grouping)
-        {
-            if (PoolGrouping* poolGrouping = dynamic_cast<PoolGrouping*>(grouping))
-                poolGrouping->SetConnection(connection);
-            if (HostGrouping* hostGrouping = dynamic_cast<HostGrouping*>(grouping))
-                hostGrouping->SetConnection(connection);
-            if (VAppGrouping* vappGrouping = dynamic_cast<VAppGrouping*>(grouping))
-                vappGrouping->SetConnection(connection);
-            grouping = grouping->getSubgrouping(QVariant());
-        }
+        if (grouping)
+            grouping->SetConnection(connection);
     };
 
     int totalItems = 0;
@@ -880,6 +872,9 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
                                     const QList<QPair<XenObjectType, QString>>& objects,
                                     int indent, XenConnection* conn)
 {
+    if (grouping)
+        grouping->SetConnection(conn);
+
     // Group objects by the grouping algorithm
     // C# equivalent: Group.Populate(IAcceptGroups adapter) in GroupAlg.cs
 
@@ -967,6 +962,8 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         groupObjectType = XenObjectType::Folder;
     else if (dynamic_cast<VAppGrouping*>(grouping))
         groupObjectType = XenObjectType::VMAppliance;
+    else if (auto* xmoGrouping = dynamic_cast<XenModelObjectPropertyGrouping*>(grouping))
+        groupObjectType = XenObject::TypeFromString(xmoGrouping->groupObjectType());
 
     auto groupSortKey = [&](const QString& key) -> int {
         if (dynamic_cast<TypeGrouping*>(grouping))

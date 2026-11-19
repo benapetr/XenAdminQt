@@ -25,6 +25,7 @@
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include "xenlib/xensearch/group.h"
 #include "xenlib/xensearch/queries.h"
+#include "xenlib/xensearch/grouping.h"
 #include "xenlib/xen/network/certificatemanager.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/friendlynames.h"
@@ -401,6 +402,52 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void genericGroupingsGroupLikeCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Network, "OpaqueRef:net", QVariantMap{{"uuid", "net-uuid"}, {"name_label", "LAN"}});
+        cache->Update(XenObjectType::VIF, "OpaqueRef:vif", QVariantMap{{"VM", "OpaqueRef:vm"}, {"network", "OpaqueRef:net"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"uuid", "vm-uuid"}, {"name_label", "web"},
+            {"power_state", "Running"}, {"VIFs", QVariantList{"OpaqueRef:vif"}},
+            {"other_config", QVariantMap{{"XenCenter.CustomFields.owner", "alice"}}}});
+        const QVariantMap vm = cache->ResolveObjectData(XenObjectType::VM, "OpaqueRef:vm");
+        const QVariantMap network = cache->ResolveObjectData(XenObjectType::Network, "OpaqueRef:net");
+
+        PropertyGrouping byPowerState(XenSearch::PropertyNames::power_state);
+        byPowerState.SetConnection(&connection);
+        QCOMPARE(byPowerState.getGroup(vm, "vm").toString(), QString("Running"));
+        QCOMPARE(byPowerState.getGroupingName(), QString("Power State"));
+
+        PropertyGrouping byTools(XenSearch::PropertyNames::virtualisation_status);
+        QCOMPARE(byTools.getGroupName(1), QString("Unknown"));
+        QCOMPARE(byTools.getGroupName(2), QString("Out of date"));
+        QCOMPARE(byTools.getGroupName(12), QString("Fully optimized"));
+
+        BoolGrouping byCaching(XenSearch::PropertyNames::read_caching_enabled);
+        QCOMPARE(byCaching.getGroupName(true), QString("Read Caching Enabled"));
+        QVERIFY(byCaching.getGroupName(false) != byCaching.getGroupName(true));
+
+        XenModelObjectPropertyGrouping byNetwork(XenSearch::PropertyNames::networks);
+        byNetwork.SetConnection(&connection);
+        QCOMPARE(byNetwork.getGroup(vm, "vm").toList(), QVariantList({"OpaqueRef:net"}));
+        QCOMPARE(byNetwork.getGroupName("OpaqueRef:net"), QString("LAN"));
+        QVERIFY(byNetwork.belongsAsGroupNotMember(network, "network"));
+        QVERIFY(!byNetwork.belongsAsGroupNotMember(vm, "vm"));
+        std::unique_ptr<QueryFilter> onNetwork(byNetwork.getSubquery(QVariant(), "OpaqueRef:net"));
+        QVERIFY(onNetwork);
+        QCOMPARE(onNetwork->Match(vm, "vm", &connection).toBool(), true);
+
+        CustomFieldGrouping byOwner(CustomFieldDefinition("owner", CustomFieldDefinition::Type::String));
+        QCOMPARE(byOwner.getGroup(vm, "vm").toString(), QString("alice"));
+        AllCustomFieldsGrouping byFields;
+        QCOMPARE(byFields.getGroup(vm, "vm").toList(), QVariantList({"owner"}));
+
+        XenModelObjectPropertyGrouping sameNetwork(XenSearch::PropertyNames::networks);
+        QVERIFY(byNetwork.equals(&sameNetwork));
+        QVERIFY(!byPowerState.equals(&byCaching));
     }
 
     void customFieldQueriesMatchXenCenterValues()

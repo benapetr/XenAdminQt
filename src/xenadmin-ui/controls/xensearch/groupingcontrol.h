@@ -29,24 +29,23 @@
 #define GROUPINGCONTROL_H
 
 #include <QWidget>
-#include <QPushButton>
-#include <QMenu>
 #include <QList>
-#include <QString>
 #include <QPoint>
 #include "../dropdownbutton.h"
 #include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/common.h"
+#include "xenlib/customfields/customfielddefinition.h"
 
-// Forward declarations
+class QHBoxLayout;
 class Searcher;
 
 /**
- * GroupingControl - Widget for managing search result grouping
- * 
- * Provides a UI for selecting and managing grouping criteria.
- * Users can add multiple grouping levels and rearrange them by dragging.
- * 
- * Based on C# xenadmin/XenAdmin/Controls/XenSearch/GroupingControl.cs
+ * "Group by" buttons of the search editor
+ *
+ * Qt port of C# XenAdmin.Controls.XenSearch.GroupingControl. Each button is one level of grouping
+ * (left = outermost); a button's menu replaces or removes it, "Add Group" appends one. Only
+ * groupings relevant to what is searched for are offered, related-object groupings keep their
+ * parent/child order (pool before server before VM ...), and buttons can be dragged to reorder.
  */
 class GroupingControl : public QWidget
 {
@@ -54,134 +53,81 @@ class GroupingControl : public QWidget
 
     public:
         explicit GroupingControl(QWidget* parent = nullptr);
-        ~GroupingControl();
+        ~GroupingControl() override;
 
-        /**
-         * Get the current grouping hierarchy
-         */
+        //! The grouping chain of the buttons (new objects owned by the caller), or null
         Grouping* GetGrouping() const;
-
-        /**
-         * Set the grouping hierarchy
-         */
+        //! Show the buttons for a grouping chain (not taken over)
         void SetGrouping(Grouping* grouping);
-
-        /**
-         * Set the associated Searcher (for filtering applicable grouping types)
-         */
         void SetSearcher(Searcher* searcher);
 
-    signals:
-        /**
-         * Emitted when the grouping configuration changes
-         */
-        void GroupingChanged();
-
-    private slots:
-        void onGroupButtonClicked();
-        void onAddGroupButtonClicked();
-        void onGroupButtonMenuTriggered(QAction* action);
-        void onAddGroupMenuTriggered(QAction* action);
-        void onSearchForChanged();
-
-    public:
-        /**
-         * GroupingType - Base class for grouping type definitions
-         */
         class GroupingType
         {
             public:
-                GroupingType(const QString& name, int appliesTo)
-                    : name_(name), appliesTo_(appliesTo) {}
-                virtual ~GroupingType() {}
+                explicit GroupingType(XenSearch::ObjectTypes appliesTo) : appliesTo_(appliesTo) {}
+                virtual ~GroupingType() = default;
 
-                QString GetName() const { return this->name_; }
-                int GetAppliesTo() const { return this->appliesTo_; }
-
+                XenSearch::ObjectTypes GetAppliesTo() const { return this->appliesTo_; }
+                virtual QString ToString() const = 0;
                 virtual Grouping* GetGroup(Grouping* subgrouping) const = 0;
                 virtual bool ForGrouping(const Grouping* grouping) const = 0;
                 virtual bool IsDescendantOf(const GroupingType* gt) const { Q_UNUSED(gt); return false; }
 
-            protected:
-                QString name_;
-                int appliesTo_;
-        };
-
-        /**
-         * PropertyGroupingType - Grouping by object property
-         */
-        class PropertyGroupingType : public GroupingType
-        {
-            public:
-                PropertyGroupingType(const QString& name, const QString& property, int appliesTo)
-                    : GroupingType(name, appliesTo), property_(property) {}
-
-                Grouping* GetGroup(Grouping* subgrouping) const override;
-                bool ForGrouping(const Grouping* grouping) const override;
-
-            protected:
-                QString property_;
-            };
-
-            /**
-             * XenObjectPropertyGroupingType - Grouping by XenObject reference property
-             */
-            class XenObjectPropertyGroupingType : public PropertyGroupingType
-            {
-            public:
-                XenObjectPropertyGroupingType(const QString& name, const QString& property,
-                                              int appliesTo, GroupingType* parent = nullptr)
-                    : PropertyGroupingType(name, property, appliesTo), parent_(parent) {}
-
-                Grouping* GetGroup(Grouping* subgrouping) const override;
-                bool IsDescendantOf(const GroupingType* gt) const override;
-
             private:
-                GroupingType* parent_;
+                XenSearch::ObjectTypes appliesTo_;
         };
 
-        /**
-         * FolderGroupingType - Grouping by folder
-         */
-        class FolderGroupingType : public GroupingType
-        {
-            public:
-                FolderGroupingType() : GroupingType("Folder", -1 /*AllIncFolders*/) {}
+        class FolderGroupingType;
+        class PropertyGroupingType;
+        class BoolGroupingType;
+        class XenModelObjectPropertyGroupingType;
+        class CustomFieldGroupingType;
+        class AllCustomFieldsGroupingType;
 
-                Grouping* GetGroup(Grouping* subgrouping) const override;
-                bool ForGrouping(const Grouping* grouping) const override;
-        };
+    signals:
+        void GroupingChanged();
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override;
+
+    private slots:
+        void onSearchForChanged();
+        void onCustomFieldsChanged();
 
     private:
-        void initializePotentialGroups();
         void setup();
-        void addGroup(GroupingType* groupType);
+        void addGroup(const GroupingType* groupType);
         void removeGroup(DropDownButton* button);
         void removeAllGroups();
         void removeUnwantedGroups();
-        QList<GroupingType*> getRemainingGroupTypes(DropDownButton* context) const;
+        void fromGrouping(const Grouping* grouping);
+        QList<const GroupingType*> allGroupTypes() const;
+        QList<const GroupingType*> getRemainingGroupTypes(DropDownButton* context) const;
         bool showFolderOption(DropDownButton* context) const;
         bool wantGroupingType(const GroupingType* gt) const;
-        DropDownButton* newGroupButton(GroupingType* groupType);
-        void buildContextMenu(DropDownButton* button, QMenu* menu);
-        void buildAddGroupMenu(QMenu* menu);
+        bool searchingForFolders() const;
+        DropDownButton* newGroupButton(const GroupingType* groupType);
+        void setButtonType(DropDownButton* button, const GroupingType* groupType);
+        const GroupingType* buttonType(DropDownButton* button) const;
+        void populateButtonMenu(DropDownButton* button);
+        void populateAddGroupMenu();
+        void dragTo(DropDownButton* button, int x);
 
         static const int MAX_GROUPS = 5;
         static const int INNER_GUTTER = 6;
 
+        QHBoxLayout* layout_ = nullptr;
         QList<GroupingType*> potentialGroups_;
-        FolderGroupingType* folderGroupingType_;
+        GroupingType* folderGroupingType_ = nullptr;
+        QList<GroupingType*> customFieldTypes_;
         QList<DropDownButton*> groups_;
-        DropDownButton* addGroupButton_;
-        Searcher* searcher_;
-        DropDownButton* lastButtonClicked_;
+        DropDownButton* addGroupButton_ = nullptr;
+        Searcher* searcher_ = nullptr;
 
-        // TODO: Implement drag-and-drop reordering of grouping buttons
-        // TODO: Implement custom field grouping types
-        // TODO: Implement grouping type hierarchy (ancestors/descendants)
+        // Drag to reorder (C# button_MouseDown/Move/Up)
+        DropDownButton* draggedButton_ = nullptr;
+        QPoint dragStart_;
+        bool dragging_ = false;
 };
-
-Q_DECLARE_METATYPE(GroupingControl::GroupingType*)
-Q_DECLARE_METATYPE(GroupingControl::FolderGroupingType*)
 
 #endif // GROUPINGCONTROL_H

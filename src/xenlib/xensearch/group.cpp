@@ -406,7 +406,7 @@ namespace XenSearch
         if (query && !query->match(objectData, objectType, conn))
             return;
 
-        this->Add(objectType, objectRef, objectData);
+        this->Add(objectType, objectRef, objectData, conn);
     }
 
     bool Group::Populate(IAcceptGroups* adapter)
@@ -505,8 +505,9 @@ namespace XenSearch
     {
     }
 
-    void NodeGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+    void NodeGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
+        this->grouping_->SetConnection(conn);
         if (this->grouping_->belongsAsGroupNotMember(objectData, objectType))
         {
             GroupKey key(this->grouping_, QVariant(objectRef));
@@ -520,7 +521,7 @@ namespace XenSearch
 
         if (!group.isValid())
         {
-            this->AddUngrouped(objectType, objectRef, objectData);
+            this->AddUngrouped(objectType, objectRef, objectData, conn);
             return;
         }
 
@@ -531,7 +532,7 @@ namespace XenSearch
 
             if (groups.isEmpty())
             {
-                this->AddUngrouped(objectType, objectRef, objectData);
+                this->AddUngrouped(objectType, objectRef, objectData, conn);
                 return;
             }
 
@@ -539,20 +540,20 @@ namespace XenSearch
             {
                 if (!g.isValid())
                 {
-                    this->AddUngrouped(objectType, objectRef, objectData);
+                    this->AddUngrouped(objectType, objectRef, objectData, conn);
                     continue;
                 }
 
-                this->AddGrouped(objectType, objectRef, objectData, g);
+                this->AddGrouped(objectType, objectRef, objectData, g, conn);
             }
         }
         else
         {
-            this->AddGrouped(objectType, objectRef, objectData, group);
+            this->AddGrouped(objectType, objectRef, objectData, group, conn);
         }
     }
 
-    void NodeGroup::AddGrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, const QVariant& group)
+    void NodeGroup::AddGrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, const QVariant& group, XenConnection* conn)
     {
         // Check if group is a searchable object and if it's hidden
         if (group.canConvert<QVariantMap>())
@@ -597,10 +598,10 @@ namespace XenSearch
         }
 
         if (nextGroup)
-            nextGroup->Add(objectType, objectRef, objectData);
+            nextGroup->Add(objectType, objectRef, objectData, conn);
     }
 
-    void NodeGroup::AddUngrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+    void NodeGroup::AddUngrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
         // C# NodeGroup.AddUngrouped
         if (HiddenObjects::IsHidden(objectRef))
@@ -609,7 +610,7 @@ namespace XenSearch
         if (!this->ungrouped_)
             this->ungrouped_ = GetGroupFor(this->grouping_, this->search_, this->grouping_->getSubgrouping(QVariant()));
 
-        this->ungrouped_->Add(objectType, objectRef, objectData);
+        this->ungrouped_->Add(objectType, objectRef, objectData, conn);
     }
 
     // ========================================================================
@@ -621,7 +622,7 @@ namespace XenSearch
     {
     }
 
-    void FolderGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+    void FolderGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
         if (objectType == "folder")
         {
@@ -633,7 +634,7 @@ namespace XenSearch
         {
             if (!this->ungrouped_)
                 this->ungrouped_ = QSharedPointer<Group>(new LeafGroup(this->search_));
-            this->ungrouped_->Add(objectType, objectRef, objectData);
+            this->ungrouped_->Add(objectType, objectRef, objectData, conn);
         }
     }
 
@@ -646,8 +647,9 @@ namespace XenSearch
     {
     }
 
-    void LeafGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+    void LeafGroup::Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
+        Q_UNUSED(conn);
         // Check for duplicate folders (one folder can appear on several connections)
         if (objectType == "folder")
         {

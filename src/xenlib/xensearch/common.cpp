@@ -187,6 +187,14 @@ void PropertyAccessors::Initialize()
         return QVariant();
     };
     
+    // C#: o is VM vm && vm.IsRealVm() ? vm.GetVirtualizationStatus(out _) : null
+    properties_[PropertyNames::virtualisation_status] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+            return vm->GetVirtualizationStatus();
+        return QVariant();
+    };
+    
     properties_[PropertyNames::power_state] = [](XenObject* o) -> QVariant {
         VM* vm = qobject_cast<VM*>(o);
         if (vm && vm->IsRealVM())
@@ -393,12 +401,14 @@ QMap<QString, QVariant> PropertyAccessors::GetI18nFor(PropertyNames property)
             // Populate virtualisationStatusI18n_ on first use
             if (virtualisationStatusI18n_.isEmpty())
             {
-                virtualisationStatusI18n_[QObject::tr("Not optimized")] = 0; // VM.VirtualizationStatus.NotInstalled
-                virtualisationStatusI18n_[QObject::tr("Out of date")] = 1; // VM.VirtualizationStatus.PvDriversOutOfDate
-                virtualisationStatusI18n_[QObject::tr("Unknown")] = 2; // VM.VirtualizationStatus.Unknown
-                virtualisationStatusI18n_[QObject::tr("I/O optimized")] = 4; // VM.VirtualizationStatus.IoDriversInstalled
-                virtualisationStatusI18n_[QObject::tr("Management Agent installed")] = 8; // VM.VirtualizationStatus.ManagementInstalled
-                virtualisationStatusI18n_[QObject::tr("Optimized")] = 12; // IoDriversInstalled | ManagementInstalled
+                // C# VM.VirtualizationStatus: NotInstalled 0, Unknown 1, PvDriversOutOfDate 2,
+                // IoDriversInstalled 4, ManagementInstalled 8
+                virtualisationStatusI18n_[QObject::tr("Not optimized")] = 0;
+                virtualisationStatusI18n_[QObject::tr("Unknown")] = 1;
+                virtualisationStatusI18n_[QObject::tr("Out of date")] = 2;
+                virtualisationStatusI18n_[QObject::tr("I/O optimized only")] = 4;
+                virtualisationStatusI18n_[QObject::tr("Management Agent installed only")] = 8;
+                virtualisationStatusI18n_[QObject::tr("Fully optimized")] = 12;
             }
             for (auto it = virtualisationStatusI18n_.begin(); it != virtualisationStatusI18n_.end(); ++it)
                 result[it.key()] = it.value();

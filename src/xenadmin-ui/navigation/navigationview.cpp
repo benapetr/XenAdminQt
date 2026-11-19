@@ -587,8 +587,8 @@ void NavigationView::buildOrganizationTree()
     baseSearch = new Search(query, grouping, "", "", false);
     Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
     XenConnection* connection = this->primaryConnection();
-    if (VAppGrouping* vappGrouping = dynamic_cast<VAppGrouping*>(effectiveSearch->GetGrouping()))
-        vappGrouping->SetConnection(connection);
+    if (Grouping* grouping = effectiveSearch->GetGrouping())
+        grouping->SetConnection(connection);
 
     QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(effectiveSearch, mode, connection);
     this->m_treeBuilder->RefreshTreeView(root, this->GetSearchText(), mode);

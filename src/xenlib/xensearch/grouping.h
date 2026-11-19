@@ -34,6 +34,8 @@
 #include <QVariant>
 #include <QVariantMap>
 #include <QIcon>
+#include "common.h"
+#include "../customfields/customfielddefinition.h"
 
 // Forward declarations
 class XenConnection;
@@ -130,8 +132,14 @@ class Grouping
             return m_subgrouping;
         }
 
+        //! The connection whose objects are being grouped. Set before getGroup() and the name
+        //! lookups; applies to the whole chain of subgroupings.
+        virtual void SetConnection(XenConnection* conn);
+        XenConnection* GetConnection() const { return this->m_connection; }
+
     protected:
         Grouping* m_subgrouping; // Optional nested grouping
+        XenConnection* m_connection = nullptr;
 };
 
 /**
@@ -171,13 +179,6 @@ class PoolGrouping : public Grouping
         bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
         bool equals(const Grouping* other) const override;
 
-        void SetConnection(XenConnection* conn)
-        {
-            m_connection = conn;
-        }
-
-    private:
-        XenConnection* m_connection = nullptr;
 };
 
 /**
@@ -198,13 +199,6 @@ class HostGrouping : public Grouping
         bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
         bool equals(const Grouping* other) const override;
 
-        void SetConnection(XenConnection* conn)
-        {
-            m_connection = conn;
-        }
-
-    private:
-        XenConnection* m_connection = nullptr;
 };
 
 /**
@@ -256,13 +250,95 @@ class VAppGrouping : public Grouping
         QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
         bool equals(const Grouping* other) const override;
 
-        void SetConnection(XenConnection* conn)
-        {
-            m_connection = conn;
-        }
+};
+
+/**
+ * Group by the value of a property (C# PropertyGrouping<T>), e.g. operating system, power state,
+ * tools status, HA restart priority. List properties put an object in several groups.
+ */
+class PropertyGrouping : public Grouping
+{
+    public:
+        explicit PropertyGrouping(XenSearch::PropertyNames property, Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+
+        XenSearch::PropertyNames property() const { return this->m_property; }
+
+    protected:
+        //! The typed property of the object (C# PropertyAccessors.Get(property)(o))
+        QVariant propertyValue(const QVariantMap& objectData, const QString& objectType) const;
+
+        XenSearch::PropertyNames m_property;
+};
+
+/**
+ * Group by a yes/no property with readable group names (C# BoolGrouping, CA-165366)
+ */
+class BoolGrouping : public PropertyGrouping
+{
+    public:
+        explicit BoolGrouping(XenSearch::PropertyNames property, Grouping* subgrouping = nullptr);
+
+        QString getGroupName(const QVariant& group) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+};
+
+/**
+ * Group by a related object, e.g. network, SR, disk, VM (C# XenModelObjectPropertyGrouping<T>).
+ * Objects of the related type appear as the groups themselves.
+ */
+class XenModelObjectPropertyGrouping : public PropertyGrouping
+{
+    public:
+        explicit XenModelObjectPropertyGrouping(XenSearch::PropertyNames property, Grouping* subgrouping = nullptr);
+
+        QString getGroupName(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+
+        //! The object type of the groups ("network", "sr", "vdi", ...)
+        QString groupObjectType() const;
+};
+
+/**
+ * Group by the value of one custom field (C# CustomFieldGrouping)
+ */
+class CustomFieldGrouping : public Grouping
+{
+    public:
+        explicit CustomFieldGrouping(const CustomFieldDefinition& definition, Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
+
+        const CustomFieldDefinition& definition() const { return this->m_definition; }
 
     private:
-        XenConnection* m_connection = nullptr;
+        CustomFieldDefinition m_definition;
+};
+
+/**
+ * Group by each custom field an object has (C# AllCustomFieldsGrouping)
+ */
+class AllCustomFieldsGrouping : public Grouping
+{
+    public:
+        explicit AllCustomFieldsGrouping(Grouping* subgrouping = nullptr);
+
+        QString getGroupingName() const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
 };
 
 #endif // GROUPING_H

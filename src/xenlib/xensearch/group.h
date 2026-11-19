@@ -122,7 +122,7 @@ namespace XenSearch
              *
              * Matches C# Group.Add()
              */
-            virtual void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) = 0;
+            virtual void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn) = 0;
 
             /**
              * @brief Populate adapter with grouped items
@@ -216,11 +216,11 @@ namespace XenSearch
         public:
             NodeGroup(Search* search, Grouping* grouping);
 
-            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn) override;
 
         private:
-            void AddGrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, const QVariant& group);
-            void AddUngrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+            void AddGrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, const QVariant& group, XenConnection* conn);
+            void AddUngrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn);
     };
 
     /**
@@ -233,7 +233,7 @@ namespace XenSearch
         public:
             FolderGroup(Search* search, Grouping* grouping);
 
-            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn) override;
     };
 
     /**
@@ -246,7 +246,7 @@ namespace XenSearch
         public:
             LeafGroup(Search* search);
 
-            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+            void Add(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn) override;
             bool Populate(IAcceptGroups* adapter, int indent, bool defaultExpand) override;
             void GetNextLevel(QList<GroupKey>& nextLevel) override;
             void PopulateFor(IAcceptGroups* adapter, const GroupKey& group, int indent, bool defaultExpand) override;

@@ -6,6 +6,8 @@
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
 #include "controls/xensearch/searcher.h"
+#include "controls/xensearch/groupingcontrol.h"
+#include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/query.h"
 #include "xenlib/xensearch/queryscope.h"
@@ -256,6 +258,75 @@ private slots:
 
         Xen::ConnectionsManager::instance()->RemoveConnection(connection);
         delete connection;
+    }
+
+    static QStringList addGroupOffers(GroupingControl* control)
+    {
+        DropDownButton* add = nullptr;
+        for (DropDownButton* button : control->findChildren<DropDownButton*>())
+            if (button->text() == "Add Group")
+                add = button;
+        emit add->GetMenu()->aboutToShow();
+        QStringList offers;
+        for (QAction* action : add->GetMenu()->actions())
+            if (!action->isSeparator())
+                offers << action->text();
+        return offers;
+    }
+
+    static QStringList groupButtons(GroupingControl* control)
+    {
+        QStringList texts;
+        for (DropDownButton* button : control->findChildren<DropDownButton*>())
+            if (button->text() != "Add Group" && button->isVisibleTo(control))
+                texts << button->text();
+        return texts;
+    }
+
+    void groupingControlRoundTripsAndFollowsSearchFor()
+    {
+        Searcher searcher;
+        GroupingControl* control = searcher.findChild<GroupingControl*>();
+        QVERIFY(control);
+
+        // C#: grouped by pool to start with
+        std::unique_ptr<Grouping> initial(control->GetGrouping());
+        QVERIFY(dynamic_cast<PoolGrouping*>(initial.get()));
+
+        // A chain shows as buttons and comes back the same
+        searcher.SetSearch(new Search(new Query(new QueryScope(ObjectTypes::VM), nullptr), nullptr, "vms"));
+        PropertyGrouping* byOs = new PropertyGrouping(PropertyNames::os_name);
+        PoolGrouping chain(new HostGrouping(byOs));
+        control->SetGrouping(&chain);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(groupButtons(control), QStringList({"Pool", "Server", "Operating System"}));
+        std::unique_ptr<Grouping> back(control->GetGrouping());
+        QVERIFY(dynamic_cast<PoolGrouping*>(back.get()));
+        QVERIFY(dynamic_cast<HostGrouping*>(back->subgrouping()));
+        auto* os = dynamic_cast<PropertyGrouping*>(back->subgrouping()->subgrouping());
+        QVERIFY(os);
+        QCOMPARE(os->property(), PropertyNames::os_name);
+
+        // Offers depend on what is searched for, and exclude groupings in use
+        QStringList offers = addGroupOffers(control);
+        QVERIFY(offers.contains("Power State"));
+        QVERIFY(offers.contains("Network"));
+        QVERIFY(!offers.contains("Pool"));
+        QVERIFY(!offers.contains("Operating System"));
+
+        auto* searchFor = searcher.findChild<XenSearch::SearchFor*>();
+        searchFor->SetQueryScope(new QueryScope(ObjectTypes::Pool));
+        emit searchFor->QueryChanged();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        // Groupings that do not apply to pools are dropped
+        QVERIFY(!groupButtons(control).contains("Operating System"));
+        QVERIFY(!addGroupOffers(control).contains("Power State"));
+
+        // Searching for folders groups by folder
+        searchFor->SetQueryScope(new QueryScope(ObjectTypes::Folder));
+        emit searchFor->QueryChanged();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(groupButtons(control), QStringList({"Folder"}));
     }
 
     void pickerListsObjectsAndSelectsByUuid()

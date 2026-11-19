@@ -34,6 +34,11 @@
 #include "xen/sr.h"
 #include "xen/vm.h"
 #include <QDebug>
+#include <typeinfo>
+#include "common.h"
+#include "../customfields/customfieldsmanager.h"
+#include "xen/network/connection.h"
+#include "xen/xenobject.h"
 
 //==============================================================================
 // Base Grouping class
@@ -80,6 +85,13 @@ Grouping* Grouping::getSubgrouping(const QVariant& group) const
     // Default implementation: return the configured subgrouping
     // C# equivalent: Grouping.GetSubgrouping() returns null
     return m_subgrouping;
+}
+
+void Grouping::SetConnection(XenConnection* conn)
+{
+    this->m_connection = conn;
+    if (this->m_subgrouping)
+        this->m_subgrouping->SetConnection(conn);
 }
 
 QueryFilter* Grouping::getSubquery(const QVariant& parent, const QVariant& group) const
@@ -661,4 +673,280 @@ QueryFilter* VAppGrouping::getSubquery(const QVariant& parent, const QVariant& g
 bool VAppGrouping::equals(const Grouping* other) const
 {
     return dynamic_cast<const VAppGrouping*>(other) != nullptr;
+}
+
+//==============================================================================
+// Generic groupings (C# PropertyGrouping<T>, BoolGrouping,
+// XenModelObjectPropertyGrouping<T>, CustomFieldGrouping, AllCustomFieldsGrouping)
+//==============================================================================
+
+namespace
+{
+    // C# VM.HaRestartPriority names for the xapi values
+    QString haRestartPriorityName(const QString& value)
+    {
+        if (value == "restart")
+            return QObject::tr("Restart");
+        if (value == "best-effort")
+            return QObject::tr("Restart if possible");
+        if (value.isEmpty())
+            return QObject::tr("Do not restart");
+        return value;
+    }
+
+    QVariant listOrValue(const QVariant& value)
+    {
+        if (value.userType() == QMetaType::QStringList)
+        {
+            QVariantList list;
+            for (const QString& item : value.toStringList())
+                list.append(item);
+            return list;
+        }
+        return value;
+    }
+}
+
+PropertyGrouping::PropertyGrouping(XenSearch::PropertyNames property, Grouping* subgrouping)
+    : Grouping(subgrouping), m_property(property)
+{
+}
+
+QString PropertyGrouping::getGroupingName() const
+{
+    return XenSearch::PropertyAccessors::GetPropertyDisplayName(this->m_property);
+}
+
+QVariant PropertyGrouping::propertyValue(const QVariantMap& objectData, const QString& objectType) const
+{
+    const std::function<QVariant(XenObject*)> accessor = XenSearch::PropertyAccessors::Get(this->m_property);
+    if (accessor && this->m_connection && this->m_connection->GetCache())
+    {
+        QString ref = objectData.value("ref").toString();
+        if (ref.isEmpty())
+            ref = objectData.value("opaque_ref").toString();
+        QSharedPointer<XenObject> object = ref.isEmpty()
+            ? QSharedPointer<XenObject>()
+            : this->m_connection->GetCache()->ResolveObject(objectType, ref);
+        if (object)
+            return accessor(object.data());
+        return QVariant();
+    }
+    return XenSearch::getPropertyValue(objectData, this->m_property);
+}
+
+QVariant PropertyGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    const QVariant value = listOrValue(this->propertyValue(objectData, objectType));
+    if (!value.isValid() || (value.userType() == QMetaType::QString && value.toString().isEmpty()))
+        return QVariant();
+    return value;
+}
+
+QString PropertyGrouping::getGroupName(const QVariant& group) const
+{
+    // C#: the translated name of an enum value, otherwise the value itself
+    if (this->m_property == XenSearch::PropertyNames::ha_restart_priority)
+        return haRestartPriorityName(group.toString());
+
+    const QMap<QString, QVariant> i18n = XenSearch::PropertyAccessors::GetI18nFor(this->m_property);
+    for (auto it = i18n.constBegin(); it != i18n.constEnd(); ++it)
+    {
+        if (it.value() == group || it.value().toString() == group.toString())
+            return it.key();
+    }
+    return Grouping::getGroupName(group);
+}
+
+QueryFilter* PropertyGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    // C# PropertyGrouping.GetSubquery
+    if (this->m_property == XenSearch::PropertyNames::tags)
+        return new TagQuery(group.toString(), false);
+    if (!XenSearch::PropertyAccessors::GetI18nFor(this->m_property).isEmpty() ||
+        this->m_property == XenSearch::PropertyNames::ha_restart_priority)
+        return new EnumQuery(this->m_property, group.toString(), false);
+    if (group.userType() == QMetaType::QString)
+        return new ValuePropertyQuery(this->m_property, group.toString(), true);
+    return nullptr;
+}
+
+bool PropertyGrouping::equals(const Grouping* other) const
+{
+    const PropertyGrouping* grouping = dynamic_cast<const PropertyGrouping*>(other);
+    return grouping && typeid(*grouping) == typeid(*this) && grouping->m_property == this->m_property;
+}
+
+BoolGrouping::BoolGrouping(XenSearch::PropertyNames property, Grouping* subgrouping)
+    : PropertyGrouping(property, subgrouping)
+{
+}
+
+QString BoolGrouping::getGroupName(const QVariant& group) const
+{
+    // C# GroupingName2: "Read Caching Enabled" / "Read Caching Disabled" instead of yes/no
+    return group.toBool() ? XenSearch::PropertyAccessors::GetPropertyDisplayName(this->m_property)
+                          : XenSearch::PropertyAccessors::GetPropertyDisplayNameFalse(this->m_property);
+}
+
+QueryFilter* BoolGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    return new BoolQuery(this->m_property, group.toBool());
+}
+
+bool BoolGrouping::equals(const Grouping* other) const
+{
+    const BoolGrouping* grouping = dynamic_cast<const BoolGrouping*>(other);
+    return grouping && grouping->m_property == this->m_property;
+}
+
+XenModelObjectPropertyGrouping::XenModelObjectPropertyGrouping(XenSearch::PropertyNames property, Grouping* subgrouping)
+    : PropertyGrouping(property, subgrouping)
+{
+}
+
+QString XenModelObjectPropertyGrouping::groupObjectType() const
+{
+    switch (this->m_property)
+    {
+        case XenSearch::PropertyNames::pool: return "pool";
+        case XenSearch::PropertyNames::host: return "host";
+        case XenSearch::PropertyNames::vm: return "vm";
+        case XenSearch::PropertyNames::networks: return "network";
+        case XenSearch::PropertyNames::storage: return "sr";
+        case XenSearch::PropertyNames::disks: return "vdi";
+        case XenSearch::PropertyNames::appliance: return "vm_appliance";
+        default: return QString();
+    }
+}
+
+QVariant XenModelObjectPropertyGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    // Groups are the related objects' refs
+    return PropertyGrouping::getGroup(objectData, objectType);
+}
+
+QString XenModelObjectPropertyGrouping::getGroupName(const QVariant& group) const
+{
+    if (this->m_connection && this->m_connection->GetCache())
+    {
+        const QVariantMap data = this->m_connection->GetCache()->ResolveObjectData(this->groupObjectType(), group.toString());
+        const QString name = data.value("name_label").toString();
+        if (!name.isEmpty())
+            return name;
+    }
+    return Grouping::getGroupName(group);
+}
+
+bool XenModelObjectPropertyGrouping::belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const
+{
+    // C#: an object of the group type is a group, except snapshots and templates for VM groups
+    if (XenObject::TypeFromString(objectType) != XenObject::TypeFromString(this->groupObjectType()))
+        return false;
+    if (this->m_property == XenSearch::PropertyNames::vm)
+    {
+        return !objectData.value("is_a_template").toBool() && !objectData.value("is_a_snapshot").toBool() &&
+               !objectData.value("is_control_domain").toBool();
+    }
+    return true;
+}
+
+QueryFilter* XenModelObjectPropertyGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    QString uuid;
+    if (this->m_connection && this->m_connection->GetCache())
+        uuid = this->m_connection->GetCache()->ResolveObjectData(this->groupObjectType(), group.toString()).value("uuid").toString();
+    if (uuid.isEmpty())
+        return nullptr;
+    // The objects related to that one: "<property> Is <object>"
+    QueryFilter* uuidQuery = new StringPropertyQuery(XenSearch::PropertyNames::uuid, uuid, StringPropertyQuery::MatchType::ExactMatch);
+    if (this->m_property == XenSearch::PropertyNames::pool || this->m_property == XenSearch::PropertyNames::appliance)
+        return new RecursiveXMOPropertyQuery(this->m_property, uuidQuery);
+    return new RecursiveXMOListPropertyQuery(this->m_property, uuidQuery);
+}
+
+bool XenModelObjectPropertyGrouping::equals(const Grouping* other) const
+{
+    const XenModelObjectPropertyGrouping* grouping = dynamic_cast<const XenModelObjectPropertyGrouping*>(other);
+    return grouping && grouping->m_property == this->m_property;
+}
+
+CustomFieldGrouping::CustomFieldGrouping(const CustomFieldDefinition& definition, Grouping* subgrouping)
+    : Grouping(subgrouping), m_definition(definition)
+{
+}
+
+QString CustomFieldGrouping::getGroupingName() const
+{
+    return this->m_definition.GetName();
+}
+
+QVariant CustomFieldGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    Q_UNUSED(objectType);
+    // C# CustomFieldsManager.GetCustomFieldValue: no group for a missing or empty value
+    const QString value = objectData.value("other_config").toMap()
+                              .value(CustomFieldsManager::getCustomFieldKey(this->m_definition)).toString();
+    if (value.isEmpty())
+        return QVariant();
+    return value;
+}
+
+QueryFilter* CustomFieldGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    Q_UNUSED(parent);
+    if (this->m_definition.GetType() == CustomFieldDefinition::Type::Date)
+    {
+        QDateTime date = QDateTime::fromString(group.toString(), QStringLiteral("yyyy-MM-dd HH:mm:ss'Z'"));
+        if (!date.isValid())
+            date = QDateTime::fromString(group.toString(), Qt::ISODate);
+        return new CustomFieldDateQuery(this->m_definition.GetName(), date, DateQuery::ComparisonType::Exact);
+    }
+    return new CustomFieldQuery(this->m_definition.GetName(), group.toString(), StringPropertyQuery::MatchType::ExactMatch);
+}
+
+bool CustomFieldGrouping::equals(const Grouping* other) const
+{
+    const CustomFieldGrouping* grouping = dynamic_cast<const CustomFieldGrouping*>(other);
+    return grouping && grouping->m_definition == this->m_definition;
+}
+
+AllCustomFieldsGrouping::AllCustomFieldsGrouping(Grouping* subgrouping) : Grouping(subgrouping)
+{
+}
+
+QString AllCustomFieldsGrouping::getGroupingName() const
+{
+    return QObject::tr("Custom Fields");
+}
+
+QVariant AllCustomFieldsGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
+{
+    Q_UNUSED(objectType);
+    // The names of the custom fields this object has a value for
+    QVariantList names;
+    const QVariantMap otherConfig = objectData.value("other_config").toMap();
+    const QString prefix = CustomFieldsManager::CUSTOM_FIELD_BASE_KEY + CustomFieldsManager::CUSTOM_FIELD_DELIM;
+    for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
+    {
+        if (it.key().startsWith(prefix) && !it.value().toString().isEmpty())
+            names.append(it.key().mid(prefix.length()));
+    }
+    return names.isEmpty() ? QVariant() : QVariant(names);
+}
+
+QueryFilter* AllCustomFieldsGrouping::getSubquery(const QVariant& parent, const QVariant& group) const
+{
+    // C#: a field name alone means "has this field"; with a parent field, that field's value
+    if (!parent.isValid() || parent.isNull())
+        return new CustomFieldQuery(group.toString(), QString(), StringPropertyQuery::MatchType::ExactMatch);
+    return new CustomFieldQuery(parent.toString(), group.toString(), StringPropertyQuery::MatchType::ExactMatch);
+}
+
+bool AllCustomFieldsGrouping::equals(const Grouping* other) const
+{
+    return dynamic_cast<const AllCustomFieldsGrouping*>(other) != nullptr;
 }

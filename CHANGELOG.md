@@ -75,6 +75,13 @@ are omitted.
 
 ### Fixed
 
+- Search "Group by" works as in C#: grouping by operating system, power state,
+  tools status, HA restart priority, read caching, Windows Update capable,
+  network, SR, virtual disk, VM, vApp and custom fields now groups by those
+  (before, most of these silently grouped by type). Only groupings relevant
+  to what is searched for are offered, related-object groupings keep their
+  pool/server/VM order, buttons can be dragged to reorder, and a search's
+  grouping is shown when it is opened.
 - The "Tags" search condition lists the tags in use; its list was always
   empty.
 - Searching by a date custom field set in XenCenter now matches; the stored
