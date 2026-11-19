@@ -36,6 +36,8 @@
 #include <QtEndian>
 #include <QtMath>
 #include <QDebug>
+#include <algorithm>
+#include <climits>
 
 // Static member initialization
 bool VNCGraphicsClient::m_handlingChange = false;
@@ -753,9 +755,12 @@ void VNCGraphicsClient::sendSetPixelFormat()
 void VNCGraphicsClient::sendSetEncodings()
 {
     // SetEncodings message (matches C# VNCStream)
-    // C# advertises (preferred first): CoRRE, RRE, CopyRect, Raw, Cursor, DesktopSize,
-    // XenCenter, QEMU extended key. Only the ones decoded here are advertised.
+    // Same order as C# VNCStream (preferred first): CoRRE, RRE, CopyRect, Raw, Cursor,
+    // DesktopSize, XenCenter, QEMU extended key. Only the ones decoded here are advertised.
     const qint32 encodings[] = {
+        CORRE_ENCODING,
+        RRE_ENCODING,
+        COPY_RECTANGLE_ENCODING,
         RAW_ENCODING,
         // Lets the server announce resolution changes (e.g. while the guest boots)
         // instead of the console keeping the old size and showing only part of the screen
@@ -819,7 +824,6 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
     // This prevents desynchronization when partial data arrives.
 
     int offset = 0;
-    const int bpp = bytesPerPixel();
 
     // Check if header is available
     if (this->m_readBuffer.size() < 4)
@@ -866,23 +870,14 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
         Q_UNUSED(peekX); // Only used for validation
         Q_UNUSED(peekY);
 
-        if (encoding == 0)
+        const int dataSize = rectDataSize(encoding, width, height, offset);
+        if (dataSize == -1)
+            return false; // Wait for more data
+        if (dataSize >= 0)
         {
-            // Raw encoding - check if pixel data is available
-            int dataSize = width * height * bpp;
-
             if (this->m_readBuffer.size() - offset < dataSize)
-            {
-                // qDebug() << "VNCGraphicsClient: Waiting for pixel data, need" << dataSize
-                //          << "bytes, have" << (this->_readBuffer.size() - offset);
                 return false; // Wait for more data
-            }
-
-            // Data is available, advance offset
             offset += dataSize;
-        } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
-        {
-            // No pixel data: width/height are the new desktop size
         } else
         {
             qWarning() << "VNCGraphicsClient: Unsupported encoding:" << encoding;
@@ -926,6 +921,48 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
             }
 
             // Record damage (matches C# Damage method)
+            damage(x, y, width, height);
+        } else if (encoding == COPY_RECTANGLE_ENCODING)
+        {
+            // C# ReadCopyRectangleEncoding: source position, then copy within the framebuffer
+            const quint16 srcX = readU16();
+            const quint16 srcY = readU16();
+            {
+                QMutexLocker locker(&this->m_backBufferMutex);
+                copyRect(srcX, srcY, width, height, x, y);
+                this->m_backBufferInteresting = true;
+            }
+            damage(x, y, width, height);
+        } else if (encoding == RRE_ENCODING || encoding == CORRE_ENCODING)
+        {
+            // C# ReadRREEncoding / ReadCoRREEncoding: background, then solid subrectangles
+            // (CoRRE uses 8-bit subrectangle coordinates)
+            const int bpp = bytesPerPixel();
+            const quint32 count = readU32();
+            const QByteArray background = readBytes(bpp);
+            QMutexLocker locker(&this->m_backBufferMutex);
+            fillRect(x, y, width, height, decodePixel(reinterpret_cast<const uchar*>(background.constData())));
+            for (quint32 i = 0; i < count; ++i)
+            {
+                const QByteArray color = readBytes(bpp);
+                int sx, sy, sw, sh;
+                if (encoding == RRE_ENCODING)
+                {
+                    sx = readU16();
+                    sy = readU16();
+                    sw = readU16();
+                    sh = readU16();
+                } else
+                {
+                    sx = readU8();
+                    sy = readU8();
+                    sw = readU8();
+                    sh = readU8();
+                }
+                fillRect(x + sx, y + sy, sw, sh, decodePixel(reinterpret_cast<const uchar*>(color.constData())));
+            }
+            this->m_backBufferInteresting = true;
+            locker.unlock();
             damage(x, y, width, height);
         } else if (encoding == DESKTOP_SIZE_PSEUDO_ENCODING)
         {
@@ -1939,6 +1976,66 @@ void VNCGraphicsClient::sendScanCodes(Qt::Key key, bool down)
         {
             sendKeyEvent(keysym, down);
         }
+    }
+}
+
+int VNCGraphicsClient::rectDataSize(qint32 encoding, int width, int height, int offset) const
+{
+    const int bpp = bytesPerPixel();
+    const int available = this->m_readBuffer.size() - offset;
+    switch (encoding)
+    {
+        case RAW_ENCODING:
+            return width * height * bpp;
+        case COPY_RECTANGLE_ENCODING:
+            return 4; // src-x, src-y
+        case RRE_ENCODING:
+        case CORRE_ENCODING:
+        {
+            // number-of-subrectangles (U32), background pixel, then per subrectangle a pixel
+            // and x, y, w, h (U16 each for RRE, U8 each for CoRRE)
+            if (available < 4)
+                return -1;
+            const quint32 count = qFromBigEndian<quint32>(reinterpret_cast<const uchar*>(this->m_readBuffer.constData() + offset));
+            const qint64 perSubrect = bpp + (encoding == RRE_ENCODING ? 8 : 4);
+            const qint64 size = 4 + bpp + qint64(count) * perSubrect;
+            return size > INT_MAX ? -2 : int(size);
+        }
+        case DESKTOP_SIZE_PSEUDO_ENCODING:
+            return 0; // width/height are the new desktop size
+        default:
+            return -2;
+    }
+}
+
+void VNCGraphicsClient::fillRect(int x, int y, int width, int height, QRgb color)
+{
+    const QRect r = QRect(x, y, width, height).intersected(this->m_backBuffer.rect());
+    if (r.isEmpty())
+        return;
+    for (int row = r.top(); row <= r.bottom(); ++row)
+    {
+        QRgb* dst = reinterpret_cast<QRgb*>(this->m_backBuffer.scanLine(row)) + r.left();
+        std::fill(dst, dst + r.width(), color);
+    }
+}
+
+void VNCGraphicsClient::copyRect(int srcX, int srcY, int width, int height, int dstX, int dstY)
+{
+    // Source and destination may overlap, so copy the source out first (C# ClientCopyRectangle
+    // draws the back buffer onto itself the same way)
+    const QRect src = QRect(srcX, srcY, width, height).intersected(this->m_backBuffer.rect());
+    if (src.isEmpty())
+        return;
+    const QImage piece = this->m_backBuffer.copy(src);
+    const QRect dst = QRect(dstX + (src.left() - srcX), dstY + (src.top() - srcY), src.width(), src.height())
+                          .intersected(this->m_backBuffer.rect());
+    for (int row = dst.top(); row <= dst.bottom(); ++row)
+    {
+        const QRgb* from = reinterpret_cast<const QRgb*>(piece.constScanLine(row - (dstY + (src.top() - srcY))))
+                           + (dst.left() - (dstX + (src.left() - srcX)));
+        QRgb* to = reinterpret_cast<QRgb*>(this->m_backBuffer.scanLine(row)) + dst.left();
+        std::copy(from, from + dst.width(), to);
     }
 }
 

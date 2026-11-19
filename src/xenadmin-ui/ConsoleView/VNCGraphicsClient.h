@@ -63,6 +63,9 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
     public:
         static constexpr int BORDER_PADDING = 5;
         static constexpr qint32 RAW_ENCODING = 0;
+        static constexpr qint32 COPY_RECTANGLE_ENCODING = 1;
+        static constexpr qint32 RRE_ENCODING = 2;
+        static constexpr qint32 CORRE_ENCODING = 4;
         static constexpr qint32 DESKTOP_SIZE_PSEUDO_ENCODING = -223; // C# VNCStream.DESKTOP_SIZE_PSEUDO_ENCODING
         static constexpr int BORDER_WIDTH = 1;
         static constexpr int MOUSE_EVENTS_BEFORE_UPDATE = 2;
@@ -176,6 +179,12 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         bool isNativeRgb32() const;
         //! Write a rectangle of server pixels into the back buffer (caller holds m_backBufferMutex)
         void writePixels(int x, int y, int width, int height, const uchar* data);
+        //! C# ClientFillRectangle / ClientCopyRectangle (caller holds m_backBufferMutex)
+        void fillRect(int x, int y, int width, int height, QRgb color);
+        void copyRect(int srcX, int srcY, int width, int height, int dstX, int dstY);
+        //! Bytes a rectangle of this encoding needs after its header, -1 if more data must
+        //! arrive first to know, -2 if the encoding is not supported
+        int rectDataSize(qint32 encoding, int width, int height, int offset) const;
 
         // Rendering helpers (matches C# Damage, OnPaint, etc.)
         void damage(int x, int y, int width, int height);
