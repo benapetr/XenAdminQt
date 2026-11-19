@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VtpmManagementDialog</class>
+ <widget class="QDialog" name="VtpmManagementDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Trusted Platform Module (TPM) Manager - %1</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QLabel" name="blurbLabel">
+     <property name="text">
+      <string>Attach, remove, and configure vTPMs on '%1'.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="bodyLayout" stretch="0,1">
+     <item>
+      <layout class="QVBoxLayout" name="leftLayout" stretch="1,0">
+       <item>
+        <widget class="QListWidget" name="vtpmList">
+         <property name="maximumSize">
+          <size>
+           <width>220</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>16</width>
+           <height>16</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="addButton">
+         <property name="text">
+          <string>A&amp;dd vTPM</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QStackedWidget" name="pages">
+       <property name="currentIndex">
+        <number>1</number>
+       </property>
+       <widget class="QWidget" name="noVtpmsPage">
+        <layout class="QVBoxLayout" name="noVtpmsLayout">
+         <item>
+          <widget class="QLabel" name="noVtpmsLabel">
+           <property name="text">
+            <string>There are no vTPMs attached to this VM.</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="detailsPage">
+        <layout class="QVBoxLayout" name="detailsLayout">
+         <item>
+          <widget class="QGroupBox" name="propertiesGroupBox">
+           <property name="title">
+            <string>Properties</string>
+           </property>
+           <layout class="QFormLayout" name="propertiesLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="protectedLabel">
+              <property name="text">
+               <string>Protected:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="protectedValue"/>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="protectedDescription">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>The contents of a protected vTPM are shielded from unauthorized access and undetected tampering when saved to persistent storage or sent via network.</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="uniqueLabel">
+              <property name="text">
+               <string>Unique:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="uniqueValue"/>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="uniqueDescription">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>The contents of a unique vTPM cannot be duplicated through any VM operation such as copy, clone, export, or creation from a snapshot.</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <spacer name="detailsSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="removeLayout">
+           <item>
+            <spacer name="removeSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="removeButton">
+             <property name="text">
+              <string>&amp;Remove vTPM</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>VtpmManagementDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

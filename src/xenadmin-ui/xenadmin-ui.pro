@@ -669,6 +669,7 @@ FORMS += \
     dialogs/vifdialog.ui \
     dialogs/vmsnapshotdialog.ui \
     dialogs/savesearchdialog.ui \
+    dialogs/vtpmmanagementdialog.ui \
     dialogs/vdipropertiesdialog.ui \
     dialogs/attachvirtualdiskdialog.ui \
     dialogs/newvirtualdiskdialog.ui \

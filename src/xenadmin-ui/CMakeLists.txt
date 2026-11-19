@@ -296,6 +296,7 @@ set(XENADMIN_SOURCES
     dialogs/vtpmmanagementdialog.cpp
     dialogs/savesearchdialog.cpp
     dialogs/savesearchdialog.ui
+    dialogs/vtpmmanagementdialog.ui
     dialogs/vmsnapshotdialog.ui
     dialogs/warningdialogs/closexencenterwarningdialog.cpp
     dialogs/warningdialogs/closexencenterwarningdialog.ui

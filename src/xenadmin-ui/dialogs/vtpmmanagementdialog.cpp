@@ -26,6 +26,7 @@
  */
 
 #include "vtpmmanagementdialog.h"
+#include "ui_vtpmmanagementdialog.h"
 #include "actionprogressdialog.h"
 #include "warningdialogs/warningdialog.h"
 #include "xenlib/xen/actions/vm/vtpmaction.h"
@@ -34,15 +35,6 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vtpm.h"
 #include "xenlib/xencache.h"
-#include <QDialogButtonBox>
-#include <QFormLayout>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QListWidget>
-#include <QPushButton>
-#include <QStackedWidget>
-#include <QVBoxLayout>
 
 QHash<QString, QPointer<VtpmManagementDialog>> VtpmManagementDialog::s_openDialogs;
 
@@ -51,14 +43,6 @@ namespace
     QString ellipsise(const QString& text, int maxChars)
     {
         return text.length() > maxChars ? text.left(maxChars - 1) + QChar(0x2026) : text;
-    }
-
-    QLabel* descriptionLabel(const QString& text)
-    {
-        QLabel* label = new QLabel(text);
-        label->setWordWrap(true);
-        label->setEnabled(false); // greyed, as the C# explanation text
-        return label;
     }
 }
 
@@ -84,66 +68,16 @@ void VtpmManagementDialog::ShowForVM(const QSharedPointer<VM>& vm, QWidget* pare
 }
 
 VtpmManagementDialog::VtpmManagementDialog(const QSharedPointer<VM>& vm, QWidget* parent)
-    : QDialog(parent), m_vm(vm)
+    : QDialog(parent), ui(new Ui::VtpmManagementDialog), m_vm(vm)
 {
+    this->ui->setupUi(this);
     this->setAttribute(Qt::WA_DeleteOnClose);
-    this->setWindowTitle(tr("Trusted Platform Module (TPM) Manager - %1").arg(ellipsise(vm->GetName(), 50)));
-    this->resize(640, 400);
+    this->setWindowTitle(this->windowTitle().arg(ellipsise(vm->GetName(), 50)));
+    this->ui->blurbLabel->setText(this->ui->blurbLabel->text().arg(ellipsise(vm->GetName(), 80)));
 
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-
-    QLabel* blurb = new QLabel(tr("Attach, remove, and configure vTPMs on '%1'.").arg(ellipsise(vm->GetName(), 80)), this);
-    blurb->setWordWrap(true);
-    mainLayout->addWidget(blurb);
-
-    QHBoxLayout* body = new QHBoxLayout();
-    mainLayout->addLayout(body, 1);
-
-    // Left: the vTPMs and Add
-    QVBoxLayout* left = new QVBoxLayout();
-    this->m_vtpmList = new QListWidget(this);
-    this->m_vtpmList->setIconSize(QSize(16, 16));
-    this->m_vtpmList->setMaximumWidth(220);
-    left->addWidget(this->m_vtpmList, 1);
-    this->m_addButton = new QPushButton(tr("A&dd vTPM"), this);
-    left->addWidget(this->m_addButton);
-    body->addLayout(left);
-
-    // Right: either "none attached" or the selected vTPM (C# VtpmManagementPage)
-    this->m_pages = new QStackedWidget(this);
-
-    QLabel* noVtpms = new QLabel(tr("There are no vTPMs attached to this VM."), this);
-    noVtpms->setAlignment(Qt::AlignCenter);
-    this->m_pages->addWidget(noVtpms);
-
-    QWidget* details = new QWidget(this);
-    QVBoxLayout* detailsLayout = new QVBoxLayout(details);
-    QGroupBox* properties = new QGroupBox(tr("Properties"), details);
-    QFormLayout* form = new QFormLayout(properties);
-    this->m_protectedValue = new QLabel(properties);
-    form->addRow(tr("Protected:"), this->m_protectedValue);
-    form->addRow(QString(), descriptionLabel(tr("The contents of a protected vTPM are shielded from unauthorized access and undetected tampering when saved to persistent storage or sent via network.")));
-    this->m_uniqueValue = new QLabel(properties);
-    form->addRow(tr("Unique:"), this->m_uniqueValue);
-    form->addRow(QString(), descriptionLabel(tr("The contents of a unique vTPM cannot be duplicated through any VM operation such as copy, clone, export, or creation from a snapshot.")));
-    detailsLayout->addWidget(properties);
-    detailsLayout->addStretch();
-    QHBoxLayout* removeRow = new QHBoxLayout();
-    removeRow->addStretch();
-    this->m_removeButton = new QPushButton(tr("&Remove vTPM"), details);
-    removeRow->addWidget(this->m_removeButton);
-    detailsLayout->addLayout(removeRow);
-    this->m_pages->addWidget(details);
-
-    body->addWidget(this->m_pages, 1);
-
-    QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
-    mainLayout->addWidget(buttons);
-
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(this->m_addButton, &QPushButton::clicked, this, &VtpmManagementDialog::addVtpm);
-    connect(this->m_removeButton, &QPushButton::clicked, this, &VtpmManagementDialog::removeVtpm);
-    connect(this->m_vtpmList, &QListWidget::currentRowChanged, this, &VtpmManagementDialog::updateDetails);
+    connect(this->ui->addButton, &QPushButton::clicked, this, &VtpmManagementDialog::addVtpm);
+    connect(this->ui->removeButton, &QPushButton::clicked, this, &VtpmManagementDialog::removeVtpm);
+    connect(this->ui->vtpmList, &QListWidget::currentRowChanged, this, &VtpmManagementDialog::updateDetails);
 
     // C# listens to the VM (power_state, VTPMs) and each vTPM (is_protected, is_unique,
     // allowed_operations)
@@ -151,6 +85,11 @@ VtpmManagementDialog::VtpmManagementDialog(const QSharedPointer<VM>& vm, QWidget
         connect(cache, &XenCache::itemChanged, this, &VtpmManagementDialog::onCacheItemChanged);
 
     this->refresh();
+}
+
+VtpmManagementDialog::~VtpmManagementDialog()
+{
+    delete this->ui;
 }
 
 void VtpmManagementDialog::onCacheItemChanged(XenConnection* connection, XenObjectType type, const QString& ref)
@@ -163,7 +102,7 @@ void VtpmManagementDialog::onCacheItemChanged(XenConnection* connection, XenObje
 
 QSharedPointer<VTPM> VtpmManagementDialog::selectedVtpm() const
 {
-    QListWidgetItem* item = this->m_vtpmList->currentItem();
+    QListWidgetItem* item = this->ui->vtpmList->currentItem();
     if (!item || !this->m_vm->GetCache())
         return QSharedPointer<VTPM>();
     return this->m_vm->GetCache()->ResolveObject<VTPM>(item->data(Qt::UserRole).toString());
@@ -175,22 +114,22 @@ void VtpmManagementDialog::refresh()
     const QSharedPointer<VTPM> previous = this->selectedVtpm();
     const QString previousRef = previous ? previous->OpaqueRef() : QString();
 
-    const QSignalBlocker blocker(this->m_vtpmList);
-    this->m_vtpmList->clear();
+    const QSignalBlocker blocker(this->ui->vtpmList);
+    this->ui->vtpmList->clear();
     int selectRow = 0;
     for (const QSharedPointer<VTPM>& vtpm : this->m_vm->GetVTPMs())
     {
-        QListWidgetItem* item = new QListWidgetItem(QIcon(":/icons/tpm.png"), tr("Trusted Platform Module"), this->m_vtpmList);
+        QListWidgetItem* item = new QListWidgetItem(QIcon(":/icons/tpm.png"), tr("Trusted Platform Module"), this->ui->vtpmList);
         item->setData(Qt::UserRole, vtpm->OpaqueRef());
         if (vtpm->OpaqueRef() == previousRef)
-            selectRow = this->m_vtpmList->count() - 1;
+            selectRow = this->ui->vtpmList->count() - 1;
     }
-    if (this->m_vtpmList->count() > 0)
-        this->m_vtpmList->setCurrentRow(selectRow);
+    if (this->ui->vtpmList->count() > 0)
+        this->ui->vtpmList->setCurrentRow(selectRow);
 
     QString cannotReason;
-    this->m_addButton->setEnabled(this->m_vm->CanAddVtpm(&cannotReason));
-    this->m_addButton->setToolTip(cannotReason);
+    this->ui->addButton->setEnabled(this->m_vm->CanAddVtpm(&cannotReason));
+    this->ui->addButton->setToolTip(cannotReason);
 
     this->updateDetails();
 }
@@ -201,17 +140,17 @@ void VtpmManagementDialog::updateDetails()
     const QSharedPointer<VTPM> vtpm = this->selectedVtpm();
     if (!vtpm)
     {
-        this->m_pages->setCurrentIndex(0);
+        this->ui->pages->setCurrentIndex(0);
         return;
     }
 
-    this->m_pages->setCurrentIndex(1);
-    this->m_protectedValue->setText(vtpm->IsProtected() ? tr("Yes") : tr("No"));
-    this->m_uniqueValue->setText(vtpm->IsUnique() ? tr("Yes") : tr("No"));
+    this->ui->pages->setCurrentIndex(1);
+    this->ui->protectedValue->setText(vtpm->IsProtected() ? tr("Yes") : tr("No"));
+    this->ui->uniqueValue->setText(vtpm->IsUnique() ? tr("Yes") : tr("No"));
 
     QString cannotReason;
-    this->m_removeButton->setEnabled(this->canRemoveVtpm(vtpm, &cannotReason));
-    this->m_removeButton->setToolTip(cannotReason);
+    this->ui->removeButton->setEnabled(this->canRemoveVtpm(vtpm, &cannotReason));
+    this->ui->removeButton->setToolTip(cannotReason);
 }
 
 bool VtpmManagementDialog::canRemoveVtpm(const QSharedPointer<VTPM>& vtpm, QString* cannotReason) const

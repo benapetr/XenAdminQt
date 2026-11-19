@@ -34,13 +34,14 @@
 #include <QSharedPointer>
 #include "xenlib/xen/xenobjecttype.h"
 
-class QLabel;
-class QListWidget;
-class QPushButton;
-class QStackedWidget;
 class VM;
 class VTPM;
 class XenConnection;
+
+namespace Ui
+{
+    class VtpmManagementDialog;
+}
 
 /**
  * @brief Attach, remove and inspect the vTPMs of a VM
@@ -58,6 +59,7 @@ class VtpmManagementDialog : public QDialog
 
     private:
         explicit VtpmManagementDialog(const QSharedPointer<VM>& vm, QWidget* parent);
+        ~VtpmManagementDialog() override;
 
         void refresh();
         void updateDetails();
@@ -70,13 +72,8 @@ class VtpmManagementDialog : public QDialog
         static QString key(const QSharedPointer<VM>& vm);
         static QHash<QString, QPointer<VtpmManagementDialog>> s_openDialogs;
 
+        Ui::VtpmManagementDialog* ui;
         QSharedPointer<VM> m_vm;
-        QListWidget* m_vtpmList = nullptr;
-        QPushButton* m_addButton = nullptr;
-        QStackedWidget* m_pages = nullptr;
-        QLabel* m_protectedValue = nullptr;
-        QLabel* m_uniqueValue = nullptr;
-        QPushButton* m_removeButton = nullptr;
 };
 
 #endif // VTPMMANAGEMENTDIALOG_H
