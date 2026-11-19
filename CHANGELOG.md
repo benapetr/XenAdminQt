@@ -64,6 +64,11 @@ are omitted.
 
 ### Fixed
 
+- Pool and Server Properties show the same pages as C#: Security only before
+  XenServer 8 (Stockholm), Live Patching only before the Cloud release,
+  Networking only with the vSwitch backend, and no Performance Alerts page for
+  pools. A standalone server's properties now include these pool-wide pages
+  and its GPU page, which the server dialog left out.
 - The General tab now shows the Trusted Platform Module row for VMs with a
   vTPM. The client received vTPM records but never turned them into objects,
   so VMs always looked as if they had no vTPM.

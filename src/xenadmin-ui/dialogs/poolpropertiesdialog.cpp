@@ -28,7 +28,6 @@
 #include "poolpropertiesdialog.h"
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
-#include "../settingspanels/perfmonalerteditpage.h"
 #include "../settingspanels/perfmonalertoptionspage.h"
 #include "../settingspanels/hostpoweroneditpage.h"
 #include "../settingspanels/pooladvancededitpage.h"
@@ -105,9 +104,7 @@ void PoolPropertiesDialog::build()
     // C# line 137 - shown for all objects
     this->showTab(new CustomFieldsDisplayPage());
 
-    // Performance Alerts tab
-    // C# line 149 - shown for VM, Host, SR
-    this->showTab(new PerfmonAlertEditPage());
+    // Performance Alerts are per VM, server and SR (C# isVm || isHost || isSr), not per pool
 
     // Email notifications for the alerts (C# isPoolOrStandalone)
     this->showTab(new PerfmonAlertOptionsPage());
@@ -121,23 +118,21 @@ void PoolPropertiesDialog::build()
     if (GpuHelpers::VGpuCapability(this->m_pool ? this->m_pool->GetConnection() : nullptr))
         this->showTab(new PoolGpuEditPage());
 
-    // Security tab (SSL/TLS settings)
-    // C# line 176: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictSslLegacySwitch)
-    //                  && !Helpers.StockholmOrGreater(connection))
-    // Shown unconditionally for now (TODO: add version check later)
-    this->showTab(new SecurityEditPage());
+    // Licence restrictions (C# Helpers.FeatureForbidden) are not ported
+    XenConnection* connection = this->m_pool ? this->m_pool->GetConnection() : nullptr;
 
-    // Live Patching tab
-    // C# line 179: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictLivePatching)
-    //                  && !Helpers.CloudOrGreater(connection))
-    // Shown unconditionally for now (TODO: add version check later)
-    this->showTab(new LivePatchingEditPage());
+    // Security (SSL legacy switch), before Stockholm only
+    if (!Host::StockholmOrGreater(connection))
+        this->showTab(new SecurityEditPage());
 
-    // Network Options tab (IGMP Snooping)
-    // C# line 182: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictIGMPSnooping)
-    //                  && Helpers.GetCoordinator(pool).vSwitchNetworkBackend())
-    // Shown unconditionally for now (TODO: add version check later)
-    this->showTab(new NetworkOptionsEditPage());
+    // Live Patching, before Cloud only
+    if (!Host::CloudOrGreater(connection))
+        this->showTab(new LivePatchingEditPage());
+
+    // Networking (IGMP snooping), with the vSwitch network backend
+    QSharedPointer<Host> poolCoordinator = Host::GetCoordinator(connection);
+    if (poolCoordinator && poolCoordinator->vSwitchNetworkBackend())
+        this->showTab(new NetworkOptionsEditPage());
 
     // Clustering tab (Corosync)
     // C# line 185: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictCorosync))

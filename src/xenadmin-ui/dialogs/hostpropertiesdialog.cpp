@@ -36,6 +36,9 @@
 #include "../settingspanels/logdestinationeditpage.h"
 #include "../settingspanels/poolgpueditpage.h"
 #include "../settingspanels/perfmonalertoptionspage.h"
+#include "../settingspanels/securityeditpage.h"
+#include "../settingspanels/livepatchingeditpage.h"
+#include "../settingspanels/networkoptionseditpage.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xencache.h"
@@ -56,82 +59,59 @@ void HostPropertiesDialog::build()
     // Match C# XenAdmin.Dialogs.PropertiesDialog.Build() tab order for Host objects
     // Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs lines 115-290
 
-    // TODO: Add conditional logic to determine if this is standalone host
-    // bool isStandalone = (pool == null || pool.Connection.Cache.Hosts.Count == 1);
-    // For now, assume pool/standalone and show all applicable tabs
-
-    // Tab 1: General (name, description, folder, tags)
-    // Always shown for all object types (C# line 135)
-    this->showTab(new GeneralEditPage());
-
-    // Tab 2: Custom Fields
-    // Shown for all objects except VM appliances and VMSS (C# line 137)
-    this->showTab(new CustomFieldsDisplayPage());
-
-    // Tab 3: Performance Alerts
-    // Shown for VMs, Hosts, and SRs (C# line 149)
-    this->showTab(new PerfmonAlertEditPage());
-
-    // Tab 4: Email notifications for the alerts, for pools and standalone servers
     // C#: isPoolOrStandalone = isPool || (isHost && Helpers.GetPool(connection) == null)
-    {
-        XenConnection* hostConnection = this->m_host ? this->m_host->GetConnection() : nullptr;
-        XenCache* hostCache = hostConnection ? hostConnection->GetCache() : nullptr;
-        if (hostCache && hostCache->GetPool().isNull())
-            this->showTab(new PerfmonAlertOptionsPage());
-    }
-
-    // Tab 5: Multipath
-    // Shown for all hosts to configure multipath storage (C# line 158-161)
-    this->showTab(new HostMultipathPage());
-
-    // Tab 6: Log Destination
-    // Shown for all hosts (C# line 161)
-    this->showTab(new LogDestinationEditPage());
-
-    // Tab 7: Power On
-    // Shown for hosts and pools to configure remote power management (WOL/DRAC/iLO) (C# line 164-165)
-    this->showTab(new HostPowerONEditPage());
-
-    // Tab 8: VM Startup Options
-    // Shown for all hosts to configure VM autostart behavior (C# line 167-168)
-    this->showTab(new HostAutostartEditPage());
-
-    // Tab 9: GPU
-    // Shown if standalone host has vGPU capability or host can enable/disable integrated GPU.
     QSharedPointer<Host> host = this->m_host;
     XenConnection* connection = host ? host->GetConnection() : nullptr;
     XenCache* cache = connection ? connection->GetCache() : nullptr;
-    const bool standalone = cache && cache->GetPoolOfOne().isNull();
-    if ((standalone && GpuHelpers::VGpuCapability(connection)) || (host && host->CanEnableDisableIntegratedGpu()))
+    const bool isStandalone = cache && cache->GetPool().isNull();
+    QSharedPointer<Host> coordinator = Host::GetCoordinator(connection);
+
+    // General (name, description, folder, tags), always shown
+    this->showTab(new GeneralEditPage());
+
+    // Custom Fields, shown for all objects except vApps and snapshot schedules
+    this->showTab(new CustomFieldsDisplayPage());
+
+    // Performance Alerts, shown for VMs, servers and SRs
+    this->showTab(new PerfmonAlertEditPage());
+
+    // Email notifications for the alerts, for pools and standalone servers
+    if (isStandalone)
+        this->showTab(new PerfmonAlertOptionsPage());
+
+    // Multipath
+    this->showTab(new HostMultipathPage());
+
+    // Log Destination
+    this->showTab(new LogDestinationEditPage());
+
+    // Power On (remote power management: WOL/DRAC/iLO)
+    this->showTab(new HostPowerONEditPage());
+
+    // VM Startup Options (autostart)
+    this->showTab(new HostAutostartEditPage());
+
+    // GPU: standalone server with vGPU capability, or a server that can toggle integrated GPU
+    if ((isStandalone && GpuHelpers::VGpuCapability(connection)) || (host && host->CanEnableDisableIntegratedGpu()))
         this->showTab(new PoolGpuEditPage());
 
-    // Tab 10: Security (SSL Legacy Switch)
-    // Shown for pool/standalone if not forbidden and pre-Stockholm (C# line 174-175)
-    // TODO: Create SecurityEditPage class
-    // TODO: Add conditional: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictSslLegacySwitch)
-    //                           && !Helpers.StockholmOrGreater(connection))
-    // this->showTab(new SecurityEditPage());
+    // The pool-wide pages below appear for a standalone server; for a pool member they are in
+    // Pool Properties. Licence restrictions (C# Helpers.FeatureForbidden) are not ported.
 
-    // Tab 11: Live Patching
-    // Shown for pool/standalone if not forbidden and pre-Cloud (C# line 177-178)
-    // TODO: Create LivePatchingEditPage class
-    // TODO: Add conditional: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictLivePatching)
-    //                           && !Helpers.CloudOrGreater(connection))
-    // this->showTab(new LivePatchingEditPage());
+    // Security (SSL legacy switch), before Stockholm only
+    if (isStandalone && !Host::StockholmOrGreater(connection))
+        this->showTab(new SecurityEditPage());
 
-    // Tab 12: Networking (IGMP Snooping)
-    // Shown for pool/standalone if not forbidden and using vSwitch backend (C# line 180-181)
-    // TODO: Create NetworkOptionsEditPage class
-    // TODO: Add conditional: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictIGMPSnooping)
-    //                           && coordinator.vSwitchNetworkBackend())
-    // this->showTab(new NetworkOptionsEditPage());
+    // Live Patching, before Cloud only
+    if (isStandalone && !Host::CloudOrGreater(connection))
+        this->showTab(new LivePatchingEditPage());
 
-    // Tab 13: Clustering (Corosync)
-    // Shown for pool/standalone if not forbidden (C# line 183-184)
-    // TODO: Create ClusteringEditPage class
-    // TODO: Add conditional: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictCorosync))
-    // this->showTab(new ClusteringEditPage());
+    // Networking (IGMP snooping), with the vSwitch network backend
+    if (isStandalone && coordinator && coordinator->vSwitchNetworkBackend())
+        this->showTab(new NetworkOptionsEditPage());
+
+    // Clustering (Corosync) is not ported yet
+    // TODO: Create ClusteringEditPage class (C# line 185, isPoolOrStandalone)
 
     // Tab 14: NRPE (Monitoring)
     // Shown for pool/standalone if XCP-ng 8.3+ / XenServer 23.27.0+ and user has permission (C# line 283-287)
