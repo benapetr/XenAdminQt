@@ -33,6 +33,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/hostmetrics.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/vdi.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/certificate.h"
@@ -395,9 +396,9 @@ QString GeneralTabPage::friendlyName(const QString& key) const
         labels.insert("VM.MaxVCPUs", tr("vCPUs maximum"));
         labels.insert("VM.Topology", tr("Topology"));
         labels.insert("VM.VirtualizationState", tr("Virtualization state"));
-        labels.insert("VM.read_caching_status", tr("Read caching status"));
-        labels.insert("VM.read_caching_disks", tr("Read caching disks"));
-        labels.insert("VM.read_caching_reason", tr("Read caching reason"));
+        labels.insert("VM.read_caching_status", tr("Status"));
+        labels.insert("VM.read_caching_disks", tr("Disks"));
+        labels.insert("VM.read_caching_reason", tr("Reason"));
         labels.insert("VM.pvs_read_caching_status", tr("PVS read caching status"));
         labels.insert("host.pool_master", tr("Pool master"));
         labels.insert("host.auto_poweron", tr("Autoboot of VMs enabled"));
@@ -913,7 +914,6 @@ void GeneralTabPage::populateBootOptionsSection()
     if (!vm)
         return;
 
-    // TODO: Add Boot Mode/UEFI/Secure Boot display once VM helpers are ported.
     QVariantMap otherConfig = vm->GetOtherConfig();
     bool autoPowerOn = (otherConfig.value("auto_poweron", "false").toString() == "true");
     this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.auto_boot", autoPowerOn ? tr("Yes") : tr("No"));
@@ -938,6 +938,33 @@ void GeneralTabPage::populateBootOptionsSection()
 
         QString orderDisplay = devices.isEmpty() ? tr("None") : devices.join(", ");
         this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootOrder", orderDisplay);
+
+        // C# GenerateBootBox (see XSI-1362 for the secure boot logic)
+        if (Host::NaplesOrGreater(vm->GetConnection()))
+        {
+            if (vm->IsDefaultBootModeUefi())
+            {
+                const QString secureBoot = vm->GetSecureBootMode();
+                QSharedPointer<Pool> pool = vm->GetCache() ? vm->GetCache()->GetPoolOfOne() : QSharedPointer<Pool>();
+                const bool poolHasCertificates = pool && !pool->GetUefiCertificates().isEmpty();
+
+                if (secureBoot == "true" && !poolHasCertificates)
+                {
+                    this->ui->pdSectionBootOptions->AddEntry(this->friendlyName("VM.BootMode"),
+                        tr("%1 (%2)").arg(tr("UEFI Secure Boot"), tr("UEFI certificates are missing from your system")),
+                        QColor(Qt::red));
+                } else if (secureBoot == "true" || (secureBoot == "auto" && poolHasCertificates))
+                {
+                    this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootMode", tr("UEFI Secure Boot"));
+                } else
+                {
+                    this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootMode", tr("UEFI Boot"));
+                }
+            } else
+            {
+                this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootMode", tr("BIOS Boot"));
+            }
+        }
     } else
     {
         QString pvArgs = vm->PVArgs();
@@ -986,8 +1013,18 @@ void GeneralTabPage::populateMultipathBootSection()
     if (this->m_object->GetObjectType() != XenObjectType::Host)
         return;
 
-    // Boot path counts are not currently exposed in the Qt port.
-    // TODO: Add Host::GetBootPathCounts() and populate Multipath Boot status.
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    int current = 0;
+    int max = 0;
+    if (!host || !host->GetBootPathCounts(current, max))
+        return;
+
+    // C# GenerateMultipathBootBox: red when not all paths are active
+    const QString text = tr("%1 of %2 paths active").arg(current).arg(max);
+    if (current < max)
+        this->ui->pdSectionMultipathBoot->AddEntry(tr("Status"), text, QColor(Qt::red));
+    else
+        this->addProperty(this->ui->pdSectionMultipathBoot, tr("Status"), text);
 }
 
 void GeneralTabPage::populateVcpusSection()
@@ -1093,10 +1130,24 @@ void GeneralTabPage::populateReadCachingSection()
     if (vm->GetPowerState() != "Running")
         return;
 
-    bool enabled = vm->ReadCachingEnabled();
-    this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_status",
-                           enabled ? tr("Enabled") : tr("Disabled"));
-    // TODO: Add read caching disk list and disabled reason (VM::ReadCachingVDIs/ReadCachingDisabledReason).
+    // C# GenerateReadCachingBox (PVS-Accelerator proxies are not ported)
+    const QList<QSharedPointer<VDI>> cachedVdis = vm->ReadCachingVDIs();
+    if (!cachedVdis.isEmpty())
+    {
+        this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_status",
+                               tr("This VM is using read caching"));
+        QStringList names;
+        for (const QSharedPointer<VDI>& vdi : cachedVdis)
+            names.append(vdi->GetNameWithLocation());
+        this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_disks", names.join("\n"));
+    } else
+    {
+        this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_status",
+                               tr("This VM is not using read caching"));
+        const QString reason = vm->ReadCachingDisabledReason();
+        if (!reason.isEmpty())
+            this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_reason", reason);
+    }
 }
 
 void GeneralTabPage::populateDeviceSecuritySection()

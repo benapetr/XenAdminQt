@@ -157,6 +157,9 @@ class XENLIB_EXPORT Pool : public XenObject
         //! Get master host object (Shared pointer to pool master/coordinator host)
         QSharedPointer<Host> GetMasterHost() const;
 
+        //! uefi_certificates (C# Pool.uefi_certificates)
+        QString GetUefiCertificates() const;
+
         //! Get all VM objects in this pool (List of VM shared pointers across all hosts)
         QList<QSharedPointer<VM>> GetAllVMs() const;
 

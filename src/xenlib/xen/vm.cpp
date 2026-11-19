@@ -1593,62 +1593,89 @@ bool VM::HasVendorDeviceState() const
 
 bool VM::ReadCachingEnabled() const
 {
-    // C# reference: XenModel/XenAPI-Extensions/VM.cs ReadCachingEnabled()
-    // Returns true if any attached VDI has read caching enabled
-    
-    XenConnection* connection = this->GetConnection();
-    if (!connection)
-        return false;
-    
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-        return false;
-    
-    // Get resident host
-    QString residentHostRef = this->GetResidentOnRef();
-    if (residentHostRef.isEmpty() || residentHostRef == XENOBJECT_NULL)
-        return false;
-    
-    // Check all VBDs
-    QStringList vbdRefs = this->GetVBDRefs();
-    for (const QString& vbdRef : vbdRefs)
+    // C# VM.ReadCachingEnabled
+    return !this->ReadCachingVDIs().isEmpty();
+}
+
+namespace
+{
+    // Attached VDIs of the VM with the host it runs on (C# ReadCachingVDIs/ReadCachingDisabledReason)
+    QList<QSharedPointer<VDI>> attachedVdis(const VM* vm, QSharedPointer<Host>& residentHost)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
-        if (!vbd || !vbd->IsValid())
-            continue;
-        
-        // Check if VBD is currently attached
-        QVariantMap vbdData = vbd->GetData();
-        bool currentlyAttached = vbdData.value("currently_attached", false).toBool();
-        if (!currentlyAttached)
-            continue;
-        
-        QString vdiRef = vbd->GetVDIRef();
-        if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
-            continue;
-        
-        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
-        if (!vdi || !vdi->IsValid())
-            continue;
-        
-        // Check if VDI has read caching enabled for this host
-        // In C#, VDI.ReadCachingEnabled(host) checks SR's allowed_operations
-        QString srRef = vdi->SRRef();
-        if (srRef.isEmpty())
-            continue;
-        
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>(srRef);
-        if (!sr || !sr->IsValid())
-            continue;
-        
-        // Check if SR allows read caching operations
-        QVariantMap srData = sr->GetData();
-        QStringList allowedOps = srData.value("allowed_operations").toStringList();
-        if (allowedOps.contains("vdi_read_caching"))
-            return true;
+        QList<QSharedPointer<VDI>> vdis;
+        XenCache* cache = vm->GetConnection() ? vm->GetConnection()->GetCache() : nullptr;
+        if (!cache)
+            return vdis;
+
+        residentHost = cache->ResolveObject<Host>(vm->GetResidentOnRef());
+        if (!residentHost || !residentHost->IsValid())
+            return vdis;
+
+        for (const QSharedPointer<VBD>& vbd : vm->GetVBDs())
+        {
+            if (!vbd->CurrentlyAttached())
+                continue;
+            QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vbd->GetVDIRef());
+            if (vdi && vdi->IsValid())
+                vdis.append(vdi);
+        }
+        return vdis;
     }
-    
-    return false;
+}
+
+QList<QSharedPointer<VDI>> VM::ReadCachingVDIs() const
+{
+    QSharedPointer<Host> residentHost;
+    QList<QSharedPointer<VDI>> result;
+    for (const QSharedPointer<VDI>& vdi : attachedVdis(this, residentHost))
+    {
+        if (vdi->ReadCachingEnabled(residentHost))
+            result.append(vdi);
+    }
+    return result;
+}
+
+QString VM::ReadCachingDisabledReason() const
+{
+    // C#: VDI.ReadCachingDisabledReason gives the first matching reason per VDI; across VDIs the
+    // last reason in the enum wins, as that VDI is nearest to being cachable
+    QSharedPointer<Host> residentHost;
+    VDI::ReadCachingDisabledReasonCode reason = VDI::ReadCachingDisabledReasonCode::Unknown;
+    for (const QSharedPointer<VDI>& vdi : attachedVdis(this, residentHost))
+    {
+        if (vdi->ReadCachingEnabled(residentHost))
+            continue;
+        const VDI::ReadCachingDisabledReasonCode vdiReason = vdi->ReadCachingDisabledReason(residentHost);
+        if (vdiReason > reason)
+            reason = vdiReason;
+    }
+
+    switch (reason)
+    {
+        case VDI::ReadCachingDisabledReasonCode::LicenseRestriction:
+            // C# says "not licensed" when the feature is forbidden now; licence restrictions are
+            // not ported (XCP-ng has none), so this is the "when the VM was started" variant
+            return QObject::tr("This pool was not licensed for read caching when the VM was started");
+        case VDI::ReadCachingDisabledReasonCode::SrNotSupported:
+            return QObject::tr("Read caching is not supported on the type of Storage Repository used by this VM");
+        case VDI::ReadCachingDisabledReasonCode::NoRoImage:
+            return QObject::tr("This VM does not have any read-only disks or disks with a read-only parent");
+        case VDI::ReadCachingDisabledReasonCode::SrOverride:
+            return QObject::tr("Read caching has been disabled on the Storage Repository used by this VM");
+        default:
+            // should only happen transiently
+            return QString();
+    }
+}
+
+bool VM::IsDefaultBootModeUefi() const
+{
+    return this->HVMBootParams().value("firmware").toString().trimmed().toLower() == "uefi";
+}
+
+QString VM::GetSecureBootMode() const
+{
+    return this->GetPlatform().value("secureboot").toString().trimmed().toLower();
 }
 
 bool VM::RequiresReboot() const

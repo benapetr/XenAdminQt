@@ -342,6 +342,65 @@ private slots:
         QCOMPARE(VMHelpers::DefaultVMName("Debian", &connection), QString("Debian (3)"));
     }
 
+    void generalTabModelHelpersMatchCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+
+        // Unknown coordinator: C# version helpers answer true
+        QVERIFY(Host::XapiEqualOrGreater(&connection, "23.11.0"));
+        QVERIFY(Host::NaplesOrGreater(&connection));
+
+        cache->Update(XenObjectType::Host, "OpaqueRef:h", QVariantMap{
+            {"uuid", "host-uuid"},
+            {"software_version", QVariantMap{{"xapi", "22.27.0"}, {"platform_version", "2.9.0"}}},
+            {"other_config", QVariantMap{{"multipathed", "true"}, {"mpath-boot", "[1, 2]"}}}});
+        cache->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{{"master", "OpaqueRef:h"}});
+        QVERIFY(Host::XapiEqualOrGreater(&connection, "22.26.0"));
+        QVERIFY(!Host::XapiEqualOrGreater(&connection, "23.11.0"));
+        QVERIFY(!Host::NaplesOrGreater(&connection));
+
+        QSharedPointer<Host> host = cache->ResolveObject<Host>("OpaqueRef:h");
+        int current = -1, max = -1;
+        QVERIFY(host->GetBootPathCounts(current, max));
+        QCOMPARE(current, 1);
+        QCOMPARE(max, 2);
+        cache->Update(XenObjectType::Host, "OpaqueRef:h2", QVariantMap{{"other_config", QVariantMap{{"mpath-boot", "[2, 2]"}}}});
+        QVERIFY(!cache->ResolveObject<Host>("OpaqueRef:h2")->GetBootPathCounts(current, max)); // not multipathed
+
+        // Boot mode
+        cache->Update(XenObjectType::VM, "OpaqueRef:uefi", QVariantMap{
+            {"HVM_boot_params", QVariantMap{{"firmware", " UEFI "}}}, {"platform", QVariantMap{{"secureboot", "Auto"}}}});
+        QSharedPointer<VM> uefi = cache->ResolveObject<VM>("OpaqueRef:uefi");
+        QVERIFY(uefi->IsDefaultBootModeUefi());
+        QCOMPARE(uefi->GetSecureBootMode(), QString("auto"));
+
+        // Read caching: per resident host in the VDI's sm_config; the last reason in C# order wins
+        cache->Update(XenObjectType::VDI, "OpaqueRef:cached", QVariantMap{{"name_label", "cached"},
+            {"sm_config", QVariantMap{{"read-caching-enabled-on-host-uuid", "true"}}}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:srtype", QVariantMap{
+            {"sm_config", QVariantMap{{"read-caching-reason-host-uuid", "SR_NOT_SUPPORTED"}}}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:noro", QVariantMap{
+            {"sm_config", QVariantMap{{"read-caching-reason-host-uuid", "NO_RO_IMAGE"}}}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:b1", QVariantMap{{"VDI", "OpaqueRef:cached"}, {"currently_attached", true}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:b2", QVariantMap{{"VDI", "OpaqueRef:srtype"}, {"currently_attached", true}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:b3", QVariantMap{{"VDI", "OpaqueRef:noro"}, {"currently_attached", true}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:b4", QVariantMap{{"VDI", "OpaqueRef:cached"}, {"currently_attached", false}});
+
+        cache->Update(XenObjectType::VM, "OpaqueRef:rc", QVariantMap{
+            {"resident_on", "OpaqueRef:h"}, {"VBDs", QVariantList{"OpaqueRef:b1", "OpaqueRef:b4"}}});
+        QSharedPointer<VM> cachingVm = cache->ResolveObject<VM>("OpaqueRef:rc");
+        QVERIFY(cachingVm->ReadCachingEnabled());
+        QCOMPARE(cachingVm->ReadCachingVDIs().size(), 1);
+
+        cache->Update(XenObjectType::VM, "OpaqueRef:norc", QVariantMap{
+            {"resident_on", "OpaqueRef:h"}, {"VBDs", QVariantList{"OpaqueRef:b2", "OpaqueRef:b3", "OpaqueRef:b4"}}});
+        QSharedPointer<VM> plainVm = cache->ResolveObject<VM>("OpaqueRef:norc");
+        QVERIFY(!plainVm->ReadCachingEnabled());
+        QCOMPARE(plainVm->ReadCachingDisabledReason(),
+                 QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
     void groupHideMatchesCSharp()
     {
         XenConnection connection;

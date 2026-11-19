@@ -366,6 +366,20 @@ class XENLIB_EXPORT Host : public XenObject
         //! Get platform version string from software_version
         QString PlatformVersion() const;
 
+        //! Multipathed boot: current and maximum paths from other_config mpath-boot
+        //! (C# Host.GetBootPathCounts). False when the host does not boot multipathed.
+        bool GetBootPathCounts(int& current, int& max) const;
+
+        //! The pool coordinator of a connection, or null if not known yet
+        static QSharedPointer<Host> GetCoordinator(XenConnection* connection);
+
+        //! C# Helpers.XapiEqualOrGreater_x_y_z: the coordinator's xapi is at least version;
+        //! true when the coordinator is not known
+        static bool XapiEqualOrGreater(XenConnection* connection, const QString& version);
+
+        //! C# Helpers.NaplesOrGreater(IXenConnection): platform version 2.9.50 or later
+        static bool NaplesOrGreater(XenConnection* connection);
+
         //! Get product brand string from software_version
         QString ProductBrand() const;
 

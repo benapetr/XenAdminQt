@@ -560,6 +560,18 @@ class XENLIB_EXPORT VM : public XenObject
          */
         bool ReadCachingEnabled() const;
 
+        //! Attached VDIs with read caching on the resident host (C# VM.ReadCachingVDIs)
+        QList<QSharedPointer<VDI>> ReadCachingVDIs() const;
+
+        //! Why read caching is off, or an empty string if unknown (C# VM.ReadCachingDisabledReason)
+        QString ReadCachingDisabledReason() const;
+
+        //! HVM_boot_params firmware is UEFI (C# VM.IsDefaultBootModeUefi)
+        bool IsDefaultBootModeUefi() const;
+
+        //! platform:secureboot, trimmed and lower case (C# VM.GetSecureBootMode)
+        QString GetSecureBootMode() const;
+
         //! Check if VM requires reboot to apply configuration changes
         bool RequiresReboot() const;
 

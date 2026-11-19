@@ -35,6 +35,7 @@
 #include "../xencache.h"
 #include "vm.h"
 #include "pbd.h"
+#include "pool.h"
 #include "pif.h"
 #include "pgpu.h"
 #include "../utils/misc.h"
@@ -1021,4 +1022,38 @@ QSharedPointer<VM> Host::ControlDomainZero() const
     }
     
     return QSharedPointer<VM>();
+}
+
+bool Host::GetBootPathCounts(int& current, int& max) const
+{
+    current = max = 0;
+    const QVariantMap otherConfig = this->GetOtherConfig();
+    return otherConfig.value("multipathed").toString() == "true"
+        && otherConfig.contains("mpath-boot")
+        && PBD::ParsePathCounts(otherConfig.value("mpath-boot").toString(), current, max);
+}
+
+QSharedPointer<Host> Host::GetCoordinator(XenConnection* connection)
+{
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    QSharedPointer<Host> coordinator = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    return coordinator && coordinator->IsValid() ? coordinator : QSharedPointer<Host>();
+}
+
+bool Host::XapiEqualOrGreater(XenConnection* connection, const QString& version)
+{
+    QSharedPointer<Host> coordinator = GetCoordinator(connection);
+    return !coordinator || Misc::ProductVersionCompare(coordinator->GetXapiVersion(), version) >= 0;
+}
+
+bool Host::NaplesOrGreater(XenConnection* connection)
+{
+    if (!connection)
+        return true;
+    QSharedPointer<Host> coordinator = GetCoordinator(connection);
+    if (!coordinator)
+        return true;
+    const QString platformVersion = coordinator->PlatformVersion();
+    return !platformVersion.isEmpty() && Misc::ProductVersionCompare(platformVersion, "2.9.50") >= 0;
 }

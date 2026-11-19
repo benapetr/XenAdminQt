@@ -32,6 +32,7 @@
 
 class SR;
 class VBD;
+class Host;
 
 /**
  * @brief VDI - A virtual disk image
@@ -125,6 +126,22 @@ class XENLIB_EXPORT VDI : public XenObject
 
         //! Get Storage Manager configuration (SM-dependent configuration data)
         QVariantMap SMConfig() const;
+
+        //! C# VDI.ReadCachingDisabledReasonCode, in the same order (later = nearer to cachable)
+        enum class ReadCachingDisabledReasonCode
+        {
+            Unknown,
+            LicenseRestriction,
+            SrNotSupported,
+            NoRoImage,
+            SrOverride
+        };
+
+        //! sm_config read-caching-enabled-on-<host uuid> (C# VDI.ReadCachingEnabled(Host))
+        bool ReadCachingEnabled(const QSharedPointer<Host>& host) const;
+
+        //! sm_config read-caching-reason-<host uuid> (C# VDI.ReadCachingDisabledReason(Host))
+        ReadCachingDisabledReasonCode ReadCachingDisabledReason(const QSharedPointer<Host>& host) const;
 
         //! Get snapshot VDI opaque references
         QStringList SnapshotRefs() const;

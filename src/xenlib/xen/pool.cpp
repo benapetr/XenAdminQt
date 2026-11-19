@@ -531,3 +531,8 @@ bool Pool::IsNotFullyUpgraded() const
     
     return false; // All versions match
 }
+
+QString Pool::GetUefiCertificates() const
+{
+    return this->stringProperty("uefi_certificates");
+}

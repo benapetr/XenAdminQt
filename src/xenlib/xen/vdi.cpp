@@ -26,6 +26,7 @@
  */
 
 #include "vdi.h"
+#include "host.h"
 #include "network/connection.h"
 #include "../xencache.h"
 #include "../utils/misc.h"
@@ -311,4 +312,28 @@ QList<QSharedPointer<VBD>> VDI::GetVBDs() const
         }
     }
     return result;
+}
+
+bool VDI::ReadCachingEnabled(const QSharedPointer<Host>& host) const
+{
+    if (!host)
+        return false;
+    return this->SMConfig().value(QStringLiteral("read-caching-enabled-on-") + host->GetUUID()).toString() == "true";
+}
+
+VDI::ReadCachingDisabledReasonCode VDI::ReadCachingDisabledReason(const QSharedPointer<Host>& host) const
+{
+    if (!host)
+        return ReadCachingDisabledReasonCode::Unknown;
+
+    const QString reason = this->SMConfig().value(QStringLiteral("read-caching-reason-") + host->GetUUID()).toString();
+    if (reason == "LICENSE_RESTRICTION")
+        return ReadCachingDisabledReasonCode::LicenseRestriction;
+    if (reason == "SR_NOT_SUPPORTED")
+        return ReadCachingDisabledReasonCode::SrNotSupported;
+    if (reason == "NO_RO_IMAGE")
+        return ReadCachingDisabledReasonCode::NoRoImage;
+    if (reason == "SR_OVERRIDE")
+        return ReadCachingDisabledReasonCode::SrOverride;
+    return ReadCachingDisabledReasonCode::Unknown;
 }

@@ -9,6 +9,10 @@ are omitted.
 
 ### Added
 
+- General tab: VMs show their boot mode (BIOS, UEFI or UEFI Secure Boot, in red
+  when the pool lacks UEFI certificates), servers booting over multipath show
+  how many boot paths are active, and running VMs list their read-cached disks
+  or why read caching is off, as in C#.
 - General tab: the Tags and Folder rows have "View tag..." and "View folder..."
   right-click items that show a search for that tag or folder, as in C#.
 - The title bar shows "Filters are ON" or "Filters are OFF" on the Alerts and
@@ -54,6 +58,9 @@ are omitted.
 
 ### Fixed
 
+- The General tab's read caching status now uses the per-server state the
+  storage manager reports, as C# does; it could say "Enabled" when the VM was
+  not using read caching.
 - VM > Send Ctrl+Alt+Del is now only enabled while the Console tab shows a
   running VM, as in C#.
 - The Memory tab now also updates when a VM's guest agent reports changes
