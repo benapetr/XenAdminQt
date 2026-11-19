@@ -86,18 +86,17 @@ void ConsolesOptionsPage::Build()
     this->ui->ClipboardCheckBox->setChecked(settings.GetConsoleClipboardAndPrinterRedirection());
     this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.GetConsoleConnectToServerConsole());
 
+    // The clipboard setting also applies to VNC consoles (C# VNCGraphicsClient), so it
+    // stays available in builds without FreeRDP
     this->ui->RDPGroupBox->setEnabled(rdpSupported);
-    this->ui->ClipboardCheckBox->setEnabled(rdpSupported);
     if (!rdpSupported)
     {
         const QString reason = tr("RDP options are unavailable because this build was compiled without FreeRDP support.");
         this->ui->RDPGroupBox->setToolTip(reason);
-        this->ui->ClipboardCheckBox->setToolTip(reason);
     }
     else
     {
         this->ui->RDPGroupBox->setToolTip(QString());
-        this->ui->ClipboardCheckBox->setToolTip(QString());
     }
 
     // Console scaling
@@ -199,13 +198,15 @@ void ConsolesOptionsPage::Save()
     settings.SetConsoleDockShortcutKey(this->ui->DockKeyComboBox->currentIndex());
     settings.SetConsoleUncaptureShortcutKey(this->ui->UncaptureKeyComboBox->currentIndex());
 
+    // Clipboard sharing applies to VNC and RDP consoles
+    settings.SetConsoleClipboardAndPrinterRedirection(this->ui->ClipboardCheckBox->isChecked());
+
     // Windows Remote Desktop
     if (rdpSupported)
     {
         settings.SetConsoleWindowsShortcuts(this->ui->WindowsKeyCheckBox->isChecked());
         settings.SetConsoleReceiveSoundFromRDP(this->ui->SoundCheckBox->isChecked());
         settings.SetConsoleAutoSwitchToRDP(this->ui->AutoSwitchCheckBox->isChecked());
-        settings.SetConsoleClipboardAndPrinterRedirection(this->ui->ClipboardCheckBox->isChecked());
         settings.SetConsoleConnectToServerConsole(this->ui->ConnectToServerConsoleCheckBox->isChecked());
     }
 

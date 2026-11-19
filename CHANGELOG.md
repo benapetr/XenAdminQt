@@ -31,6 +31,10 @@ are omitted.
 
 ### Fixed
 
+- Options > Consoles "Enable clipboard and printer redirection" now controls
+  clipboard sharing with VNC consoles, as in C#. The clipboard was always shared
+  in both directions, and the option was disabled in builds without FreeRDP.
+  The console's clipboard text is also no longer written to the debug log.
 - Security: server TLS certificates were never checked. Every connection (API,
   console, import/export, performance data) accepted any certificate, so an
   impersonated server would have received the login password. Certificates are

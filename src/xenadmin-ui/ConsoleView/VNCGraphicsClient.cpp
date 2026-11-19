@@ -27,6 +27,7 @@
 
 #include "VNCGraphicsClient.h"
 #include "ConsoleKeyHandler.h"
+#include "../settingsmanager.h"
 #include <QPainter>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -986,7 +987,8 @@ bool VNCGraphicsClient::handleServerCutText()
     length = readU32();
 
     QString text = QString::fromLatin1(readBytes(length));
-    qDebug() << "VNCGraphicsClient: Server cut text:" << text.left(50);
+    // Don't log the text itself: it is the guest's clipboard contents
+    qDebug() << "VNCGraphicsClient: Server cut text," << text.length() << "characters";
 
     // Set clipboard (matches C# clipboard handling)
     if (redirectingClipboard())
@@ -1460,8 +1462,9 @@ void VNCGraphicsClient::focusOutEvent(QFocusEvent* event)
 
 bool VNCGraphicsClient::redirectingClipboard()
 {
-    // TODO: Get from settings (matches C# Properties.Settings.Default.ClipboardAndPrinterRedirection)
-    return true;
+    // C# Reference: VNCGraphicsClient.RedirectingClipboard() -
+    // Properties.Settings.Default.ClipboardAndPrinterRedirection (Options > Consoles)
+    return SettingsManager::instance().GetConsoleClipboardAndPrinterRedirection();
 }
 
 void VNCGraphicsClient::onClipboardChanged()
