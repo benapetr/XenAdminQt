@@ -27,6 +27,8 @@
 
 #include "newtemplatefromsnapshotcommand.h"
 #include "xenlib/xen/actions/vm/vmcloneaction.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
@@ -134,10 +136,26 @@ void NewTemplateFromSnapshotCommand::Run()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {
-            // Mark template as "instant" (created from snapshot)
-            // In C#, this is done with SetVMOtherConfigAction
-            // For now, we'll just show success message
-            // TODO: Add VM.add_to_other_config call to mark as instant template
+            // C# action_Completed: mark the new template as "instant" (other_config:instant=true,
+            // see VM::IsInstantTemplate). The clone action doesn't wait for the template to reach
+            // the cache, so this works on the ref rather than through SetVMOtherConfigAction.
+            const QString templateRef = action->GetResult();
+            if (!templateRef.isEmpty())
+            {
+                auto* markInstant = new DelegatedAsyncOperation(
+                    conn,
+                    tr("Updating VM configuration"),
+                    tr("Updating VM configuration..."),
+                    [templateRef](DelegatedAsyncOperation* operation)
+                    {
+                        // add_to_other_config fails on an existing key, and the clone may
+                        // have inherited one from the snapshot; removing a missing key is fine
+                        XenAPI::VM::remove_from_other_config(operation->GetSession(), templateRef, "instant");
+                        XenAPI::VM::add_to_other_config(operation->GetSession(), templateRef, "instant", "true");
+                    },
+                    MainWindow::instance());
+                markInstant->RunAsync(true);
+            }
 
             MainWindow::instance()->ShowStatusMessage(
                 tr("Template '%1' created from snapshot").arg(templateName), 5000);

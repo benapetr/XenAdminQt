@@ -46,6 +46,8 @@ are omitted.
 
 ### Fixed
 
+- Templates created from a snapshot are now marked as instant templates, as in
+  C#, so Instant VM from Template is offered for them.
 - VM > Uninstall VM now deletes the VM through the usual delete confirmation
   (choosing which disks and snapshots to remove), as in C#, instead of showing
   a "Not Implemented" message.
