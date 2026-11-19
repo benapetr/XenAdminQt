@@ -24,6 +24,7 @@
 #include "xenlib/xen/actions/vm/vmrebootaction.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include "xenlib/xensearch/group.h"
+#include "xenlib/xensearch/queries.h"
 #include "xenlib/xen/network/certificatemanager.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/friendlynames.h"
@@ -400,6 +401,69 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void groupAndRecursiveQueriesMatchLikeCSharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{{"uuid", "pool-uuid"}, {"name_label", "pool"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"uuid", "vm-uuid"}, {"name_label", "web01"},
+            {"power_state", "Running"}});
+        const QVariantMap vm = cache->ResolveObjectData(XenObjectType::VM, "OpaqueRef:vm");
+
+        auto named = [](const QString& text) {
+            return new StringPropertyQuery(XenSearch::PropertyNames::label, text, StringPropertyQuery::MatchType::Contains);
+        };
+
+        // An unfinished "Select a filter..." child must not decide a group (C# three-valued logic)
+        GroupQuery andWithPlaceholder(GroupQuery::GroupQueryType::And, {named("web"), new DummyQuery()});
+        QCOMPARE(andWithPlaceholder.Match(vm, "vm", &connection).toBool(), true);
+        GroupQuery andFails(GroupQuery::GroupQueryType::And, {named("db"), new DummyQuery()});
+        QCOMPARE(andFails.Match(vm, "vm", &connection).toBool(), false);
+        GroupQuery onlyPlaceholder(GroupQuery::GroupQueryType::Or, {new DummyQuery()});
+        QVERIFY(!onlyPlaceholder.Match(vm, "vm", &connection).isValid());
+        GroupQuery nor(GroupQuery::GroupQueryType::Nor, {named("db"), new DummyQuery()});
+        QCOMPARE(nor.Match(vm, "vm", &connection).toBool(), true);
+
+        // "Pool is <pool>" as the editor builds it: a recursive query over the pool with a UUID subquery
+        RecursiveXMOPropertyQuery inPool(XenSearch::PropertyNames::pool,
+            new StringPropertyQuery(XenSearch::PropertyNames::uuid, "pool-uuid", StringPropertyQuery::MatchType::ExactMatch));
+        QCOMPARE(inPool.Match(vm, "vm", &connection).toBool(), true);
+        RecursiveXMOPropertyQuery otherPool(XenSearch::PropertyNames::pool,
+            new StringPropertyQuery(XenSearch::PropertyNames::uuid, "other", StringPropertyQuery::MatchType::ExactMatch));
+        QCOMPARE(otherPool.Match(vm, "vm", &connection).toBool(), false);
+
+        // List relationships: a server's VMs, a VM's disks, storage and networks
+        cache->Update(XenObjectType::Host, "OpaqueRef:h", QVariantMap{{"uuid", "host-uuid"}, {"name_label", "xcp1"},
+            {"resident_VMs", QVariantList{"OpaqueRef:vm"}}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr", QVariantMap{{"uuid", "sr-uuid"}, {"name_label", "nfs"}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:vdi", QVariantMap{{"uuid", "vdi-uuid"}, {"name_label", "web-disk"},
+            {"SR", "OpaqueRef:sr"}, {"VBDs", QVariantList{"OpaqueRef:vbd"}}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:vbd", QVariantMap{{"VM", "OpaqueRef:vm"}, {"VDI", "OpaqueRef:vdi"}});
+        cache->Update(XenObjectType::Network, "OpaqueRef:net", QVariantMap{{"uuid", "net-uuid"}, {"name_label", "lan"}});
+        cache->Update(XenObjectType::VIF, "OpaqueRef:vif", QVariantMap{{"VM", "OpaqueRef:vm"}, {"network", "OpaqueRef:net"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"uuid", "vm-uuid"}, {"name_label", "web01"},
+            {"power_state", "Running"}, {"resident_on", "OpaqueRef:h"},
+            {"VBDs", QVariantList{"OpaqueRef:vbd"}}, {"VIFs", QVariantList{"OpaqueRef:vif"}}});
+        const QVariantMap host = cache->ResolveObjectData(XenObjectType::Host, "OpaqueRef:h");
+        const QVariantMap vmNow = cache->ResolveObjectData(XenObjectType::VM, "OpaqueRef:vm");
+
+        RecursiveXMOListPropertyQuery hostHasWebVm(XenSearch::PropertyNames::vm, named("web"));
+        QCOMPARE(hostHasWebVm.Match(host, "host", &connection).toBool(), true);
+        RecursiveXMOListPropertyQuery hostHasDbVm(XenSearch::PropertyNames::vm, named("db"));
+        QCOMPARE(hostHasDbVm.Match(host, "host", &connection).toBool(), false);
+
+        RecursiveXMOListPropertyQuery vmDisk(XenSearch::PropertyNames::disks, named("web-disk"));
+        QCOMPARE(vmDisk.Match(vmNow, "vm", &connection).toBool(), true);
+        RecursiveXMOListPropertyQuery vmStorage(XenSearch::PropertyNames::storage, named("nfs"));
+        QCOMPARE(vmStorage.Match(vmNow, "vm", &connection).toBool(), true);
+        RecursiveXMOListPropertyQuery vmNetwork(XenSearch::PropertyNames::networks, named("lan"));
+        QCOMPARE(vmNetwork.Match(vmNow, "vm", &connection).toBool(), true);
+
+        // A nested "Select a filter..." keeps the result indeterminate instead of hiding everything
+        RecursiveXMOListPropertyQuery unfinished(XenSearch::PropertyNames::vm, new DummyQuery());
+        QVERIFY(!unfinished.Match(host, "host", &connection).isValid());
     }
 
     void cacheBuildsEveryKnownType()

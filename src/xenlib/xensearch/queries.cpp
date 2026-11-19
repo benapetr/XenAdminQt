@@ -98,49 +98,50 @@ GroupQuery::~GroupQuery()
 
 QVariant GroupQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    if (this->subQueries_.isEmpty())
-        return true; // Empty group matches everything
-    
+    // C# GroupQuery.Match: three-valued. Indeterminate subqueries (such as an unfinished
+    // "Select a filter..." placeholder) are skipped; the result is indeterminate if nothing decided it.
+    QVariant result;
+
     switch (this->type_)
     {
         case GroupQueryType::And:
-        {
-            // All must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->Match(objectData, objectType, conn);
-                if (!result.isValid() || !result.toBool())
+                const QVariant b = subQuery->Match(objectData, objectType, conn);
+                if (!b.isValid())
+                    continue;
+                if (!b.toBool())
                     return false;
+                result = true;
             }
-            return true;
-        }
-        
+            return result;
+
         case GroupQueryType::Or:
-        {
-            // At least one must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->Match(objectData, objectType, conn);
-                if (result.isValid() && result.toBool())
+                const QVariant b = subQuery->Match(objectData, objectType, conn);
+                if (!b.isValid())
+                    continue;
+                if (b.toBool())
                     return true;
+                result = false;
             }
-            return false;
-        }
-        
+            return result;
+
         case GroupQueryType::Nor:
-        {
-            // None must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->Match(objectData, objectType, conn);
-                if (result.isValid() && result.toBool())
+                const QVariant b = subQuery->Match(objectData, objectType, conn);
+                if (!b.isValid())
+                    continue;
+                if (b.toBool())
                     return false;
+                result = true;
             }
-            return true;
-        }
+            return result;
     }
-    
-    return false;
+
+    return result;
 }
 
 bool GroupQuery::Equals(const QueryFilter* other) const
@@ -611,6 +612,31 @@ RecursivePropertyQuery::~RecursivePropertyQuery()
 // RecursiveXMOPropertyQuery - Single object recursive query
 // ============================================================================
 
+
+namespace
+{
+    // C# RecursivePropertyQuery reads the relationship through PropertyAccessors on the typed
+    // object. Use the typed accessor where one exists; fall back to the raw-record helper for
+    // properties that only have that (folders).
+    QVariant relationshipValue(const QVariantMap& objectData, const QString& objectType,
+                               PropertyNames property, XenConnection* conn)
+    {
+        const std::function<QVariant(XenObject*)> accessor = PropertyAccessors::Get(property);
+        if (accessor && conn && conn->GetCache())
+        {
+            QString ref = objectData.value("ref").toString();
+            if (ref.isEmpty())
+                ref = objectData.value("opaque_ref").toString();
+            QSharedPointer<XenObject> object = ref.isEmpty()
+                ? QSharedPointer<XenObject>()
+                : conn->GetCache()->ResolveObject(objectType, ref);
+            if (object)
+                return accessor(object.data());
+        }
+        return getPropertyValue(objectData, property);
+    }
+}
+
 RecursiveXMOPropertyQuery::RecursiveXMOPropertyQuery(PropertyNames property, QueryFilter* subQuery)
     : RecursivePropertyQuery(property, subQuery)
 {
@@ -618,10 +644,8 @@ RecursiveXMOPropertyQuery::RecursiveXMOPropertyQuery(PropertyNames property, Que
 
 QVariant RecursiveXMOPropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(objectType);
-    
-    // Get the property value (should be an opaque ref)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    // The related object(s): an opaque ref, or a list of them
+    QVariant propertyValue = relationshipValue(objectData, objectType, this->property_, conn);
     
     if (!propertyValue.isValid() || propertyValue.toString().isEmpty())
         return false;
@@ -676,10 +700,8 @@ RecursiveXMOListPropertyQuery::RecursiveXMOListPropertyQuery(PropertyNames prope
 
 QVariant RecursiveXMOListPropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(objectType);
-    
-    // Get the property value (should be a list of opaque refs)
-    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    // The related object(s): an opaque ref, or a list of them
+    QVariant propertyValue = relationshipValue(objectData, objectType, this->property_, conn);
     
     QVariantList refList;
     if (propertyValue.canConvert<QVariantList>())

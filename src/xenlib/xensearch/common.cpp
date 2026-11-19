@@ -167,13 +167,10 @@ void PropertyAccessors::Initialize()
         if (!cache)
             return QVariant();
         
-        // Get pool from cache - there's exactly one pool per connection
-        QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
-        if (poolRefs.isEmpty())
-            return QVariant();
-        
-        // Return the first (and only) pool ref
-        return poolRefs.first();
+        // C# Helpers.GetPool: only a visible pool counts, not the implicit pool of a
+        // standalone server
+        QSharedPointer<Pool> pool = cache->GetPool();
+        return pool ? QVariant(pool->OpaqueRef()) : QVariant();
     };
     
     properties_[PropertyNames::host] = HostProperty;
@@ -881,9 +878,8 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
     if (!cache)
         return QVariant();
     
-    // Get pool to check if we're in a pool
-    QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
-    bool inPool = !poolRefs.isEmpty();
+    // C# Helpers.GetPool: a standalone server has an implicit pool that does not count
+    bool inPool = !cache->GetPool().isNull();
     
     if (!inPool)
     {

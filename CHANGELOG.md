@@ -64,6 +64,10 @@ are omitted.
 
 ### Fixed
 
+- Search conditions that look at related objects now work, as in C#: "Pool",
+  "Server", "VM", "Networks", "Storage" and "Disks" conditions never matched
+  (or matched the object itself), and an "All of" group returned nothing while
+  one of its rows was still "Select a filter...".
 - The client now builds objects for every server class it receives, as C#
   does. Sixteen classes were never turned into objects, so code that looked
   them up got nothing. Among the effects: vApp Start/Shut Down could not find
