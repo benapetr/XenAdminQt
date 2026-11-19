@@ -107,6 +107,13 @@ class MainWindow : public QMainWindow
         //! Open the folder with the application log files (C# Program.ViewLogFiles)
         static void ViewLogFiles(QWidget* parent);
 
+        //! Show the results of a search in place of the object tabs (C# DoSearch). Takes
+        //! ownership of the search.
+        void DoSearch(class Search* search);
+        //! C# MainWindow.SearchForTag / SearchForFolder (General tab "View tag/folder...")
+        void SearchForTag(const QString& tag);
+        void SearchForFolder(const QString& path);
+
     private slots:
         void connectToServer();
         void showAbout();
@@ -296,6 +303,7 @@ class MainWindow : public QMainWindow
         // Tab management - new system
         void showObjectTabs(QSharedPointer<XenObject> xen_obj);
         void showSearchPage(XenConnection *connection, class GroupingTag* groupingTag);
+        void showSearch(XenConnection* connection, class Search* search);
         void clearTabs();
         void updateTabPages(QSharedPointer<XenObject> xen_obj);
         void updatePlaceholderVisibility();

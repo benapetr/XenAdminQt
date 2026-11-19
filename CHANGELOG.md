@@ -9,6 +9,8 @@ are omitted.
 
 ### Added
 
+- General tab: the Tags and Folder rows have "View tag..." and "View folder..."
+  right-click items that show a search for that tag or folder, as in C#.
 - The title bar shows "Filters are ON" or "Filters are OFF" on the Alerts and
   Events pages, as in C#.
 - Quick Create (Templates menu and template context menu), as in C#: creates a

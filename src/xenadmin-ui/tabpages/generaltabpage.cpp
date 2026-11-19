@@ -45,6 +45,8 @@
 #include "dialogs/poolpropertiesdialog.h"
 #include "dialogs/storagepropertiesdialog.h"
 #include "dialogs/networkpropertiesdialog.h"
+#include "mainwindow.h"
+#include <QMenu>
 #include <algorithm>
 #include <QDateTime>
 
@@ -169,16 +171,9 @@ void GeneralTabPage::refreshContent()
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_label", objectName, propertiesMenu);
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description", objectDescription, propertiesMenu);
 
-    QStringList tags = this->m_object->GetTags();
-    QString tagsValue = tags.isEmpty() ? tr("None") : tags.join(", ");
-    this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tagsValue);
+    this->addTagsRow(propertiesMenu);
+    this->addFolderRow(propertiesMenu);
 
-    QString folderValue = this->m_object->GetFolderPath();
-    if (folderValue.isEmpty())
-        folderValue = tr("None");
-    this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), folderValue);
-
-    // TODO: Add "View tag" and "View folder" context menu actions once search helpers are ported.
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uuid",
                            this->m_object->GetUUID().isEmpty() ? "N/A" : this->m_object->GetUUID());
 
@@ -227,8 +222,76 @@ void GeneralTabPage::refreshContent()
     this->updateExpandCollapseButtons();
 }
 
+QAction* GeneralTabPage::createRowAction(const QString& text)
+{
+    QAction* action = new QAction(text, this);
+    this->m_rowMenuObjects.append(action);
+    return action;
+}
+
+// C# GenTagRow: "View tag..." lists each tag and searches for it
+void GeneralTabPage::addTagsRow(const QList<QAction*>& propertiesMenu)
+{
+    QStringList tags = this->m_object->GetTags();
+    if (tags.isEmpty())
+    {
+        this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tr("None"), propertiesMenu);
+        return;
+    }
+
+    std::sort(tags.begin(), tags.end());
+
+    QAction* viewTag = this->createRowAction(tr("View tag..."));
+    QMenu* tagMenu = new QMenu(this);
+    this->m_rowMenuObjects.append(tagMenu);
+    for (const QString& tag : tags)
+    {
+        // C# tag.Ellipsise(30)
+        const QString text = tag.length() > 30 ? tag.left(29) + QChar(0x2026) : tag;
+        QAction* tagAction = tagMenu->addAction(text);
+        connect(tagAction, &QAction::triggered, this, [tag]()
+        {
+            if (MainWindow* mainWindow = MainWindow::instance())
+                mainWindow->SearchForTag(tag);
+        });
+    }
+    viewTag->setMenu(tagMenu);
+
+    this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tags.join(", "),
+                      QList<QAction*>() << viewTag << propertiesMenu);
+}
+
+// C# GenFolderRow: "View folder..." when the object is in a folder
+void GeneralTabPage::addFolderRow(const QList<QAction*>& propertiesMenu)
+{
+    const QString path = this->m_object->GetFolderPath();
+    if (path.isEmpty())
+    {
+        this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), tr("None"), propertiesMenu);
+        return;
+    }
+
+    QAction* viewFolder = this->createRowAction(tr("View folder..."));
+    connect(viewFolder, &QAction::triggered, this, [path]()
+    {
+        if (MainWindow* mainWindow = MainWindow::instance())
+            mainWindow->SearchForFolder(path);
+    });
+
+    this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), path,
+                      QList<QAction*>() << viewFolder << propertiesMenu);
+}
+
 void GeneralTabPage::clearProperties()
 {
+    // deleteLater: a row's context menu may still be open while the rows are rebuilt
+    for (const QPointer<QObject>& object : this->m_rowMenuObjects)
+    {
+        if (object)
+            object->deleteLater();
+    }
+    this->m_rowMenuObjects.clear();
+
     this->ui->pdSectionGeneral->ClearData();
     this->ui->pdSectionCertificate->ClearData();
     this->ui->pdSectionBios->ClearData();

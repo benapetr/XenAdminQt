@@ -967,27 +967,57 @@ void MainWindow::showObjectTabs(QSharedPointer<XenObject> xen_obj)
 
 // C# Equivalent: MainWindow.SwitchToTab(TabPageSearch) with SearchPage.Search = Search.SearchForNonVappGroup(...)
 // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1771-1775
-void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* groupingTag)
+// Shared by group overviews and DoSearch: the search page alone replaces the object tabs
+void MainWindow::showSearch(XenConnection* connection, Search* search)
 {
-    if (!groupingTag || !this->m_searchTabPage)
+    if (!this->m_searchTabPage || !search)
+    {
+        delete search;
         return;
+    }
 
     if (!connection)
     {
         Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-        if (connMgr)
+        const QList<XenConnection*> connections = connMgr ? connMgr->GetAllConnections() : QList<XenConnection*>();
+        for (XenConnection* candidate : connections)
         {
-            const QList<XenConnection*> connections = connMgr->GetAllConnections();
-            for (XenConnection* candidate : connections)
+            if (candidate && candidate->GetCache())
             {
-                if (candidate && candidate->GetCache())
-                {
-                    connection = candidate;
-                    break;
-                }
+                connection = candidate;
+                break;
             }
         }
     }
+
+    this->m_searchTabPage->SetObject(QSharedPointer<XenObject>(new XenObject(connection, QString())));
+    this->m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
+
+    this->clearTabs();
+    this->ui->mainTabWidget->addTab(this->m_searchTabPage, this->m_searchTabPage->GetTitle());
+    this->updatePlaceholderVisibility();
+}
+
+void MainWindow::DoSearch(Search* search)
+{
+    // Tags and folders span all connections, so no particular connection is preferred
+    this->showSearch(nullptr, search);
+}
+
+void MainWindow::SearchForTag(const QString& tag)
+{
+    this->DoSearch(Search::SearchForTag(tag));
+}
+
+void MainWindow::SearchForFolder(const QString& path)
+{
+    this->DoSearch(Search::SearchForFolder(path));
+}
+
+void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* groupingTag)
+{
+    if (!groupingTag || !this->m_searchTabPage)
+        return;
 
     // C# parity:
     // - vApps root/group uses SearchForVappGroup
@@ -1001,13 +1031,7 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
     else
         search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
 
-    this->m_searchTabPage->SetObject(QSharedPointer<XenObject>(new XenObject(connection, QString())));
-    this->m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
-
-    // Clear existing tabs and show only SearchTabPage
-    this->clearTabs();
-    this->ui->mainTabWidget->addTab(this->m_searchTabPage, this->m_searchTabPage->GetTitle());
-    this->updatePlaceholderVisibility();
+    this->showSearch(connection, search);
 
     // Update status bar
     QString groupName = groupingTag->getGrouping()->getGroupName(groupingTag->getGroup());

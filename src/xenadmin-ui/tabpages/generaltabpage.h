@@ -29,6 +29,7 @@
 #define GENERALTABPAGE_H
 
 #include "basetabpage.h"
+#include <QPointer>
 #include "controls/pdsection.h"
 #include <QAction>
 #include <QHash>
@@ -76,8 +77,14 @@ class GeneralTabPage : public BaseTabPage
         QList<PDSection*> m_sections;
         QHash<QString, QList<PDSection*>> m_expandedSections;
         QAction* m_propertiesAction;
+        //! Context menu actions made for the current rows; released when the rows are rebuilt
+        QList<QPointer<QObject>> m_rowMenuObjects;
 
         void clearProperties();
+        //! An action owned by the current rows (see m_rowMenuObjects)
+        QAction* createRowAction(const QString& text);
+        void addTagsRow(const QList<QAction*>& propertiesMenu);
+        void addFolderRow(const QList<QAction*>& propertiesMenu);
         void addProperty(PDSection* section, const QString& label, const QString& value, const QList<QAction*>& contextMenuItems = QList<QAction*>());
         void addPropertyByKey(PDSection* section, const QString& key, const QString& value, const QList<QAction*>& contextMenuItems = QList<QAction*>());
         void showSectionIfNotEmpty(PDSection* section);
