@@ -33,6 +33,7 @@
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
 #include "xenlib/xen/hiddenobjects.h"
+#include "xenlib/xen/vmappliance.h"
 #include "xenlib/vmhelpers.h"
 #include <QTemporaryDir>
 #include <QTemporaryFile>
@@ -399,6 +400,32 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void cacheBuildsEveryKnownType()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+
+        // Every type the cache lists (cache explorer) must resolve to an object of that type
+        const QStringList known = cache->GetKnownTypes();
+        QVERIFY(known.size() >= 48);
+        for (const QString& typeName : known)
+        {
+            const XenObjectType type = XenObject::TypeFromString(typeName);
+            QVERIFY2(type != XenObjectType::Null, qPrintable(typeName));
+            const QString ref = "OpaqueRef:" + typeName;
+            cache->Update(type, ref, QVariantMap{{"uuid", typeName}});
+            QSharedPointer<XenObject> object = cache->ResolveObject(type, ref);
+            QVERIFY2(object, qPrintable(typeName));
+            QCOMPARE(object->GetObjectType(), type);
+        }
+
+        // Server classes that used to be missing, e.g. vApps
+        cache->Update(XenObjectType::VMAppliance, "OpaqueRef:app", QVariantMap{{"name_label", "app"}});
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("OpaqueRef:app");
+        QVERIFY(appliance);
+        QCOMPARE(appliance->GetName(), QString("app"));
     }
 
     void vtpmRulesMatchCSharp()

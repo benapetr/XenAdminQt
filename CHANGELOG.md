@@ -64,6 +64,12 @@ are omitted.
 
 ### Fixed
 
+- The client now builds objects for every server class it receives, as C#
+  does. Sixteen classes were never turned into objects, so code that looked
+  them up got nothing. Among the effects: vApp Start/Shut Down could not find
+  their vApp, vApps were missing from views that list them, "Reclaim freed
+  space" was never offered for storage that supports it, and clustering and
+  pool-join checks saw no clustered servers.
 - Pool and Server Properties show the same pages as C#: Security only before
   XenServer 8 (Stockholm), Live Patching only before the Cloud release,
   Networking only with the vSwitch backend, and no Performance Alerts page for

@@ -39,6 +39,22 @@
 #include "xen/vmguestmetrics.h"
 #include "xen/vmmetrics.h"
 #include "xen/vtpm.h"
+#include "xen/blob.h"
+#include "xen/cluster.h"
+#include "xen/clusterhost.h"
+#include "xen/feature.h"
+#include "xen/hostcrashdump.h"
+#include "xen/hostpatch.h"
+#include "xen/poolpatch.h"
+#include "xen/poolupdate.h"
+#include "xen/pusb.h"
+#include "xen/sm.h"
+#include "xen/usbgroup.h"
+#include "xen/user.h"
+#include "xen/vmappliance.h"
+#include "xen/vmpp.h"
+#include "xen/vmss.h"
+#include "xen/vusb.h"
 #include "xen/message.h"
 #include "xen/network_sriov.h"
 #include "xen/folder.h"
@@ -529,7 +545,23 @@ QStringList XenCache::GetKnownTypes() const
         XenCache::TypeToCacheString(XenObjectType::VM),
         XenCache::TypeToCacheString(XenObjectType::VMGuestMetrics),
         XenCache::TypeToCacheString(XenObjectType::VMMetrics),
-        XenCache::TypeToCacheString(XenObjectType::VTPM)
+        XenCache::TypeToCacheString(XenObjectType::VTPM),
+        XenCache::TypeToCacheString(XenObjectType::Blob),
+        XenCache::TypeToCacheString(XenObjectType::Cluster),
+        XenCache::TypeToCacheString(XenObjectType::ClusterHost),
+        XenCache::TypeToCacheString(XenObjectType::Feature),
+        XenCache::TypeToCacheString(XenObjectType::HostCrashdump),
+        XenCache::TypeToCacheString(XenObjectType::HostPatch),
+        XenCache::TypeToCacheString(XenObjectType::PoolPatch),
+        XenCache::TypeToCacheString(XenObjectType::PoolUpdate),
+        XenCache::TypeToCacheString(XenObjectType::PUSB),
+        XenCache::TypeToCacheString(XenObjectType::SM),
+        XenCache::TypeToCacheString(XenObjectType::USBGroup),
+        XenCache::TypeToCacheString(XenObjectType::User),
+        XenCache::TypeToCacheString(XenObjectType::VMAppliance),
+        XenCache::TypeToCacheString(XenObjectType::VMPP),
+        XenCache::TypeToCacheString(XenObjectType::VMSS),
+        XenCache::TypeToCacheString(XenObjectType::VUSB)
     };
 }
 
@@ -603,6 +635,40 @@ QSharedPointer<XenObject> XenCache::createObjectForType(XenObjectType type, cons
         return QSharedPointer<XenObject>(new VMMetrics(this->m_connection, ref));
     if (type == XenObjectType::VTPM)
         return QSharedPointer<XenObject>(new VTPM(this->m_connection, ref));
+
+    // Further server classes (C# Cache has a collection for each of them)
+    if (type == XenObjectType::Blob)
+        return QSharedPointer<XenObject>(new Blob(this->m_connection, ref));
+    if (type == XenObjectType::Cluster)
+        return QSharedPointer<XenObject>(new Cluster(this->m_connection, ref));
+    if (type == XenObjectType::ClusterHost)
+        return QSharedPointer<XenObject>(new ClusterHost(this->m_connection, ref));
+    if (type == XenObjectType::Feature)
+        return QSharedPointer<XenObject>(new Feature(this->m_connection, ref));
+    if (type == XenObjectType::HostCrashdump)
+        return QSharedPointer<XenObject>(new HostCrashdump(this->m_connection, ref));
+    if (type == XenObjectType::HostPatch)
+        return QSharedPointer<XenObject>(new HostPatch(this->m_connection, ref));
+    if (type == XenObjectType::PoolPatch)
+        return QSharedPointer<XenObject>(new PoolPatch(this->m_connection, ref));
+    if (type == XenObjectType::PoolUpdate)
+        return QSharedPointer<XenObject>(new PoolUpdate(this->m_connection, ref));
+    if (type == XenObjectType::PUSB)
+        return QSharedPointer<XenObject>(new PUSB(this->m_connection, ref));
+    if (type == XenObjectType::SM)
+        return QSharedPointer<XenObject>(new SM(this->m_connection, ref));
+    if (type == XenObjectType::USBGroup)
+        return QSharedPointer<XenObject>(new USBGroup(this->m_connection, ref));
+    if (type == XenObjectType::User)
+        return QSharedPointer<XenObject>(new User(this->m_connection, ref));
+    if (type == XenObjectType::VMAppliance)
+        return QSharedPointer<XenObject>(new VMAppliance(this->m_connection, ref));
+    if (type == XenObjectType::VMPP)
+        return QSharedPointer<XenObject>(new VMPP(this->m_connection, ref));
+    if (type == XenObjectType::VMSS)
+        return QSharedPointer<XenObject>(new VMSS(this->m_connection, ref));
+    if (type == XenObjectType::VUSB)
+        return QSharedPointer<XenObject>(new VUSB(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }
