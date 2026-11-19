@@ -29,35 +29,32 @@
 #define QUERYELEMENT_H
 
 #include <QWidget>
-#include <QComboBox>
-#include <QPushButton>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QDateTimeEdit>
-#include <QVBoxLayout>
-#include <QLabel>
+#include <QDateTime>
+#include <QPointer>
 #include "../../../xenlib/xensearch/queryfilter.h"
 #include "querytype.h"
 
-// Forward declarations
+class QComboBox;
+class QDateTimeEdit;
+class QDoubleSpinBox;
+class QHBoxLayout;
+class QLabel;
+class QLineEdit;
+class QPushButton;
+class QSpinBox;
+class QVBoxLayout;
 class Searcher;
 class QueryScope;
 class ResourceSelectButton;
 class Search;
 
 /**
- * QueryElement - Search criterion editor widget
- * 
- * Full implementation matching C# xenadmin/XenAdmin/Controls/XenSearch/QueryElement.cs
- * 
- * Features:
- * - Multiple QueryType classes for different criterion types
- * - Nested QueryElement support for And/Or/Nor groups
- * - Dynamic UI based on selected QueryType
- * - Query validation and building
- * 
- * Based on C# xenadmin/XenAdmin/Controls/XenSearch/QueryElement.cs
+ * QueryElement - one row of the search editor, with its nested rows
+ *
+ * Qt port of C# XenAdmin.Controls.XenSearch.QueryElement. A row shows a query type
+ * ("Name", "Pool", "All of", ...) and the controls that type asks for. Group types (All of /
+ * Any of / None of) hold sub-rows below; parent/child types ("Pool", "Server", "Disks", ...)
+ * hold one sub-row on the same line that filters the related objects, with its own scope.
  */
 class QueryElement : public QWidget
 {
@@ -66,31 +63,22 @@ class QueryElement : public QWidget
     public:
         explicit QueryElement(QWidget* parent = nullptr);
         explicit QueryElement(Searcher* searcher, QWidget* parent = nullptr);
-        explicit QueryElement(Searcher* searcher, QueryScope* queryScope,
-                             QueryElement* parentQueryElement, QWidget* parent = nullptr);
-        ~QueryElement();
+        //! queryScope is normally null (use the searcher's scope); it is set for the
+        //! sub-row of a parent/child query
+        QueryElement(Searcher* searcher, QueryScope* queryScope,
+                     QueryElement* parentQueryElement, QWidget* parent = nullptr);
+        ~QueryElement() override;
 
-        /**
-         * Get the current query filter
-         */
+        //! The query this row builds; a new object owned by the caller (may be null)
         QueryFilter* GetQueryFilter() const;
 
-        /**
-         * Set the query filter
-         */
+        //! Show the query (not taken over; may be null for "Select a filter...")
         void SetQueryFilter(QueryFilter* filter);
 
-        /**
-         * Set the associated Searcher
-         */
         void SetSearcher(Searcher* searcher);
-
-        /**
-         * Select the default query type (empty filter)
-         */
         void SelectDefaultQueryType();
 
-        // UI state access methods (used by QueryType classes)
+        // Control access for the query types
         QString getMatchTypeSelection() const;
         void setMatchTypeSelection(const QString& value);
 
@@ -99,6 +87,9 @@ class QueryElement : public QWidget
 
         QString getComboBoxSelection() const;
         void setComboBoxSelection(const QString& value);
+        //! Value of the selected combo entry (see QueryElement::ComboEntry)
+        QVariant getComboBoxValue() const;
+        void setComboBoxValue(const QVariant& value);
 
         qint64 getNumericValue() const;
         void setNumericValue(qint64 value);
@@ -110,73 +101,80 @@ class QueryElement : public QWidget
         void setDateTimeValue(const QDateTime& value);
 
         QString getResourceSelection() const;
+        QString getResourceSelectionUuid() const;
         void setResourceSelection(const QString& ref);
+        void setResourceSelectionUuid(const QString& uuid);
 
+        //! Queries of the sub-rows (new objects owned by the caller)
         QList<QueryFilter*> getSubQueries() const;
-        void setSubQueries(const QList<QueryFilter*>& queries);
 
-        /**
-         * Get the Search instance for resource picker population
-         * C# QueryElement.cs line 462: GetSearchForResourceSelectButton()
-         */
-        Search* getSearchForResourceSelectButton();
+        //! C# GroupQueryType.FromQuery: one sub-row per query, reusing existing rows
+        void setGroupSubQueries(const QList<QueryFilter*>& queries);
+        //! C# RecursiveQueryType.FromQuery: a single sub-row with the given scope
+        void setParentChildSubQuery(QueryFilter* query, QueryScope* scope);
+
+        //! Search listing the objects for the resource picker (owned by the caller)
+        Search* getSearchForResourceSelectButton() const;
+
+        //! An entry for getComboButtonEntries() with display text different from its value
+        static QVariant ComboEntry(const QString& text, const QVariant& value);
 
     signals:
-        /**
-         * Emitted when the query changes
-         */
         void QueryChanged();
 
     private slots:
-        void onQueryTypeChanged(int index);
+        void populateResourceSelectButton();
+        void onQueryTypeActivated(int index);
         void onMatchTypeChanged(int index);
-        void onTextChanged();
-        void onComboChanged(int index);
-        void onNumericChanged(int value);
-        void onDoubleChanged(double value);
-        void onDateTimeChanged(const QDateTime& dateTime);
-        void onResourceSelected(const QString& ref);
         void onRemoveClicked();
-        void onSubQueryChanged();
-        void onSomeThingChanged(); // Refreshes combo boxes when QueryType cache changes
+        void onSearchForChanged();
+        void onSomeThingChanged();
+        void emitQueryChanged();
 
     private:
         void setupUi();
-        void setupControls();
-        void populateQueryTypeCombo(bool showAll = false);
-        void refreshSubQueryElements();
-        void clearSubQueryElements();
+        XenSearch::QueryType* currentQueryType() const { return this->currentQueryType_; }
+        void setCurrentQueryType(XenSearch::QueryType* queryType);
+        void populateQueryTypeCombo();
+        void repopulateAllQueryTypeCombos();
+        bool wantQueryType(XenSearch::QueryType* queryType) const;
+        void selectQueryTypeFor(QueryFilter* query);
+
+        void setup(bool queryTypeDropDownChanged = false);
+        void setup2();
+        void populateComboButton(QComboBox* combo, const QVariantList& values);
+
+        bool isSubQueryElement() const { return this->parentQueryElement_ != nullptr; }
+        bool hasDummySubQuery() const;
+        void addDummySubQuery(QueryScope* queryScope);
         void addSubQueryElement(QueryElement* element);
         void removeSubQueryElement(QueryElement* element);
-        bool wantQueryType(XenSearch::QueryType* queryType) const;
+        void clearSubQueryElements();
+        void refreshSubQueryElements();
+        void removeUnwantedFilters();
 
-        // UI widgets
-        QComboBox* queryTypeCombo_;
-        QComboBox* matchTypeCombo_;
-        QComboBox* comboBox_;           // General combo button (showComboButton)
-        QLineEdit* textBox_;
-        QSpinBox* numericUpDown_;
-        QDoubleSpinBox* doubleSpinBox_;
-        QLabel* unitsLabel_;
-        QDateTimeEdit* dateTimePicker_;
-        ResourceSelectButton* resourceSelectButton_;
-        QPushButton* removeButton_;
-        QVBoxLayout* subQueryLayout_;
+        // Controls
+        QComboBox* queryTypeCombo_ = nullptr;
+        QHBoxLayout* parentChildLayout_ = nullptr;  // sub-row of a parent/child query
+        QComboBox* matchTypeCombo_ = nullptr;
+        QComboBox* comboBox_ = nullptr;
+        QLineEdit* textBox_ = nullptr;
+        QSpinBox* numericUpDown_ = nullptr;
+        QDoubleSpinBox* doubleSpinBox_ = nullptr;
+        QLabel* unitsLabel_ = nullptr;
+        QDateTimeEdit* dateTimePicker_ = nullptr;
+        ResourceSelectButton* resourceSelectButton_ = nullptr;
+        QPushButton* removeButton_ = nullptr;
+        QVBoxLayout* subQueryLayout_ = nullptr;      // sub-rows of a group query
 
         // State
-        Searcher* searcher_;
-        QueryScope* queryScope_;
-        QueryElement* parentQueryElement_;
-        XenSearch::QueryType* currentQueryType_;
+        Searcher* searcher_ = nullptr;
+        QueryScope* queryScope_ = nullptr;
+        QueryElement* parentQueryElement_ = nullptr;
+        XenSearch::QueryType* currentQueryType_ = nullptr;
         QList<QueryElement*> subQueryElements_;
-        QueryFilter* lastQueryFilter_;
-
-        // TODO: Add UI controls for:
-        // - Query type selector (dropdown with 100+ types)
-        // - Value editors (text, number, date, enum, resource selector)
-        // - Nested QueryElement container for And/Or/Nor groups
-        // - Add/remove query buttons
-        // - Resource selection popups
+        QueryFilter* lastQueryFilter_ = nullptr;
+        bool populating_ = false;
 };
 
 #endif // QUERYELEMENT_H

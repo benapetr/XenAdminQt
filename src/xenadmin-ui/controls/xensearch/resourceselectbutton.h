@@ -30,39 +30,17 @@
 
 #include "../dropdownbutton.h"
 #include "xenlib/xensearch/iacceptgroups.h"
-#include <QSharedPointer>
+#include "xenlib/xensearch/common.h"
 
-QT_FORWARD_DECLARE_CLASS(Search)
-QT_FORWARD_DECLARE_CLASS(QueryScope)
-QT_FORWARD_DECLARE_CLASS(Grouping)
-class XenObject;
+class Search;
 class XenConnection;
 
 /**
- * @brief ResourceSelectButton - Dropdown with XenObject selection for UuidQueryType
+ * @brief Drop-down that picks one object from the results of a search
  *
- * Matches C# XenAdmin/Controls/XenSearch/ResourceSelectButton.cs
- *
- * Populates dropdown from Search results showing XenObjects with:
- * - Hierarchical indentation (Pool→Host→VM)
- * - Icons for each object type
- * - Disabled items for objects outside query scope
- * - Folder path display for folder objects
- *
- * Usage:
- * ```cpp
- * ResourceSelectButton* selector = new ResourceSelectButton();
- * selector->Populate(search);
- * connect(selector, &ResourceSelectButton::itemSelected, [](const QString& ref) {
- *     qDebug() << "Selected ref:" << ref;
- * });
- * ```
- *
- * Integration with UuidQueryType:
- * - UuidQueryType creates this widget instead of StringTextBox
- * - Widget populates from Search::PopulateAdapters() (hierarchical tree)
- * - User selects object, widget emits itemSelected(ref)
- * - QueryType uses ref for XenModelObjectPropertyQuery matching
+ * Qt port of C# XenAdmin.Controls.XenSearch.ResourceSelectButton. Search::PopulateAdapters
+ * adds the objects grouped and indented (for example pool, server, VM); group headings that are
+ * not objects are left out, and objects outside the search scope are listed but disabled.
  */
 class ResourceSelectButton : public DropDownButton, public IAcceptGroups
 {
@@ -71,26 +49,16 @@ class ResourceSelectButton : public DropDownButton, public IAcceptGroups
     public:
         explicit ResourceSelectButton(QWidget* parent = nullptr);
 
-        /**
-         * @brief Populate dropdown from Search results
-         * @param search Search instance providing PopulateAdapters() for tree building
-         *
-         * Calls search->PopulateAdapters(this) which adds grouped/indented items
-         * via Add(grouping, group, indent) method
-         */
+        //! List the objects of the search, keeping the current selection if still listed
         void Populate(Search* search);
 
-        /**
-         * @brief Get currently selected object reference
-         * @return Opaque reference of selected object, or empty string
-         */
+        //! Opaque ref and UUID of the selected object (empty if none)
         QString selectedRef() const;
+        QString selectedUuid() const;
 
-        /**
-         * @brief Set selected object by reference
-         * @param ref Opaque reference to select
-         */
         void setSelectedRef(const QString& ref);
+        //! Select the listed object with this UUID (C# FromQuery matches by UUID)
+        void setSelectedUuid(const QString& uuid);
 
         // IAcceptGroups implementation (matches C# interface)
         IAcceptGroups* Add(Grouping* grouping, const QVariant& group,
@@ -99,21 +67,20 @@ class ResourceSelectButton : public DropDownButton, public IAcceptGroups
         void FinishedInThisGroup(bool defaultExpand) override;
 
     signals:
-        /**
-         * @brief Emitted when user selects an object
-         * @param ref Opaque reference of selected object
-         */
         void itemSelected(const QString& ref);
 
     private slots:
-        void onActionTriggered();
+        void onActionTriggered(QAction* action);
 
     private:
-        QueryScope* scope_;
-        QString selectedRef_;
-        static const QString INDENT;
+        QAction* findAction(const QString& key, const QString& value) const;
+        void select(QAction* action);
 
-        QIcon getObjectIcon(QSharedPointer<XenObject> object) const;
+        bool hasScope_ = false;
+        XenSearch::ObjectTypes scopeTypes_ = XenSearch::ObjectTypes::None;
+        QString selectedRef_;
+        QString selectedUuid_;
+        static const QString INDENT;
 };
 
 #endif // RESOURCESELECTBUTTON_H

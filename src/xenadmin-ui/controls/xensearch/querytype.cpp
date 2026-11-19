@@ -38,6 +38,16 @@
 
 using namespace XenSearch;
 
+namespace
+{
+    // C# PropertyAccessors.PropertyNames_i18n: the label shown in the query type drop-down
+    QString propertyDisplayName(PropertyNames property)
+    {
+        const QString name = PropertyAccessors::GetPropertyDisplayName(property);
+        return name.isEmpty() ? getPropertyName(property) : name;
+    }
+}
+
 // ============================================================================
 // QueryType base class
 // ============================================================================
@@ -81,7 +91,7 @@ QueryFilter* DummyQueryType::GetQuery(QueryElement* queryElement) const
 
 QString DummyQueryType::toString() const
 {
-    return "Select a filter...";
+    return QObject::tr("Select a filter...");
 }
 
 // ============================================================================
@@ -123,8 +133,7 @@ void GroupQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
     if (!groupQuery)
         return;
     
-    // QueryElement will handle populating sub-elements
-    queryElement->setSubQueries(groupQuery->getSubQueries());
+    queryElement->setGroupSubQueries(groupQuery->getSubQueries());
 }
 
 QueryFilter* GroupQueryType::GetQuery(QueryElement* queryElement) const
@@ -155,11 +164,11 @@ QString GroupQueryType::toString() const
     switch (this->type_)
     {
         case GroupType::And:
-            return "All of the following";
+            return QObject::tr("All of the following:");
         case GroupType::Or:
-            return "Any of the following";
+            return QObject::tr("Any of the following:");
         case GroupType::Nor:
-            return "None of the following";
+            return QObject::tr("None of the following:");
     }
     return "Group";
 }
@@ -215,7 +224,7 @@ QString StringPropertyQueryType::toString() const
     if (!this->customName_.isEmpty())
         return this->customName_;
     
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QStringList StringPropertyQueryType::getMatchTypeComboButtonEntries() const
@@ -302,7 +311,7 @@ QueryFilter* EnumPropertyQueryType::GetQuery(QueryElement* queryElement) const
 
 QString EnumPropertyQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 bool EnumPropertyQueryType::showComboButton(QueryElement* queryElement) const
@@ -520,7 +529,7 @@ QueryFilter* DatePropertyQueryType::GetQuery(QueryElement* queryElement) const
 
 QString DatePropertyQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 bool DatePropertyQueryType::showDateTimePicker(QueryElement* queryElement) const
@@ -621,7 +630,7 @@ QueryFilter* BooleanQueryType::GetQuery(QueryElement* queryElement) const
 
 QString BooleanQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QStringList BooleanQueryType::getMatchTypeComboButtonEntries() const
@@ -786,7 +795,7 @@ QueryFilter* IPAddressQueryType::GetQuery(QueryElement* queryElement) const
 
 QString IPAddressQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QStringList IPAddressQueryType::getMatchTypeComboButtonEntries() const
@@ -866,7 +875,7 @@ bool ValuePropertyQueryType::ForQuery(QueryFilter* query) const
 
 QString ValuePropertyQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 void ValuePropertyQueryType::populateCollectedValues()
@@ -998,19 +1007,17 @@ UuidQueryType::UuidQueryType(int group, ObjectTypes appliesTo, PropertyNames pro
 
 bool UuidQueryType::ForQuery(QueryFilter* query) const
 {
-    // TODO: Implement when we have proper query type for UUID selection
-    Q_UNUSED(query);
-    return false;
+    // C# PropertyQueryType<String>.ForQuery: a string query on the UUID. Only exact matches are
+    // object picks; "UUID starts with" belongs to UuidStringQueryType.
+    auto* stringQuery = dynamic_cast<StringPropertyQuery*>(query);
+    return stringQuery && stringQuery->getProperty() == this->property_ &&
+           stringQuery->getMatchType() == StringPropertyQuery::MatchType::ExactMatch;
 }
 
 QString UuidQueryType::toString() const
 {
-    return getPropertyName(this->property_);
-}
-
-QStringList UuidQueryType::getMatchTypeComboButtonEntries() const
-{
-    return QStringList() << "is" << "is not";
+    // C# Messages.UUID_SEARCH, shown as "<relation> Is <object>" in a parent/child query
+    return QObject::tr("Is");
 }
 
 bool UuidQueryType::showResourceSelectButton(QueryElement* queryElement) const
@@ -1021,24 +1028,15 @@ bool UuidQueryType::showResourceSelectButton(QueryElement* queryElement) const
 
 QueryFilter* UuidQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // Get selected object ref from ResourceSelectButton
-    QString ref = queryElement->getResourceSelection();
-    if (ref.isEmpty())
-        return nullptr;
-    
-    // Create XenModelObjectPropertyQuery matching the selected object
-    return new XenModelObjectPropertyQuery(this->property_, ref, true);
+    return new StringPropertyQuery(this->property_, queryElement->getResourceSelectionUuid(),
+                                   StringPropertyQuery::MatchType::ExactMatch);
 }
 
 void UuidQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // Restore selected object from XenModelObjectPropertyQuery
-    XenModelObjectPropertyQuery* propQuery = dynamic_cast<XenModelObjectPropertyQuery*>(query);
-    if (propQuery && propQuery->getProperty() == this->property_)
-    {
-        QString ref = propQuery->getUuid();
-        queryElement->setResourceSelection(ref);
-    }
+    auto* stringQuery = dynamic_cast<StringPropertyQuery*>(query);
+    if (stringQuery)
+        queryElement->setResourceSelectionUuid(stringQuery->getQuery());
 }
 
 // ============================================================================
@@ -1118,9 +1116,30 @@ void RecursiveQueryTypeBase::onConnectionsChanged()
 
 void RecursiveQueryTypeBase::onCacheChanged()
 {
-    // C# fires OnSomeThingChanged() to notify QueryElement
-    // In Qt, QueryElement would need to monitor this signal
-    // For now, this is a placeholder for future implementation
+    // C# raises SomeThingChanged here so the drop-downs refresh. The only object list of a
+    // parent/child row is the resource picker of its sub-row, which refills itself each time it
+    // opens, so nothing needs refreshing here.
+}
+
+// C# RecursiveQueryType.GetQuery: the query of the (single) sub-row, or a placeholder
+QueryFilter* RecursiveQueryTypeBase::subQueryFrom(QueryElement* queryElement) const
+{
+    QList<QueryFilter*> subQueries = queryElement ? queryElement->getSubQueries() : QList<QueryFilter*>();
+    QueryFilter* subQuery = subQueries.isEmpty() ? new DummyQuery() : subQueries.takeFirst();
+    qDeleteAll(subQueries);
+
+    // CA-30595: "parent folder is (blank)" means "parent folder is /"
+    if (this->property_ == PropertyNames::folder)
+    {
+        auto* stringQuery = dynamic_cast<StringPropertyQuery*>(subQuery);
+        if (stringQuery && stringQuery->getProperty() == PropertyNames::uuid && stringQuery->getQuery().isEmpty())
+        {
+            delete subQuery;
+            subQuery = new StringPropertyQuery(PropertyNames::uuid, "/", StringPropertyQuery::MatchType::ExactMatch);
+        }
+    }
+
+    return subQuery;
 }
 
 // ============================================================================
@@ -1135,50 +1154,19 @@ RecursiveXMOQueryType::RecursiveXMOQueryType(int group, ObjectTypes appliesTo, P
 QString RecursiveXMOQueryType::toString() const
 {
     // C# returns property display name (e.g., "Pool", "Parent folder", "Appliance")
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QueryFilter* RecursiveXMOQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // Get sub-query from QueryElement (C# GetSubQueries())
-    // C# code: QueryFilter qf = subQueries[0]
-    
-    // TODO: Implement when QueryElement::GetSubQueries() exists
-    Q_UNUSED(queryElement);
-    
-    // Placeholder: would extract sub-query from queryElement->subQueryElements[0]
-    QueryFilter* subQuery = new DummyQuery();
-    
-    // Special case for folder="(blank)" → folder="/" (C# CA-30595)
-    if (this->property_ == PropertyNames::folder)
-    {
-        if (auto* strQuery = dynamic_cast<StringPropertyQuery*>(subQuery))
-        {
-            if (strQuery->getProperty() == PropertyNames::uuid && strQuery->getQuery().isEmpty())
-            {
-                delete subQuery;
-                subQuery = new StringPropertyQuery(PropertyNames::uuid, "/", 
-                                                   StringPropertyQuery::MatchType::ExactMatch);
-            }
-        }
-    }
-    
-    return this->newQuery(this->property_, subQuery);
+    return this->newQuery(this->property_, this->subQueryFrom(queryElement));
 }
 
 void RecursiveXMOQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // Extract sub-query from RecursiveXMOPropertyQuery and populate QueryElement
-    // C# code: queryElement.ClearSubQueryElements(); queryElement.subQueryElements.Add(new QueryElement(...))
-    
     auto* recursiveQuery = dynamic_cast<RecursiveXMOPropertyQuery*>(query);
-    if (!recursiveQuery)
-        return;
-    
-    // TODO: Implement when QueryElement sub-query support exists
-    Q_UNUSED(queryElement);
-    
-    // Placeholder: would create sub-QueryElement with recursiveQuery->getSubQuery()
+    if (recursiveQuery)
+        queryElement->setParentChildSubQuery(recursiveQuery->getSubQuery(), this->subQueryScope_);
 }
 
 QueryFilter* RecursiveXMOQueryType::newQuery(PropertyNames property, QueryFilter* subQuery) const
@@ -1198,26 +1186,19 @@ RecursiveXMOListQueryType::RecursiveXMOListQueryType(int group, ObjectTypes appl
 QString RecursiveXMOListQueryType::toString() const
 {
     // C# returns property display name (e.g., "Host", "Networks", "Disks")
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QueryFilter* RecursiveXMOListQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // Same pattern as RecursiveXMOQueryType
-    Q_UNUSED(queryElement);
-    
-    QueryFilter* subQuery = new DummyQuery();  // TODO: Extract from queryElement
-    return this->newQuery(this->property_, subQuery);
+    return this->newQuery(this->property_, this->subQueryFrom(queryElement));
 }
 
 void RecursiveXMOListQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
     auto* recursiveQuery = dynamic_cast<RecursiveXMOListPropertyQuery*>(query);
-    if (!recursiveQuery)
-        return;
-    
-    Q_UNUSED(queryElement);
-    // TODO: Populate sub-query element
+    if (recursiveQuery)
+        queryElement->setParentChildSubQuery(recursiveQuery->getSubQuery(), this->subQueryScope_);
 }
 
 QueryFilter* RecursiveXMOListQueryType::newQuery(PropertyNames property, QueryFilter* subQuery) const
@@ -1274,7 +1255,7 @@ bool XenModelObjectPropertyQueryType::ForQuery(QueryFilter* query) const
 
 QString XenModelObjectPropertyQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QStringList XenModelObjectPropertyQueryType::getMatchTypeComboButtonEntries() const
@@ -1388,7 +1369,7 @@ bool XenModelObjectListContainsQueryType::ForQuery(QueryFilter* query) const
 
 QString XenModelObjectListContainsQueryType::toString() const
 {
-    return getPropertyName(this->property_);
+    return propertyDisplayName(this->property_);
 }
 
 QStringList XenModelObjectListContainsQueryType::getMatchTypeComboButtonEntries() const
@@ -2038,8 +2019,11 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new GroupQueryType(0, ObjectTypes::AllIncFolders, GroupQueryType::GroupType::Nor));
     
     // Basic property queries (Group 1)
-    this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllIncFolders, PropertyNames::label));
-    this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllExcFolders, PropertyNames::description));
+    // Picking one object; only offered as the sub-row of a parent/child query (C# WantQueryType)
+    this->queryTypes_.append(new UuidQueryType(1, (ObjectTypes::AllIncFolders & ~ObjectTypes::VDI) | ObjectTypes::Appliance,
+                                               PropertyNames::uuid));
+    this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllIncFolders | ObjectTypes::Appliance, PropertyNames::label));
+    this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllExcFolders | ObjectTypes::Appliance, PropertyNames::description));
     this->queryTypes_.append(new UuidStringQueryType(1, ObjectTypes::AllExcFolders));
     this->queryTypes_.append(new TagQueryType(1, ObjectTypes::AllExcFolders));
     
@@ -2058,7 +2042,6 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new DatePropertyQueryType(3, ObjectTypes::VM, PropertyNames::start_time));
     this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::read_caching_enabled));
     this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::vendor_device_state));
-    this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::in_any_appliance));
     
     // Storage queries (Group 4)
     this->queryTypes_.append(new NumericPropertyQueryType(4, ObjectTypes::VDI, PropertyNames::size,

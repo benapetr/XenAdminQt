@@ -3,10 +3,52 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/network/connection.h"
 #include "iconmanager.h"
+#include "controls/xensearch/queryelement.h"
+#include "controls/xensearch/resourceselectbutton.h"
+#include "controls/xensearch/searcher.h"
+#include "xenlib/xensearch/queries.h"
+#include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xensearch/search.h"
+#include <QComboBox>
+#include <QLineEdit>
+#include <QMenu>
+#include <QPushButton>
+#include <QSignalSpy>
+#include <memory>
+
+using namespace XenSearch;
 
 class XenAdminUiTests : public QObject
 {
     Q_OBJECT
+
+    // Search editor helpers
+
+    static int subRows(QueryElement* e) { return e->findChildren<QueryElement*>(QString(), Qt::FindDirectChildrenOnly).size(); }
+
+    static void choose(QueryElement* e, const QString& typeName)
+    {
+        QComboBox* combo = e->findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).first();
+        const int index = combo->findText(typeName);
+        QVERIFY2(index >= 0, qPrintable(typeName));
+        combo->setCurrentIndex(index);
+        emit combo->activated(index);
+    }
+
+    static QueryElement* topElement(Searcher* searcher)
+    {
+        return searcher->findChild<QueryElement*>();
+    }
+
+    static QStringList offered(QueryElement* e)
+    {
+        QComboBox* combo = e->findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).first();
+        QStringList items;
+        for (int i = 0; i < combo->count(); ++i)
+            items << combo->itemText(i);
+        return items;
+    }
 
 private slots:
     void cachedFolderIconDoesNotRecurse()
@@ -57,6 +99,161 @@ private slots:
         dataMissing.insert("other_config", QVariantMap{});
         cache->Update(XenObjectType::VM, ref, dataMissing);
         QCOMPARE(vm->IsDefaultTemplate(), false);
+    }
+
+    // Search editor (C# QueryElement)
+    void nestedQueryRoundTrips()
+    {
+        QueryElement element;
+        RecursiveXMOPropertyQuery query(PropertyNames::pool,
+            new StringPropertyQuery(PropertyNames::uuid, "pool-uuid", StringPropertyQuery::MatchType::ExactMatch));
+        element.SetQueryFilter(&query);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+        QVERIFY(back);
+        QVERIFY(back->Equals(&query));
+        QCOMPARE(subRows(&element), 1);
+    }
+
+    void groupKeepsPreviousConditionAndOffersAnother()
+    {
+        QueryElement element;
+        choose(&element, "Name");
+        element.findChildren<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly).first()->setText("web");
+
+        choose(&element, "All of the following:");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(subRows(&element), 2); // the Name condition and a "Select a filter..." row
+
+        std::unique_ptr<QueryFilter> filter(element.GetQueryFilter());
+        auto* group = dynamic_cast<GroupQuery*>(filter.get());
+        QVERIFY(group);
+        QCOMPARE(group->getSubQueries().size(), 2);
+        auto* name = dynamic_cast<StringPropertyQuery*>(group->getSubQueries().first());
+        QVERIFY(name);
+        QCOMPARE(name->getQuery(), QString("web"));
+        QVERIFY(dynamic_cast<DummyQuery*>(group->getSubQueries().last()));
+
+        // Using the "Select a filter..." row adds a new one
+        QueryElement* placeholder = element.findChildren<QueryElement*>(QString(), Qt::FindDirectChildrenOnly).last();
+        choose(placeholder, "Description");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(subRows(&element), 3);
+
+        // Removing a condition
+        QueryElement* first = element.findChildren<QueryElement*>(QString(), Qt::FindDirectChildrenOnly).first();
+        QPushButton* remove = first->findChild<QPushButton*>("removeButton", Qt::FindDirectChildrenOnly);
+        QVERIFY(remove->isVisibleTo(first));
+        remove->click();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(subRows(&element), 2);
+    }
+
+    void groupLoadsWithRows()
+    {
+        QueryElement element;
+        GroupQuery query(GroupQuery::GroupQueryType::Or, {
+            new StringPropertyQuery(PropertyNames::label, "a", StringPropertyQuery::MatchType::Contains),
+            new RecursiveXMOListPropertyQuery(PropertyNames::vm,
+                new StringPropertyQuery(PropertyNames::label, "db", StringPropertyQuery::MatchType::StartsWith))});
+        element.SetQueryFilter(&query);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(subRows(&element), 3); // both conditions and a "Select a filter..." row
+
+        std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+        auto* group = dynamic_cast<GroupQuery*>(back.get());
+        QVERIFY(group);
+        QCOMPARE(group->getSubQueries().size(), 3);
+        QVERIFY(group->getSubQueries().at(0)->Equals(query.getSubQueries().at(0)));
+        QVERIFY(group->getSubQueries().at(1)->Equals(query.getSubQueries().at(1)));
+    }
+
+    void choosingNestedTypeGivesSubRow()
+    {
+        QueryElement element;
+        choose(&element, "Pool");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(subRows(&element), 1);
+        QueryElement* sub = element.findChildren<QueryElement*>(QString(), Qt::FindDirectChildrenOnly).first();
+        QComboBox* subTypes = sub->findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).first();
+        // The sub-row offers only single conditions for pools, including picking one ("Is")
+        QVERIFY(subTypes->findText("Is") >= 0);
+        QVERIFY(subTypes->findText("All of the following:") < 0);
+        QVERIFY(subTypes->findText("Pool") < 0);
+        // The sub-row has no remove button of its own
+        QVERIFY(!sub->findChild<QPushButton*>("removeButton", Qt::FindDirectChildrenOnly)->isVisibleTo(sub));
+
+        std::unique_ptr<QueryFilter> filter(element.GetQueryFilter());
+        auto* recursive = dynamic_cast<RecursiveXMOPropertyQuery*>(filter.get());
+        QVERIFY(recursive);
+        QVERIFY(dynamic_cast<DummyQuery*>(recursive->getSubQuery()));
+    }
+
+
+
+    void offersConditionsForWhatIsSearchedFor()
+    {
+        Searcher searcher;
+        searcher.SetSearch(new Search(new Query(new QueryScope(ObjectTypes::VM), nullptr), nullptr, "vms"));
+        QStringList items = offered(topElement(&searcher));
+        QVERIFY(items.contains("Name"));
+        QVERIFY(items.contains("Pool"));
+        QVERIFY(items.contains("Server"));
+        QVERIFY(!items.contains("Is")); // picking one object only inside a parent/child row
+
+        searcher.SetSearch(new Search(new Query(new QueryScope(ObjectTypes::Pool), nullptr), nullptr, "pools"));
+        items = offered(topElement(&searcher));
+        QVERIFY(items.contains("Name"));
+        QVERIFY(!items.contains("Pool"));   // constraining pools by their pool is pointless
+        QVERIFY(!items.contains("Server")); // C# excludes pools from the Server relation
+        QVERIFY(items.contains("VM"));
+    }
+
+    void changingSearchForDropsConditionsThatNoLongerApply()
+    {
+        Searcher searcher;
+        GroupQuery* group = new GroupQuery(GroupQuery::GroupQueryType::And, {
+            new StringPropertyQuery(PropertyNames::label, "a", StringPropertyQuery::MatchType::Contains),
+            new RecursiveXMOPropertyQuery(PropertyNames::pool,
+                new StringPropertyQuery(PropertyNames::uuid, "pool-uuid", StringPropertyQuery::MatchType::ExactMatch))});
+        searcher.SetSearch(new Search(new Query(new QueryScope(ObjectTypes::VM), group), nullptr, "vms"));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        auto* searchFor = searcher.findChild<XenSearch::SearchFor*>();
+        QVERIFY(searchFor);
+        searchFor->SetQueryScope(new QueryScope(ObjectTypes::Pool));
+        emit searchFor->QueryChanged();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        // The Pool condition went; the All of group with one condition left became that condition
+        std::unique_ptr<QueryFilter> filter(topElement(&searcher)->GetQueryFilter());
+        auto* name = dynamic_cast<StringPropertyQuery*>(filter.get());
+        QVERIFY(name);
+        QCOMPARE(name->getQuery(), QString("a"));
+    }
+
+    void pickerListsObjectsAndSelectsByUuid()
+    {
+        ResourceSelectButton picker;
+        // A heading that is not an object adds no item but its contents are still added
+        IAcceptGroups* adapter = picker.Add(nullptr, QVariant("Servers"), QString(), QVariantMap(), 0, nullptr);
+        QCOMPARE(adapter, static_cast<IAcceptGroups*>(&picker));
+        adapter->Add(nullptr, QVariant("OpaqueRef:p"), "pool", QVariantMap{{"name_label", "Prod"}, {"uuid", "pool-uuid"}}, 1, nullptr);
+        adapter->Add(nullptr, QVariant("OpaqueRef:q"), "pool", QVariantMap{{"name_label", "Dev"}, {"uuid", "dev-uuid"}}, 1, nullptr);
+        QCOMPARE(picker.GetMenu()->actions().size(), 2);
+
+        QSignalSpy spy(&picker, &ResourceSelectButton::itemSelected);
+        picker.GetMenu()->actions().at(1)->trigger();
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(picker.selectedRef(), QString("OpaqueRef:q"));
+        QCOMPARE(picker.selectedUuid(), QString("dev-uuid"));
+        QCOMPARE(picker.text(), QString("Dev"));
+
+        picker.setSelectedUuid("pool-uuid");
+        QCOMPARE(picker.selectedRef(), QString("OpaqueRef:p"));
+        QCOMPARE(picker.text(), QString("Prod"));
     }
 };
 

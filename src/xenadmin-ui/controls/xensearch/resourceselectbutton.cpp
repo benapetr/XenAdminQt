@@ -26,48 +26,46 @@
  */
 
 #include "resourceselectbutton.h"
+#include "../../iconmanager.h"
 #include "xenlib/xensearch/search.h"
-#include "xenlib/xen/xenobject.h"
+#include "xenlib/xensearch/query.h"
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 #include <QAction>
 #include <QMenu>
-#include <QDebug>
 
 const QString ResourceSelectButton::INDENT = "       ";
 
-ResourceSelectButton::ResourceSelectButton(QWidget* parent)
-    : DropDownButton(parent)
-    , scope_(nullptr)
+ResourceSelectButton::ResourceSelectButton(QWidget* parent) : DropDownButton(parent)
 {
-    // Create menu for dropdown
     QMenu* menu = new QMenu(this);
     this->SetMenu(menu);
-    
-    // Connect menu actions
     connect(menu, &QMenu::triggered, this, &ResourceSelectButton::onActionTriggered);
 }
 
 void ResourceSelectButton::Populate(Search* search)
 {
-    // Clear existing items
-    if (this->GetMenu())
-        this->GetMenu()->clear();
-    
-    this->scope_ = (search && search->GetQuery()) ? search->GetQuery()->getQueryScope() : nullptr;
-    
+    if (!this->GetMenu())
+        return;
+
+    this->GetMenu()->clear();
+
+    QueryScope* scope = (search && search->GetQuery()) ? search->GetQuery()->getQueryScope() : nullptr;
+    this->hasScope_ = scope != nullptr;
+    this->scopeTypes_ = scope ? scope->getObjectTypes() : XenSearch::ObjectTypes::None;
+
+    // PopulateAdapters walks every connection
     if (search)
-    {
-        // Get connection from search
-        XenConnection* conn = search->GetConnection();
-        if (conn)
-        {
-            // Call PopulateAdapters which will call our Add method for each object
-            QList<IAcceptGroups*> adapters;
-            adapters.append(this);
-            search->PopulateAdapters(conn, adapters);
-        }
-    }
+        search->PopulateAdapters(search->GetConnection(), QList<IAcceptGroups*>() << this);
+
+    // Keep the selection if the object is still listed
+    QAction* selected = this->findAction("ref", this->selectedRef_);
+    if (selected)
+        this->select(selected);
+    else if (!this->selectedRef_.isEmpty())
+        this->setText(QString());
 }
 
 QString ResourceSelectButton::selectedRef() const
@@ -75,26 +73,54 @@ QString ResourceSelectButton::selectedRef() const
     return this->selectedRef_;
 }
 
+QString ResourceSelectButton::selectedUuid() const
+{
+    return this->selectedUuid_;
+}
+
 void ResourceSelectButton::setSelectedRef(const QString& ref)
 {
     this->selectedRef_ = ref;
-    
-    // Find action with matching ref
-    if (!this->GetMenu())
-        return;
-    
+    QAction* action = this->findAction("ref", ref);
+    if (action)
+        this->select(action);
+    else
+        this->setText(QString());
+}
+
+void ResourceSelectButton::setSelectedUuid(const QString& uuid)
+{
+    QAction* action = this->findAction("uuid", uuid);
+    if (action)
+    {
+        this->select(action);
+    } else
+    {
+        this->selectedRef_.clear();
+        this->selectedUuid_ = uuid;
+        this->setText(QString());
+    }
+}
+
+QAction* ResourceSelectButton::findAction(const QString& key, const QString& value) const
+{
+    if (!this->GetMenu() || value.isEmpty())
+        return nullptr;
     for (QAction* action : this->GetMenu()->actions())
     {
-        QString actionRef = action->data().toString();
-        if (actionRef == ref)
-        {
-            this->setText(action->text().trimmed());
-            return;
-        }
+        if (action->data().toMap().value(key).toString() == value)
+            return action;
     }
-    
-    // Not found - clear text
-    this->setText("");
+    return nullptr;
+}
+
+void ResourceSelectButton::select(QAction* action)
+{
+    const QVariantMap data = action->data().toMap();
+    this->selectedRef_ = data.value("ref").toString();
+    this->selectedUuid_ = data.value("uuid").toString();
+    // C# SetButtonTextFromItem: the object's name (folders show their path)
+    this->setText(data.value("name").toString());
 }
 
 IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& group,
@@ -102,87 +128,54 @@ IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& gro
                                          int indent, XenConnection* conn)
 {
     Q_UNUSED(grouping);
-    
-    if (!this->GetMenu())
-        return nullptr;
-    
-    // Extract object ref from group variant
-    QString objectRef = group.toString();
-    
-    // Build indented text (matches C# padding logic)
+
+    // C#: only groups that are objects get an item; headings such as "Servers" are skipped,
+    // but their contents are still added (return this)
+    if (!this->GetMenu() || objectData.isEmpty())
+        return this;
+
+    const QString ref = group.toString();
+    QString name = objectData.value("name_label").toString();
+    const XenObjectType type = XenObject::TypeFromString(objectType);
+    if (type == XenObjectType::Folder)
+        name = ref; // the full path, as C# shows folders with a FolderListItem
+    if (name.isEmpty())
+        name = ref;
+
     QString text = INDENT;
     for (int i = 0; i < indent; ++i)
         text += INDENT;
-    
-    QString name = objectData.value("name_label").toString();
-    if (name.isEmpty())
-        name = objectRef;  // Fallback to ref if no name
-    
-    // Escape ampersands (C# EscapeAmpersands)
-    name.replace("&", "&&");
-    text += name;
-    
-    // Create action
+    text += QString(name).replace("&", "&&");
+
     QAction* action = new QAction(text, this->GetMenu());
-    action->setData(objectRef);  // Store ref for selection
-    
-    // Set icon based on object type
-    // TODO
-    //QIcon icon = this->getObjectIcon(objectType);
-    //if (!icon.isNull())
-    //    action->setIcon(icon);
-    
-    // Check if object is within scope
-    if (this->scope_ && !this->scope_->wantType(objectData, objectType, conn))
+    action->setData(QVariantMap{{"ref", ref},
+                                {"uuid", objectData.value("uuid").toString()},
+                                {"name", name}});
+    if (conn)
+        action->setIcon(IconManager::instance().GetIconForObject(conn, type, ref));
+
+    // Objects outside the scope are context only (C# greys them out)
+    if (this->hasScope_)
     {
-        action->setEnabled(false);
-        // C# sets background to Gainsboro - Qt doesn't support per-action background easily,
-        // so we just disable the item
+        QueryScope scope(this->scopeTypes_);
+        if (!scope.wantType(objectData, objectType, conn))
+            action->setEnabled(false);
     }
-    
+
     this->GetMenu()->addAction(action);
-    
-    // Return nullptr - we don't support nested groups
-    return nullptr;
+    return this;
 }
 
 void ResourceSelectButton::FinishedInThisGroup(bool defaultExpand)
 {
     Q_UNUSED(defaultExpand);
-    // C# does nothing here
 }
 
-void ResourceSelectButton::onActionTriggered()
+void ResourceSelectButton::onActionTriggered(QAction* action)
 {
-    QAction* action = qobject_cast<QAction*>(sender());
-    if (!action)
+    if (!action || !action->isEnabled())
         return;
-    
-    QSharedPointer<XenObject> object = action->data().value<QSharedPointer<XenObject>>();
-    if (!object)
-        return;
-    
-    this->selectedRef_ = object->OpaqueRef();
-    QString displayName = object->GetName();
-    this->setText(displayName);
-    
+
+    this->select(action);
     emit this->itemSelected(this->selectedRef_);
-}
-
-QIcon ResourceSelectButton::getObjectIcon(QSharedPointer<XenObject> object) const
-{
-    if (!object)
-        return QIcon();
-    
-    // TODO: Implement icon lookup based on object type when XenObject::objectType() is available
-    // C# uses Images.GetImage16For(IXenObject)
-    // For now, return null icon - icons will be added when we implement Images helper
-    
-    //QString objectType = object->GetObjectTypeName();
-    // Placeholder - would map to actual icons:
-    // if (objectType == "vm") return QIcon(":/icons/vm_16.png");
-    // if (objectType == "host") return QIcon(":/icons/host_16.png");
-    // etc.
-    
-    return QIcon();
 }

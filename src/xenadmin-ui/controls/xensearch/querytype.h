@@ -420,14 +420,10 @@ namespace XenSearch
     };
 
     /**
-     * UUID query type - resource selection with dropdown
+     * Pick one object: the sub-row of a parent/child query ("Pool Is <pool>")
      *
-     * C# Equivalent: Uuid QueryType pattern (not a single class, but pattern used in XenModelObjectPropertyQueryType)
-     * Uses ResourceSelectButton widget to show hierarchical object picker.
-     * User selects an object (VM, Host, Pool, etc.), query matches by opaque_ref.
-     *
-     * Note: Requires ResourceSelectButton widget which is not yet functional (needs Search::PopulateAdapters).
-     * For now, this falls back to UuidStringQueryType behavior.
+     * C# Equivalent: UuidQueryType in QueryElement.cs. The resource picker lists the objects in
+     * the sub-row's scope; the query is a UUID exact match (folders use their path as UUID).
      */
     class UuidQueryType : public QueryType
     {
@@ -439,9 +435,6 @@ namespace XenSearch
             bool ForQuery(QueryFilter* query) const override;
             QString toString() const override;
 
-            bool showMatchTypeComboButton() const override { return true; }
-            QStringList getMatchTypeComboButtonEntries() const override;
-
             bool showResourceSelectButton(QueryElement* queryElement) const override;
 
             QueryFilter* GetQuery(QueryElement* queryElement) const override;
@@ -449,7 +442,6 @@ namespace XenSearch
 
         private:
             PropertyNames property_;
-            // TODO: Implement when ResourceSelectButton + Search::PopulateAdapters ready
     };
 
     /**
@@ -505,6 +497,9 @@ namespace XenSearch
 
             // Derived classes implement this to create the appropriate RecursivePropertyQuery
             virtual QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const = 0;
+
+            //! The sub-row's query (owned by the caller), with the C# folder special case
+            QueryFilter* subQueryFrom(QueryElement* queryElement) const;
 
         private slots:
             void onConnectionsChanged();

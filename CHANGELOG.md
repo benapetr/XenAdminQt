@@ -9,6 +9,13 @@ are omitted.
 
 ### Added
 
+- Search editor: conditions on related objects work, as in C#. Choosing
+  "Pool", "Server", "VM", "Network", "SR", "Virtual Disk", "VM Appliance" or a
+  folder adds a condition for that object on the same line, including "Is"
+  to pick one object. Switching a condition to "All/Any/None of the
+  following" keeps it as the first entry, a new "Select a filter..." row
+  appears as rows are used, and conditions that stop applying are removed
+  when "Search for" changes.
 - Email notifications page in Pool Properties (and Server Properties for a
   standalone server): send performance alert emails to an address through an
   SMTP server, in English, Chinese or Japanese, as in C#.
@@ -64,6 +71,9 @@ are omitted.
 
 ### Fixed
 
+- The search editor lists conditions by their names ("Name", "Power State",
+  "Pool") instead of internal identifiers, and no longer lists "In Any
+  Appliance" twice.
 - Search conditions that look at related objects now work, as in C#: "Pool",
   "Server", "VM", "Networks", "Storage" and "Disks" conditions never matched
   (or matched the object itself), and an "All of" group returned nothing while
