@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QDebug>
 #include <QTextStream>
 #include <QTimer>
 #include "globals.h"

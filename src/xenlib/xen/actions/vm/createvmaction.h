@@ -142,12 +142,12 @@ class CreateVMAction : public AsyncOperation
         QList<VifConfig> m_vifs;
         bool m_startAfter;
         bool m_assignVtpm;
+        QVariantList m_vgpuData;
+        bool m_modifyVgpuSettings;
         // Passed to the VMStartAction run when m_startAfter is set (C# _warningDialogHAInvalidConfig,
         // _startDiagnosisForm)
         VMStartAbstractAction::WarningDialogHAInvalidConfig m_warningDialogHAInvalidConfig;
         VMStartAbstractAction::StartDiagnosisForm m_startDiagnosisForm;
-        QVariantList m_vgpuData;
-        bool m_modifyVgpuSettings;
 };
 
 #endif // CREATEVMACTION_H
