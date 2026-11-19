@@ -762,7 +762,7 @@ void VNCGraphicsClient::sendSetEncodings()
 {
     // SetEncodings message (matches C# VNCStream)
     // Same order as C# VNCStream (preferred first): CoRRE, RRE, CopyRect, Raw, Cursor,
-    // DesktopSize, XenCenter, QEMU extended key. Only the ones decoded here are advertised.
+    // DesktopSize, XenCenter, QEMU extended key.
     const qint32 encodings[] = {
         CORRE_ENCODING,
         RRE_ENCODING,
@@ -773,6 +773,9 @@ void VNCGraphicsClient::sendSetEncodings()
         // Lets the server announce resolution changes (e.g. while the guest boots)
         // instead of the console keeping the old size and showing only part of the screen
         DESKTOP_SIZE_PSEUDO_ENCODING,
+        // Identifies the client as XenCenter to the server; C# advertises it but never
+        // receives rectangles of this type either
+        XENCENTER_ENCODING,
     };
 
     writeU8(2);  // Message type

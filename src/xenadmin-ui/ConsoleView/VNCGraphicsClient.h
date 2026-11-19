@@ -69,6 +69,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         static constexpr qint32 CORRE_ENCODING = 4;
         static constexpr qint32 CURSOR_PSEUDO_ENCODING = -239;
         static constexpr qint32 DESKTOP_SIZE_PSEUDO_ENCODING = -223; // C# VNCStream.DESKTOP_SIZE_PSEUDO_ENCODING
+        static constexpr qint32 XENCENTER_ENCODING = -254;
         static constexpr int BORDER_WIDTH = 1;
         static constexpr int MOUSE_EVENTS_BEFORE_UPDATE = 2;
         static constexpr int MOUSE_EVENTS_DROPPED = 5;
