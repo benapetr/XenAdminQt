@@ -112,6 +112,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/createcddriveaction.cpp
     xen/actions/vm/createvmaction.cpp
     xen/actions/vm/createvmfastaction.cpp
+    xen/actions/vm/installpvtoolsaction.cpp
     xen/actions/vm/exportapplianceaction.cpp
     xen/actions/vm/exportvmaction.cpp
     xen/actions/vm/gpuassignaction.cpp

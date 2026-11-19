@@ -231,6 +231,7 @@ HEADERS += \
     xen/actions/vm/vmcloneaction.h \
     xen/actions/vm/vmtotemplateaction.h \
     xen/actions/vm/createvmfastaction.h \
+    xen/actions/vm/installpvtoolsaction.h \
     xen/actions/vm/createvmaction.h \
     xen/actions/vm/vmsnapshotcreateaction.h \
     xen/actions/vm/vmsnapshotdeleteaction.h \
@@ -495,6 +496,7 @@ SOURCES += \
     xen/actions/vm/vmcloneaction.cpp \
     xen/actions/vm/vmtotemplateaction.cpp \
     xen/actions/vm/createvmfastaction.cpp \
+    xen/actions/vm/installpvtoolsaction.cpp \
     xen/actions/vm/createvmaction.cpp \
     xen/actions/vm/vmsnapshotcreateaction.cpp \
     xen/actions/vm/vmsnapshotdeleteaction.cpp \

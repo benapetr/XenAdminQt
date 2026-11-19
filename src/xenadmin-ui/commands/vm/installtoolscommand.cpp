@@ -27,72 +27,66 @@
 
 #include "installtoolscommand.h"
 #include "../../mainwindow.h"
+#include "xenlib/xen/actions/vm/installpvtoolsaction.h"
 #include "xenlib/xen/vm.h"
-#include "xenlib/xencache.h"
 #include <QMessageBox>
+#include <QPointer>
 
 InstallToolsCommand::InstallToolsCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
+bool InstallToolsCommand::CanInstallTools(const QSharedPointer<VM>& vm)
+{
+    // The old C# InstallToolsCommand.CanRun, plus a CD drive to put the ISO in
+    return vm && vm->IsValid() && !vm->IsTemplate() && !vm->IsSnapshot() && !vm->IsControlDomain()
+        && !vm->IsLocked() && vm->IsRunning() && vm->FindVMCDROM();
+}
+
 bool InstallToolsCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    // Can install tools if VM is running and tools are not already installed/current
-    return vm->IsRunning() && this->canInstallTools();
+    return CanInstallTools(this->getVM());
 }
 
 void InstallToolsCommand::Run()
 {
     QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!CanInstallTools(vm))
         return;
 
-    // Show confirmation dialog
-    int ret = QMessageBox::question(MainWindow::instance(), "Install XenServer Tools",
-                                    "This will mount the XenServer Tools ISO in the VM.\n\n"
-                                    "You can then install the tools from within the VM's guest OS.\n\n"
-                                    "Continue?",
-                                    QMessageBox::Yes | QMessageBox::No);
+    MainWindow* mainWindow = MainWindow::instance();
+    const QString message = tr("The Guest Tools ISO will be inserted into the CD drive of '%1', replacing any disk "
+                               "in it. You can then install the tools from within the VM.\n\nDo you want to continue?")
+                                .arg(vm->GetName());
+    if (QMessageBox::question(mainWindow, tr("Install Guest Tools"), message,
+                              QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+        return;
 
-    if (ret == QMessageBox::Yes)
+    InstallPVToolsAction* action = new InstallPVToolsAction(vm, mainWindow);
+
+    // Linux guests run the installer by hand (C# showed the same instructions)
+    if (!vm->IsWindows())
     {
-        MainWindow::instance()->ShowStatusMessage("Mounting XenServer Tools ISO...");
-
-        // TODO: Implement VM.assert_can_mount_tools and VM.mount_tools_iso
-        QMessageBox::information(MainWindow::instance(), "Not Implemented",
-                                 "Install Tools functionality will be implemented with XenAPI VM bindings.\n\n"
-                                 "This will mount xs-tools.iso in the VM's CD drive.");
+        QPointer<MainWindow> window = mainWindow;
+        const QString vmName = vm->GetName();
+        connect(action, &AsyncOperation::completed, mainWindow, [window, vmName]()
+        {
+            if (!window)
+                return;
+            QMessageBox::information(window, tr("Install Guest Tools"),
+                                     tr("The Guest Tools ISO is in the CD drive of '%1'. To install the tools, run "
+                                        "as root in the VM:\n\n"
+                                        "mount /dev/cdrom /mnt\n"
+                                        "bash /mnt/Linux/install.sh\n"
+                                        "umount /mnt\n\n"
+                                        "then restart the VM.").arg(vmName));
+        });
     }
+
+    action->RunAsync(true);
 }
 
 QString InstallToolsCommand::MenuText() const
 {
-    return "Install XenServer Tools...";
-}
-
-bool InstallToolsCommand::canInstallTools() const
-{
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap vmData = vm->GetData();
-
-    // Check guest metrics for tools version
-    QString guestMetricsRef = vmData.value("guest_metrics", "").toString();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
-    {
-        XenCache* cache = vm->GetConnection()->GetCache();
-        QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
-        QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
-
-        // If PV drivers are already installed and up-to-date, don't allow install
-        // For now, always allow install (TODO: check version properly)
-    }
-
-    return true;
+    return tr("&Install Guest Tools");
 }

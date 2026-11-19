@@ -29,6 +29,8 @@
 #include "xenlib/xensearch/searchmarshalling.h"
 #include "xenlib/xensearch/searchmanager.h"
 #include "xenlib/customfields/customfieldsmanager.h"
+#include "xenlib/xen/actions/vm/installpvtoolsaction.h"
+#include "xenlib/xen/vdi.h"
 #include <QSignalSpy>
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/query.h"
@@ -773,6 +775,27 @@ private slots:
         QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("OpaqueRef:app");
         QVERIFY(appliance);
         QCOMPARE(appliance->GetName(), QString("app"));
+    }
+
+    void installToolsFindsToolsIsoOnIsoSrs()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        QVERIFY(!InstallPVToolsAction::FindToolsIso(&connection));
+
+        // A disk of that name on a non-ISO SR is not the tools ISO
+        cache->Update(XenObjectType::SR, "OpaqueRef:local", QVariantMap{{"content_type", "user"}, {"VDIs", QVariantList{"OpaqueRef:fake"}}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:fake", QVariantMap{{"name_label", "guest-tools.iso"}, {"SR", "OpaqueRef:local"}});
+        QVERIFY(!InstallPVToolsAction::FindToolsIso(&connection));
+
+        // XCP-ng: guest-tools.iso on the tools ISO SR
+        cache->Update(XenObjectType::SR, "OpaqueRef:tools", QVariantMap{{"content_type", "iso"}, {"name_label", "XCP-ng Tools"},
+                                                                       {"VDIs", QVariantList{"OpaqueRef:other", "OpaqueRef:iso"}}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:other", QVariantMap{{"name_label", "debian.iso"}, {"SR", "OpaqueRef:tools"}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:iso", QVariantMap{{"name_label", "guest-tools.iso"}, {"SR", "OpaqueRef:tools"}});
+        QSharedPointer<VDI> iso = InstallPVToolsAction::FindToolsIso(&connection);
+        QVERIFY(iso);
+        QCOMPARE(iso->OpaqueRef(), QString("OpaqueRef:iso"));
     }
 
     void vtpmRulesMatchCSharp()

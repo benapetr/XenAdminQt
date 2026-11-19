@@ -1231,7 +1231,7 @@
     <string>&amp;Install Guest Tools</string>
    </property>
    <property name="statusTip">
-    <string>Install XenServer Tools in this VM</string>
+    <string>Insert the Guest Tools ISO into this VM's CD drive</string>
    </property>
   </action>
   <action name="uninstallToolStripMenuItem">

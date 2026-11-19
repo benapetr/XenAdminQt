@@ -42,8 +42,8 @@ class InstallToolsCommand : public VMCommand
         void Run() override;
         QString MenuText() const override;
 
-    private:
-        bool canInstallTools() const;
+        //! A running guest (not a template, snapshot or dom0) with a CD drive, not locked by an operation
+        static bool CanInstallTools(const QSharedPointer<VM>& vm);
 };
 
 #endif // INSTALLTOOLSCOMMAND_H
