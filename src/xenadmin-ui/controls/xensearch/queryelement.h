@@ -123,6 +123,7 @@ class QueryElement : public QWidget
         void QueryChanged();
 
     private slots:
+        void populateQueryTypeCombo();
         void populateResourceSelectButton();
         void onQueryTypeActivated(int index);
         void onMatchTypeChanged(int index);
@@ -135,7 +136,6 @@ class QueryElement : public QWidget
         void setupUi();
         XenSearch::QueryType* currentQueryType() const { return this->currentQueryType_; }
         void setCurrentQueryType(XenSearch::QueryType* queryType);
-        void populateQueryTypeCombo();
         void repopulateAllQueryTypeCombos();
         bool wantQueryType(XenSearch::QueryType* queryType) const;
         void selectQueryTypeFor(QueryFilter* query);

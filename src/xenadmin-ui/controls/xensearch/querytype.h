@@ -274,6 +274,12 @@ namespace XenSearch
             static ComparisonType comparisonTypeFromString(const QString& str);
             static QString comparisonTypeToString(ComparisonType type);
 
+            // Shared with the custom field date type (C# DatePropertyQueryType statics)
+            static QStringList matchTypeEntries();
+            static bool showsDateTimePicker(QueryElement* queryElement);
+            static void dateQueryFrom(QueryElement* queryElement, QDateTime& dateTime, DateQuery::ComparisonType& type);
+            static void showDateQuery(QueryElement* queryElement, const QDateTime& dateTime, DateQuery::ComparisonType type);
+
         protected:
             PropertyNames property_;
     };
@@ -873,11 +879,12 @@ namespace XenSearch
             CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, const QString& fieldName);
 
             QString toString() const override { return this->fieldName_; }
+            QString getFieldName() const { return this->fieldName_; }
 
             bool ForQuery(QueryFilter* query) const override;
 
         protected:
-            QString fieldName_;  // Will be CustomFieldDefinition* when implemented
+            QString fieldName_;
     };
 
     /**
@@ -891,6 +898,8 @@ namespace XenSearch
     {
         public:
             CustomFieldStringQueryType(int group, ObjectTypes appliesTo, const QString& fieldName);
+
+            bool ForQuery(QueryFilter* query) const override;
 
             bool showMatchTypeComboButton() const override { return true; }
             bool showTextBox(QueryElement* queryElement) const override;
@@ -913,6 +922,8 @@ namespace XenSearch
         public:
             CustomFieldDateQueryType(int group, ObjectTypes appliesTo, const QString& fieldName);
 
+            bool ForQuery(QueryFilter* query) const override;
+
             bool showMatchTypeComboButton() const override { return true; }
             bool showDateTimePicker(QueryElement* queryElement) const override;
 
@@ -931,7 +942,8 @@ namespace XenSearch
             static QueryTypeRegistry* instance();
 
             void initialize();
-            const QList<QueryType*>& getAllQueryTypes() const { return this->queryTypes_; }
+            //! The built-in types followed by one per custom field
+            const QList<QueryType*>& getAllQueryTypes() const { return this->allQueryTypes_; }
             QueryType* getDefaultQueryType() const { return this->defaultQueryType_; }
 
             // Find appropriate query type for a given filter
@@ -941,8 +953,13 @@ namespace XenSearch
             QueryTypeRegistry();
             ~QueryTypeRegistry();
 
+            void updateCustomFieldTypes();
+
             static QueryTypeRegistry* instance_;
             QList<QueryType*> queryTypes_;
+            QList<CustomFieldQueryTypeBase*> customFieldTypes_;
+            QList<CustomFieldQueryTypeBase*> retiredCustomFieldTypes_;
+            QList<QueryType*> allQueryTypes_;
             QueryType* defaultQueryType_;
     };
 }

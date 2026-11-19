@@ -1081,11 +1081,11 @@ QVariant CustomFieldQuery::Match(const QVariantMap& objectData, const QString& o
     QVariantMap otherConfig = objectData.value("other_config").toMap();
     QString key = "XenCenter.CustomFields." + this->fieldName_;
     
-    if (!otherConfig.contains(key))
-        return false;  // Field not present
-    
-    QString value = otherConfig.value(key).toString();
-    
+    // C# CustomFieldsManager.GetCustomFieldValue: a missing or empty value is no value
+    const QString value = otherConfig.value(key).toString();
+    if (value.isEmpty())
+        return false;
+
     if (this->query_.isEmpty())
         return true;  // Just checking if field exists
     
@@ -1147,13 +1147,19 @@ QVariant CustomFieldDateQuery::Match(const QVariantMap& objectData, const QStrin
     QVariantMap otherConfig = objectData.value("other_config").toMap();
     QString key = "XenCenter.CustomFields." + this->fieldName_;
     
-    if (!otherConfig.contains(key))
-        return false;  // Field not present
-    
-    // Parse date from string (stored as yyyyMMdd format)
-    QString value = otherConfig.value(key).toString();
-    QDateTime fieldDate = QDateTime::fromString(value, "yyyyMMdd");
-    
+    // XenCenter stores dates in UTC as "yyyy-MM-dd HH:mm:ssZ" (C# DateTime.ToString("u"),
+    // CP-2036); C# reads them back with DateTime.TryParse. Accept that and ISO 8601.
+    const QString value = otherConfig.value(key).toString().trimmed();
+    if (value.isEmpty())
+        return false;
+
+    QDateTime fieldDate = QDateTime::fromString(value, QStringLiteral("yyyy-MM-dd HH:mm:ss'Z'"));
+    if (fieldDate.isValid())
+        fieldDate.setTimeSpec(Qt::UTC);
+    else
+        fieldDate = QDateTime::fromString(value, Qt::ISODate);
+    if (!fieldDate.isValid())
+        fieldDate = QDateTime::fromString(value, QStringLiteral("yyyyMMdd"));
     if (!fieldDate.isValid())
         return false;  // Invalid date format
     
@@ -1167,8 +1173,8 @@ QVariant CustomFieldDateQuery::Match(const QVariantMap& objectData, const QStrin
             return fieldDate > this->query_;
         
         case DateQuery::ComparisonType::Exact:
-            // Match same date (ignoring time)
-            return fieldDate.date() == this->query_.date();
+            // Same day in local time (C# parses the stored UTC time to local)
+            return fieldDate.toLocalTime().date() == this->query_.toLocalTime().date();
     }
     
     return false;

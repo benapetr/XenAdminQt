@@ -9,6 +9,10 @@ are omitted.
 
 ### Added
 
+- Search editor: custom fields can be searched, as in C#. Each custom field
+  appears as a condition (text fields with contains/starts with/...; date
+  fields with before/after/on and recent periods), and the list follows custom
+  fields as they are added or removed.
 - Search editor: conditions on related objects work, as in C#. Choosing
   "Pool", "Server", "VM", "Network", "SR", "Virtual Disk", "VM Appliance" or a
   folder adds a condition for that object on the same line, including "Is"
@@ -71,6 +75,8 @@ are omitted.
 
 ### Fixed
 
+- Searching by a date custom field set in XenCenter now matches; the stored
+  date format was not recognised.
 - The search editor lists conditions by their names ("Name", "Power State",
   "Pool") instead of internal identifiers, and no longer lists "In Any
   Appliance" twice.

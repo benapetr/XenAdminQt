@@ -33,6 +33,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
+#include "xenlib/customfields/customfieldsmanager.h"
 #include <algorithm>
 #include <QSet>
 
@@ -473,32 +474,37 @@ bool DatePropertyQueryType::ForQuery(QueryFilter* query) const
 void DatePropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
     DateQuery* dateQuery = dynamic_cast<DateQuery*>(query);
-    if (!dateQuery)
-        return;
-    
-    // Convert DateQuery::ComparisonType to DatePropertyQueryType::ComparisonType
-    ComparisonType uiComparisonType;
-    DateQuery::ComparisonType queryComparisonType = dateQuery->getComparisonType();
-    
-    if (queryComparisonType == DateQuery::ComparisonType::Before)
+    if (dateQuery)
+        showDateQuery(queryElement, dateQuery->getValue(), dateQuery->getComparisonType());
+}
+
+void DatePropertyQueryType::showDateQuery(QueryElement* queryElement, const QDateTime& dateTime,
+                                          DateQuery::ComparisonType type)
+{
+    ComparisonType uiComparisonType = ComparisonType::Exact;
+    if (type == DateQuery::ComparisonType::Before)
         uiComparisonType = ComparisonType::Before;
-    else if (queryComparisonType == DateQuery::ComparisonType::After)
+    else if (type == DateQuery::ComparisonType::After)
         uiComparisonType = ComparisonType::After;
-    else // Exact
-        uiComparisonType = ComparisonType::Exact;
-    
+
     queryElement->setMatchTypeSelection(comparisonTypeToString(uiComparisonType));
-    queryElement->setDateTimeValue(dateQuery->getValue());
+    queryElement->setDateTimeValue(dateTime);
 }
 
 QueryFilter* DatePropertyQueryType::GetQuery(QueryElement* queryElement) const
 {
-    QString matchType = queryElement->getMatchTypeSelection();
-    ComparisonType comparisonType = comparisonTypeFromString(matchType);
     QDateTime dateTime;
-    DateQuery::ComparisonType queryComparisonType;
-    
-    // For relative time queries, calculate absolute time
+    DateQuery::ComparisonType type;
+    dateQueryFrom(queryElement, dateTime, type);
+    return new DateQuery(this->property_, dateTime, type);
+}
+
+void DatePropertyQueryType::dateQueryFrom(QueryElement* queryElement, QDateTime& dateTime,
+                                          DateQuery::ComparisonType& queryComparisonType)
+{
+    const ComparisonType comparisonType = comparisonTypeFromString(queryElement->getMatchTypeSelection());
+
+    // Relative ranges become "after" a moment computed now
     if (comparisonType == ComparisonType::Last24Hours)
     {
         dateTime = QDateTime::currentDateTime().addDays(-1);
@@ -514,17 +520,13 @@ QueryFilter* DatePropertyQueryType::GetQuery(QueryElement* queryElement) const
     } else
     {
         dateTime = queryElement->getDateTimeValue();
-        
-        // Convert to DateQuery::ComparisonType
         if (comparisonType == ComparisonType::Before)
             queryComparisonType = DateQuery::ComparisonType::Before;
         else if (comparisonType == ComparisonType::After)
             queryComparisonType = DateQuery::ComparisonType::After;
-        else // Exact
+        else
             queryComparisonType = DateQuery::ComparisonType::Exact;
     }
-    
-    return new DateQuery(this->property_, dateTime, queryComparisonType);
 }
 
 QString DatePropertyQueryType::toString() const
@@ -534,16 +536,22 @@ QString DatePropertyQueryType::toString() const
 
 bool DatePropertyQueryType::showDateTimePicker(QueryElement* queryElement) const
 {
-    QString matchType = queryElement->getMatchTypeSelection();
-    ComparisonType type = comparisonTypeFromString(matchType);
-    
-    // Only show date picker for absolute date queries
-    return (type == ComparisonType::Before || 
-            type == ComparisonType::After || 
-            type == ComparisonType::Exact);
+    return showsDateTimePicker(queryElement);
+}
+
+bool DatePropertyQueryType::showsDateTimePicker(QueryElement* queryElement)
+{
+    // Only absolute comparisons need a date
+    const ComparisonType type = comparisonTypeFromString(queryElement->getMatchTypeSelection());
+    return type == ComparisonType::Before || type == ComparisonType::After || type == ComparisonType::Exact;
 }
 
 QStringList DatePropertyQueryType::getMatchTypeComboButtonEntries() const
+{
+    return matchTypeEntries();
+}
+
+QStringList DatePropertyQueryType::matchTypeEntries()
 {
     return QStringList()
         << comparisonTypeToString(ComparisonType::Before)
@@ -1869,7 +1877,7 @@ QList<MatchType*> LongQueryType::getMatchTypes() const
 }
 
 // ============================================================================
-// CustomFieldQueryTypeBase - Abstract base for custom field queries
+// Custom field query types (C# CustomFieldQueryTypeBase and subclasses)
 // ============================================================================
 
 CustomFieldQueryTypeBase::CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, const QString& fieldName)
@@ -1880,101 +1888,89 @@ CustomFieldQueryTypeBase::CustomFieldQueryTypeBase(int group, ObjectTypes applie
 
 bool CustomFieldQueryTypeBase::ForQuery(QueryFilter* query) const
 {
-    // TODO: Check if query matches this custom field
-    // Need CustomFieldQuery classes first
-    Q_UNUSED(query);
-    return false;
+    auto* customFieldQuery = dynamic_cast<CustomFieldQueryBase*>(query);
+    return customFieldQuery && customFieldQuery->getFieldName() == this->fieldName_;
 }
-
-// ============================================================================
-// CustomFieldStringQueryType - String custom field queries
-// ============================================================================
 
 CustomFieldStringQueryType::CustomFieldStringQueryType(int group, ObjectTypes appliesTo, const QString& fieldName)
     : CustomFieldQueryTypeBase(group, appliesTo, fieldName)
 {
 }
 
-bool CustomFieldStringQueryType::showTextBox(QueryElement *queryElement) const
+bool CustomFieldStringQueryType::ForQuery(QueryFilter* query) const
 {
-    (void) queryElement;
+    // C# compares the definition (name and type)
+    return dynamic_cast<CustomFieldQuery*>(query) && CustomFieldQueryTypeBase::ForQuery(query);
+}
+
+bool CustomFieldStringQueryType::showTextBox(QueryElement* queryElement) const
+{
+    Q_UNUSED(queryElement);
     return true;
 }
 
 QStringList CustomFieldStringQueryType::getMatchTypeComboButtonEntries() const
 {
-    // Use same match types as StringPropertyQueryType
-    // C# QueryElement.cs line 2142
-    QStringList entries;
-    entries << "contains";
-    entries << "does not contain";
-    entries << "starts with";
-    entries << "ends with";
-    entries << "is exactly";
-    entries << "is not";
-    return entries;
+    // C# StringPropertyQueryType.MatchTypeEntries
+    using MatchType = StringPropertyQuery::MatchType;
+    return QStringList()
+        << StringPropertyQueryType::matchTypeToString(MatchType::Contains)
+        << StringPropertyQueryType::matchTypeToString(MatchType::NotContains)
+        << StringPropertyQueryType::matchTypeToString(MatchType::StartsWith)
+        << StringPropertyQueryType::matchTypeToString(MatchType::EndsWith)
+        << StringPropertyQueryType::matchTypeToString(MatchType::ExactMatch);
 }
 
 QueryFilter* CustomFieldStringQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // TODO: Create CustomFieldQuery
-    // Need CustomFieldQuery class first
-    Q_UNUSED(queryElement);
-    return nullptr;
+    return new CustomFieldQuery(this->fieldName_, queryElement->getTextBoxValue(),
+                                StringPropertyQueryType::matchTypeFromString(queryElement->getMatchTypeSelection()));
 }
 
 void CustomFieldStringQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // TODO: Restore custom field query
-    Q_UNUSED(query);
-    Q_UNUSED(queryElement);
+    auto* customFieldQuery = dynamic_cast<CustomFieldQuery*>(query);
+    if (!customFieldQuery)
+        return;
+    queryElement->setMatchTypeSelection(StringPropertyQueryType::matchTypeToString(customFieldQuery->getType()));
+    queryElement->setTextBoxValue(customFieldQuery->getQuery());
 }
 
-// ============================================================================
-// CustomFieldDateQueryType - Date custom field queries
-// ============================================================================
-
-CustomFieldDateQueryType::CustomFieldDateQueryType(int group, ObjectTypes appliesTo,
-                                                   const QString& fieldName)
+CustomFieldDateQueryType::CustomFieldDateQueryType(int group, ObjectTypes appliesTo, const QString& fieldName)
     : CustomFieldQueryTypeBase(group, appliesTo, fieldName)
 {
 }
 
+bool CustomFieldDateQueryType::ForQuery(QueryFilter* query) const
+{
+    return dynamic_cast<CustomFieldDateQuery*>(query) && CustomFieldQueryTypeBase::ForQuery(query);
+}
+
 bool CustomFieldDateQueryType::showDateTimePicker(QueryElement* queryElement) const
 {
-    // Use same logic as DatePropertyQueryType
-    // Show date picker for most match types except "null" checks
-    Q_UNUSED(queryElement);
-    return true;  // Simplified - will refine when QueryElement complete
+    // C# DatePropertyQueryType.ShouldShowDateTimePicker
+    return DatePropertyQueryType::showsDateTimePicker(queryElement);
 }
 
 QStringList CustomFieldDateQueryType::getMatchTypeComboButtonEntries() const
 {
-    // Use same match types as DatePropertyQueryType
-    // C# QueryElement.cs line 2181
-    QStringList entries;
-    entries << "on";
-    entries << "after";
-    entries << "before";
-    entries << "between";
-    entries << "is empty";
-    entries << "is not empty";
-    return entries;
+    // C# DatePropertyQueryType.MatchTypeEntries
+    return DatePropertyQueryType::matchTypeEntries();
 }
 
 QueryFilter* CustomFieldDateQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // TODO: Create CustomFieldDateQuery
-    // Need CustomFieldDateQuery class first
-    Q_UNUSED(queryElement);
-    return nullptr;
+    QDateTime dateTime;
+    DateQuery::ComparisonType type;
+    DatePropertyQueryType::dateQueryFrom(queryElement, dateTime, type);
+    return new CustomFieldDateQuery(this->fieldName_, dateTime, type);
 }
 
 void CustomFieldDateQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // TODO: Restore custom field date query
-    Q_UNUSED(query);
-    Q_UNUSED(queryElement);
+    auto* dateQuery = dynamic_cast<CustomFieldDateQuery*>(query);
+    if (dateQuery)
+        DatePropertyQueryType::showDateQuery(queryElement, dateQuery->getQuery(), dateQuery->getType());
 }
 
 // ============================================================================
@@ -1991,6 +1987,8 @@ QueryTypeRegistry::QueryTypeRegistry()
 QueryTypeRegistry::~QueryTypeRegistry()
 {
     qDeleteAll(this->queryTypes_);
+    qDeleteAll(this->customFieldTypes_);
+    qDeleteAll(this->retiredCustomFieldTypes_);
 }
 
 QueryTypeRegistry* QueryTypeRegistry::instance()
@@ -2090,9 +2088,11 @@ void QueryTypeRegistry::initialize()
     // C# QueryElement.cs line 111
     this->queryTypes_.append(new BooleanQueryType(9, ObjectTypes::AllExcFolders, PropertyNames::has_custom_fields));
     
-    // NOTE: Dynamic custom field query types are added by CustomFieldsManager
-    // C# QueryElement.cs lines 113-116, 119-145
-    // TODO: Connect to OtherConfigAndTagsWatcher and CustomFieldsManager when available
+    // One query type per custom field definition, kept up to date (C# QueryElement static
+    // constructor and CustomFieldsManager_CustomFieldsChanged)
+    QObject::connect(CustomFieldsManager::instance(), &CustomFieldsManager::customFieldsChanged,
+                     [this]() { this->updateCustomFieldTypes(); });
+    this->updateCustomFieldTypes();
     
     // Legacy query types (Group 5) - NOT USED FOR NEW QUERIES, kept for backward compatibility
     // C# QueryElement.cs lines 92-93
@@ -2100,12 +2100,51 @@ void QueryTypeRegistry::initialize()
     // this->queryTypes_.append(new DiskQueryType(5, ObjectTypes::None, "Disks"));  // Replaced by recursive disk queries
 }
 
+void QueryTypeRegistry::updateCustomFieldTypes()
+{
+    const QList<CustomFieldDefinition> definitions = CustomFieldsManager::instance()->getCustomFields();
+
+    auto matches = [](CustomFieldQueryTypeBase* type, const CustomFieldDefinition& definition) {
+        const bool isDate = dynamic_cast<CustomFieldDateQueryType*>(type) != nullptr;
+        return type->getFieldName() == definition.GetName() &&
+               isDate == (definition.GetType() == CustomFieldDefinition::Type::Date);
+    };
+
+    // Add types for new definitions
+    for (const CustomFieldDefinition& definition : definitions)
+    {
+        const bool exists = std::any_of(this->customFieldTypes_.begin(), this->customFieldTypes_.end(),
+                                        [&](CustomFieldQueryTypeBase* t) { return matches(t, definition); });
+        if (exists)
+            continue;
+        if (definition.GetType() == CustomFieldDefinition::Type::Date)
+            this->customFieldTypes_.append(new CustomFieldDateQueryType(8, ObjectTypes::AllExcFolders, definition.GetName()));
+        else
+            this->customFieldTypes_.append(new CustomFieldStringQueryType(8, ObjectTypes::AllExcFolders, definition.GetName()));
+    }
+
+    // Stop offering types whose definition is gone. They are kept alive because a search row may
+    // still be showing one.
+    for (int i = this->customFieldTypes_.size() - 1; i >= 0; --i)
+    {
+        CustomFieldQueryTypeBase* type = this->customFieldTypes_.at(i);
+        const bool defined = std::any_of(definitions.begin(), definitions.end(),
+                                         [&](const CustomFieldDefinition& d) { return matches(type, d); });
+        if (!defined)
+            this->retiredCustomFieldTypes_.append(this->customFieldTypes_.takeAt(i));
+    }
+
+    this->allQueryTypes_ = this->queryTypes_;
+    for (CustomFieldQueryTypeBase* type : this->customFieldTypes_)
+        this->allQueryTypes_.append(type);
+}
+
 QueryType* QueryTypeRegistry::findQueryTypeForFilter(QueryFilter* filter) const
 {
     if (!filter)
         return this->defaultQueryType_;
     
-    for (QueryType* queryType : this->queryTypes_)
+    for (QueryType* queryType : this->allQueryTypes_)
     {
         if (queryType->ForQuery(filter))
             return queryType;

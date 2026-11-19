@@ -34,6 +34,7 @@
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/sort.h"
 #include "xenlib/xensearch/grouping.h"
+#include "xenlib/customfields/customfieldsmanager.h"
 #include <QComboBox>
 #include <QDateTimeEdit>
 #include <QDoubleSpinBox>
@@ -94,6 +95,11 @@ QueryElement::QueryElement(Searcher* searcher, QueryScope* queryScope,
     this->setupUi();
     this->SetSearcher(searcher);
     this->SelectDefaultQueryType();
+
+    // The registry updates its custom field types first (it connected earlier), then each row
+    // refreshes its list
+    connect(CustomFieldsManager::instance(), &CustomFieldsManager::customFieldsChanged,
+            this, &QueryElement::populateQueryTypeCombo);
 }
 
 QueryElement::~QueryElement()

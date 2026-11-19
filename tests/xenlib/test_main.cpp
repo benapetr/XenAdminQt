@@ -403,6 +403,31 @@ private slots:
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
     }
 
+    void customFieldQueriesMatchXenCenterValues()
+    {
+        // XenCenter writes dates in UTC with DateTime.ToString("u")
+        const QVariantMap vm{{"other_config", QVariantMap{
+            {"XenCenter.CustomFields.owner", "Alice"},
+            {"XenCenter.CustomFields.expires", "2026-03-15 10:30:00Z"},
+            {"XenCenter.CustomFields.blank", ""}}}};
+
+        CustomFieldQuery owner("owner", "ali", StringPropertyQuery::MatchType::StartsWith);
+        QCOMPARE(owner.Match(vm, "vm", nullptr).toBool(), true);
+        CustomFieldQuery other("owner", "bob", StringPropertyQuery::MatchType::Contains);
+        QCOMPARE(other.Match(vm, "vm", nullptr).toBool(), false);
+        // An empty value counts as no value, even for a "has this field" query
+        CustomFieldQuery blank("blank", QString(), StringPropertyQuery::MatchType::Contains);
+        QCOMPARE(blank.Match(vm, "vm", nullptr).toBool(), false);
+
+        const QDateTime stored(QDate(2026, 3, 15), QTime(10, 30), Qt::UTC);
+        CustomFieldDateQuery before("expires", stored.addDays(1), DateQuery::ComparisonType::Before);
+        QCOMPARE(before.Match(vm, "vm", nullptr).toBool(), true);
+        CustomFieldDateQuery after("expires", stored.addDays(1), DateQuery::ComparisonType::After);
+        QCOMPARE(after.Match(vm, "vm", nullptr).toBool(), false);
+        CustomFieldDateQuery sameDay("expires", stored.toLocalTime(), DateQuery::ComparisonType::Exact);
+        QCOMPARE(sameDay.Match(vm, "vm", nullptr).toBool(), true);
+    }
+
     void groupAndRecursiveQueriesMatchLikeCSharp()
     {
         XenConnection connection;
