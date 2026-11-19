@@ -75,6 +75,8 @@ are omitted.
 
 ### Fixed
 
+- The "Tags" search condition lists the tags in use; its list was always
+  empty.
 - Searching by a date custom field set in XenCenter now matches; the stored
   date format was not recognised.
 - The search editor lists conditions by their names ("Name", "Power State",

@@ -675,21 +675,26 @@ void TagQueryType::populateCollectedTags()
     this->collectedTags_.clear();
     QSet<QString> uniqueTags;
     
-    // TODO: When ConnectionsManager is implemented, iterate through all connections
-    // For now, this is a placeholder that will be populated by cache updates
-    
-    // C# logic:
-    // foreach (IXenConnection connection in ConnectionsManager.XenConnectionsCopy)
-    // {
-    //     foreach (IXenObject o in connection.Cache.XenSearchableObjects)
-    //     {
-    //         String[] tags = Tags.GetTags(o);
-    //         if (tags != null)
-    //             foreach (string tag in tags)
-    //                 uniqueTags.insert(tag);
-    //     }
-    // }
-    
+    Xen::ConnectionsManager* connectionsManager = Xen::ConnectionsManager::instance();
+    const QList<XenConnection*> connections = connectionsManager ? connectionsManager->GetAllConnections()
+                                                                 : QList<XenConnection*>();
+    for (XenConnection* connection : connections)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            continue;
+        for (const auto& object : cache->GetXenSearchableObjects())
+        {
+            const QVariantList tags = cache->ResolveObjectData(object.first, object.second).value("tags").toList();
+            for (const QVariant& tag : tags)
+            {
+                const QString text = tag.toString();
+                if (!text.isEmpty())
+                    uniqueTags.insert(text);
+            }
+        }
+    }
+
     this->collectedTags_ = uniqueTags.values();
     std::sort(this->collectedTags_.begin(), this->collectedTags_.end());
 }

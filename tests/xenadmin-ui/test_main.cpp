@@ -10,6 +10,8 @@
 #include "xenlib/xensearch/query.h"
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xensearch/search.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include <QComboBox>
 #include <QLineEdit>
 #include <QMenu>
@@ -232,6 +234,28 @@ private slots:
         auto* name = dynamic_cast<StringPropertyQuery*>(filter.get());
         QVERIFY(name);
         QCOMPARE(name->getQuery(), QString("a"));
+    }
+
+    void tagConditionOffersTagsInUse()
+    {
+        XenConnection* connection = new XenConnection(nullptr);
+        connection->GetCache()->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{
+            {"name_label", "web"}, {"tags", QVariantList{"production", "web"}}});
+        connection->GetCache()->Update(XenObjectType::SR, "OpaqueRef:sr", QVariantMap{
+            {"name_label", "nfs"}, {"tags", QVariantList{"backup"}}});
+        Xen::ConnectionsManager::instance()->AddConnection(connection);
+        emit OtherConfigAndTagsWatcher::instance()->TagsChanged();
+
+        QueryElement element;
+        choose(&element, "Tags");
+        QComboBox* values = element.findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).at(2);
+        QStringList tags;
+        for (int i = 0; i < values->count(); ++i)
+            tags << values->itemText(i);
+        QCOMPARE(tags, QStringList({"backup", "production", "web"}));
+
+        Xen::ConnectionsManager::instance()->RemoveConnection(connection);
+        delete connection;
     }
 
     void pickerListsObjectsAndSelectsByUuid()
