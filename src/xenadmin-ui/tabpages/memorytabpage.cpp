@@ -37,6 +37,8 @@
 #include "../controls/hostmemoryrow.h"
 #include "../widgets/vmmemoryrow.h"
 #include "../dialogs/ballooningdialog.h"
+#include "../settingsmanager.h"
+#include <QTimer>
 #include <algorithm>
 
 MemoryTabPage::MemoryTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::MemoryTabPage)
@@ -293,10 +295,12 @@ void MemoryTabPage::populateHostMemory()
     QList<QSharedPointer<VM>> vmList = cache ? cache->GetAll<VM>(XenObjectType::VM) : QList<QSharedPointer<VM>>();
     QList<QSharedPointer<VM>> hostVms;
     QString hostRef = host->OpaqueRef();
+    const bool showHiddenVMs = SettingsManager::instance().GetShowHiddenObjects();
 
     for (const QSharedPointer<VM>& vm : vmList)
     {
-        if (!vm || vm->IsEvicted() || !vm->IsRealVM())
+        // C# VMWanted: real VMs, shown by the hidden objects setting, whose home is this host
+        if (!vm || vm->IsEvicted() || !vm->IsRealVM() || !vm->Show(showHiddenVMs))
             continue;
 
         if (vm->GetHomeRef() != hostRef)
@@ -423,48 +427,56 @@ void MemoryTabPage::onCacheObjectChanged(XenConnection* connection, XenObjectTyp
     {
         if (type == XenObjectType::VM && ref == this->m_object->OpaqueRef())
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
 
         QSharedPointer<VM> vm = this->GetVM();
         if (vm && type == XenObjectType::VMMetrics && ref == vm->MetricsRef())
         {
-            this->refreshContent();
+            this->scheduleRefresh();
+            return;
+        }
+
+        // Ballooning support and the Edit button come from the guest metrics
+        // (C# guest_metrics_PropertyChanged)
+        if (vm && type == XenObjectType::VMGuestMetrics && ref == vm->GetGuestMetricsRef())
+        {
+            this->scheduleRefresh();
             return;
         }
     } else if (this->m_object->GetObjectType() == XenObjectType::Host)
     {
         if (type == XenObjectType::Host && ref == this->m_object->OpaqueRef())
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
 
         QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
         if (host && type == XenObjectType::HostMetrics && ref == host->GetMetricsRef())
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
 
-        if (type == XenObjectType::VM || type == XenObjectType::VMMetrics)
+        if (type == XenObjectType::VM || type == XenObjectType::VMMetrics || type == XenObjectType::VMGuestMetrics)
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
     } else if (this->m_object->GetObjectType() == XenObjectType::Pool)
     {
         if (type == XenObjectType::Pool && ref == this->m_object->OpaqueRef())
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
 
         if (type == XenObjectType::Host || type == XenObjectType::HostMetrics ||
             type == XenObjectType::VM || type == XenObjectType::VMMetrics)
         {
-            this->refreshContent();
+            this->scheduleRefresh();
             return;
         }
     }
@@ -480,17 +492,17 @@ void MemoryTabPage::onCacheObjectRemoved(XenConnection* connection, XenObjectTyp
     if (this->m_object->GetObjectType() == XenObjectType::VM)
     {
         if (type == XenObjectType::VMMetrics || type == XenObjectType::VM)
-            this->refreshContent();
+            this->scheduleRefresh();
     } else if (this->m_object->GetObjectType() == XenObjectType::Host)
     {
         if (type == XenObjectType::Host || type == XenObjectType::HostMetrics ||
             type == XenObjectType::VM || type == XenObjectType::VMMetrics)
-            this->refreshContent();
+            this->scheduleRefresh();
     } else if (this->m_object->GetObjectType() == XenObjectType::Pool)
     {
         if (type == XenObjectType::Pool || type == XenObjectType::Host || type == XenObjectType::HostMetrics ||
             type == XenObjectType::VM || type == XenObjectType::VMMetrics)
-            this->refreshContent();
+            this->scheduleRefresh();
     }
 }
 
@@ -504,23 +516,52 @@ void MemoryTabPage::onCacheBulkUpdateComplete(XenObjectType type, int count)
     if (this->m_object->GetObjectType() == XenObjectType::VM)
     {
         if (type == XenObjectType::VM || type == XenObjectType::VMMetrics)
-            this->refreshContent();
+            this->scheduleRefresh();
     } else if (this->m_object->GetObjectType() == XenObjectType::Host)
     {
         if (type == XenObjectType::Host || type == XenObjectType::HostMetrics ||
             type == XenObjectType::VM || type == XenObjectType::VMMetrics)
-            this->refreshContent();
+            this->scheduleRefresh();
     } else if (this->m_object->GetObjectType() == XenObjectType::Pool)
     {
         if (type == XenObjectType::Pool || type == XenObjectType::Host || type == XenObjectType::HostMetrics ||
             type == XenObjectType::VM || type == XenObjectType::VMMetrics)
-            this->refreshContent();
+            this->scheduleRefresh();
     }
 }
 
 void MemoryTabPage::onCacheCleared()
 {
-    this->refreshContent();
+    this->scheduleRefresh();
+}
+
+void MemoryTabPage::scheduleRefresh()
+{
+    if (this->m_refreshScheduled)
+        return;
+
+    this->m_refreshScheduled = true;
+    QTimer::singleShot(0, this, [this]()
+    {
+        this->m_refreshScheduled = false;
+        if (!this->isVisible())
+        {
+            // C# Rebuild returns early while hidden; catch up when the page is shown
+            this->MarkDirty();
+            return;
+        }
+        this->refreshContent();
+    });
+}
+
+void MemoryTabPage::OnPageShown()
+{
+    BaseTabPage::OnPageShown();
+    if (this->IsDirty())
+    {
+        this->m_isDirty = false;
+        this->refreshContent();
+    }
 }
 
 void MemoryTabPage::clearVmListLayout()

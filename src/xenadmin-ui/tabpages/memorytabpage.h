@@ -41,9 +41,6 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
-// TODO this tab doesn't refresh automatically when VM power state of memory settings change (eg. changing memory - it will be stuck showing old value in memory bar until reopening)
-//      we probably need to hook to some xencache events and force refresh the values on change
-
 /**
  * Memory tab page showing memory configuration and usage for VMs and Hosts.
  * This tab displays memory ballooning settings, dynamic/static memory limits,
@@ -71,6 +68,7 @@ class MemoryTabPage : public BaseTabPage
         }
         bool IsApplicableForObjectType(XenObjectType objectType) const override;
         QSharedPointer<VM> GetVM();
+        void OnPageShown() override;
 
     protected:
         void refreshContent() override;
@@ -91,6 +89,11 @@ class MemoryTabPage : public BaseTabPage
         void populateHostMemory();
         void populatePoolMemory();
         void clearVmListLayout();
+
+        //! Rebuild once for a burst of cache events, and only while the page is visible
+        //! (C# BallooningPage batches changes until XenObjectsUpdated, CA-35330)
+        void scheduleRefresh();
+        bool m_refreshScheduled = false;
 };
 
 #endif // MEMORYTABPAGE_H
