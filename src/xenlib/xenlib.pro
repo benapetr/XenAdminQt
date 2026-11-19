@@ -115,6 +115,7 @@ HEADERS += \
     xen/friendlynames.h \
     xen/asyncoperation.h \
     xen/xenobject.h \
+    xen/hiddenobjects.h \
     xen/pool.h \
     xen/host.h \
     xen/hostmetrics.h \
@@ -379,6 +380,7 @@ SOURCES += \
     xen/friendlynames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
+    xen/hiddenobjects.cpp \
     xen/vmappliance.cpp \
     xen/pool.cpp \
     xen/host.cpp \

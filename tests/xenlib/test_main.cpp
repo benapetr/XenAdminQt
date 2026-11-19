@@ -32,6 +32,7 @@
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
+#include "xenlib/xen/hiddenobjects.h"
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QScopeGuard>
@@ -301,6 +302,28 @@ private slots:
 
         // A missing certificate with errors is rejected
         QVERIFY(!manager->ValidateServerCertificate(QSslCertificate(), selfSigned, host));
+    }
+
+    void hiddenObjectsKeepObjectsOutOfTheTree()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VM, "OpaqueRef:new-vm", QVariantMap{{"name_label", "new"}, {"power_state", "Halted"}});
+        QSharedPointer<XenObject> vm = cache->ResolveObject(XenObjectType::VM, "OpaqueRef:new-vm");
+
+        QSignalSpy changed(HiddenObjects::instance(), &HiddenObjects::Changed);
+        QVERIFY(!HiddenObjects::IsHidden("OpaqueRef:new-vm"));
+        QVERIFY(!XenSearch::Group::Hide(vm, false));
+
+        HiddenObjects::Hide("OpaqueRef:new-vm");
+        QVERIFY(HiddenObjects::IsHidden("OpaqueRef:new-vm"));
+        // Hidden by a running operation even when the user shows hidden objects
+        QVERIFY(XenSearch::Group::Hide(vm, true));
+
+        HiddenObjects::Show("OpaqueRef:new-vm");
+        QVERIFY(!HiddenObjects::IsHidden("OpaqueRef:new-vm"));
+        QVERIFY(!XenSearch::Group::Hide(vm, false));
+        QCOMPARE(changed.count(), 2);
     }
 
     void groupHideMatchesCSharp()

@@ -254,6 +254,7 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_VM.cpp
     xen/xenapi/xenapi_VTPM.cpp
     xen/xenobject.cpp
+    xen/hiddenobjects.cpp
     # Header-only Q_OBJECT classes: listed explicitly so AUTOMOC processes them
     collections/observablelist.h
 )

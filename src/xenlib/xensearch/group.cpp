@@ -26,6 +26,7 @@
  */
 
 #include "group.h"
+#include "../xen/hiddenobjects.h"
 #include "grouping.h"
 #include "search.h"
 #include "query.h"
@@ -228,9 +229,8 @@ namespace XenSearch
     bool Group::Hide(const QString& objectType, const QString& objectRef, const QVariantMap& objectData, XenConnection* conn)
     {
         Q_UNUSED(objectData)
-        // TODO: Integrate with XenAdminConfigManager equivalent for hidden objects
-        // if (XenAdminConfigManager::Provider::ObjectIsHidden(objectRef))
-        //     return true;
+        if (HiddenObjects::IsHidden(objectRef))
+            return true;
 
         if (!conn || !conn->GetCache())
             return true;
@@ -242,9 +242,11 @@ namespace XenSearch
     bool Group::Hide(const QSharedPointer<XenObject>& object, bool showHiddenObjects)
     {
         // C# Reference: GroupAlg.Hide(IXenObject o)
-        // TODO: C# first checks XenAdminConfigManager.Provider.ObjectIsHidden(o.opaque_ref), a
-        // client-side list of objects temporarily hidden by running operations; not ported yet.
         if (!object)
+            return true;
+
+        // Objects kept out of view by a running operation (C# Provider.ObjectIsHidden)
+        if (HiddenObjects::IsHidden(object->OpaqueRef()))
             return true;
 
         XenCache* cache = object->GetCache();
@@ -557,9 +559,9 @@ namespace XenSearch
         {
             QVariantMap groupData = group.toMap();
             QString groupRef = groupData.value("opaque_ref").toString();
-            // TODO: Check if hidden
-            // if (XenAdminConfigManager::Provider::ObjectIsHidden(groupRef))
-            //     return;
+            // C# NodeGroup.AddGrouped: no group for an object hidden by a running operation
+            if (!groupRef.isEmpty() && HiddenObjects::IsHidden(groupRef))
+                return;
         }
 
         // Apply filter to group if needed
@@ -600,9 +602,9 @@ namespace XenSearch
 
     void NodeGroup::AddUngrouped(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
     {
-        // TODO: Check if hidden
-        // if (XenAdminConfigManager::Provider::ObjectIsHidden(objectRef))
-        //     return;
+        // C# NodeGroup.AddUngrouped
+        if (HiddenObjects::IsHidden(objectRef))
+            return;
 
         if (!this->ungrouped_)
             this->ungrouped_ = GetGroupFor(this->grouping_, this->search_, this->grouping_->getSubgrouping(QVariant()));

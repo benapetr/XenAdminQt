@@ -86,6 +86,7 @@
 #include "placeholderwidget.h"
 #include "settingsmanager.h"
 #include "xenlib/utils/filelogger.h"
+#include "xenlib/xen/hiddenobjects.h"
 #include "connectionprofile.h"
 #include "navigation/navigationhistory.h"
 #include "navigation/navigationpane.h"
@@ -322,6 +323,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this->m_navigationPane, &NavigationPane::treeNodeActivated, this, &MainWindow::onNavigationPaneTreeNodeActivated);
     connect(this->m_navigationPane, &NavigationPane::dragDropCommandActivated, this, &MainWindow::onNavigationPaneDragDropCommandActivated);
     connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
+
+    // C# WinformsXenAdminConfigProvider.HideObject/ShowObject call RequestRefreshTreeView; the
+    // list changes on action threads, so the refresh is queued to the GUI thread
+    connect(HiddenObjects::instance(), &HiddenObjects::Changed, this, [this]()
+    {
+        if (this->m_navigationPane)
+            this->m_navigationPane->RequestRefreshTreeView();
+    }, Qt::QueuedConnection);
 
     // Unread counts for the notifications button and sub-mode items
     // C# Reference: Alert.RegisterAlertCollectionChanged / History.CollectionChanged
