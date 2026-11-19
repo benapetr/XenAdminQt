@@ -388,11 +388,12 @@ bool VNCView::eventFilter(QObject* watched, QEvent* event)
         switch (event->type())
         {
             case QEvent::Close:
-                // C# FormClosing: closing the window puts the console back into the tab
-                event->ignore();
+                // C# FormClosing: closing the window puts the console back into the tab. The
+                // close is still accepted, because Qt closes every window on quit and one that
+                // refuses would cancel the quit. DockUnDock only deletes the window later.
                 if (!this->IsDocked())
                     this->DockUnDock();
-                return true;
+                return false;
 
             case QEvent::WindowStateChange:
                 // C# Resize handler: no point decoding frames for a minimized window
@@ -435,10 +436,6 @@ void VNCView::registerEventListeners()
     if (this->m_vncTabView)
     {
         connect(this->m_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
-        // TODO: Implement fullscreen (VNCTabView.toggleFullscreen creates FullScreenForm)
-        connect(this->m_vncTabView, &VNCTabView::toggleFullscreenRequested, this, []() {
-            qWarning() << "VNCView: Fullscreen not yet implemented";
-        });
     }
 
     if (this->m_vm)
@@ -461,7 +458,6 @@ void VNCView::unregisterEventListeners()
     if (this->m_vncTabView)
     {
         disconnect(this->m_vncTabView, &VNCTabView::toggleDockRequested, this, &VNCView::DockUnDock);
-        disconnect(this->m_vncTabView, &VNCTabView::toggleFullscreenRequested, nullptr, nullptr);
     }
 
     if (this->m_vm)
