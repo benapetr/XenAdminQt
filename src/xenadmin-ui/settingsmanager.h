@@ -220,6 +220,17 @@ class SettingsManager : public QObject
         int GetDebugConsoleFontSize() const;
         void SetDebugConsoleFontSize(int pointSize);
 
+        // Application log file (C# log4net RollingFileAppender)
+        bool GetFileLoggingEnabled() const;
+        void SetFileLoggingEnabled(bool enabled);
+        bool GetFileLoggingVerbose() const;
+        void SetFileLoggingVerbose(bool verbose);
+        int GetFileLoggingMaxSizeMB() const;
+        void SetFileLoggingMaxSizeMB(int megabytes);
+        QString GetLogDirectory() const;
+        //! Push the logging settings above to FileLogger
+        void ApplyFileLoggingSettings() const;
+
         // Network settings
         QString GetProxyServer() const;
         void SetProxyServer(const QString& server);
@@ -329,6 +340,9 @@ class SettingsManager : public QObject
         bool m_debugConsoleVisible;
         int m_logLevel;
         int m_debugConsoleFontSize;
+        bool m_fileLoggingEnabled;
+        bool m_fileLoggingVerbose;
+        int m_fileLoggingMaxSizeMB;
         QString m_proxyServer;
         int m_proxyPort;
         bool m_useProxy;

@@ -258,6 +258,8 @@ set(XENADMIN_SOURCES
     dialogs/optionspages/connectionoptionspage.ui
     dialogs/optionspages/consolesoptionspage.cpp
     dialogs/optionspages/consolesoptionspage.ui
+    dialogs/optionspages/loggingoptionspage.cpp
+    dialogs/optionspages/loggingoptionspage.ui
     dialogs/optionspages/displayoptionspage.cpp
     dialogs/optionspages/displayoptionspage.ui
     dialogs/optionspages/saveandrestoreoptionspage.cpp

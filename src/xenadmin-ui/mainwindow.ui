@@ -276,6 +276,8 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
+    <addaction name="viewApplicationLogAction"/>
+    <addaction name="separator"/>
     <addaction name="aboutAction"/>
    </widget>
    <widget class="QMenu" name="menuTools">
@@ -570,6 +572,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="viewApplicationLogAction">
+   <property name="text">
+    <string>View Application &amp;Log Files</string>
+   </property>
+   <property name="statusTip">
+    <string>Open the folder with the application log files</string>
    </property>
   </action>
   <action name="aboutAction">

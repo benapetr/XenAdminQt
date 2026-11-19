@@ -171,8 +171,8 @@ void HTTPConnect::sendConnectRequest()
     request += QString("Cookie: session_id=%1\r\n").arg(this->m_sessionId);
     request += "\r\n"; // Empty line to end headers
 
-    qDebug() << "HTTPConnect: Sending CONNECT request:";
-    qDebug().noquote() << request.trimmed();
+    // The session cookie stays out of the log: whoever has it can act as the logged-in user
+    qDebug() << "HTTPConnect: Sending CONNECT request for" << this->m_consoleUrl.host() << this->m_consoleUrl.path();
 
     // Send the request (non-blocking)
     QByteArray requestData = request.toUtf8();

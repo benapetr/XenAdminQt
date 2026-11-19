@@ -30,6 +30,7 @@
 #include "mainwindow.h"
 #include "globals.h"
 #include "xenlib/utils/encryption.h"
+#include "xenlib/utils/filelogger.h"
 #include "xenlib/xensearch/search.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -135,6 +136,9 @@ void SettingsManager::Load()
     this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
     this->m_logLevel = this->m_settings->value("Debug/logLevel", 2).toInt();
     this->m_debugConsoleFontSize = this->m_settings->value("Debug/fontSize", 9).toInt();
+    this->m_fileLoggingEnabled = this->m_settings->value("Logging/enabled", true).toBool();
+    this->m_fileLoggingVerbose = this->m_settings->value("Logging/verbose", false).toBool();
+    this->m_fileLoggingMaxSizeMB = this->m_settings->value("Logging/maxSizeMB", 10).toInt();
     // Backward-compatible mirrors of proxy settings.
     this->m_proxyServer = this->m_connectionProxyAddress;
     this->m_proxyPort = this->m_connectionProxyPort;
@@ -206,6 +210,9 @@ void SettingsManager::Save()
     this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
     this->m_settings->setValue("Debug/logLevel", this->m_logLevel);
     this->m_settings->setValue("Debug/fontSize", this->m_debugConsoleFontSize);
+    this->m_settings->setValue("Logging/enabled", this->m_fileLoggingEnabled);
+    this->m_settings->setValue("Logging/verbose", this->m_fileLoggingVerbose);
+    this->m_settings->setValue("Logging/maxSizeMB", this->m_fileLoggingMaxSizeMB);
     // Backward-compatible keys.
     this->m_settings->setValue("Network/proxyServer", this->m_connectionProxyAddress);
     this->m_settings->setValue("Network/proxyPort", this->m_connectionProxyPort);
@@ -1019,6 +1026,57 @@ void SettingsManager::SetDebugConsoleFontSize(int pointSize)
 {
     this->m_debugConsoleFontSize = pointSize;
     emit settingsChanged("Debug/fontSize");
+}
+
+bool SettingsManager::GetFileLoggingEnabled() const
+{
+    return this->m_fileLoggingEnabled;
+}
+
+void SettingsManager::SetFileLoggingEnabled(bool enabled)
+{
+    this->m_fileLoggingEnabled = enabled;
+    emit settingsChanged("Logging/enabled");
+}
+
+bool SettingsManager::GetFileLoggingVerbose() const
+{
+    return this->m_fileLoggingVerbose;
+}
+
+void SettingsManager::SetFileLoggingVerbose(bool verbose)
+{
+    this->m_fileLoggingVerbose = verbose;
+    emit settingsChanged("Logging/verbose");
+}
+
+int SettingsManager::GetFileLoggingMaxSizeMB() const
+{
+    return qBound(1, this->m_fileLoggingMaxSizeMB, 1000);
+}
+
+void SettingsManager::SetFileLoggingMaxSizeMB(int megabytes)
+{
+    this->m_fileLoggingMaxSizeMB = qBound(1, megabytes, 1000);
+    emit settingsChanged("Logging/maxSizeMB");
+}
+
+QString SettingsManager::GetLogDirectory() const
+{
+    // C# keeps the logs in a "logs" folder next to its settings; with -c the logs follow the
+    // alternative configuration directory, otherwise they go to the per-user data folder
+    if (!SettingsManager::s_configDir.isEmpty())
+        return QDir(SettingsManager::s_configDir).filePath("logs");
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)).filePath("logs");
+}
+
+void SettingsManager::ApplyFileLoggingSettings() const
+{
+    FileLogger::instance()->Configure(this->GetFileLoggingEnabled(),
+                                      this->GetFileLoggingVerbose(),
+                                      qint64(this->GetFileLoggingMaxSizeMB()) * 1024 * 1024,
+                                      this->GetLogDirectory(),
+                                      QCoreApplication::applicationName());
 }
 
 // Network settings

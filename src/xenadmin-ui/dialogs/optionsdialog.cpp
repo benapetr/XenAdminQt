@@ -33,6 +33,7 @@
 #include "optionspages/consolesoptionspage.h"
 #include "optionspages/saveandrestoreoptionspage.h"
 #include "optionspages/connectionoptionspage.h"
+#include "optionspages/loggingoptionspage.h"
 #include "../settingsmanager.h"
 #include <QMessageBox>
 #include <QTimer>
@@ -48,6 +49,7 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     DisplayOptionsPage* displayPage = new DisplayOptionsPage(this);
     ConsolesOptionsPage* consolesPage = new ConsolesOptionsPage(this);
     ConnectionOptionsPage* connectionPage = new ConnectionOptionsPage(this);
+    LoggingOptionsPage* loggingPage = new LoggingOptionsPage(this);
 
     // Add pages to list (matches C# order)
     this->m_pages.append(confirmationPage);
@@ -56,6 +58,7 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     this->m_pages.append(displayPage);
     this->m_pages.append(consolesPage);
     this->m_pages.append(connectionPage);
+    this->m_pages.append(loggingPage); // not in C#, which has no log settings
 
     // Add pages to vertical tabs and stacked widget
     for (IOptionsPage* page : this->m_pages)

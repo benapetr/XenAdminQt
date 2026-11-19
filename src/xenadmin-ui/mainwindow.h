@@ -104,6 +104,9 @@ class MainWindow : public QMainWindow
         //! True if there is any open connection
         bool IsConnected();
 
+        //! Open the folder with the application log files (C# Program.ViewLogFiles)
+        static void ViewLogFiles(QWidget* parent);
+
     private slots:
         void connectToServer();
         void showAbout();

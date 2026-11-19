@@ -260,11 +260,13 @@ namespace
                 if (cmd.CanRun())
                     cmd.Run();
             };
+        } else if (type == "MULTIPATH_PERIODIC_ALERT")
+        {
+            // C# returns Program.ViewLogFiles here (the client's own log folder)
+            link.text = fixLinkText(type);
+            link.action = []() { MainWindow::ViewLogFiles(MainWindow::instance()); };
         }
 
-        // TODO: MULTIPATH_PERIODIC_ALERT -> "View Log Files" (C# Program.ViewLogFiles opens the
-        // application log folder). This client doesn't write a log file yet, so there is nothing
-        // to open; add file logging + ViewLogFiles, then return that action here.
         return link;
     }
 

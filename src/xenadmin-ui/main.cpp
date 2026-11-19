@@ -37,6 +37,7 @@
 #include "xenlib/customfields/customfieldsmanager.h"
 #include "xenlib/folders/foldersmanager.h"
 #include "xenlib/xenlib.h"
+#include "xenlib/utils/filelogger.h"
 
 int main(int argc, char* argv[])
 {
@@ -76,6 +77,12 @@ int main(int argc, char* argv[])
     app.setApplicationName(XENADMIN_BRANDING_APP_NAME);
     app.setApplicationVersion(XENADMIN_VERSION);
     app.setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
+
+    // Application log file (C# log4net); configured before anything else logs much
+    SettingsManager::instance().ApplyFileLoggingSettings();
+    FileLogger::instance()->Install();
+    qInfo().noquote() << QString("%1 %2 started").arg(app.applicationName(), app.applicationVersion());
+
     SettingsManager::instance().ApplyProxySettings();
 
     // C# parity startup services (watchers + folders + custom fields)
@@ -88,8 +95,15 @@ int main(int argc, char* argv[])
         OtherConfigAndTagsWatcher::instance()->DeregisterEventHandlers();
     });
 
-    MainWindow w;
-    w.show();
+    int result = 0;
+    {
+        MainWindow w;
+        w.show();
+        result = app.exec();
+    }
 
-    return app.exec();
+    // The handler stays installed (the debug console chains to it), only the buffer is written out
+    qInfo().noquote() << QString("%1 exiting").arg(app.applicationName());
+    FileLogger::instance()->Flush();
+    return result;
 }

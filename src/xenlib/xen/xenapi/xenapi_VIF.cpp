@@ -49,8 +49,6 @@ namespace XenAPI
 
         QString taskRef = api.ParseJsonRpcResponse(response).toString();
         qDebug() << "VIF.async_create returned task ref:" << taskRef;
-        qDebug() << "Request was:" << QString::fromUtf8(request);
-        qDebug() << "Response was:" << QString::fromUtf8(response);
 
         return taskRef;
     }

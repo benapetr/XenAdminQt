@@ -9,6 +9,12 @@ are omitted.
 
 ### Added
 
+- The client now writes an application log file, like C#'s, and Help > View
+  Application Log Files opens its folder (the multipath alert's View Log Files
+  link does the same). A new Logging page in Options can turn the log off,
+  include debug messages, and cap its size (10 MB by default, spread over the
+  log and two backups). Messages are written in batches every few seconds to
+  keep disk writes low, and console session cookies are masked.
 - Added C#'s status bar buttons for tasks in progress, failed tasks and alerts.
   Each shows its count only when it is above zero and opens the Events or
   Alerts page when clicked.

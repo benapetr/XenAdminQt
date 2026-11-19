@@ -59,6 +59,7 @@ HEADERS += \
     operations/multipleaction.h \
     operations/multipleactionlauncher.h \
     operations/parallelaction.h \
+    utils/filelogger.h \
     utils/misc.h \
     utils/decompressgzaction.h \
     utils/downloadfileaction.h \
@@ -323,6 +324,7 @@ SOURCES += \
     operations/multipleaction.cpp \
     operations/multipleactionlauncher.cpp \
     operations/parallelaction.cpp \
+    utils/filelogger.cpp \
     utils/misc.cpp \
     utils/decompressgzaction.cpp \
     utils/downloadfileaction.cpp \

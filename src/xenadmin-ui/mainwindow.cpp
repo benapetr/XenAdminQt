@@ -50,6 +50,9 @@
 #include <QDockWidget>
 #include <QCursor>
 #include <QSet>
+#include <QDesktopServices>
+#include <QFileInfo>
+#include <QUrl>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -82,6 +85,7 @@
 #include "ConsoleView/ConsolePanel.h"
 #include "placeholderwidget.h"
 #include "settingsmanager.h"
+#include "xenlib/utils/filelogger.h"
 #include "connectionprofile.h"
 #include "navigation/navigationhistory.h"
 #include "navigation/navigationpane.h"
@@ -360,6 +364,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Initialize debug window and message handler
     this->m_debugWindow = new DebugWindow(this);
     DebugWindow::installDebugHandler();
+
+    // C# viewApplicationLogToolStripMenuItem ("View {0} &Log Files")
+    this->ui->viewApplicationLogAction->setText(tr("View %1 &Log Files").arg(QCoreApplication::applicationName()));
+    connect(this->ui->viewApplicationLogAction, &QAction::triggered, this, [this]() { MainWindow::ViewLogFiles(this); });
 
     // Create console panels (matches C# MainWindow.cs lines 85-86)
     // - ConsolePanel for VM/Host consoles (shown in TabPageConsole)
@@ -1666,6 +1674,28 @@ bool MainWindow::IsConnected()
 {
     Xen::ConnectionsManager *manager = Xen::ConnectionsManager::instance();
     return manager && !manager->GetConnectedConnections().isEmpty();
+}
+
+void MainWindow::ViewLogFiles(QWidget* parent)
+{
+    // C# Program.ViewLogFiles: open the folder of the log file, or say that there is none
+    FileLogger* logger = FileLogger::instance();
+    logger->Flush();
+
+    bool exists = false;
+    for (const QString& path : logger->GetLogFilePaths())
+        exists = exists || (!path.isEmpty() && QFileInfo::exists(path));
+
+    if (!exists)
+    {
+        QString message = tr("Log file is missing.");
+        if (!logger->IsEnabled())
+            message += QStringLiteral("\n\n") + tr("Writing the application log is turned off. It can be turned on in Tools > Options > Logging.");
+        QMessageBox::warning(parent, QCoreApplication::applicationName(), message);
+        return;
+    }
+
+    QDesktopServices::openUrl(QUrl::fromLocalFile(logger->GetDirectory()));
 }
 
 void MainWindow::loadSettings()

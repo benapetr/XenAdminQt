@@ -31,6 +31,8 @@
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/leafcoalescealert.h"
+#include "xenlib/utils/filelogger.h"
+#include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QScopeGuard>
 #include <QTextStream>
@@ -128,6 +130,67 @@ private slots:
         // FriendlyNames has no entry for this type, so that is the raw message name
         auto broken = make("not xml");
         QCOMPARE(broken->GetDescription(), QString("FAILED_LOGIN_ATTEMPTS"));
+    }
+
+    void fileLoggerBatchesFiltersAndRotates()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        FileLogger logger;
+        const QMessageLogContext context;
+        auto readLog = [](const QString& path)
+        {
+            QFile file(path);
+            return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+        };
+
+        logger.Configure(true, false, FileLogger::MinimumTotalBytes, dir.path(), "Test");
+        const QString logPath = logger.GetLogFilePath();
+        QCOMPARE(logPath, QDir(dir.path()).filePath("Test.log"));
+
+        // Debug is dropped unless verbose; other messages wait in memory until a flush
+        logger.Write(QtDebugMsg, context, "debug line");
+        logger.Write(QtInfoMsg, context, "info line");
+        logger.Write(QtWarningMsg, context, "CONNECT Cookie: session_id=OpaqueRef:secret-session");
+        QVERIFY(!QFileInfo::exists(logPath));
+        logger.Flush();
+        QString text = readLog(logPath);
+        QVERIFY(text.contains("INFO  [") && text.contains("] - info line"));
+        QVERIFY(!text.contains("debug line"));
+        QVERIFY(text.contains("session_id=<hidden>"));
+        QVERIFY(!text.contains("secret-session"));
+
+        // Errors are written straight away
+        logger.Write(QtCriticalMsg, context, "error line");
+        QVERIFY(readLog(logPath).contains("ERROR [") );
+
+        logger.Configure(true, true, FileLogger::MinimumTotalBytes, dir.path(), "Test");
+        logger.Write(QtDebugMsg, context, "verbose debug line");
+        logger.Flush();
+        QVERIFY(readLog(logPath).contains("DEBUG [") );
+
+        // Turned off: nothing more reaches the disk
+        const qint64 sizeBefore = QFileInfo(logPath).size();
+        logger.Configure(false, true, FileLogger::MinimumTotalBytes, dir.path(), "Test");
+        logger.Write(QtCriticalMsg, context, "not written");
+        logger.Flush();
+        QCOMPARE(QFileInfo(logPath).size(), sizeBefore);
+
+        // Writing three times the cap keeps FileCount files, each within its share of the cap
+        logger.Configure(true, false, FileLogger::MinimumTotalBytes, dir.path(), "Test");
+        const QString filler(1000, QLatin1Char('x'));
+        for (int i = 0; i < 3 * 1024; ++i)
+            logger.Write(QtWarningMsg, context, filler);
+        logger.Flush();
+        qint64 total = 0;
+        for (const QString& path : logger.GetLogFilePaths())
+        {
+            QVERIFY2(QFileInfo::exists(path), qPrintable(path));
+            QVERIFY(QFileInfo(path).size() <= logger.GetMaxFileBytes());
+            total += QFileInfo(path).size();
+        }
+        QVERIFY(total <= FileLogger::MinimumTotalBytes);
+        QVERIFY(!QFileInfo::exists(logPath + "." + QString::number(FileLogger::FileCount)));
     }
 
     void serverCertificateTrustOnFirstUse()

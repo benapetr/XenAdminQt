@@ -143,6 +143,7 @@ SOURCES += \
     dialogs/optionspages/displayoptionspage.cpp \
     dialogs/optionspages/confirmationoptionspage.cpp \
     dialogs/optionspages/consolesoptionspage.cpp \
+    dialogs/optionspages/loggingoptionspage.cpp \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
     dialogs/restoresession/saveandrestoredialog.cpp \
@@ -463,6 +464,7 @@ HEADERS += \
     dialogs/optionspages/displayoptionspage.h \
     dialogs/optionspages/confirmationoptionspage.h \
     dialogs/optionspages/consolesoptionspage.h \
+    dialogs/optionspages/loggingoptionspage.h \
     dialogs/optionspages/saveandrestoreoptionspage.h \
     dialogs/optionspages/connectionoptionspage.h \
     dialogs/restoresession/saveandrestoredialog.h \
@@ -706,6 +708,7 @@ FORMS += \
     dialogs/optionspages/displayoptionspage.ui \
     dialogs/optionspages/confirmationoptionspage.ui \
     dialogs/optionspages/consolesoptionspage.ui \
+    dialogs/optionspages/loggingoptionspage.ui \
     dialogs/optionspages/saveandrestoreoptionspage.ui \
     dialogs/optionspages/connectionoptionspage.ui \
     dialogs/restoresession/saveandrestoredialog.ui \
