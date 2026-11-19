@@ -921,20 +921,7 @@ bool VNCGraphicsClient::handleFramebufferUpdate()
             // Draw to back buffer (matches C# Damage/OnPaint)
             {
                 QMutexLocker locker(&this->m_backBufferMutex);
-
-                for (int py = 0; py < height; py++)
-                {
-                    for (int px = 0; px < width; px++)
-                    {
-                        int pixelOffset = (py * width + px) * bpp;
-                        if (x + px < (quint16) this->m_fbWidth && y + py < (quint16) this->m_fbHeight)
-                        {
-                            const uchar* pixelPtr = reinterpret_cast<const uchar*>(pixelData.constData() + pixelOffset);
-                            this->m_backBuffer.setPixel(x + px, y + py, decodePixel(pixelPtr));
-                        }
-                    }
-                }
-
+                writePixels(x, y, width, height, reinterpret_cast<const uchar*>(pixelData.constData()));
                 this->m_backBufferInteresting = true;
             }
 
@@ -1951,6 +1938,44 @@ void VNCGraphicsClient::sendScanCodes(Qt::Key key, bool down)
         if (keysym > 0)
         {
             sendKeyEvent(keysym, down);
+        }
+    }
+}
+
+bool VNCGraphicsClient::isNativeRgb32() const
+{
+    // The format sendSetPixelFormat() requests: 32 bpp little-endian 0x00RRGGBB, which is
+    // QImage::Format_RGB32 apart from the unused top byte
+    const auto& f = this->m_pixelFormat;
+    return f.bitsPerPixel == 32 && f.trueColor && !f.bigEndian &&
+           f.redMax == 255 && f.greenMax == 255 && f.blueMax == 255 &&
+           f.redShift == 16 && f.greenShift == 8 && f.blueShift == 0;
+}
+
+void VNCGraphicsClient::writePixels(int x, int y, int width, int height, const uchar* data)
+{
+    // Caller holds m_backBufferMutex. Writes rows directly into the back buffer instead
+    // of one QImage::setPixel() call per pixel; anything outside the framebuffer is clipped.
+    const int bpp = bytesPerPixel();
+    const int x0 = qMax(x, 0);
+    const int x1 = qMin(x + width, this->m_backBuffer.width());
+    const int y1 = qMin(y + height, this->m_backBuffer.height());
+    if (x0 >= x1)
+        return;
+
+    const bool native = isNativeRgb32();
+    for (int row = qMax(y, 0); row < y1; ++row)
+    {
+        const uchar* src = data + (qint64(row - y) * width + (x0 - x)) * bpp;
+        QRgb* dst = reinterpret_cast<QRgb*>(this->m_backBuffer.scanLine(row)) + x0;
+        if (native)
+        {
+            for (int col = x0; col < x1; ++col, src += 4)
+                *dst++ = qFromLittleEndian<quint32>(src) | 0xff000000u;
+        } else
+        {
+            for (int col = x0; col < x1; ++col, src += bpp)
+                *dst++ = decodePixel(src);
         }
     }
 }

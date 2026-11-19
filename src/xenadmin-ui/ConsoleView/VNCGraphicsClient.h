@@ -172,6 +172,10 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         void sendClientCutText(const QString& text);
         int bytesPerPixel() const;
         QRgb decodePixel(const uchar* data) const;
+        //! Pixel format is the RGB32 layout sendSetPixelFormat() requests
+        bool isNativeRgb32() const;
+        //! Write a rectangle of server pixels into the back buffer (caller holds m_backBufferMutex)
+        void writePixels(int x, int y, int width, int height, const uchar* data);
 
         // Rendering helpers (matches C# Damage, OnPaint, etc.)
         void damage(int x, int y, int width, int height);
