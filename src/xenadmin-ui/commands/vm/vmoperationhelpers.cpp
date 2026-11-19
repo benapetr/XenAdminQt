@@ -28,6 +28,8 @@
 #include "vmoperationhelpers.h"
 #include "../../dialogs/warningdialogs/warningdialog.h"
 #include "xenlib/xen/actions/vm/vmstartabstractaction.h"
+#include "xenlib/xen/actions/vm/vmstartaction.h"
+#include "../../mainwindow.h"
 #include <QCoreApplication>
 #include <QThread>
 #include <QPointer>
@@ -395,4 +397,31 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
         *cannotBootReason = QString();
 
     return true;
+}
+
+// C# VMOperationCommand: start with the HA warning dialog (WarningDialogHAInvalidConfig) and,
+// on failure, the boot diagnosis form (StartDiagnosisForm)
+VMStartAction* VMOperationHelpers::CreateVMStartAction(MainWindow* mainWindow, const QSharedPointer<VM>& vm)
+{
+    XenConnection* conn = vm ? vm->GetConnection() : nullptr;
+    const QString displayName = vm ? vm->GetName() : QString();
+    QPointer<MainWindow> windowPtr = mainWindow;
+
+    return new VMStartAction(
+        vm,
+        [windowPtr](QSharedPointer<VM> vm, bool isStart) {
+            VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, windowPtr.data());
+        },
+        [conn, displayName, windowPtr, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
+            Q_UNUSED(abstractAction)
+            if (!windowPtr)
+                return;
+            Failure failureCopy = failure;
+            QMetaObject::invokeMethod(windowPtr, [windowPtr, conn, vm, displayName, failureCopy]() {
+                if (!windowPtr)
+                    return;
+                VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, windowPtr);
+            }, Qt::QueuedConnection);
+        },
+        mainWindow);
 }

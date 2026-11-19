@@ -27,8 +27,13 @@
 
 #include "instantvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
+#include "../vm/vmoperationhelpers.h"
 #include "xenlib/xen/vm.h"
-#include <QMessageBox>
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/vm/createvmfastaction.h"
+#include "xenlib/xen/actions/vm/vmstartaction.h"
+#include "xenlib/xencache.h"
+#include <QPointer>
 
 InstantVMFromTemplateCommand::InstantVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : TemplateCommand(mainWindow, parent)
 {
@@ -41,31 +46,38 @@ bool InstantVMFromTemplateCommand::CanRun() const
 
 void InstantVMFromTemplateCommand::Run()
 {
+    // C# InstantVMFromTemplateCommand.RunCore: create the VM quickly, then start it
     QSharedPointer<VM> templateVm = this->getTemplate();
     if (!this->canRunTemplate(templateVm))
-    {
-        QMessageBox::warning(MainWindow::instance(), "Cannot Create VM",
-                             "The selected template cannot be used for instant VM creation.");
         return;
-    }
 
-    // TODO: Implement fast VM creation
-    // CreateVMFastAction action = new CreateVMFastAction(connection, template);
-    // action.Completed += (sender) => {
-    //     if (action.Succeeded) {
-    //         VMStartAction startAction = new VMStartAction(vm, ...);
-    //         startAction.RunAsync();
-    //     }
-    // };
-    // action.RunAsync();
+    XenConnection* connection = templateVm->GetConnection();
+    MainWindow* mainWindow = MainWindow::instance();
 
-    QMessageBox::information(MainWindow::instance(), "Not Implemented",
-                             "Instant VM creation will be implemented using CreateVMFastAction + auto-start.");
+    CreateVMFastAction* action = new CreateVMFastAction(connection, templateVm, mainWindow);
+    QPointer<CreateVMFastAction> actionPtr = action;
+    QPointer<MainWindow> windowPtr = mainWindow;
+
+    // C# createAction_Completed: start the new VM, with the HA warning and boot diagnosis
+    // like Start VM (VMOperationCommand.WarningDialogHAInvalidConfig / StartDiagnosisForm).
+    // completed() is only emitted on success.
+    connect(action, &AsyncOperation::completed, mainWindow, [actionPtr, windowPtr, connection]()
+    {
+        if (!actionPtr || !windowPtr || !connection || !connection->GetCache())
+            return;
+
+        QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(actionPtr->GetResult());
+        if (vm && vm->IsValid())
+            VMOperationHelpers::CreateVMStartAction(windowPtr, vm)->RunAsync(true);
+    });
+
+    action->RunAsync(true);
 }
 
 QString InstantVMFromTemplateCommand::MenuText() const
 {
-    return "Instant VM from Template";
+    // C# Messages.MAINWINDOW_INSTANT_VM_FROM_TEMPLATE
+    return tr("&Quick Create");
 }
 
 bool InstantVMFromTemplateCommand::canRunTemplate(const QSharedPointer<VM>& templateVm) const
@@ -73,7 +85,8 @@ bool InstantVMFromTemplateCommand::canRunTemplate(const QSharedPointer<VM>& temp
     if (!TemplateCommand::canRunTemplate(templateVm))
         return false;
 
-    // Must be an instant template
+    // C# CanRun: is_a_template && !Locked && !is_a_snapshot (checked by TemplateCommand)
+    // && InstantTemplate()
     if (!templateVm->IsInstantTemplate())
         return false;
 

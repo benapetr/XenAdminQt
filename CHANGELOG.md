@@ -9,6 +9,10 @@ are omitted.
 
 ### Added
 
+- Quick Create (Templates menu and template context menu), as in C#: creates a
+  VM named "<template> (n)" from an instant template and starts it straight
+  away. The menu item used to show "Not Implemented". While the VM is being
+  set up it is kept out of the tree, as the New VM wizard now also does.
 - Full screen consoles, as in C#: the Fullscreen button or the configured
   shortcut (Ctrl+Alt by default, Ctrl+Alt+F, F12 or Ctrl+Enter) shows the
   console on the whole screen with C#'s connection bar (console name, pin and
@@ -47,7 +51,7 @@ are omitted.
 ### Fixed
 
 - Templates created from a snapshot are now marked as instant templates, as in
-  C#, so Instant VM from Template is offered for them.
+  C#, so Quick Create is offered for them.
 - VM > Uninstall VM now deletes the VM through the usual delete confirmation
   (choosing which disks and snapshots to remove), as in C#, instead of showing
   a "Not Implemented" message.

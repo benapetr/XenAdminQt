@@ -75,6 +75,7 @@
 #include "vm/newvmcommand.h"
 #include "vm/importvmcommand.h"
 #include "template/newvmfromtemplatecommand.h"
+#include "template/instantvmfromtemplatecommand.h"
 #include "vm/vmpropertiescommand.h"
 #include "vm/takesnapshotcommand.h"
 #include "vm/deletesnapshotcommand.h"
@@ -908,6 +909,8 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
     // VM Creation from template
     NewVMFromTemplateCommand* newVMFromTemplateCmd = new NewVMFromTemplateCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMFromTemplateCmd);
+    // C# ContextMenuBuilder: items.AddIfEnabled(new InstantVMFromTemplateCommand(...))
+    this->addCommand(menu, new InstantVMFromTemplateCommand(this->m_mainWindow, this));
 
     this->addSeparator(menu);
 

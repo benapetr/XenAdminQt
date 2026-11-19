@@ -1353,7 +1353,7 @@
   </action>
   <action name="InstantVmToolStripMenuItem">
    <property name="text">
-    <string>&amp;Instant VM from Template</string>
+    <string>&amp;Quick Create</string>
    </property>
    <property name="statusTip">
     <string>Create and start a VM from this template instantly</string>

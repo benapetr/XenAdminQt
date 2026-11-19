@@ -141,30 +141,6 @@ namespace
         return !brokenCdVbds.isEmpty();
     }
 
-    VMStartAction* createStartAction(MainWindow* mainWindow, const QSharedPointer<VM>& vm)
-    {
-        XenConnection* conn = vm ? vm->GetConnection() : nullptr;
-        const QString displayName = vm ? vm->GetName() : QString();
-        QPointer<MainWindow> windowPtr = mainWindow;
-
-        return new VMStartAction(
-            vm,
-            [windowPtr](QSharedPointer<VM> vm, bool isStart) {
-                VMOperationHelpers::WarningDialogHAInvalidConfig(vm, isStart, windowPtr.data());
-            },
-            [conn, displayName, windowPtr, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
-                Q_UNUSED(abstractAction)
-                if (!windowPtr)
-                    return;
-                Failure failureCopy = failure;
-                QMetaObject::invokeMethod(windowPtr, [windowPtr, conn, vm, displayName, failureCopy]() {
-                    if (!windowPtr)
-                        return;
-                    VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, windowPtr);
-                }, Qt::QueuedConnection);
-            },
-            mainWindow);
-    }
 } // namespace
 
 StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
@@ -217,7 +193,7 @@ void StartVMCommand::Run()
 
     if (runnable.size() == 1 && brokenCds.isEmpty())
     {
-        VMStartAction* action = createStartAction(MainWindow::instance(), runnable.first());
+        VMStartAction* action = VMOperationHelpers::CreateVMStartAction(MainWindow::instance(), runnable.first());
         action->RunAsync(true);
         return;
     }
@@ -248,7 +224,7 @@ void StartVMCommand::Run()
     {
         if (!brokenCds.contains(vm))
         {
-            actions.append(createStartAction(MainWindow::instance(), vm));
+            actions.append(VMOperationHelpers::CreateVMStartAction(MainWindow::instance(), vm));
             continue;
         }
 
@@ -258,7 +234,7 @@ void StartVMCommand::Run()
         {
             subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), MainWindow::instance()));
         }
-        subActions.append(createStartAction(MainWindow::instance(), vm));
+        subActions.append(VMOperationHelpers::CreateVMStartAction(MainWindow::instance(), vm));
 
         XenConnection* conn = vm->GetConnection();
         MultipleAction* multi = new MultipleAction(
@@ -311,7 +287,7 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
         {
             subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), MainWindow::instance()));
         }
-        subActions.append(createStartAction(MainWindow::instance(), vm));
+        subActions.append(VMOperationHelpers::CreateVMStartAction(MainWindow::instance(), vm));
 
         MultipleAction* multi = new MultipleAction(
             vm->GetConnection(),
@@ -327,7 +303,7 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
         return true;
     }
 
-    VMStartAction* action = createStartAction(MainWindow::instance(), vm);
+    VMStartAction* action = VMOperationHelpers::CreateVMStartAction(MainWindow::instance(), vm);
     action->RunAsync(true);
     return true;
 }
