@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PerfmonAlertOptionsPage</class>
+ <widget class="QWidget" name="PerfmonAlertOptionsPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QLabel" name="blurbLabel">
+     <property name="text">
+      <string>If you want to be notified via email when alerts are generated for your system's resources, enter an address where email notifications will be sent.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="enableCheckBox">
+     <property name="text">
+      <string>Send email alert &amp;notifications</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="deliveryGroupBox">
+     <property name="title">
+      <string>Delivery address</string>
+     </property>
+     <layout class="QGridLayout" name="deliveryLayout" columnstretch="0,1,0,0">
+      <item row="0" column="0">
+       <widget class="QLabel" name="emailLabel">
+        <property name="text">
+         <string>&amp;Email address:</string>
+        </property>
+        <property name="buddy">
+         <cstring>emailAddressLineEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="3">
+       <widget class="QLineEdit" name="emailAddressLineEdit"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="smtpServerLabel">
+        <property name="text">
+         <string>&amp;SMTP Server:</string>
+        </property>
+        <property name="buddy">
+         <cstring>smtpServerLineEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="smtpServerLineEdit"/>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="smtpPortLabel">
+        <property name="text">
+         <string>&amp;Port:</string>
+        </property>
+        <property name="buddy">
+         <cstring>smtpPortLineEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLineEdit" name="smtpPortLineEdit">
+        <property name="maximumSize">
+         <size>
+          <width>70</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">25</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="languageLabel">
+        <property name="text">
+         <string>&amp;Mail language:</string>
+        </property>
+        <property name="buddy">
+         <cstring>languageComboBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="languageComboBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="bottomSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

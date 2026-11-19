@@ -349,6 +349,7 @@ set(XENADMIN_SOURCES
     settingspanels/perfmonalerteditpage.cpp
     settingspanels/perfmonalertoptionspage.cpp
     settingspanels/perfmonalerteditpage.ui
+    settingspanels/perfmonalertoptionspage.ui
     settingspanels/pooladvancededitpage.cpp
     settingspanels/pooladvancededitpage.ui
     settingspanels/poolgpueditpage.cpp

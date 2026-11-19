@@ -30,10 +30,10 @@
 
 #include "ieditpage.h"
 
-class QCheckBox;
-class QComboBox;
-class QLabel;
-class QLineEdit;
+namespace Ui
+{
+    class PerfmonAlertOptionsPage;
+}
 
 /**
  * @brief Email notifications for performance alerts (pool or standalone server)
@@ -47,6 +47,7 @@ class PerfmonAlertOptionsPage : public IEditPage
 
     public:
         explicit PerfmonAlertOptionsPage(QWidget* parent = nullptr);
+        ~PerfmonAlertOptionsPage() override;
 
         QString GetText() const override;
         QString GetSubText() const override;
@@ -75,12 +76,7 @@ class PerfmonAlertOptionsPage : public IEditPage
         void updateEnablement();
         int indexOfLanguage(const QString& code) const;
 
-        QCheckBox* m_enableCheckBox = nullptr;
-        QLineEdit* m_emailAddress = nullptr;
-        QLineEdit* m_smtpServer = nullptr;
-        QLineEdit* m_smtpPort = nullptr;
-        QLabel* m_languageLabel = nullptr;
-        QComboBox* m_language = nullptr;
+        Ui::PerfmonAlertOptionsPage* ui;
 
         bool m_origEnabled = false;
         QString m_origEmailAddress;

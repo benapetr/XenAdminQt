@@ -4,6 +4,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "iconmanager.h"
 #include "dialogs/savesearchdialog.h"
+#include "settingspanels/perfmonalertoptionspage.h"
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
 #include "controls/xensearch/searcher.h"
@@ -15,6 +16,7 @@
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QLineEdit>
@@ -372,6 +374,37 @@ private slots:
         QVERIFY(buttons->button(QDialogButtonBox::Save)->isEnabled());
         name->setText("   ");
         QVERIFY(!buttons->button(QDialogButtonBox::Save)->isEnabled());
+    }
+
+    void emailNotificationsPageFollowsCheckbox()
+    {
+        PerfmonAlertOptionsPage page;
+        QCheckBox* enable = page.findChild<QCheckBox*>("enableCheckBox");
+        QLineEdit* email = page.findChild<QLineEdit*>("emailAddressLineEdit");
+        QLineEdit* server = page.findChild<QLineEdit*>("smtpServerLineEdit");
+        QLineEdit* port = page.findChild<QLineEdit*>("smtpPortLineEdit");
+        QComboBox* language = page.findChild<QComboBox*>("languageComboBox");
+        QVERIFY(enable && email && server && port && language);
+
+        // C# defaults: off, port 25, the three mail languages with their codes
+        QVERIFY(!enable->isChecked());
+        QVERIFY(!email->isEnabled() && !server->isEnabled() && !port->isEnabled() && !language->isEnabled());
+        QCOMPARE(port->text(), QString("25"));
+        QCOMPARE(language->count(), 3);
+        QCOMPARE(language->itemData(0).toString(), QString("en-US"));
+        QCOMPARE(page.GetSubText(), QString("None defined"));
+        QVERIFY(page.IsValidToSave());
+
+        // Enabled, the fields must be valid before saving
+        enable->setChecked(true);
+        QVERIFY(email->isEnabled() && server->isEnabled() && port->isEnabled() && language->isEnabled());
+        QVERIFY(!page.IsValidToSave());
+        email->setText("admin@example.com");
+        server->setText("smtp.example.com");
+        QVERIFY(page.IsValidToSave());
+        QCOMPARE(page.GetSubText(), QString("admin@example.com"));
+        port->setText("70000");
+        QVERIFY(!page.IsValidToSave());
     }
 };
 

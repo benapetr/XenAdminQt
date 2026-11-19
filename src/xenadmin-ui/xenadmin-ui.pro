@@ -704,6 +704,7 @@ FORMS += \
     settingspanels/vmhaeditpage.ui \
     settingspanels/customfieldsdisplaypage.ui \
     settingspanels/perfmonalerteditpage.ui \
+    settingspanels/perfmonalertoptionspage.ui \
     settingspanels/homeservereditpage.ui \
     settingspanels/vmadvancededitpage.ui \
     settingspanels/vmenlightenmenteditpage.ui \

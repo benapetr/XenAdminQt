@@ -14,7 +14,9 @@ SOURCES += \
     ../../src/xenadmin-ui/controls/xensearch/searcher.cpp \
     ../../src/xenadmin-ui/controls/xensearch/groupingcontrol.cpp \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.cpp \
-    ../../src/xenadmin-ui/dialogs/savesearchdialog.cpp
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.cpp \
+    ../../src/xenadmin-ui/settingspanels/ieditpage.cpp \
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp
 
 # Search editor widgets (moc)
 HEADERS += \
@@ -26,11 +28,14 @@ HEADERS += \
     ../../src/xenadmin-ui/controls/xensearch/searcher.h \
     ../../src/xenadmin-ui/controls/xensearch/groupingcontrol.h \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.h \
-    ../../src/xenadmin-ui/dialogs/savesearchdialog.h
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.h \
+    ../../src/xenadmin-ui/settingspanels/ieditpage.h \
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h
 
 FORMS += \
     ../../src/xenadmin-ui/dialogs/customsearchdialog.ui \
-    ../../src/xenadmin-ui/dialogs/savesearchdialog.ui
+    ../../src/xenadmin-ui/dialogs/savesearchdialog.ui \
+    ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.ui
 
 INCLUDEPATH += \
     ../../src \
