@@ -26,6 +26,8 @@
  */
 
 #include "searcher.h"
+#include <QApplication>
+#include <QStyle>
 #include "queryelement.h"
 #include "groupingcontrol.h"
 #include "../../dialogs/customsearchdialog.h"
@@ -104,7 +106,20 @@ void SearchFor::initializeDictionaries()
     // Custom placeholder
     this->typeNames_[CUSTOM] = "Custom...";
 
-    // TODO: Load icons for each type
+    // C# PropertyAccessors.ObjectTypes_images (combinations other than all SRs have none)
+    this->typeIcons_[ObjectTypes::Pool] = QIcon(":/tree-icons/pool.png");
+    this->typeIcons_[ObjectTypes::Server] = QIcon(":/tree-icons/host.png");
+    this->typeIcons_[ObjectTypes::DisconnectedServer] = QIcon(":/tree-icons/host_disconnected.png");
+    this->typeIcons_[ObjectTypes::VM] = QIcon(":/tree-icons/vm_generic.png");
+    this->typeIcons_[ObjectTypes::Snapshot] = QIcon(":/tree-icons/snapshot.png");
+    this->typeIcons_[ObjectTypes::UserTemplate] = QIcon(":/tree-icons/template_user.png");
+    this->typeIcons_[ObjectTypes::DefaultTemplate] = QIcon(":/tree-icons/template.png");
+    this->typeIcons_[ObjectTypes::LocalSR] = QIcon(":/tree-icons/storage.png");
+    this->typeIcons_[ObjectTypes::RemoteSR] = QIcon(":/tree-icons/storage.png");
+    this->typeIcons_[ObjectTypes::LocalSR | ObjectTypes::RemoteSR] = QIcon(":/tree-icons/storage.png");
+    this->typeIcons_[ObjectTypes::VDI] = QIcon(":/icons/virtual_storage.png");
+    this->typeIcons_[ObjectTypes::Network] = QIcon(":/tree-icons/network.png");
+    this->typeIcons_[ObjectTypes::Folder] = QApplication::style()->standardIcon(QStyle::SP_DirIcon); // as the tree shows folders
 }
 
 void SearchFor::populateComboBox()
@@ -174,6 +189,17 @@ void SearchFor::populateComboBox()
     // Custom option
     this->comboBox_->addItem(this->getTypeName(CUSTOM), 
                              QVariant::fromValue(static_cast<int>(CUSTOM)));
+
+    // C# AddItemToSearchFor: types with an image get it
+    for (int i = 0; i < this->comboBox_->count(); ++i)
+    {
+        const QVariant data = this->comboBox_->itemData(i);
+        if (!data.isValid())
+            continue; // separator
+        const ObjectTypes type = static_cast<ObjectTypes>(data.toInt());
+        if (this->typeIcons_.contains(type))
+            this->comboBox_->setItemIcon(i, this->typeIcons_.value(type));
+    }
 
     // Default selection
     this->comboBox_->setCurrentIndex(this->comboBox_->findData(
