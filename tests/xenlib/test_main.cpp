@@ -6,6 +6,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/utils/vncdes.h"
 #include "xenlib/alerts/alertmanager.h"
+#include "xenlib/xen/actions/wlb/wlbrecommendations.h"
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
@@ -435,6 +436,32 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void wlbReasonsAreReadable()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Host, "OpaqueRef:a", QVariantMap{{"name_label", "a"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:b", QVariantMap{{"name_label", "b"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"name_label", "vm"}, {"resident_on", "OpaqueRef:a"}});
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:vm");
+        QSharedPointer<Host> b = cache->ResolveObject<Host>(XenObjectType::Host, "OpaqueRef:b");
+        QSharedPointer<Host> c(new Host(&connection, "OpaqueRef:c"));
+
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> recommendations;
+        recommendations[vm][b] = QStringList{"HOST_NOT_ENOUGH_FREE_MEMORY", "1024", "512"};
+        WlbRecommendations wlb({vm}, recommendations);
+
+        // A XenAPI error is shown as its friendly text (C# new Failure(rec).ShortMessage)
+        const QString reason = wlb.GetStarRating(b).CantRunReasons.value(vm);
+        QVERIFY(!reason.isEmpty());
+        QVERIFY(!reason.contains("HOST_NOT_ENOUGH_FREE_MEMORY"));
+
+        // No recommendation for a host: it is not live
+        const WlbRecommendation none = wlb.GetStarRating(c);
+        QVERIFY(!none.CanRunByVM.value(vm, true));
+        QCOMPARE(none.CantRunReasons.value(vm), QString("Host not live"));
     }
 
     void alertManagerAllowsCallbacksFromItsSignals()

@@ -28,6 +28,7 @@
 #include "wlbrecommendations.h"
 #include "../../vm.h"
 #include "../../host.h"
+#include "../../failure.h"
 #include <QHash>
 #include <QDebug>
 
@@ -106,7 +107,12 @@ WlbRecommendation WlbRecommendations::GetStarRating(const QSharedPointer<Host>& 
 
         const QHash<QSharedPointer<Host>, QStringList>& hostRecs = this->m_recommendations[vm];
         if (!hostRecs.contains(host))
+        {
+            // C#: no recommendation for the host means it is not live
+            result.CanRunByVM[vm] = false;
+            result.CantRunReasons[vm] = HOST_NOT_LIVE_SHORT;
             continue;
+        }
 
         const QStringList& rec = hostRecs[host];
 
@@ -139,17 +145,9 @@ WlbRecommendation WlbRecommendations::GetStarRating(const QSharedPointer<Host>& 
             
             if (rec.size() > 0)
             {
-                // TODO: Parse using Failure class when implemented
-                // For now, check for common "HOST_NOT_LIVE" error
-                if (rec[0].contains("HOST_NOT_LIVE", Qt::CaseInsensitive))
-                {
-                    result.CantRunReasons[vm] = HOST_NOT_LIVE_SHORT;
-                }
-                else
-                {
-                    // Generic error message from rec[0]
-                    result.CantRunReasons[vm] = rec[0];
-                }
+                // C#: new Failure(rec).ShortMessage
+                const Failure failure(rec);
+                result.CantRunReasons[vm] = failure.shortMessage().isEmpty() ? failure.message() : failure.shortMessage();
             }
             else
             {

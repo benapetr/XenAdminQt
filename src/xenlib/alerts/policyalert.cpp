@@ -26,6 +26,7 @@
  */
 
 #include "policyalert.h"
+#include "../xen/failure.h"
 #include <QRegularExpression>
 #include <QDebug>
 
@@ -92,8 +93,8 @@ void PolicyAlert::parsePolicyMessage()
         if (errorMatch.hasMatch())
         {
             QString errorCode = errorMatch.captured(1);
-            // TODO: Map error code to friendly message using XenAPI Failure class
-            QString errorMessage = errorCode;  // For now, show error code directly
+            // C#: new Failure(errorCode).Message
+            const QString errorMessage = Failure(errorCode).message();
             vmFailures.append(tr("  - %1: %2").arg(vmName, errorMessage));
         }
     }
