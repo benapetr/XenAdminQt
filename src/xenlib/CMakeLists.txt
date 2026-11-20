@@ -61,6 +61,7 @@ set(XENLIB_SOURCES
     xen/actions/network/createsriovaction.cpp
     xen/actions/network/destroybondaction.cpp
     xen/actions/network/networkaction.cpp
+    xen/actions/network/unplugplugnetworkaction.cpp
     xen/actions/network/networkingactionhelpers.cpp
     xen/actions/network/rescanpifsaction.cpp
     xen/actions/network/setsecondarymanagementpurposeaction.cpp

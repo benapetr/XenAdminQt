@@ -37,6 +37,10 @@
 #include "xenlib/xen/vif.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/network/networkaction.h"
+#include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
+#include "xenlib/xen/xenapi/xenapi_Bond.h"
+#include "xenlib/operations/multipleaction.h"
 #include "iconmanager.h"
 #include <QMessageBox>
 
@@ -174,10 +178,10 @@ void NetworkGeneralEditPage::SetXenObject(QSharedPointer<XenObject> object,
         if (!vm || !vm->IsValid())
             continue;
 
+        // C#: a running VM without I/O drivers can't take the MTU change
         QString powerState = vm->GetData().value("power_state").toString();
-        if (powerState == "Running")
+        if (powerState == "Running" && !(vm->GetVirtualizationStatus() & 4)) // 4 = IoDriversInstalled
         {
-            // Check if VM has tools installed (simplified - C# checks virtualization status)
             this->m_runningVMsWithoutTools_ = true;
             break;
         }
@@ -578,10 +582,84 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     otherConfig["automatic"] = autoAdd ? "true" : "false";
     this->m_objectDataCopy_["other_config"] = otherConfig;
 
-    // If no PIF changes are needed, let VerticallyTabbedDialog handle simple property changes
-    // Bond mode/hashing changes would need DelegatedAsyncOperation (TODO: port UnplugPlugNetworkAction)
-    if (!needsPifChange)
+    // MTU and auto-add are saved by the dialog's SaveChangesAction, which runs first.
+    // C# EditNetworkPage.SaveSettings: bond changes, then either the PIF
+    // reconfiguration or, for an MTU change, replugging the network.
+    QList<AsyncOperation*> actions;
+    if (this->bondModeHasChanged())
+        actions.append(this->setBondActions(network, QString()));
+    if (this->hashingAlgorithmHasChanged())
+        actions.append(this->setBondActions(network, this->getSelectedHashingAlgorithm()));
+
+    if (needsPifChange)
+    {
+        // NetworkAction recreates the PIFs anyway, so no replug is needed
+        if (AsyncOperation* action = this->pifChangeAction(network))
+            actions.append(action);
+    } else if (this->mtuHasChanged())
+    {
+        actions.append(new UnplugPlugNetworkAction(network, true, this));
+    }
+
+    if (actions.isEmpty())
         return nullptr;
+    if (actions.size() == 1)
+        return actions.first();
+
+    for (AsyncOperation* action : actions)
+        action->setParent(nullptr);
+    return new MultipleAction(conn, tr("Save Changes"), tr("Saving changes..."), tr("Saved changes"),
+                              actions, true, false, false, this);
+}
+
+QList<AsyncOperation*> NetworkGeneralEditPage::setBondActions(const QSharedPointer<Network>& network,
+                                                               const QString& hashingAlgorithm)
+{
+    // C# SetBondModeActions / SetBondPropertiesActions: one action per bond of the network
+    QList<AsyncOperation*> actions;
+    XenCache* cache = network->GetCache();
+    if (!cache)
+        return actions;
+
+    const QString mode = this->getSelectedBondMode();
+    for (const QSharedPointer<PIF>& pif : network->GetPIFs())
+    {
+        for (const QVariant& bondRefVar : pif->GetData().value("bond_master_of").toList())
+        {
+            const QString bondRef = bondRefVar.toString();
+            QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(XenObjectType::Bond, bondRef);
+            if (!bond || !bond->IsValid())
+                continue;
+
+            DelegatedAsyncOperation* action;
+            if (hashingAlgorithm.isEmpty())
+            {
+                action = new DelegatedAsyncOperation(network->GetConnection(), tr("Change bond mode"),
+                    tr("Changing bond mode..."),
+                    [bondRef, mode](DelegatedAsyncOperation* self)
+                    {
+                        XenAPI::Bond::set_mode(self->GetSession(), bondRef, mode);
+                    }, this);
+                action->AddApiMethodToRoleCheck("bond.set_mode");
+            } else
+            {
+                action = new DelegatedAsyncOperation(network->GetConnection(), tr("Change load balancing algorithm"),
+                    tr("Changing load balancing algorithm..."),
+                    [bondRef, hashingAlgorithm](DelegatedAsyncOperation* self)
+                    {
+                        XenAPI::Bond::set_property(self->GetSession(), bondRef, "hashing_algorithm", hashingAlgorithm);
+                    }, this);
+                action->AddApiMethodToRoleCheck("bond.set_property");
+            }
+            actions.append(action);
+        }
+    }
+    return actions;
+}
+
+AsyncOperation* NetworkGeneralEditPage::pifChangeAction(const QSharedPointer<Network>& network)
+{
+    XenConnection* conn = network->GetConnection();
 
     // Complex PIF reconfiguration requires NetworkAction
     bool isNowInternal = this->isSelectedInternal();

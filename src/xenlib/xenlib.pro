@@ -268,6 +268,7 @@ HEADERS += \
     xen/actions/network/destroybondaction.h \
     xen/actions/network/createsriovaction.h \
     xen/actions/network/networkaction.h \
+    xen/actions/network/unplugplugnetworkaction.h \
     xen/actions/network/setsecondarymanagementpurposeaction.h \
     xen/actions/network/networkingactionhelpers.h \
     xen/actions/network/rescanpifsaction.h \
@@ -533,6 +534,7 @@ SOURCES += \
     xen/actions/network/destroybondaction.cpp \
     xen/actions/network/createsriovaction.cpp \
     xen/actions/network/networkaction.cpp \
+    xen/actions/network/unplugplugnetworkaction.cpp \
     xen/actions/network/setsecondarymanagementpurposeaction.cpp \
     xen/actions/network/networkingactionhelpers.cpp \
     xen/actions/network/rescanpifsaction.cpp \

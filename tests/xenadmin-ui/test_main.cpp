@@ -7,6 +7,9 @@
 #include "settingspanels/perfmonalertoptionspage.h"
 #include "settingspanels/customfieldsdisplaypage.h"
 #include "dialogs/newcustomfielddialog.h"
+#include "settingspanels/networkgeneraleditpage.h"
+#include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
+#include <QSpinBox>
 #include <QDateTimeEdit>
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
@@ -471,6 +474,52 @@ private slots:
         QCOMPARE(page.GetSubText(), QString("admin@example.com"));
         port->setText("70000");
         QVERIFY(!page.IsValidToSave());
+    }
+    void networkMtuChangeIsSavedAndReplugged()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Host, "OpaqueRef:host", QVariantMap{{"name_label", "host"}, {"PIFs", QVariantList{"OpaqueRef:pif"}}});
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"master", "OpaqueRef:host"}});
+        cache->Update(XenObjectType::PIF, "OpaqueRef:pif",
+                      QVariantMap{{"host", "OpaqueRef:host"}, {"network", "OpaqueRef:net"}, {"device", "eth1"},
+                                  {"physical", true}, {"VLAN", -1}, {"currently_attached", true}, {"management", false}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"name_label", "vm"}, {"power_state", "Running"},
+                                                                    {"guest_metrics", "OpaqueRef:metrics"}});
+        cache->Update(XenObjectType::VMGuestMetrics, "OpaqueRef:metrics",
+                      QVariantMap{{"PV_drivers_version", QVariantMap{{"major", "8"}, {"minor", "2"}}}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:halted", QVariantMap{{"name_label", "off"}, {"power_state", "Halted"}});
+        cache->Update(XenObjectType::VIF, "OpaqueRef:vif", QVariantMap{{"VM", "OpaqueRef:vm"}, {"currently_attached", true}});
+        cache->Update(XenObjectType::VIF, "OpaqueRef:vif-off", QVariantMap{{"VM", "OpaqueRef:halted"}, {"currently_attached", false}});
+        const QVariantMap networkData{{"name_label", "net"}, {"MTU", 1500}, {"other_config", QVariantMap()},
+                                      {"PIFs", QVariantList{"OpaqueRef:pif"}},
+                                      {"VIFs", QVariantList{"OpaqueRef:vif", "OpaqueRef:vif-off"}}};
+        cache->Update(XenObjectType::Network, "OpaqueRef:net", networkData);
+
+        NetworkGeneralEditPage page;
+        page.SetConnection(&connection); // as VerticallyTabbedDialog does
+        page.SetXenObject(cache->ResolveObject(XenObjectType::Network, "OpaqueRef:net"), networkData, networkData);
+        QSpinBox* mtu = page.findChild<QSpinBox*>("mtuSpinBox");
+        QVERIFY(mtu);
+        QVERIFY(mtu->isEnabled());
+        QVERIFY(!page.HasChanged());
+
+        mtu->setValue(9000);
+        QVERIFY(page.HasChanged());
+        std::unique_ptr<AsyncOperation> action(page.SaveSettings());
+
+        // The new MTU goes to the dialog's SaveChangesAction ...
+        QCOMPARE(page.GetModifiedObjectData().value("MTU").toLongLong(), 9000LL);
+        // ... and the network is replugged so that it takes effect: attached PIFs, VIFs of running VMs
+        auto* replug = qobject_cast<UnplugPlugNetworkAction*>(action.get());
+        QVERIFY(replug);
+        QCOMPARE(replug->GetPIFRefs(), QStringList{"OpaqueRef:pif"});
+        QCOMPARE(replug->GetVIFRefs(), QStringList{"OpaqueRef:vif"});
+
+        // A running VM without I/O drivers can't take the change (C# runningVMsWithoutTools)
+        cache->Update(XenObjectType::VMGuestMetrics, "OpaqueRef:metrics", QVariantMap());
+        page.SetXenObject(cache->ResolveObject(XenObjectType::Network, "OpaqueRef:net"), networkData, networkData);
+        QVERIFY(!mtu->isEnabled());
     }
 };
 

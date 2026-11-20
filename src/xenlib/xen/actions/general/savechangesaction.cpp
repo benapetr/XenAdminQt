@@ -187,6 +187,16 @@ void SaveChangesAction::run()
                 XenAPI::Network::set_other_config(session, this->m_objectRef, newOtherConfig);
                 this->throwIfJsonError("Network.set_other_config");
             }
+
+            // C# Network.SaveChanges: MTU is a plain field; the edit page replugs the
+            // network afterwards (UnplugPlugNetworkAction) so the change takes effect
+            const QVariant oldMtu = this->m_objectDataBefore.value("MTU");
+            const QVariant newMtu = this->m_objectDataCopy.value("MTU");
+            if (newMtu.isValid() && oldMtu.toLongLong() != newMtu.toLongLong())
+            {
+                XenAPI::Network::set_MTU(session, this->m_objectRef, newMtu.toLongLong());
+                this->throwIfJsonError("Network.set_MTU");
+            }
         }
 
         this->SetPercentComplete(55);

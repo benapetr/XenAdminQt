@@ -18,6 +18,7 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/ieditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.cpp \
+    ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.cpp \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.cpp \
     ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.cpp
 
@@ -35,6 +36,7 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/ieditpage.h \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.h \
+    ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.h \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.h \
     ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.h
 
@@ -43,6 +45,7 @@ FORMS += \
     ../../src/xenadmin-ui/dialogs/savesearchdialog.ui \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.ui \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.ui \
+    ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.ui \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.ui
 
 INCLUDEPATH += \

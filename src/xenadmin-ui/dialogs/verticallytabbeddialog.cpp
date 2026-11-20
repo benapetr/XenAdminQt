@@ -440,6 +440,11 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
         {
             this->m_objectDataCopy["HVM_shadow_multiplier"] = pageData.value("HVM_shadow_multiplier");
         }
+
+        if (pageData.contains("MTU"))
+        {
+            this->m_objectDataCopy["MTU"] = pageData.value("MTU");
+        }
         
         if (action)
         {

@@ -36,6 +36,7 @@ class NetworkGeneralEditPage;
 }
 
 class AsyncOperation;
+class Network;
 
 /**
  * @brief Network-specific settings edit page
@@ -103,6 +104,10 @@ class NetworkGeneralEditPage : public IEditPage
         bool isNicVlanEditable() const;
         QString getSelectedBondMode() const;
         QString getSelectedHashingAlgorithm() const;
+        //! C# SetBondModeActions (empty algorithm) / SetBondPropertiesActions
+        QList<AsyncOperation*> setBondActions(const QSharedPointer<Network>& network, const QString& hashingAlgorithm);
+        //! NetworkAction for a change between internal/external or of NIC/VLAN
+        AsyncOperation* pifChangeAction(const QSharedPointer<Network>& network);
         QString getNetworkPifRef() const;
         QString getPhysicalPifRef() const;
         QString findVirtualPifRefForSelection(const QString& nicName, int vlan) const;
