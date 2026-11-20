@@ -129,6 +129,7 @@ SOURCES += \
     settingspanels/logdestinationeditpage.cpp \
     settingspanels/cpumemoryeditpage.cpp \
     settingspanels/bootoptionseditpage.cpp \
+    settingspanels/cloudconfigparameterspage.cpp \
     settingspanels/vmhaeditpage.cpp \
     settingspanels/customfieldsdisplaypage.cpp \
     settingspanels/perfmonalerteditpage.cpp \
@@ -458,6 +459,7 @@ HEADERS += \
     settingspanels/logdestinationeditpage.h \
     settingspanels/cpumemoryeditpage.h \
     settingspanels/bootoptionseditpage.h \
+    settingspanels/cloudconfigparameterspage.h \
     settingspanels/vmhaeditpage.h \
     settingspanels/customfieldsdisplaypage.h \
     settingspanels/perfmonalerteditpage.h \
@@ -714,6 +716,7 @@ FORMS += \
     settingspanels/logdestinationeditpage.ui \
     settingspanels/cpumemoryeditpage.ui \
     settingspanels/bootoptionseditpage.ui \
+    settingspanels/cloudconfigparameterspage.ui \
     settingspanels/vmhaeditpage.ui \
     settingspanels/customfieldsdisplaypage.ui \
     settingspanels/perfmonalerteditpage.ui \

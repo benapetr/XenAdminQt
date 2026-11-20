@@ -327,6 +327,8 @@ set(XENADMIN_SOURCES
     selectionmanager.cpp
     settingsmanager.cpp
     settingspanels/bootoptionseditpage.cpp
+    settingspanels/cloudconfigparameterspage.cpp
+    settingspanels/cloudconfigparameterspage.ui
     settingspanels/bootoptionseditpage.ui
     settingspanels/cpumemoryeditpage.cpp
     settingspanels/cpumemoryeditpage.ui

@@ -548,6 +548,27 @@ private slots:
         QVERIFY(cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:new")->UsingUpstreamQemu());
     }
 
+    void cloudConfigDriveFoundThroughVbds()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VDI, "OpaqueRef:disk", QVariantMap{{"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::VDI, "OpaqueRef:drive", QVariantMap{{"other_config", QVariantMap{{"config-drive", "True"}}}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:vbd1", QVariantMap{{"VDI", "OpaqueRef:disk"}});
+        cache->Update(XenObjectType::VBD, "OpaqueRef:vbd2", QVariantMap{{"VDI", "OpaqueRef:drive"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:with", QVariantMap{{"is_a_template", false}, {"VBDs", QVariantList{"OpaqueRef:vbd1", "OpaqueRef:vbd2"}}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:without", QVariantMap{{"is_a_template", false}, {"VBDs", QVariantList{"OpaqueRef:vbd1"}}});
+
+        // C# VM.CloudConfigDrive / CanHaveCloudConfigDrive (config-drive compared case-insensitively)
+        QSharedPointer<VM> with = cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:with");
+        QSharedPointer<VM> without = cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:without");
+        QVERIFY(with->CloudConfigDrive());
+        QCOMPARE(with->CloudConfigDrive()->OpaqueRef(), QString("OpaqueRef:drive"));
+        QVERIFY(with->CanHaveCloudConfigDrive());
+        QVERIFY(!without->CloudConfigDrive());
+        QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
     void alertManagerAllowsCallbacksFromItsSignals()
     {
         // Receivers call back into the manager (the alert list rebuilds from it); with the

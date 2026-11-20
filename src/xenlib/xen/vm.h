@@ -306,6 +306,12 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get platform configuration map
         QVariantMap GetPlatform() const;
 
+        //! C# VM.CloudConfigDrive: the first VDI attached to the VM that is a config drive
+        QSharedPointer<VDI> CloudConfigDrive() const;
+
+        //! C# VM.CanHaveCloudConfigDrive: a CoreOS template, or anything that already has a config drive
+        bool CanHaveCloudConfigDrive() const;
+
         //! C# VM.UsingUpstreamQemu: platform:device-model is qemu-upstream-compat (needed for USB passthrough)
         bool UsingUpstreamQemu() const;
 

@@ -1039,6 +1039,24 @@ QVariantMap VM::GetPlatform() const
     return property("platform").toMap();
 }
 
+QSharedPointer<VDI> VM::CloudConfigDrive() const
+{
+    for (const QSharedPointer<VBD>& vbd : this->GetVBDs())
+    {
+        QSharedPointer<VDI> vdi = vbd ? vbd->GetVDI() : QSharedPointer<VDI>();
+        if (vdi && vdi->IsCloudConfigDrive())
+            return vdi;
+    }
+    return QSharedPointer<VDI>();
+}
+
+bool VM::CanHaveCloudConfigDrive() const
+{
+    if (this->IsTemplate() && this->TemplateType() == VmTemplateType::CoreOS)
+        return true;
+    return !this->CloudConfigDrive().isNull();
+}
+
 bool VM::UsingUpstreamQemu() const
 {
     return this->GetPlatform().value("device-model").toString() == "qemu-upstream-compat";

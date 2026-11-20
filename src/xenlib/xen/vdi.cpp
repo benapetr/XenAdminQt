@@ -236,6 +236,11 @@ bool VDI::MetadataLatest() const
     return this->boolProperty("metadata_latest", false);
 }
 
+bool VDI::IsCloudConfigDrive() const
+{
+    return this->GetOtherConfig().value("config-drive").toString().toLower() == "true";
+}
+
 bool VDI::IsToolsIso() const
 {
     // C# equivalent: VDI.IsToolsIso()

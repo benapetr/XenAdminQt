@@ -38,6 +38,7 @@
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
 #include "../settingspanels/usbeditpage.h"
+#include "../settingspanels/cloudconfigparameterspage.h"
 #include "xen/pool.h"
 #include "xen/host.h"
 #include "xen/poolupdate.h"
@@ -162,9 +163,13 @@ void VMPropertiesDialog::build()
             this->showTab(new VMAdvancedEditPage());
         }
 
-        if (containerCapability(this->m_vm->GetConnection()) && this->m_vm->CanBeEnlightened())
+        if (containerCapability(this->m_vm->GetConnection()))
         {
-            this->showTab(new VMEnlightenmentEditPage());
+            if (this->m_vm->CanBeEnlightened())
+                this->showTab(new VMEnlightenmentEditPage());
+
+            if (this->m_vm->CanHaveCloudConfigDrive())
+                this->showTab(new CloudConfigParametersPage());
         }
     }
 

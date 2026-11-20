@@ -174,6 +174,9 @@ class XENLIB_EXPORT VDI : public XenObject
          */
         bool IsToolsIso() const;
 
+        //! C# VDI.IsCloudConfigDrive: other_config:config-drive is true
+        bool IsCloudConfigDrive() const;
+
         //! Check if Changed Block Tracking is enabled for this VDI
         bool IsCBTEnabled() const;
 
