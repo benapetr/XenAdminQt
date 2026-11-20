@@ -230,8 +230,6 @@ void NavigationPane::addNavigationItemPair(QObject* bigButton, QObject* smallBut
 void NavigationPane::populateOrganizationDropDown()
 {
     // Matches C# NavigationPane.PopulateOrganizationDropDown
-    // TODO: Implement organization dropdown population
-    // QMenu* menu = m_buttonOrganizationBig->dropDownMenu();
 
     QAction* tagsAction = new QAction(QIcon(":/icons/tag_16.png"), "Tags", this);
     tagsAction->setData(QVariant::fromValue(Tags));

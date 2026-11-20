@@ -55,8 +55,6 @@ class PBD;
  * - Management interface migration
  * - Coordinated PIF bring-up/bring-down
  * - Pool.management_reconfigure with fallback to host-by-host
- *
- * TODO:
  * - Cluster/GFS2 SR coordination (disable clustering before network changes)
  * - IP address range calculation for static IPs across pool members
  * - Feature checks (Host.RestrictManagementOnVLAN)

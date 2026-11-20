@@ -414,10 +414,7 @@ QueryScope* NavigationView::buildTreeSearchScope() const
 void NavigationView::onSearchTextChanged(const QString& text)
 {
     // Matches C# NavigationView.searchTextBox_TextChanged (line 215)
-    // Trigger tree refresh with search filter
-    // TODO: When tree builder is implemented, this will:
-    // 1. Create filtered search: CurrentSearch.AddFullTextFilter(text)
-    // 2. Call treeBuilder.RefreshTreeView(newRoot, text, mode)
+    // The tree builds apply the full-text filter from the search box
     Q_UNUSED(text);
     this->RequestRefreshTreeView();
 }

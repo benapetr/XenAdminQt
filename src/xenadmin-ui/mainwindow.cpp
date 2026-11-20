@@ -2858,7 +2858,6 @@ void MainWindow::initializeToolbar()
     connect(ui->forceShutdownAction, &QAction::triggered, this, &MainWindow::onForceShutdownButton);
     connect(ui->forceRebootAction, &QAction::triggered, this, &MainWindow::onForceRebootButton);
 
-    // TODO: Add Pool connections when implemented
     // TODO: Add Docker container buttons when needed
 
     // Initial state - disable all action buttons

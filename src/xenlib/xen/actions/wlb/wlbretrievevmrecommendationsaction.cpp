@@ -58,8 +58,6 @@ void WlbRetrieveVmRecommendationsAction::run()
     }
 
     // Check if WLB is enabled on the connection
-    // TODO: Implement Helpers::WlbEnabled() check
-    // For now we'll attempt the call and handle errors
     bool wlbEnabled = false;
     
     // Get pool to check WLB configuration

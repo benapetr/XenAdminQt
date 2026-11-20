@@ -56,10 +56,6 @@ class AsyncOperation;
  * - Warnings for management interfaces and attached VMs
  * - SR-IOV network detection
  *
- * TODO: Add SR-IOV-specific settings page when needed. Current implementation
- * detects SR-IOV networks but doesn't provide SR-IOV-specific configuration UI.
- * See C# for whether a separate SR-IOV page is needed.
- *
  * C# Reference: xenadmin/XenAdmin/SettingsPanels/EditNetworkPage.cs
  */
 class NetworkGeneralEditPage : public IEditPage

@@ -58,10 +58,6 @@ void NetworkPropertiesDialog::build()
     // Shows: NIC, VLAN, MTU, Auto-add to VMs, Bond mode
     this->showTab(new NetworkGeneralEditPage());
 
-    // TODO: Add SR-IOV settings page when SR-IOV networks are more commonly used
-    // Would show SR-IOV-specific configuration options
-    // C# doesn't have a separate page for this either
-
     // Select first tab by default
     if (!this->m_pages.isEmpty())
     {

@@ -35,7 +35,7 @@ class XenConnection;
 /**
  * @brief DisconnectCommand - Disconnects a XenConnection (C# DisconnectCommand).
  *
- * Mirrors XenAdmin.Commands.DisconnectCommand: prompts, cancels work (TODO),
+ * Mirrors XenAdmin.Commands.DisconnectCommand: prompts, cancels work,
  * ends the connection, and saves the server list.
  */
 class DisconnectCommand : public Command

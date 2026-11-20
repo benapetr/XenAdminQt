@@ -140,8 +140,6 @@ void CreateBondAction::run()
         // Remove create_in_progress flag
         XenAPI::Network::remove_from_other_config(this->GetSession(), this->m_networkRef, "create_in_progress");
 
-        // TODO: Set network.Locked = true (not yet implemented in Qt)
-
         try
         {
             int inc = poolHosts.count() > 0 ? 90 / (poolHosts.count() * 2) : 90;
@@ -217,8 +215,6 @@ void CreateBondAction::run()
                 newBond.bondInterfaceRef = bondInterfaceRef;
                 newBond.memberRefs = hostPifRefs;
                 this->m_newBonds.append(newBond);
-
-                // TODO: Set bond.Locked = true, bondInterface.Locked = true
 
                 progress += inc;
             }

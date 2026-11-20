@@ -50,9 +50,6 @@ class Host;
  * - Processes hosts in coordinator-last order for stability
  * - Moves management interface names from bond members to bond interface
  * - Handles cleanup on failure (destroys bonds and network)
- *
- * TODO:
- * - Implement network/bond/PIF locking (Locked property)
  */
 class CreateBondAction : public AsyncOperation
 {

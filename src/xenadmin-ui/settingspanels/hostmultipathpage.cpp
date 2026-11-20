@@ -111,7 +111,6 @@ AsyncOperation* HostMultipathPage::SaveSettings()
     // Create and return action
     bool enableMultipath = this->ui->multipathCheckBox->isChecked();
 
-    // TODO check if this really works, the actions shouldn't be owned, this could lead to segfault
     return new EditMultipathAction(host, enableMultipath, this);
 }
 

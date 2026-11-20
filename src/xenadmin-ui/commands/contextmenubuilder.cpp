@@ -1167,7 +1167,7 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
 {
     // C# pattern: Disconnected servers (fake Host objects) show:
     // - Connect (ReconnectHostCommand)
-    // - Forget Password (TODO: implement password management)
+    // - Forget Password (ForgetSavedPasswordCommand)
     // - Remove (RemoveHostCommand)
     QList<XenConnection*> connections = this->getSelectedConnections();
     if (connections.isEmpty())

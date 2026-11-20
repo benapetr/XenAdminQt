@@ -248,7 +248,7 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
         }
 
         // Create new VNCView
-        // Note: Using empty elevated credentials (TODO: support elevated credentials)
+        // No elevated credentials, like C# (only the snapshot console uses them)
         VNCView* newView = new VNCView(vm, QString(), QString(), this);
         this->_vncViews[vmRef] = newView;
     }

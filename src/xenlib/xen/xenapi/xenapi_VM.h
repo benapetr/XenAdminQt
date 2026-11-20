@@ -801,9 +801,6 @@ namespace XenAPI
              */
             static QStringList get_VIFs(Session* session, const QString& vm);
 
-            // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
-            // See xenadmin/XenModel/XenAPI/VM.cs for complete list
-
         private:
             VM() = delete; // Static class, no instances
             ~VM() = delete;

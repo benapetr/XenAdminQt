@@ -58,7 +58,7 @@ class RdpClient;
  * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs lines 147-177
  */
 XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnection *connection, const QString& elevatedUsername, const QString& elevatedPassword)
-    : QWidget(nullptr), _sourceRef(sourceRef), _connection(connection), _parentVNCTabView(parent) // TODO: Get from parent when VNCTabView exists
+    : QWidget(nullptr), _sourceRef(sourceRef), _connection(connection), _parentVNCTabView(parent)
       , _elevatedUsername(elevatedUsername), _elevatedPassword(elevatedPassword), _focusColor(QApplication::palette().color(QPalette::Highlight))
 {
     //qDebug() << "XSVNCScreen: Constructor for source:" << this->_sourceRef;

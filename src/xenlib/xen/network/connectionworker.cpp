@@ -343,8 +343,7 @@ namespace Xen
             // Process any queued API requests
             this->processQueuedRequests();
 
-            // TODO: Implement event.from() polling
-            // For now, just sleep to avoid busy loop
+            // Events are polled by EventPoller; sleep to avoid a busy loop
             QThread::msleep(100);
         }
 
