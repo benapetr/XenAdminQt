@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+After New Pool, the servers that joined are no longer kept as separate connections in the tree and the server list, as in XenCenter
 Alerts can only be dismissed by users whose role allows deleting messages, as in XenCenter, instead of failing on the server
 Selecting pools and standalone servers together offers Disconnect, Reconnect and Edit Tags in the context menu, as XenCenter does, and Disconnect then disconnects all of them
 Failed snapshot schedule alerts and Workload Balancing placement reasons show readable error messages instead of raw XenAPI error codes

@@ -27,6 +27,7 @@
 
 #include "createpoolaction.h"
 #include "../../network/connection.h"
+#include "../../network/connectionsmanager.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_Task.h"
@@ -246,7 +247,16 @@ void CreatePoolAction::run()
 
             SetDescription(QString("Member %1 of %2 joined successfully").arg(i + 1).arg(m_members.size()));
 
-            // TODO: Drop connection and remove from ConnectionsManager
+            // C#: drop the member's own connection, it is now reached through the pool
+            // (EndConnect + ConnectionsManager.ClearCacheAndRemoveConnection). Connections
+            // belong to the GUI thread.
+            QMetaObject::invokeMethod(memberConnection, [memberConnection]()
+            {
+                memberConnection->EndConnect(true, false);
+                Xen::ConnectionsManager::instance()->RemoveConnection(memberConnection);
+                memberConnection->deleteLater();
+            }, Qt::BlockingQueuedConnection);
+            this->m_memberConnections[i] = nullptr;
         }
 
         SetDescription("Pool created successfully");

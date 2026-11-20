@@ -578,5 +578,11 @@ void NewPoolDialog::createPool()
         poolDescription,
         nullptr);
 
+    // The members' own connections were dropped (C# then saves the server list)
+    connect(action, &AsyncOperation::completed, MainWindow::instance(), []()
+    {
+        MainWindow::instance()->SaveServerList();
+    });
+
     action->RunAsync(true);
 }
