@@ -108,6 +108,11 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
         //! read over the already trusted API connection, such a match needs no prompt.
         static bool IsKnownPoolCertificate(const QSslCertificate& certificate);
 
+        //! The host name is the address of a host in a connected pool that has no
+        //! certificate record. XAPI before 1.295 (XCP-ng 8.2) records only certificates
+        //! installed with host.install_server_certificate, not the default self-signed ones.
+        static bool IsUnrecordedPoolMember(const QString& hostname);
+
         //! C# X509Ext.VerifyInAllStores(), shown as "trusted" in the prompt: the only
         //! verification problem is a host name mismatch (e.g. connecting by IP address)
         static bool IsTrustedChain(const QList<QSslError>& errors);

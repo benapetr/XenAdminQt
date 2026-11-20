@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Opening a console or performance graphs on a pool member of an XCP-ng 8.2 pool no longer asks to trust the member's default certificate
 Rebooting or restarting the toolstack of a pool coordinator, or installing a server certificate, now drops and reconnects the connection straight away, as XenCenter does, instead of treating it as live until the event stream failed; operations on a connection lost unexpectedly are cancelled
 Install Guest Tools inserts the guest tools ISO (XCP-ng: guest-tools.iso) into the VM's CD drive, repairing an unplugged tools SR first, and shows the install commands for Linux guests; it used to show a "Not Implemented" message
 Custom fields work like XenCenter's: they are defined pool-wide (New Custom Field... and Delete on the Custom Fields page update the pool's list, and deleting a field clears its values), the page shows every defined field with a text or date-and-time editor, and the General tab lists only defined fields

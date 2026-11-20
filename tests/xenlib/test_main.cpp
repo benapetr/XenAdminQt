@@ -313,6 +313,27 @@ private slots:
         }
         QVERIFY(!XenCertificateManager::IsKnownPoolCertificate(cert));
 
+        // XAPI before 1.295: a member without a certificate record is accepted by its
+        // address, without a prompt and without being remembered
+        {
+            XenConnection* pool = new XenConnection();
+            Xen::ConnectionsManager::instance()->AddConnection(pool);
+            const auto removePool = qScopeGuard([pool]() { Xen::ConnectionsManager::instance()->RemoveConnection(pool); });
+            pool->GetCache()->Update(XenObjectType::Host, "OpaqueRef:member", QVariantMap{{"address", "10.0.0.2"}});
+
+            manager->SetKnownServers({});
+            prompts.clear();
+            QVERIFY(manager->ValidateServerCertificate(cert, selfSigned, "10.0.0.2"));
+            QVERIFY(prompts.isEmpty());
+            QVERIFY(manager->GetKnownServers().isEmpty());
+
+            // Once the pool records a certificate for that host, a different one is not trusted
+            pool->GetCache()->Update(XenObjectType::Certificate, "OpaqueRef:other",
+                                     QVariantMap{{"type", "host"}, {"host", "OpaqueRef:member"}, {"fingerprint_sha256", "AA:BB"}});
+            QVERIFY(!XenCertificateManager::IsUnrecordedPoolMember("10.0.0.2"));
+            QVERIFY(!XenCertificateManager::IsUnrecordedPoolMember("10.0.0.3"));
+        }
+
         // A missing certificate with errors is rejected
         QVERIFY(!manager->ValidateServerCertificate(QSslCertificate(), selfSigned, host));
     }

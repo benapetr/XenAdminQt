@@ -173,6 +173,48 @@ bool XenCertificateManager::IsKnownPoolCertificate(const QSslCertificate& certif
     return false;
 }
 
+bool XenCertificateManager::IsUnrecordedPoolMember(const QString& hostname)
+{
+    if (hostname.isEmpty())
+        return false;
+
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (!manager)
+        return false;
+
+    for (XenConnection* connection : manager->GetAllConnections())
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            continue;
+
+        QString hostRef;
+        for (const QSharedPointer<XenObject>& host : cache->GetAll(XenObjectType::Host))
+        {
+            if (host && host->GetData().value(QStringLiteral("address")).toString().compare(hostname, Qt::CaseInsensitive) == 0)
+            {
+                hostRef = host->OpaqueRef();
+                break;
+            }
+        }
+        if (hostRef.isEmpty())
+            continue;
+
+        // A host the pool has a certificate record for must match it (IsKnownPoolCertificate)
+        for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Certificate))
+        {
+            if (!object)
+                continue;
+            const QVariantMap data = object->GetData();
+            const QString type = data.value(QStringLiteral("type")).toString();
+            if (data.value(QStringLiteral("host")).toString() == hostRef && (type.isEmpty() || type == QLatin1String("host")))
+                return false;
+        }
+        return true;
+    }
+    return false;
+}
+
 bool XenCertificateManager::IsTrustedChain(const QList<QSslError>& errors)
 {
     for (const QSslError& error : errors)
@@ -227,6 +269,12 @@ bool XenCertificateManager::ValidateServerCertificate(const QSslCertificate& cer
             emit this->trustSettingsChanged();
         return true;
     }
+
+    // XAPI before 1.295 (e.g. XCP-ng 8.2) keeps a certificate record only for a host that
+    // had a certificate installed, not for the default self-signed one. A pool member
+    // without a record is accepted like C# does, but not remembered.
+    if (IsUnrecordedPoolMember(hostname))
+        return true;
 
     // C# CertificateValidationLock: one decision (and dialog) at a time, so a second
     // connection to the same host sees the first answer. A worker thread may hold this
