@@ -31,6 +31,7 @@
 #include "../xen/vdi.h"
 #include "../xen/pool.h"
 #include "../xen/sr.h"
+#include "../xen/friendlynames.h"
 #include "../xencache.h"
 #include "../xen/network/connection.h"
 #include "../metricupdater.h"
@@ -470,15 +471,13 @@ QString PropertyAccessorHelper::GetPoolHAStatus(Pool* pool)
     if (!pool)
         return QString();
     
-    bool haEnabled = pool->HAEnabled();
-    if (!haEnabled)
-        return "Disabled";
-    
-    qint64 planExistsFor = pool->HAPlanExistsFor();
+    if (!pool->HAEnabled())
+        return QObject::tr("Disabled");
+
+    const qint64 planExistsFor = pool->HAPlanExistsFor();
     if (planExistsFor == 1)
-        return QString("Tolerates %1 host failure").arg(planExistsFor);
-    else
-        return QString("Tolerates %1 host failures").arg(planExistsFor);
+        return QObject::tr("%1 failure tolerated").arg(planExistsFor);
+    return QObject::tr("%1 failures tolerated").arg(planExistsFor);
 }
 
 QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
@@ -506,7 +505,7 @@ QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
     for (const QString& vdiRef : vdiRefs)
     {
         if (haStatefiles.contains(vdiRef))
-            return "HA Heartbeat SR";
+            return QObject::tr("HA Heartbeat SR");
     }
     
     return QString();
@@ -514,20 +513,26 @@ QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
 
 QString PropertyAccessorHelper::GetVMHAStatus(VM* vm)
 {
+    // C# PropertyAccessorHelper.GetVMHAStatus: Helpers.RestartPriorityI18n(vm.HARestartPriority())
     if (!vm || !vm->IsRealVM())
         return "-";
-    
-    QString priority = vm->HARestartPriority();
-    
-    // Map priorities to display strings
-    if (priority == "restart")
-        return "Restart";
-    else if (priority == "best-effort" || priority == "")
-        return "Best-effort";
+
+    // C# VM.StringToPriority; anything unrecognised is AlwaysRestart there too
+    const QString priority = vm->HARestartPriority();
+    QString name;
+    if (priority == "0")
+        name = "AlwaysRestartHighPriority";
+    else if (priority == "restart")
+        name = "Restart";
     else if (priority.isEmpty())
-        return "Do not restart";
+        name = "DoNotRestart";
+    else if (priority == "best-effort")
+        name = "BestEffort";
     else
-        return priority;  // Return as-is for unknown priorities
+        name = "AlwaysRestart";
+
+    const QString text = FriendlyNames::getString("Label-VM.ha_restart_priority." + name);
+    return text.isEmpty() ? name : text;
 }
 
 } // namespace XenSearch

@@ -39,6 +39,7 @@
 #include "querypanel.h"
 #include "treewidgetgroupacceptor.h"
 #include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/common.h"
 #include "xenlib/xensearch/sort.h"
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/query.h"
@@ -913,9 +914,9 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
 
 QString QueryPanel::formatHA(XenObject* xenObject) const
 {
-    // TODO: Get HA restart priority
-    Q_UNUSED(xenObject);
-    return QString("--");
+    // C# ColumnAccessors: the ha column shows PropertyNames.haText
+    const auto accessor = XenSearch::PropertyAccessors::Get(XenSearch::PropertyNames::haText);
+    return accessor ? accessor(xenObject).toString() : QString();
 }
 
 void QueryPanel::showColumn(const QString& column)

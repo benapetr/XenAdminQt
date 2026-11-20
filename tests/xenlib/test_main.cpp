@@ -1,4 +1,6 @@
 #include <QtTest>
+#include "xenlib/xensearch/propertyaccessorhelper.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vdi.h"
@@ -486,6 +488,28 @@ private slots:
         const WlbRecommendation none = wlb.GetStarRating(c);
         QVERIFY(!none.CanRunByVM.value(vm, true));
         QCOMPARE(none.CantRunReasons.value(vm), QString("Host not live"));
+    }
+
+    void haTextUsesFriendlyPriorities()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VM, "OpaqueRef:r", QVariantMap{{"name_label", "r"}, {"ha_restart_priority", "restart"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:b", QVariantMap{{"name_label", "b"}, {"ha_restart_priority", "best-effort"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:n", QVariantMap{{"name_label", "n"}, {"ha_restart_priority", ""}});
+        cache->Update(XenObjectType::Pool, "OpaqueRef:p", QVariantMap{{"name_label", "p"}, {"ha_enabled", true}, {"ha_plan_exists_for", 1}});
+
+        // C# Helpers.RestartPriorityI18n via the Label-VM.ha_restart_priority friendly names
+        auto text = [cache](const QString& ref)
+        {
+            return XenSearch::PropertyAccessorHelper::GetVMHAStatus(cache->ResolveObject<VM>(XenObjectType::VM, ref).data());
+        };
+        QCOMPARE(text("OpaqueRef:r"), QString("Restart"));
+        QCOMPARE(text("OpaqueRef:b"), QString("Restart if possible"));
+        QCOMPARE(text("OpaqueRef:n"), QString("Do not restart"));
+
+        Pool* pool = cache->ResolveObject<Pool>(XenObjectType::Pool, "OpaqueRef:p").data();
+        QCOMPARE(XenSearch::PropertyAccessorHelper::GetPoolHAStatus(pool), QString("1 failure tolerated"));
     }
 
     void alertManagerAllowsCallbacksFromItsSignals()

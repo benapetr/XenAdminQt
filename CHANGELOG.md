@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+The HA column in search results shows each VM's restart priority, a pool's failure tolerance and the heartbeat SR instead of always "--"
 The Migrate to Server, Start on Server and Resume on Server submenus in the main VM menu on macOS no longer stay stuck at "Updating..."
 After New Pool, the servers that joined are no longer kept as separate connections in the tree and the server list, as in XenCenter
 Alerts can only be dismissed by users whose role allows deleting messages, as in XenCenter, instead of failing on the server
