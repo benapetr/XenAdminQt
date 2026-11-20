@@ -35,6 +35,7 @@
 #include "../../xenapi/xenapi_Tunnel.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_PIF.h"
+#include "../../xenapi/xenapi_Network_sriov.h"
 #include "../../jsonrpcclient.h"
 #include "../../../xencache.h"
 
@@ -115,6 +116,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
                      "Updating Network",
                      network ? QString("Updating network '%1'").arg(network->GetName())
                              : "Updating network",
+                     suppressHistory,
                      parent),
       m_network(network),
       m_basePif(basePif),
@@ -123,8 +125,6 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
       m_external(external),
       m_changePIFs(changePIFs)
 {
-    Q_UNUSED(suppressHistory); // TODO: Implement history suppression if needed
-
     if (!network)
         throw std::invalid_argument("Network cannot be null");
 
@@ -180,19 +180,12 @@ void NetworkAction::destroyPIFs()
                     }
                 }
 
-                // Check for SR-IOV logical PIF
-                QStringList sriovRefs = pif->SriovLogicalPIFOfRefs();
+                // SR-IOV logical PIF: C# Network_sriov.destroy(Session, pif.sriov_logical_PIF_of[0])
+                const QStringList sriovRefs = pif->SriovLogicalPIFOfRefs();
                 if (!sriovRefs.isEmpty())
                 {
-                    // TODO: This works because xenapi_Network_sriov.h exists
-                    // But keep the pattern consistent
-                    for (const QString& sriovRef : sriovRefs)
-                    {
-                        qWarning() << "SR-IOV PIF cleanup not yet tested";
-                        qWarning() << "SR-IOV ref:" << sriovRef;
-                        // C# code: Network_sriov.destroy(Session, sriovRef);
-                        // Implementation would go here when tested
-                    }
+                    const QString taskRef = XenAPI::Network_sriov::async_destroy(this->GetSession(), sriovRefs.first());
+                    this->pollToCompletion(taskRef);
                 }
             }
             else
