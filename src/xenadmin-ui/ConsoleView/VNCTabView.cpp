@@ -837,8 +837,7 @@ void VNCTabView::onToggleConsoleButtonClicked()
             this->m_oldScaleValue = this->ui->scaleCheckBox->isChecked();
 
             // C#: vncScreen.UseSource = !vncScreen.UseSource;
-            // Note: UseSource property not yet ported, so we toggle UseVNC instead
-            this->m_vncScreen->SetUseVNC(!this->m_vncScreen->GetUseVNC());
+            this->m_vncScreen->SetUseSource(!this->m_vncScreen->GetUseSource());
         }
 
         // C#: Unpause();
@@ -1054,7 +1053,10 @@ void VNCTabView::onDetectRDP()
         
         // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 1089-1113
         // Enable RDP button, maybe auto-switch
-        
+        this->m_toggleToXVNCorRDP = RDP;
+        if (this->m_vncScreen && this->m_vncScreen->GetUseVNC())
+            this->ui->toggleConsoleButton->setText(canEnableRDP() ? tr("Enable Remote Desktop") : tr("Switch to Remote Desktop"));
+
         this->ui->toggleConsoleButton->setEnabled(true);
         updateTooltipOfToggleButton();
         
@@ -1089,9 +1091,11 @@ void VNCTabView::onDetectVNC()
     {
         qDebug() << "VNCTabView: onDetectVNC_()";
         
-        // C#: Lines 1120-1141
-        // VNC is available
-        
+        // C# OnDetectVNC_: the guest runs its own VNC server, so the button switches
+        // between it and the text console
+        this->m_toggleToXVNCorRDP = XVNC;
+        if (this->m_vncScreen)
+            this->ui->toggleConsoleButton->setText(this->m_vncScreen->GetUseSource() ? tr("Switch to Graphical Console") : tr("Switch to Text Console"));
         this->ui->toggleConsoleButton->setEnabled(true);
         updateTooltipOfToggleButton();
     }, Qt::QueuedConnection);
@@ -1101,18 +1105,16 @@ void VNCTabView::onUserCancelledAuth()
 {
     qDebug() << "VNCTabView: onUserCancelledAuth()";
 
-    // C#: Lines 1252-1273
-    // User cancelled VNC password prompt
-
-    QMessageBox::information(this, tr("Console Authentication"), tr("Console connection cancelled by user."));
+    // C# OnUserCancelledAuth: switch back to the text console
+    this->onToggleConsoleButtonClicked();
 }
 
 void VNCTabView::onVncConnectionAttemptCancelled()
 {
     qDebug() << "VNCTabView: onVncConnectionAttemptCancelled()";
 
-    // C#: Lines 1243-1250
-    // VNC connection attempt was cancelled
+    // C# OnVncConnectionAttemptCancelled: switch back to the text console
+    this->onToggleConsoleButtonClicked();
 }
 
 void VNCTabView::onInsKeyTimeout()
@@ -1624,8 +1626,7 @@ void VNCTabView::maybeEnableButton()
     qDebug() << "VNCTabView: maybeEnableButton()";
 
     // C#: if (vncScreen != null && (!vncScreen.UseVNC || !vncScreen.UseSource))
-    // UseSource property not yet ported, so just check UseVNC
-    if (this->m_vncScreen && !this->m_vncScreen->GetUseVNC())
+    if (this->m_vncScreen && (!this->m_vncScreen->GetUseVNC() || !this->m_vncScreen->GetUseSource()))
     {
         this->ui->toggleConsoleButton->setEnabled(true);
     }
@@ -1858,10 +1859,9 @@ void VNCTabView::updateButtons()
         }
     } else
     {
-        // Text console mode (XVNC)
+        // Text console or the guest's own VNC server (XVNC)
         // C#: toggleConsoleButton.Text = vncScreen.UseSource ? UseXVNC : UseVNC;
-        // UseSource not ported yet, so just show VNC label
-        this->ui->toggleConsoleButton->setText(this->m_vncScreen->GetUseVNC() ? tr("Switch to Text Console") : tr("Switch to Graphical Console"));
+        this->ui->toggleConsoleButton->setText(this->m_vncScreen->GetUseSource() ? tr("Switch to Graphical Console") : tr("Switch to Text Console"));
     }
 
     // C#: UpdateTooltipOfToggleButton();

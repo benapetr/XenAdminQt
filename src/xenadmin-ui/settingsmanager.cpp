@@ -163,6 +163,12 @@ void SettingsManager::Load()
         this->m_settings->setValue("Security/LocalKey", this->m_localKey);
     }
     EncryptionUtils::SetLocalKey(this->m_localKey);
+
+    this->m_vncPasswords.clear();
+    this->m_settings->beginGroup("VNCPasswords");
+    for (const QString& uuid : this->m_settings->childKeys())
+        this->m_vncPasswords.insert(uuid, this->m_settings->value(uuid).toString());
+    this->m_settings->endGroup();
 }
 
 void SettingsManager::Save()
@@ -226,6 +232,16 @@ void SettingsManager::Save()
     this->m_settings->setValue("General/serverHistory", this->m_serverHistory);
     this->m_settings->setValue("Session/SaveSession", this->m_saveSession);
     this->m_settings->setValue("Session/SavePasswords", this->m_savePasswords);
+
+    // C# saves VNC passwords with the server list, only when the session is saved
+    this->m_settings->remove("VNCPasswords");
+    if (this->m_saveSession)
+    {
+        this->m_settings->beginGroup("VNCPasswords");
+        for (auto it = this->m_vncPasswords.constBegin(); it != this->m_vncPasswords.constEnd(); ++it)
+            this->m_settings->setValue(it.key(), it.value());
+        this->m_settings->endGroup();
+    }
     this->m_settings->setValue("Session/RequirePass", this->m_requirePass);
 
     if (this->m_mainPasswordHash.isEmpty())
@@ -1350,4 +1366,39 @@ void SettingsManager::SetRequirePass(bool require)
 {
     this->m_requirePass = require;
     emit settingsChanged("Session/RequirePass");
+}
+
+bool SettingsManager::GetVNCPassword(const QString& vmUuid, QString* password) const
+{
+    auto it = this->m_vncPasswords.constFind(vmUuid);
+    if (vmUuid.isEmpty() || it == this->m_vncPasswords.constEnd())
+        return false;
+
+    if (it.value().isEmpty())
+    {
+        if (password)
+            password->clear();
+        return true;
+    }
+
+    // Can't be decrypted (e.g. the main password isn't entered): treat as unknown
+    const QString decrypted = this->decryptPassword_(it.value());
+    if (decrypted.isEmpty())
+        return false;
+    if (password)
+        *password = decrypted;
+    return true;
+}
+
+void SettingsManager::SetVNCPassword(const QString& vmUuid, const QString* password)
+{
+    if (vmUuid.isEmpty())
+        return;
+
+    if (!password)
+        this->m_vncPasswords.remove(vmUuid);
+    else
+        this->m_vncPasswords.insert(vmUuid, password->isEmpty() ? QString() : this->encryptPassword_(*password));
+
+    this->Sync(); // C# SetVNCPassword saves the server list
 }

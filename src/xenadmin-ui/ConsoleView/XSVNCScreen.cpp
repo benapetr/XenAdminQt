@@ -28,6 +28,7 @@
 #include "XSVNCScreen.h"
 #include "ConsoleView/RdpClient.h"
 #include "VNCGraphicsClient.h"
+#include "VNCTabView.h"
 #include "IRemoteConsole.h"
 #include <QDebug>
 #include <QThread>
@@ -47,6 +48,12 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/network.h"
 #include "network/httpconnect.h"
+#include "settingsmanager.h"
+#include "dialogs/vncpassworddialog.h"
+#include <QPointer>
+
+// Defined with the connection code below
+static QTcpSocket* connectGuest(const QString& ipAddress, int port, XenConnection* connection);
 
 class VNCTabView;
 class RdpClient;
@@ -120,6 +127,10 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
                 qDebug() << "XSVNCScreen: Cached" << this->_cachedNetworks.size() << "network entries";
             }
         }
+
+        // C# Source setter: start polling the guest right away. Queued, so the parent's
+        // detection callbacks are set first.
+        QTimer::singleShot(0, this, &XSVNCScreen::StartPolling);
     }
 }
 
@@ -214,12 +225,23 @@ QString XSVNCScreen::GetVNCPassword() const
  */
 void XSVNCScreen::SetUseVNC(bool value)
 {
-    if (value != this->_useVNC)
+    // C# UseVNC setter
+    if (value == this->_useVNC)
+        return;
+
+    this->_connectionRetries = 0;
+    this->_useVNC = value;
+    qDebug() << "XSVNCScreen: UseVNC changed to:" << this->_useVNC;
+
+    // C# InitSubControl doesn't switch to RDP without an RDP address, and this port
+    // has no RDP client to switch to: then the switch didn't happen and is undone (CA-102755)
+    if (!this->_useVNC && (this->_rdpIp.isEmpty() || !this->_rdpClient))
     {
-        this->_useVNC = value;
-        qDebug() << "XSVNCScreen: UseVNC changed to:" << this->_useVNC;
-        // TODO: Trigger reconnection if needed
+        this->_useVNC = true;
+        return;
     }
+
+    this->resetSubControl();
 }
 
 /**
@@ -228,24 +250,50 @@ void XSVNCScreen::SetUseVNC(bool value)
  */
 void XSVNCScreen::SetUseSource(bool value)
 {
-    if (value != this->_useSource)
-    {
-        this->_useSource = value;
-        qDebug() << "XSVNCScreen: UseSource changed to:" << this->_useSource;
+    // C# UseSource setter: the hosted (text) console or the guest's own VNC server
+    if (value == this->_useSource)
+        return;
 
-        // Update VNC client if it exists
-        if (this->_vncClient)
-        {
-            this->_vncClient->SetUseSource(this->_useSource);
-        }
-
-        // Trigger reconnection
-        // C#: connectNewHostedConsole();
-        QTimer::singleShot(0, this, &XSVNCScreen::connectNewHostedConsole);
-    }
+    this->_useSource = value;
+    this->_connectionRetries = 0;
+    qDebug() << "XSVNCScreen: UseSource changed to:" << this->_useSource;
+    this->resetSubControl();
 }
 
-// ========== Public Methods ==========
+void XSVNCScreen::resetSubControl()
+{
+    // C# InitSubControl: drop the current client, make a new one for the new mode and
+    // connect it. Workers still holding the old client see it was replaced and stop.
+    if (this->_vncClient)
+    {
+        VNCGraphicsClient* old = this->_vncClient;
+        this->_vncClient = nullptr;
+        if (this->_remoteConsole == old)
+            this->_remoteConsole = nullptr;
+        QObject::disconnect(old, nullptr, this, nullptr);
+        old->DisconnectAndDispose();
+        if (layout())
+            layout()->removeWidget(old);
+        old->hide();
+        old->deleteLater();
+    }
+
+    this->_vncPassword.clear();
+    this->_haveTriedLoginWithoutPassword = false;
+    this->m_lastAuthFailed = false;
+
+    this->initSubControl();
+    if (this->_vncClient)
+    {
+        this->_vncClient->SetUseSource(this->_useSource);
+        if (this->_wasPaused)
+            this->_vncClient->Pause();
+        else
+            this->_vncClient->Unpause();
+    }
+
+    this->connectToRemoteConsole();
+}
 
 /**
  * @brief Pause the remote console
@@ -488,6 +536,8 @@ void XSVNCScreen::initSubControl()
         // Connection error handler
         QObject::connect(this->_vncClient, &VNCGraphicsClient::errorOccurred,
                          this, &XSVNCScreen::onVncClientError);
+        QObject::connect(this->_vncClient, &VNCGraphicsClient::authenticationFailed,
+                         this, &XSVNCScreen::onVncClientAuthenticationFailed);
 
         // Desktop resize handler (for updating parent window size)
         QObject::connect(this->_vncClient, &VNCGraphicsClient::desktopResized,
@@ -892,23 +942,25 @@ void XSVNCScreen::StartPolling()
 {
     qDebug() << "XSVNCScreen: startPolling()";
 
-    // TODO: Disable toggle VNC button if in default console
-    // C#: if (InDefaultConsole()) ParentVNCTabView.DisableToggleVNCButton();
+    // C#: disable the toggle button first, but only in the default (text) console, so
+    // there is always a way back to it (CA-70314); detecting VNC/RDP enables it again
+    if (this->IsInDefaultConsole() && this->_parentVNCTabView)
+        this->_parentVNCTabView->DisableToggleVNCButton();
 
-    // TODO: Check if RDP control is enabled
-    // C#: if (ParentVNCTabView.IsRDPControlEnabled()) return;
+    if (this->_parentVNCTabView && this->_parentVNCTabView->IsRDPControlEnabled())
+        return;
 
     if (this->_sourceRef.isEmpty())
         return;
 
-    // If we're using hosted consoles (UseSource), skip guest polling entirely.
-    // Hosted console discovery/connection is handled separately and polling the
-    // guest IPs just burns sockets and UI time.
-    if (this->GetUseSource())
-    {
-        qDebug() << "XSVNCScreen: Hosted console in use, skipping guest port polling";
+    // The guest is polled in the text console too: that is how C# finds the guest's own
+    // VNC server and offers "Switch to Graphical Console". The probes run off the GUI thread.
+
+#ifndef HAVE_FREERDP
+    // HVM guests are only polled for RDP (C# PollRDPPort), which this build can't use
+    if (!this->_sourceIsPv)
         return;
-    }
+#endif
 
     // Don't poll if this is a control domain (dom0) - they use hosted consoles only
     if (isControlDomainZero(this->_sourceRef))
@@ -930,18 +982,17 @@ void XSVNCScreen::StartPolling()
     // C#: Timer(PollVNCPort, null, RETRY_SLEEP_TIME, RDP_POLL_INTERVAL) for PV
     this->_connectionPoller = new QTimer(this);
 
-    // Determine polling strategy based on VM virtualization mode
+    // Determine polling strategy based on VM virtualization mode: PV guests may run a VNC
+    // server, HVM guests are polled for RDP
     if (this->_sourceIsPv)
-    {
-        // PV VMs only have VNC
         QObject::connect(this->_connectionPoller, &QTimer::timeout, this, &XSVNCScreen::pollVNCPort);
-        this->_connectionPoller->start(RETRY_SLEEP_TIME);
-    } else
-    {
-        // HVM VMs can have both VNC and RDP
+    else
         QObject::connect(this->_connectionPoller, &QTimer::timeout, this, &XSVNCScreen::pollRDPPort);
-        this->_connectionPoller->start(RETRY_SLEEP_TIME);
-    }
+
+    // C#: first after RETRY_SLEEP_TIME, then every RDP_POLL_INTERVAL
+    QTimer* poller = this->_connectionPoller;
+    QObject::connect(poller, &QTimer::timeout, poller, [poller]() { poller->setInterval(RDP_POLL_INTERVAL); });
+    this->_connectionPoller->start(RETRY_SLEEP_TIME);
 
     qDebug() << "XSVNCScreen: Polling started with interval:" << RETRY_SLEEP_TIME << "ms";
 }
@@ -955,9 +1006,7 @@ void XSVNCScreen::pollRDPPort()
     qDebug() << "XSVNCScreen: pollRDPPort()";
 
 #ifndef HAVE_FREERDP
-    // RDP not available - fall back to VNC polling instead
-    qDebug() << "XSVNCScreen: RDP not available, switching to VNC polling";
-    this->pollVNCPort();
+    // No RDP support in this build (StartPolling doesn't poll HVM guests then)
     return;
 #endif
 
@@ -971,20 +1020,9 @@ void XSVNCScreen::pollRDPPort()
         }
     } else
     {
-        // Scan for RDP port on guest IPs
+        // Scan for RDP port on guest IPs (C# clears RdpIp first)
         this->_rdpIp.clear();
-        QString openIp = this->pollPort(RDP_PORT, false);
-
-        if (openIp.isEmpty())
-            return;
-
-        this->_rdpIp = openIp;
-        qDebug() << "XSVNCScreen: Detected RDP on IP:" << this->_rdpIp;
-
-        if (onDetectRDP)
-        {
-            QMetaObject::invokeMethod(this, [this]() { onDetectRDP(); }, Qt::QueuedConnection);
-        }
+        this->pollGuestPort(RDP_PORT, false);
     }
 }
 
@@ -995,41 +1033,94 @@ void XSVNCScreen::pollRDPPort()
 void XSVNCScreen::pollVNCPort()
 {
     qDebug() << "XSVNCScreen: pollVNCPort()";
+    this->pollGuestPort(VNC_PORT, true);
+}
 
-    QString openIp = this->pollPort(VNC_PORT, true);
+void XSVNCScreen::pollGuestPort(int port, bool vnc)
+{
+    if (this->m_guestPollRunning)
+        return; // the previous probe is still going
 
-    if (openIp.isEmpty())
+    const QStringList addresses = this->guestAddresses();
+    if (addresses.isEmpty())
     {
-        // Keep the previously detected IP so reconnect attempts still have an address.
-        if (this->_vncIp.isEmpty())
+        this->onGuestPortPolled(port, vnc, QString(), nullptr);
+        return;
+    }
+
+    this->m_guestPollRunning = true;
+    QPointer<XSVNCScreen> self(this);
+    QThreadPool::globalInstance()->start([self, addresses, port, vnc]()
+    {
+        QString found;
+        QTcpSocket* socket = nullptr;
+        for (const QString& address : addresses)
         {
-            qDebug() << "XSVNCScreen: No VNC listener detected yet";
-        } else
+            try
+            {
+                qDebug() << "XSVNCScreen: Polling" << address << ":" << port;
+                QTcpSocket* connected = connectGuest(address, port, nullptr); // now on the GUI thread
+                found = address;
+                if (vnc)
+                    socket = connected; // kept for the VNC client (C# _pendingVNCConnection)
+                else
+                    connected->deleteLater(); // RDP: only a probe
+                break;
+            } catch (const std::exception&)
+            {
+                // try the next address
+            }
+        }
+
+        QMetaObject::invokeMethod(qApp, [self, port, vnc, found, socket]()
         {
-            qDebug() << "XSVNCScreen: VNC listener not reachable, preserving" << this->_vncIp;
+            if (!self)
+            {
+                if (socket)
+                    socket->deleteLater();
+                return;
+            }
+            self->onGuestPortPolled(port, vnc, found, socket);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void XSVNCScreen::onGuestPortPolled(int port, bool vnc, const QString& address, QTcpSocket* socket)
+{
+    Q_UNUSED(port);
+    this->m_guestPollRunning = false;
+
+    if (!vnc)
+    {
+        // C# PollRDPPort
+        this->_rdpIp = address;
+        if (!address.isEmpty())
+        {
+            qDebug() << "XSVNCScreen: Detected RDP on IP:" << address;
+            if (onDetectRDP)
+                onDetectRDP();
         }
         return;
     }
 
-    if (this->_vncIp != openIp)
+    // C# PollVNCPort. Keep the previous address if nothing answered this time, so a
+    // reconnect still has one.
+    if (address.isEmpty())
     {
-        this->_vncIp = openIp;
-        qDebug() << "XSVNCScreen: Detected VNC on IP:" << this->_vncIp;
-    } else
-    {
-        qDebug() << "XSVNCScreen: VNC IP unchanged:" << this->_vncIp;
+        qDebug() << "XSVNCScreen: No VNC listener detected" << (this->_vncIp.isEmpty() ? "yet" : "now, keeping " + this->_vncIp);
+        return;
     }
+
+    this->_vncIp = address;
+    this->setPendingVNCConnection(socket);
+    qDebug() << "XSVNCScreen: Detected VNC on IP:" << this->_vncIp;
 
     // Stop polling once VNC is found (C#: _connectionPoller?.Change(Timeout.Infinite, Timeout.Infinite))
     if (this->_connectionPoller)
-    {
         this->_connectionPoller->stop();
-    }
 
     if (onDetectVNC)
-    {
-        QMetaObject::invokeMethod(this, [this]() { onDetectVNC(); }, Qt::QueuedConnection);
-    }
+        onDetectVNC();
 }
 
 /**
@@ -1074,6 +1165,37 @@ void XSVNCScreen::onVncClientError(QObject* sender, const QString& error)
     this->retryConnection(this->_vncClient, error);
 }
 
+void XSVNCScreen::onVncClientAuthenticationFailed(QObject* sender, const QString& error)
+{
+    Q_UNUSED(sender);
+    qWarning() << "XSVNCScreen: VNC password rejected:" << error;
+
+    // C# ErrorHandler, VNCAuthenticationException: forget the stored password and retry,
+    // which asks for it (saying it was wrong, unless it was the passwordless attempt)
+    SettingsManager::instance().SetVNCPassword(this->sourceVmUuid(), nullptr);
+    this->_vncPassword.clear();
+    this->m_lastAuthFailed = true;
+    this->retryConnection(this->_vncClient, error);
+}
+
+bool XSVNCScreen::promptForPassword(const QString& vmUuid, bool passwordIncorrect, QString* password)
+{
+    // C# PromptForPassword
+    VNCPasswordDialog dialog(passwordIncorrect, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return false;
+
+    *password = dialog.GetPassword();
+    SettingsManager::instance().SetVNCPassword(vmUuid, password); // stored for next time
+    return true;
+}
+
+QString XSVNCScreen::sourceVmUuid() const
+{
+    QSharedPointer<VM> vm = this->resolveVM(this->_sourceRef);
+    return vm ? vm->GetUUID() : QString();
+}
+
 /**
  * @brief Handle desktop resize event from VNC client
  * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs lines 262-270
@@ -1114,10 +1236,15 @@ static QTcpSocket* connectGuest(const QString& ipAddress, int port, XenConnectio
     // Keep this short to avoid UI stalls when multiple addresses are probed
     if (!socket->waitForConnected(1000)) // 1 second timeout
     {
-        qDebug() << "XSVNCScreen: Connection failed:" << socket->errorString();
-        socket->deleteLater();
-        throw std::runtime_error(socket->errorString().toStdString());
+        const QString error = socket->errorString();
+        qDebug() << "XSVNCScreen: Connection failed:" << error;
+        delete socket; // worker threads have no event loop for deleteLater
+        throw std::runtime_error(error.toStdString());
     }
+
+    // Made on a worker thread, used by the VNC client on the GUI thread
+    if (QThread::currentThread() != qApp->thread())
+        socket->moveToThread(qApp->thread());
 
     qDebug() << "XSVNCScreen: Connected successfully";
     return socket;
@@ -1138,38 +1265,36 @@ static QTcpSocket* connectGuest(const QString& ipAddress, int port, XenConnectio
  * @param vnc If true, keep connection open for VNC; if false, close immediately (RDP probe)
  * @return First responsive IP address, or empty string if none found
  */
-QString XSVNCScreen::pollPort(int port, bool vnc)
+QStringList XSVNCScreen::guestAddresses() const
 {
-    qDebug() << "XSVNCScreen: pollPort() - scanning port:" << port;
-
     try
     {
         if (this->_sourceRef.isEmpty() || !this->_connection)
-            return QString();
+            return QStringList();
 
         // Get VM record from cache
         XenCache* cache = this->_connection->GetCache();
         if (!cache)
-            return QString();
+            return QStringList();
 
         QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef);
         if (!vm || !vm->IsValid())
-            return QString();
+            return QStringList();
 
         // Get guest_metrics reference
         QString guestMetricsRef = vm->GetGuestMetricsRef();
         if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
-            return QString();
+            return QStringList();
 
         // Get guest metrics record
         QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
         if (guestMetrics.isEmpty())
-            return QString();
+            return QStringList();
 
         // Get networks dictionary (format: "0/ip" -> "192.168.1.100", "0/ipv4/0" -> "192.168.1.100", etc.)
         QVariantMap networks = guestMetrics.value("networks").toMap();
         if (networks.isEmpty())
-            return QString();
+            return QStringList();
 
         // Lists to organize IP addresses by priority
         QStringList ipv4Addresses;      // IPv4 on connected PIFs
@@ -1251,52 +1376,20 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
         QStringList allAddresses;
         allAddresses << ipv4Addresses << ipv6Addresses << ipv4AddressesNoPif << ipv6AddressesNoPif;
 
-        // Try connecting to each IP address
-        foreach (const QString& ipAddress, allAddresses)
+        // IPv6 link-local addresses typically fail and waste time
+        QStringList result;
+        for (const QString& ipAddress : allAddresses)
         {
-            // Skip IPv6 link-local addresses which typically fail and waste time
-            if (ipAddress.startsWith("[fe80", Qt::CaseInsensitive))
-                continue;
-
-            try
-            {
-                qDebug() << "XSVNCScreen: Polling" << ipAddress << ":" << port;
-
-                QTcpSocket* socket = connectGuest(ipAddress, port, this->_connection);
-
-                if (socket && socket->state() == QAbstractSocket::ConnectedState)
-                {
-                    qDebug() << "XSVNCScreen: Connected to" << ipAddress << ":" << port;
-
-                    if (vnc)
-                    {
-                        // Keep connection open and pass to VNC client
-                        qDebug() << "XSVNCScreen: Setting pending VNC connection";
-                        this->setPendingVNCConnection(socket);
-                    } else
-                    {
-                        // RDP probe - just close it
-                        socket->close();
-                        delete socket;
-                    }
-
-                    return ipAddress;
-                } else if (socket)
-                {
-                    socket->close();
-                    delete socket;
-                }
-            } catch (...)
-            {
-                qDebug() << "XSVNCScreen: Failed to connect to" << ipAddress << ":" << port;
-            }
+            if (!ipAddress.startsWith("[fe80", Qt::CaseInsensitive))
+                result.append(ipAddress);
         }
+        return result;
     } catch (...)
     {
-        qWarning() << "XSVNCScreen: Exception in pollPort()";
+        qWarning() << "XSVNCScreen: Exception in guestAddresses()";
     }
 
-    return QString();
+    return QStringList();
 }
 
 // ========== Connection Management ==========
@@ -1403,34 +1496,54 @@ void XSVNCScreen::connect()
                 return;
             }
 
-            // TODO: Get VNC password from settings
-            // C#: _vncPassword = Settings.GetVNCPassword(_sourceVm.uuid);
+            // C#: _vncPassword = Settings.GetVNCPassword(_sourceVm.uuid). Settings and dialogs
+            // belong to the GUI thread.
+            const QString vmUuid = this->sourceVmUuid();
+            QString password;
+            bool known = false;
+            QMetaObject::invokeMethod(this, [&]() { known = SettingsManager::instance().GetVNCPassword(vmUuid, &password); },
+                                      Qt::BlockingQueuedConnection);
 
-            if (this->_vncPassword.isEmpty())
+            if (!known)
             {
-                // TODO: Check if lifecycle operation is in progress
-                // C#: var lifecycleOperationInProgress = _sourceVm.current_operations.Values.Any(VM.is_lifecycle_operation);
-
-                if (this->_haveTriedLoginWithoutPassword)
+                // C#: no prompt while a lifecycle operation (start, reboot...) is running
+                bool lifecycleOperationInProgress = false;
+                if (XenCache* cache = this->_connection ? this->_connection->GetCache() : nullptr)
                 {
-                    // TODO: Prompt for password
-                    // C#: Program.Invoke(this, delegate { PromptForPassword(_ignoreNextError ? null : error); });
-                    qDebug() << "XSVNCScreen: Would prompt for VNC password (not implemented)";
+                    const QVariantMap operations = cache->ResolveObjectData(XenObjectType::VM, this->_sourceRef)
+                                                       .value("current_operations").toMap();
+                    for (const QVariant& operation : operations)
+                    {
+                        // C# VM.is_lifecycle_operation: anything but memory changes
+                        const QString op = operation.toString();
+                        if (op != "changing_dynamic_range" && op != "changing_static_range" && op != "changing_memory_limits")
+                            lifecycleOperationInProgress = true;
+                    }
+                }
 
-                    if (this->_vncPassword.isEmpty())
+                if (this->_haveTriedLoginWithoutPassword && !lifecycleOperationInProgress)
+                {
+                    const bool passwordIncorrect = this->m_lastAuthFailed && !this->_ignoreNextError;
+                    bool entered = false;
+                    QMetaObject::invokeMethod(this, [&]() { entered = this->promptForPassword(vmUuid, passwordIncorrect, &password); },
+                                              Qt::BlockingQueuedConnection);
+                    this->_ignoreNextError = false;
+                    this->m_lastAuthFailed = false;
+                    if (!entered)
                     {
                         qDebug() << "XSVNCScreen: User cancelled VNC password prompt: aborting connection attempt";
-                        // TODO: Emit userCancelledAuth signal
+                        QMetaObject::invokeMethod(this, [this]() { emit this->userCancelledAuth(); }, Qt::QueuedConnection);
                         return;
                     }
                 } else
                 {
                     qDebug() << "XSVNCScreen: Attempting passwordless VNC login";
-                    this->_vncPassword.clear(); // Empty password
+                    password.clear();
                     this->_ignoreNextError = true;
                     this->_haveTriedLoginWithoutPassword = true;
                 }
             }
+            this->_vncPassword = password.toUtf8();
 
             // Get or create TCP connection
             QTcpSocket* stream = this->takePendingVNCConnection();
@@ -1448,9 +1561,15 @@ void XSVNCScreen::connect()
             // Invoke connection with the stream
             this->invokeConnection(this->_vncClient, stream, QString());
 
-            // TODO: Store empty VNC password after successful passwordless login
-            // C#: if (_haveTriedLoginWithoutPassword && _vncPassword.Length == 0)
-            //         Program.Invoke(this, () => Settings.SetVNCPassword(_sourceVm.uuid, _vncPassword));
+            // C#: store the empty password after a passwordless login; a rejection clears it
+            if (this->_haveTriedLoginWithoutPassword && password.isEmpty())
+            {
+                QMetaObject::invokeMethod(this, [vmUuid]()
+                {
+                    const QString empty;
+                    SettingsManager::instance().SetVNCPassword(vmUuid, &empty);
+                }, Qt::QueuedConnection);
+            }
         }
     } catch (const std::exception& exn)
     {

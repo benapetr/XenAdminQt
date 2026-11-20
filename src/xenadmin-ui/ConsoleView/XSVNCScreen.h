@@ -440,7 +440,19 @@ class XSVNCScreen : public QWidget
          * @param vnc Whether this is a VNC scan (affects connection reuse)
          * @return IP address if port is open, empty string otherwise
          */
-        QString pollPort(int port, bool vnc);
+        //! The guest's addresses to probe, best first (C# PollPort's address list)
+        QStringList guestAddresses() const;
+        //! Probes the guest's addresses for the port on a worker thread (C# PollPort runs
+        //! on a timer thread); the result comes back in onGuestPortPolled
+        void pollGuestPort(int port, bool vnc);
+        void onGuestPortPolled(int port, bool vnc, const QString& address, QTcpSocket* socket);
+        //! C# InitSubControl on a mode change: a new client, connected afresh
+        void resetSubControl();
+        //! C# PromptForPassword; GUI thread
+        bool promptForPassword(const QString& vmUuid, bool passwordIncorrect, QString* password);
+        QString sourceVmUuid() const;
+        //! The guest's VNC server rejected the password (C# VNCAuthenticationException)
+        void onVncClientAuthenticationFailed(QObject* sender, const QString& error);
 
         /**
          * @brief Connect to remote console (VNC or RDP)
@@ -577,6 +589,8 @@ class XSVNCScreen : public QWidget
         QString _rdpIp;                       // Detected RDP IP (C#: public string RdpIp)
         QString _vncIp;                       // Detected VNC IP (C#: public string VncIp)
         bool m_hostedConsoleConnectionPending = false; // Prevent concurrent hosted console attempts
+        bool m_guestPollRunning = false;               // A guest port probe is on a worker thread
+        volatile bool m_lastAuthFailed = false;        // The last guest VNC login was rejected
 
         // Hosted consoles
         QMutex _hostedConsolesLock;     // Lock for console list (C#: object _hostedConsolesLock)

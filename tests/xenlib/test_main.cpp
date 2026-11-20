@@ -4,6 +4,7 @@
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/utils/vncdes.h"
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
@@ -433,6 +434,24 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void vncDesMatchesStandardVectors()
+    {
+        // FIPS 46 / textbook vectors
+        QCOMPARE(VncDes::EncryptBlock(QByteArray::fromHex("133457799BBCDFF1"), QByteArray::fromHex("0123456789ABCDEF")).toHex().toUpper(),
+                 QByteArray("85E813540F0AB405"));
+        QCOMPARE(VncDes::EncryptBlock(QByteArray::fromHex("0000000000000000"), QByteArray::fromHex("0000000000000000")).toHex().toUpper(),
+                 QByteArray("8CA64DE9C1B123A7"));
+
+        // VNC: each key byte bit-reversed, only the first 8 characters count, ECB over 16 bytes
+        const QByteArray challenge = QByteArray::fromHex("0123456789ABCDEF0123456789ABCDEF");
+        const QByteArray response = VncDes::ChallengeResponse(challenge, QString::fromLatin1("\xC8\x2C\xEA\x9E\xD9\x3D\xFB\x8F"));
+        QCOMPARE(response.size(), 16);
+        QCOMPARE(response.left(8).toHex().toUpper(), QByteArray("85E813540F0AB405")); // reversed 13 34 57 79 9B BC DF F1
+        QCOMPARE(response.mid(8), response.left(8));
+        QCOMPARE(VncDes::ChallengeResponse(challenge, "password"), VncDes::ChallengeResponse(challenge, "password-and-more"));
+        QVERIFY(VncDes::ChallengeResponse(challenge, "password") != VncDes::ChallengeResponse(challenge, "Password"));
     }
 
     void hostTellsDom0FromDriverDomains()

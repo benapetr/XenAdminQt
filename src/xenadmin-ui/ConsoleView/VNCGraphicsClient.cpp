@@ -28,6 +28,7 @@
 #include "VNCGraphicsClient.h"
 #include "ConsoleKeyHandler.h"
 #include "../settingsmanager.h"
+#include "xenlib/utils/vncdes.h"
 #include <QPainter>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -349,17 +350,26 @@ void VNCGraphicsClient::onSocketReadyRead()
             case Disconnected:
                 return; // Nothing to process when disconnected
 
+            // Handshake steps wait (return false) until their whole message is there
             case ProtocolVersion:
-                this->handleProtocolVersion();
+                if (!this->handleProtocolVersion())
+                    return;
                 break;
             case SecurityHandshake:
-                this->handleSecurityHandshake();
+                if (!this->handleSecurityHandshake())
+                    return;
+                break;
+            case VncAuthChallenge:
+                if (!this->handleVncAuthChallenge())
+                    return;
                 break;
             case SecurityResult:
-                this->handleSecurityResult();
+                if (!this->handleSecurityResult())
+                    return;
                 break;
             case Initialization:
-                this->handleServerInit();
+                if (!this->handleServerInit())
+                    return;
                 break;
             case Normal: {
                 // Handle server messages
@@ -409,11 +419,11 @@ void VNCGraphicsClient::onSocketReadyRead()
     }
 }
 
-void VNCGraphicsClient::handleProtocolVersion()
+bool VNCGraphicsClient::handleProtocolVersion()
 {
     // Wait for "RFB xxx.yyy\n" (12 bytes)
     if (this->m_readBuffer.size() < 12)
-        return;
+        return false;
 
     QString version = QString::fromLatin1(this->m_readBuffer.left(12)).trimmed();
 
@@ -464,167 +474,175 @@ void VNCGraphicsClient::handleProtocolVersion()
 
     this->m_readBuffer.remove(0, 12);
     this->m_state = SecurityHandshake;
+    this->m_usedVncAuth = false;
+    return true;
 }
 
-void VNCGraphicsClient::handleSecurityHandshake()
+bool VNCGraphicsClient::handleSecurityHandshake()
 {
-    // RFB 3.3 and 3.7+ use different security handshake formats
+    // C# VNCStream.AuthenticationExchange. Nothing is consumed until the whole message
+    // is there, so a message split across reads is not misparsed.
+    const uchar* data = reinterpret_cast<const uchar*>(this->m_readBuffer.constData());
+
     if (this->m_protocolMinorVersion <= 3)
     {
-        // RFB 3.3: Server sends 32-bit security type directly
+        // RFB 3.3: the server picks the security type (U32)
         if (this->m_readBuffer.size() < 4)
-            return;
+            return false;
 
-        quint32 securityType = readU32();
+        const quint32 securityType = qFromBigEndian<quint32>(data);
         qDebug() << "VNCGraphicsClient: RFB 3.3 security type:" << securityType;
 
-        // Security types: 0=Failed, 1=None, 2=VNC Authentication
         if (securityType == 0)
         {
-            // Connection failed - read reason string
-            qWarning() << "VNCGraphicsClient: Server rejected connection";
-            emit errorOccurred(this, "Server rejected connection");
-            DisconnectAndDispose();
-            return;
-        } else if (securityType == 1)
+            // Connection failed, with a reason string
+            if (this->m_readBuffer.size() < 8)
+                return false;
+            const quint32 reasonLength = qFromBigEndian<quint32>(data + 4);
+            if (quint32(this->m_readBuffer.size()) < 8 + reasonLength)
+                return false;
+            const QString reason = QString::fromUtf8(this->m_readBuffer.mid(8, int(reasonLength)));
+            this->failSecurity(tr("Connection failed: %1").arg(reason), false);
+            return false;
+        }
+
+        this->m_readBuffer.remove(0, 4);
+        if (securityType == 1)
         {
-            // No authentication - proceed directly to ClientInit
             qDebug() << "VNCGraphicsClient: No authentication required";
+            this->sendClientInit();
             this->m_state = Initialization;
-            sendClientInit();
-        } else if (securityType == 2)
-        {
-            // VNC Authentication - wait for 16-byte challenge
-            qDebug() << "VNCGraphicsClient: VNC authentication required";
-
-            if (this->m_readBuffer.size() < 16)
-                return;
-
-            // Read 16-byte challenge
-            QByteArray challenge = this->m_readBuffer.left(16);
-            this->m_readBuffer.remove(0, 16);
-
-            // TODO: Implement proper DES encryption with password
-            // For now, send back the challenge unmodified (will fail but allows testing)
-            qWarning() << "VNCGraphicsClient: VNC authentication not fully implemented";
-            this->m_vncStream->write(challenge);
-            this->m_vncStream->flush();
-
-            this->m_state = SecurityResult;
-        } else
-        {
-            qWarning() << "VNCGraphicsClient: Unknown security type:" << securityType;
-            emit errorOccurred(this, QString("Unknown security type: %1").arg(securityType));
-            DisconnectAndDispose();
+            return true;
         }
-    } else
-    {
-        // RFB 3.7+: Server sends list of security types
-        // Wait for security type count
-        if (this->m_readBuffer.size() < 1)
-            return;
-
-        quint8 securityTypeCount = (quint8) this->m_readBuffer.at(0);
-
-        if (securityTypeCount == 0)
+        if (securityType == 2)
         {
-            // Connection failed - read reason string
-            this->m_readBuffer.remove(0, 1);
-            if (this->m_readBuffer.size() < 4)
-                return;
-
-            quint32 reasonLength = readU32();
-            if (this->m_readBuffer.size() < (int) reasonLength)
-                return;
-
-            QString reason = QString::fromUtf8(this->m_readBuffer.left(reasonLength));
-            this->m_readBuffer.remove(0, reasonLength);
-
-            qWarning() << "VNCGraphicsClient: Server rejected connection:" << reason;
-            emit errorOccurred(this, "Server rejected: " + reason);
-            DisconnectAndDispose();
-            return;
+            this->m_usedVncAuth = true;
+            this->m_state = VncAuthChallenge;
+            return true;
         }
 
-        if (this->m_readBuffer.size() < 1 + securityTypeCount)
-            return;
-
-        qDebug() << "VNCGraphicsClient: Security types:" << securityTypeCount;
-
-        // Look for security types (1 = None, 2 = VNC Authentication)
-        bool foundNone = false;
-        bool foundVNC = false;
-
-        for (int i = 0; i < securityTypeCount; i++)
-        {
-            quint8 secType = (quint8) this->m_readBuffer.at(1 + i);
-            qDebug() << "VNCGraphicsClient: Security type:" << secType;
-            if (secType == 1)
-                foundNone = true;
-            if (secType == 2)
-                foundVNC = true;
-        }
-
-        this->m_readBuffer.remove(0, 1 + securityTypeCount);
-
-        // Choose security type (prefer VNC auth if password provided)
-        if (!this->m_password.isEmpty() && foundVNC)
-        {
-            qDebug() << "VNCGraphicsClient: Using VNC authentication";
-            writeU8(2); // VNC Authentication
-            this->m_vncStream->flush();
-
-            // Wait for challenge (handled in separate state)
-            // For now, skip to SecurityResult (proper DES encryption needed for production)
-            qWarning() << "VNCGraphicsClient: VNC authentication not fully implemented - using empty response";
-
-            // Send dummy 16-byte response
-            this->m_vncStream->write(QByteArray(16, 0));
-            this->m_vncStream->flush();
-            this->m_state = SecurityResult;
-        } else if (foundNone)
-        {
-            qDebug() << "VNCGraphicsClient: Using no authentication";
-            writeU8(1); // None
-            this->m_vncStream->flush();
-            this->m_state = SecurityResult;
-        } else
-        {
-            qWarning() << "VNCGraphicsClient: No compatible security type found";
-            emit errorOccurred(this, "No compatible security type");
-            DisconnectAndDispose();
-        }
+        this->failSecurity(tr("Unexpected authentication scheme: %1").arg(securityType), false);
+        return false;
     }
+
+    // RFB 3.7+: the server lists the types (U8 count, then U8 each) and the client picks one
+    if (this->m_readBuffer.size() < 1)
+        return false;
+
+    const quint8 securityTypeCount = data[0];
+    if (securityTypeCount == 0)
+    {
+        if (this->m_readBuffer.size() < 5)
+            return false;
+        const quint32 reasonLength = qFromBigEndian<quint32>(data + 1);
+        if (quint32(this->m_readBuffer.size()) < 5 + reasonLength)
+            return false;
+        const QString reason = QString::fromUtf8(this->m_readBuffer.mid(5, int(reasonLength)));
+        this->failSecurity(tr("Connection failed: %1").arg(reason), false);
+        return false;
+    }
+
+    if (this->m_readBuffer.size() < 1 + securityTypeCount)
+        return false;
+
+    bool foundNone = false;
+    bool foundVNC = false;
+    for (int i = 0; i < securityTypeCount; ++i)
+    {
+        const quint8 secType = data[1 + i];
+        foundNone = foundNone || secType == 1;
+        foundVNC = foundVNC || secType == 2;
+    }
+    this->m_readBuffer.remove(0, 1 + securityTypeCount);
+
+    if (foundNone)
+    {
+        writeU8(1); // None
+        this->m_vncStream->flush();
+        if (this->m_protocolMinorVersion >= 8)
+        {
+            this->m_state = SecurityResult; // only RFB 3.8 confirms "None"
+        } else
+        {
+            this->sendClientInit();
+            this->m_state = Initialization;
+        }
+        return true;
+    }
+
+    if (foundVNC)
+    {
+        writeU8(2); // VNC authentication
+        this->m_vncStream->flush();
+        this->m_usedVncAuth = true;
+        this->m_state = VncAuthChallenge;
+        return true;
+    }
+
+    this->failSecurity(tr("No supported authentication scheme"), false);
+    return false;
 }
 
-void VNCGraphicsClient::handleSecurityResult()
+bool VNCGraphicsClient::handleVncAuthChallenge()
+{
+    // C# VNCStream.PasswordAuthentication: DES-encrypt the 16-byte challenge
+    if (this->m_readBuffer.size() < 16)
+        return false;
+
+    const QByteArray challenge = this->m_readBuffer.left(16);
+    this->m_readBuffer.remove(0, 16);
+
+    this->m_vncStream->write(VncDes::ChallengeResponse(challenge, this->m_password));
+    this->m_vncStream->flush();
+    this->m_state = SecurityResult;
+    return true;
+}
+
+bool VNCGraphicsClient::handleSecurityResult()
 {
     if (this->m_readBuffer.size() < 4)
-        return;
+        return false;
 
-    quint32 result = readU32();
+    const uchar* data = reinterpret_cast<const uchar*>(this->m_readBuffer.constData());
+    const quint32 result = qFromBigEndian<quint32>(data);
     qDebug() << "VNCGraphicsClient: Security result:" << result;
 
-    if (result != 0)
+    if (result == 0)
     {
-        // Authentication failed - read reason if available
-        QString reason = "Authentication failed";
-        if (this->m_readBuffer.size() >= 4)
-        {
-            quint32 reasonLength = readU32();
-            if (this->m_readBuffer.size() >= (int) reasonLength)
-            {
-                reason = QString::fromLatin1(readBytes(reasonLength));
-            }
-        }
-        emit errorOccurred(this, reason);
-        DisconnectAndDispose();
-        return;
+        this->m_readBuffer.remove(0, 4);
+        this->sendClientInit();
+        this->m_state = Initialization;
+        return true;
     }
 
-    // Authentication successful - send ClientInit
-    sendClientInit();
-    this->m_state = Initialization;
+    // Failed. RFB 3.8 adds a reason string.
+    QString reason = tr("Authentication failed");
+    if (this->m_protocolMinorVersion >= 8)
+    {
+        if (this->m_readBuffer.size() < 8)
+            return false;
+        const quint32 reasonLength = qFromBigEndian<quint32>(data + 4);
+        if (quint32(this->m_readBuffer.size()) < 8 + reasonLength)
+            return false;
+        const QString serverReason = QString::fromUtf8(this->m_readBuffer.mid(8, int(reasonLength)));
+        if (!serverReason.isEmpty())
+            reason = serverReason;
+    }
+
+    // C#: statuses 1 and 2 are VNCAuthenticationException (wrong password)
+    this->failSecurity(reason, this->m_usedVncAuth && (result == 1 || result == 2));
+    return false;
+}
+
+void VNCGraphicsClient::failSecurity(const QString& error, bool authentication)
+{
+    qWarning() << "VNCGraphicsClient: Security handshake failed:" << error;
+    this->m_readBuffer.clear();
+    if (authentication)
+        emit authenticationFailed(this, error);
+    else
+        emit errorOccurred(this, error);
+    this->DisconnectAndDispose();
 }
 
 void VNCGraphicsClient::sendClientInit()
@@ -635,12 +653,16 @@ void VNCGraphicsClient::sendClientInit()
     qDebug() << "VNCGraphicsClient: Sent ClientInit (shared=1)";
 }
 
-void VNCGraphicsClient::handleServerInit()
+bool VNCGraphicsClient::handleServerInit()
 {
     // ServerInit structure:
     // width: U16, height: U16, pixel_format: 16 bytes, name_length: U32, name: string
+    // Wait for the whole message, name included, before consuming any of it
     if (this->m_readBuffer.size() < 24)
-        return;
+        return false;
+    const quint32 fullNameLength = qFromBigEndian<quint32>(reinterpret_cast<const uchar*>(this->m_readBuffer.constData()) + 20);
+    if (quint32(this->m_readBuffer.size()) < 24 + fullNameLength)
+        return false;
 
     this->m_fbWidth = readU16();
     this->m_fbHeight = readU16();
@@ -659,8 +681,6 @@ void VNCGraphicsClient::handleServerInit()
     readBytes(3); // padding
 
     quint32 nameLength = readU32();
-    if (this->m_readBuffer.size() < (int) nameLength)
-        return;
 
     this->m_desktopName = QString::fromUtf8(readBytes(nameLength));
 
@@ -721,6 +741,7 @@ void VNCGraphicsClient::handleServerInit()
     emit connectionSuccess();
     emit desktopResized();
     update();
+    return true;
 }
 
 void VNCGraphicsClient::sendSetPixelFormat()

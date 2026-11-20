@@ -19,6 +19,10 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.cpp \
     ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.cpp \
+    ../../src/xenadmin-ui/settingsmanager.cpp \
+    ../../src/xenadmin-ui/connectionprofile.cpp \
+    ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.cpp \
+    ../../src/xenadmin-ui/ConsoleView/VNCGraphicsClient.cpp \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.cpp \
     ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.cpp
 
@@ -37,6 +41,9 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.h \
     ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.h \
+    ../../src/xenadmin-ui/settingsmanager.h \
+    ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.h \
+    ../../src/xenadmin-ui/ConsoleView/VNCGraphicsClient.h \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.h \
     ../../src/xenadmin-ui/dialogs/warningdialogs/warningdialog.h
 

@@ -23,6 +23,7 @@ set(XENLIB_SOURCES
     utils/decompressgzaction.cpp
     utils/downloadfileaction.cpp
     utils/encryption.cpp
+    utils/vncdes.cpp
     utils/filelogger.cpp
     utils/misc.cpp
     vmhelpers.cpp

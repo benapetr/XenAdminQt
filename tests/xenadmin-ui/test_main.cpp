@@ -29,6 +29,14 @@
 #include <QMenu>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QTemporaryDir>
+#include <QDeadlineTimer>
+#include <QDataStream>
+#include "settingsmanager.h"
+#include "ConsoleView/VNCGraphicsClient.h"
+#include "xenlib/utils/vncdes.h"
 #include <memory>
 
 using namespace XenSearch;
@@ -36,6 +44,8 @@ using namespace XenSearch;
 class XenAdminUiTests : public QObject
 {
     Q_OBJECT
+
+    QTemporaryDir m_configDir;
 
     // Search editor helpers
 
@@ -64,7 +74,161 @@ class XenAdminUiTests : public QObject
         return items;
     }
 
+    // A fake VNC server end for VNCGraphicsClient tests
+    struct VncPair
+    {
+        QTcpServer server;
+        QTcpSocket* clientSide = nullptr;
+        QTcpSocket* serverSide = nullptr;
+    };
+
+    static bool openVncPair(VncPair& pair)
+    {
+        if (!pair.server.listen(QHostAddress::LocalHost))
+            return false;
+        pair.clientSide = new QTcpSocket();
+        pair.clientSide->connectToHost(QHostAddress::LocalHost, pair.server.serverPort());
+        if (!pair.clientSide->waitForConnected(2000) || !pair.server.waitForNewConnection(2000))
+            return false;
+        pair.serverSide = pair.server.nextPendingConnection();
+        return pair.serverSide != nullptr;
+    }
+
+    static QByteArray readFromClient(QTcpSocket* serverSide, int count)
+    {
+        QDeadlineTimer deadline(3000);
+        while (serverSide->bytesAvailable() < count && !deadline.hasExpired())
+            QTest::qWait(5);
+        return serverSide->read(count);
+    }
+
+    static QByteArray serverInit()
+    {
+        QByteArray init;
+        QDataStream out(&init, QIODevice::WriteOnly);
+        out << quint16(4) << quint16(3)                      // framebuffer size
+            << quint8(32) << quint8(24) << quint8(0) << quint8(1) // bpp, depth, big endian, true colour
+            << quint16(255) << quint16(255) << quint16(255)  // RGB max
+            << quint8(16) << quint8(8) << quint8(0)          // RGB shift
+            << quint8(0) << quint8(0) << quint8(0)           // padding
+            << quint32(4);
+        init.append("test");
+        return init;
+    }
+
 private slots:
+    void initTestCase()
+    {
+        // Keep SettingsManager (used by the VNC client) away from the real settings
+        QVERIFY(this->m_configDir.isValid());
+        SettingsManager::SetConfigDir(this->m_configDir.path());
+    }
+
+    void vncPasswordsAreRememberedPerVm()
+    {
+        SettingsManager& settings = SettingsManager::instance();
+        QString password = "unchanged";
+        QVERIFY(!settings.GetVNCPassword("vm-1", &password));
+
+        const QString secret = "s3cret";
+        settings.SetVNCPassword("vm-1", &secret);
+        QVERIFY(settings.GetVNCPassword("vm-1", &password));
+        QCOMPARE(password, secret);
+
+        // An empty password is known (a passwordless login worked), unlike none
+        const QString empty;
+        settings.SetVNCPassword("vm-2", &empty);
+        QVERIFY(settings.GetVNCPassword("vm-2", &password));
+        QVERIFY(password.isEmpty());
+
+        settings.SetVNCPassword("vm-1", nullptr);
+        QVERIFY(!settings.GetVNCPassword("vm-1", &password));
+
+        // Saved with the session, and not in plain text
+        settings.SetVNCPassword("vm-1", &secret);
+        QSettings stored(settings.GetFileName(), QSettings::IniFormat);
+        const QString storedValue = stored.value("VNCPasswords/vm-1").toString();
+        QVERIFY(!storedValue.isEmpty());
+        QVERIFY(!storedValue.contains(secret));
+    }
+
+    void vncClientAnswersChallengeWithDes()
+    {
+        VncPair pair;
+        QVERIFY(openVncPair(pair));
+        VNCGraphicsClient vnc;
+        QSignalSpy success(&vnc, &VNCGraphicsClient::connectionSuccess);
+        QSignalSpy authFailed(&vnc, &VNCGraphicsClient::authenticationFailed);
+        vnc.Connect(pair.clientSide, "secret");
+
+        pair.serverSide->write("RFB 003.008\n");
+        QCOMPARE(readFromClient(pair.serverSide, 12), QByteArray("RFB 003.008\n"));
+        pair.serverSide->write(QByteArray::fromHex("0102")); // offers VNC authentication only
+        QCOMPARE(readFromClient(pair.serverSide, 1), QByteArray::fromHex("02"));
+
+        const QByteArray challenge = QByteArray::fromHex("00112233445566778899AABBCCDDEEFF");
+        pair.serverSide->write(challenge);
+        QCOMPARE(readFromClient(pair.serverSide, 16), VncDes::ChallengeResponse(challenge, "secret"));
+
+        pair.serverSide->write(QByteArray::fromHex("00000000")); // OK
+        QCOMPARE(readFromClient(pair.serverSide, 1), QByteArray::fromHex("01")); // ClientInit, shared
+        pair.serverSide->write(serverInit());
+        QTRY_COMPARE(success.count(), 1);
+        QCOMPARE(authFailed.count(), 0);
+    }
+
+    void vncClientReportsWrongPassword()
+    {
+        VncPair pair;
+        QVERIFY(openVncPair(pair));
+        VNCGraphicsClient vnc;
+        QSignalSpy authFailed(&vnc, &VNCGraphicsClient::authenticationFailed);
+        QSignalSpy errors(&vnc, &VNCGraphicsClient::errorOccurred);
+        vnc.Connect(pair.clientSide, "wrong");
+
+        pair.serverSide->write("RFB 003.008\n");
+        readFromClient(pair.serverSide, 12);
+        pair.serverSide->write(QByteArray::fromHex("0102"));
+        readFromClient(pair.serverSide, 1);
+        pair.serverSide->write(QByteArray(16, 'x'));
+        readFromClient(pair.serverSide, 16);
+
+        // RFB 3.8: failed, with a reason
+        pair.serverSide->write(QByteArray::fromHex("00000001") + QByteArray::fromHex("00000003") + "bad");
+        QTRY_COMPARE(authFailed.count(), 1);
+        QCOMPARE(authFailed.first().at(1).toString(), QString("bad"));
+        QCOMPARE(errors.count(), 0);
+    }
+
+    void vncClientWaitsForSplitHandshake()
+    {
+        // RFB 3.3, no authentication, every byte arriving on its own
+        VncPair pair;
+        QVERIFY(openVncPair(pair));
+        VNCGraphicsClient vnc;
+        QSignalSpy success(&vnc, &VNCGraphicsClient::connectionSuccess);
+        QSignalSpy errors(&vnc, &VNCGraphicsClient::errorOccurred);
+        vnc.Connect(pair.clientSide, QString());
+
+        auto dribble = [&pair](const QByteArray& data)
+        {
+            for (char byte : data)
+            {
+                pair.serverSide->write(&byte, 1);
+                pair.serverSide->flush();
+                QTest::qWait(2);
+            }
+        };
+
+        dribble("RFB 003.003\n");
+        QCOMPARE(readFromClient(pair.serverSide, 12), QByteArray("RFB 003.003\n"));
+        dribble(QByteArray::fromHex("00000001")); // None
+        QCOMPARE(readFromClient(pair.serverSide, 1), QByteArray::fromHex("01"));
+        dribble(serverInit());
+        QTRY_COMPARE(success.count(), 1);
+        QCOMPARE(errors.count(), 0);
+    }
+
     void cachedFolderIconDoesNotRecurse()
     {
         XenConnection connection;

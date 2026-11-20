@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Switch to Graphical Console works for VMs running their own VNC server, as in XenCenter: the app finds the server, asks for its password when needed (remembered per VM, saved with the session) and goes back to the text console if you cancel; the VNC client now answers password challenges correctly and no longer stalls when the server's handshake arrives in pieces
 Consoles check the user's role like XenCenter: a user whose role may not open a console sees which roles may, instead of a console that fails; the host console opens dom0 and the driver domain console its storage driver domain on hosts that have one; Open SSH Console uses the logged-in user's name instead of root
 Back and Forward return to tag and folder searches, as XenCenter does, and clicking the selected object in the tree while a search is shown brings its tabs back
 Changing a network's MTU, bond mode or load balancing algorithm in its properties is saved again, and the network is replugged so a new MTU takes effect, as XenCenter does; the MTU can be changed while VMs with I/O drivers are running

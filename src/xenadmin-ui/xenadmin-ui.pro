@@ -25,6 +25,7 @@ SOURCES += \
     dialogs/addserverdialog.cpp \
     dialogs/connectingtoserverdialog.cpp \
     dialogs/changeserverpassworddialog.cpp \
+    dialogs/vncpassworddialog.cpp \
     dialogs/controldomainmemorydialog.cpp \
     dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
@@ -341,6 +342,7 @@ HEADERS += \
     dialogs/addserverdialog.h \
     dialogs/connectingtoserverdialog.h \
     dialogs/changeserverpassworddialog.h \
+    dialogs/vncpassworddialog.h \
     dialogs/controldomainmemorydialog.h \
     dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
@@ -654,6 +656,7 @@ FORMS += \
     dialogs/addserverdialog.ui \
     dialogs/connectingtoserverdialog.ui \
     dialogs/changeserverpassworddialog.ui \
+    dialogs/vncpassworddialog.ui \
     dialogs/controldomainmemorydialog.ui \
     dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \

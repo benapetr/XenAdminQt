@@ -196,6 +196,8 @@ set(XENADMIN_SOURCES
     dialogs/bondpropertiesdialog.ui
     dialogs/changeserverpassworddialog.cpp
     dialogs/changeserverpassworddialog.ui
+    dialogs/vncpassworddialog.cpp
+    dialogs/vncpassworddialog.ui
     dialogs/commanderrordialog.cpp
     dialogs/commanderrordialog.ui
     dialogs/confirmvmdeletedialog.cpp

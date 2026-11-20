@@ -130,6 +130,8 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
 
     signals:
         void errorOccurred(QObject* sender, const QString& error);
+        //! The server rejected the password (C# VNCAuthenticationException)
+        void authenticationFailed(QObject* sender, const QString& error);
         void connectionSuccess();
         void desktopResized();
 
@@ -157,10 +159,14 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         Qt::Key remapKey(Qt::Key input);
 
         // Protocol handling
-        void handleProtocolVersion();
-        void handleSecurityHandshake();
-        void handleSecurityResult();
-        void handleServerInit();
+        // Handshake steps: false while waiting for more data, nothing consumed
+        bool handleProtocolVersion();
+        bool handleSecurityHandshake();
+        bool handleVncAuthChallenge();
+        bool handleSecurityResult();
+        bool handleServerInit();
+        //! A security failure: reason string (RFB 3.8, and a 3.3 "connection failed")
+        void failSecurity(const QString& error, bool authentication);
         bool handleFramebufferUpdate();
         //! C# VNCStream.DesktopSize / VNCGraphicsClient.ClientDesktopSize
         void applyDesktopSize(int width, int height);
@@ -236,6 +242,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
             Disconnected,
             ProtocolVersion,
             SecurityHandshake,
+            VncAuthChallenge,
             SecurityResult,
             Initialization,
             Normal
@@ -244,6 +251,7 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         int m_protocolMinorVersion = 8; // RFB protocol minor version (3 for 3.3, 7 for 3.7, 8 for 3.8)
         QByteArray m_readBuffer;
         QString m_password;
+        bool m_usedVncAuth = false; // VNC authentication chosen, so a failure means a wrong password
 
         // Rendering state (matches C# fields with exact names)
         QImage m_backBuffer;          // Matches C# Bitmap _backBuffer

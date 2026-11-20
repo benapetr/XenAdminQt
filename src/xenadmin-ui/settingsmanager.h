@@ -34,6 +34,7 @@
 #include <QByteArray>
 #include <QStringList>
 #include <QVariantMap>
+#include <QHash>
 
 class ConnectionProfile;
 
@@ -285,6 +286,12 @@ class SettingsManager : public QObject
         bool GetRequirePass() const;
         void SetRequirePass(bool require);
 
+        //! Password of a VM's own VNC server, by VM uuid (C# Settings.GetVNCPassword). False
+        //! if none is known; an empty password means a passwordless login was used.
+        bool GetVNCPassword(const QString& vmUuid, QString* password) const;
+        //! nullptr forgets it. Written to disk, encrypted, only when the session is saved.
+        void SetVNCPassword(const QString& vmUuid, const QString* password);
+
     signals:
         void settingsChanged(const QString& key);
 
@@ -356,6 +363,7 @@ class SettingsManager : public QObject
         QString m_lastConnectedServer;
         QStringList m_serverHistory;
         bool m_saveSession;
+        QHash<QString, QString> m_vncPasswords; // VM uuid -> encrypted password ("" for none)
         bool m_savePasswords;
         bool m_requirePass;
         QByteArray m_mainPasswordHash;

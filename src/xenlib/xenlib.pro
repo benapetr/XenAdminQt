@@ -281,6 +281,7 @@ HEADERS += \
     xen/actions/meddlingactionmanager.h \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
+    utils/vncdes.h \
     vmhelpers.h \
     network/comparableaddress.h \
     collections/observablelist.h \
@@ -547,6 +548,7 @@ SOURCES += \
     xen/actions/meddlingactionmanager.cpp \
     xen/actions/delegatedasyncoperation.cpp \
     utils/encryption.cpp \
+    utils/vncdes.cpp \
     network/comparableaddress.cpp \
     xen/network/connectionsmanager.cpp \
     operations/producerconsumerqueue.cpp \
