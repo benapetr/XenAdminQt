@@ -219,6 +219,22 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         return menu;
     }
 
+    if (this->isMixedPoolsAndStandaloneHosts())
+    {
+        // C# MixedPoolsAndStandaloneHosts
+        this->addCommand(menu, new DisconnectHostsAndPoolsCommand(this->m_mainWindow, this));
+        QList<XenConnection*> connections;
+        for (const QSharedPointer<XenObject>& selected : this->m_mainWindow->GetSelectionManager()->SelectedObjects())
+        {
+            if (selected && selected->GetConnection() && !connections.contains(selected->GetConnection()))
+                connections.append(selected->GetConnection());
+        }
+        this->addCommand(menu, new ReconnectHostCommand(connections, this->m_mainWindow, this));
+        this->addCommand(menu, new EditTagsCommand(this->m_mainWindow, this));
+        this->addTreeContextMenuExtras(menu);
+        return menu;
+    }
+
     switch (objectType)
     {
         case XenObjectType::VM:
@@ -1475,4 +1491,35 @@ bool ContextMenuBuilder::isMultiSnapshotSelection() const
     }
 
     return true;
+}
+
+bool ContextMenuBuilder::isMixedPoolsAndStandaloneHosts() const
+{
+    // C# MixedPoolsAndStandaloneHosts.IsValid: several items, only pools and hosts that are
+    // not in a pool, at least one of each
+    if (!this->m_mainWindow || !this->m_mainWindow->GetSelectionManager())
+        return false;
+
+    const QList<QSharedPointer<XenObject>> selection = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+    if (selection.size() < 2)
+        return false;
+
+    bool containsPool = false;
+    bool containsHost = false;
+    for (const QSharedPointer<XenObject>& item : selection)
+    {
+        if (!item)
+            return false;
+        if (item->GetObjectType() == XenObjectType::Pool)
+        {
+            containsPool = true;
+        } else if (item->GetObjectType() == XenObjectType::Host && item->GetCache() && !item->GetCache()->GetPool())
+        {
+            containsHost = true;
+        } else
+        {
+            return false;
+        }
+    }
+    return containsPool && containsHost;
 }

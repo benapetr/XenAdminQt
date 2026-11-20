@@ -87,6 +87,8 @@ class ContextMenuBuilder : public QObject
         QList<QSharedPointer<Host>> getSelectedHosts() const;
         QList<XenConnection*> getSelectedConnections() const;
         bool isMultiSnapshotSelection() const;
+        //! C# MixedPoolsAndStandaloneHosts: pools and standalone hosts selected together
+        bool isMixedPoolsAndStandaloneHosts() const;
 
         // Helper methods
         //! Builds special root-node menus (infrastructure root and folder root); returns null when not applicable.

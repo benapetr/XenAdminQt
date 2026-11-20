@@ -44,63 +44,49 @@ DisconnectHostsAndPoolsCommand::DisconnectHostsAndPoolsCommand(const QList<XenCo
 {
 }
 
-QList<XenConnection*> DisconnectHostsAndPoolsCommand::getConnections() const
+QList<QSharedPointer<XenObject>> DisconnectHostsAndPoolsCommand::getItems() const
 {
-    if (!this->m_connections.isEmpty())
-        return this->m_connections;
+    if (this->m_connections.isEmpty())
+        return this->getSelectedObjects();
 
-    // TODO: Get all selected connections from main window selection
-    QList<XenConnection*> connections;
-    QSharedPointer<XenObject> obj = this->getSelectedObject();
-    
-    if (obj && obj->GetConnection())
-        connections.append(obj->GetConnection());
-
-    return connections;
+    QList<QSharedPointer<XenObject>> items;
+    for (XenConnection* connection : this->m_connections)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            continue;
+        if (QSharedPointer<Pool> pool = cache->GetPool())
+            items.append(pool);
+        else if (QSharedPointer<Host> coordinator = Host::GetCoordinator(connection))
+            items.append(coordinator);
+    }
+    return items;
 }
 
 bool DisconnectHostsAndPoolsCommand::CanRun() const
 {
-    QList<XenConnection*> connections = this->getConnections();
-    
-    if (connections.isEmpty())
-        return false;
-
+    // C# CanRunCore: some item can be disconnected, and the selection has hosts and pools
     bool oneIsConnected = false;
     bool foundHost = false;
     bool foundPool = false;
 
-    for (XenConnection* connection : connections)
+    for (const QSharedPointer<XenObject>& item : this->getItems())
     {
-        if (!connection)
+        if (!item)
             continue;
 
-        XenCache* cache = connection->GetCache();
-        if (!cache)
-            continue;
+        const QList<QSharedPointer<XenObject>> single{item};
+        DisconnectHostCommand hostCommand(this->mainWindow());
+        hostCommand.SetSelectionOverride(single);
+        DisconnectPoolCommand poolCommand(this->mainWindow());
+        poolCommand.SetSelectionOverride(single);
+        if (hostCommand.CanRun() || poolCommand.CanRun())
+            oneIsConnected = true;
 
-        // Check if we can disconnect this (either as host or pool)
-        QSharedPointer<Pool> pool = cache->GetPool();
-        
-        if (pool)
-        {
-            // This is a pool connection
-            QSharedPointer<Host> host = pool->GetMasterHost();
-            DisconnectPoolCommand poolCmd(MainWindow::instance());
-            // TODO: Need to check if this specific pool connection can run
-            if (connection->IsConnected())
-                oneIsConnected = true;
-            foundPool = true;
-        }
-        else
-        {
-            // This is a standalone host connection
-            DisconnectHostCommand hostCmd(MainWindow::instance());
-            // TODO: Need to check if this specific host connection can run
-            if (connection->IsConnected())
-                oneIsConnected = true;
+        if (item->GetObjectType() == XenObjectType::Host)
             foundHost = true;
-        }
+        else if (item->GetObjectType() == XenObjectType::Pool)
+            foundPool = true;
     }
 
     return oneIsConnected && foundHost && foundPool;
@@ -108,16 +94,18 @@ bool DisconnectHostsAndPoolsCommand::CanRun() const
 
 void DisconnectHostsAndPoolsCommand::Run()
 {
-    QList<XenConnection*> connections = this->getConnections();
-
-    for (XenConnection* connection : connections)
+    // C# RunCore: disconnect each item's connection (once, as several items may share one)
+    QList<XenConnection*> done;
+    for (const QSharedPointer<XenObject>& item : this->getItems())
     {
-        if (connection)
-        {
-            DisconnectCommand* disconnectCmd = new DisconnectCommand(MainWindow::instance(), connection, false, this);
-            disconnectCmd->Run();
-            disconnectCmd->deleteLater();
-        }
+        XenConnection* connection = item ? item->GetConnection() : nullptr;
+        if (!connection || done.contains(connection))
+            continue;
+        done.append(connection);
+
+        DisconnectCommand* disconnectCmd = new DisconnectCommand(MainWindow::instance(), connection, false, this);
+        disconnectCmd->Run();
+        disconnectCmd->deleteLater();
     }
 }
 

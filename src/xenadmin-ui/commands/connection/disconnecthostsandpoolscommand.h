@@ -56,7 +56,9 @@ class DisconnectHostsAndPoolsCommand : public Command
         QString MenuText() const override;
 
     private:
-        QList<XenConnection*> getConnections() const;
+        //! The selected hosts and pools; for a connection list, each connection's pool, or
+        //! its coordinator if it isn't in a pool
+        QList<QSharedPointer<XenObject>> getItems() const;
         QList<XenConnection*> m_connections;
 };
 
