@@ -73,7 +73,6 @@ namespace Xen
             void ReleaseSession(XenAPI::Session *session);
 
             // Connection state management
-            void ConnectAll();
             void DisconnectAll();
 
             // Monitoring and health

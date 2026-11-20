@@ -351,18 +351,6 @@ class XSVNCScreen : public QWidget
         // ========== Qt Slots (equivalent to C# event handlers) ==========
 
         /**
-         * @brief Handle VM property changes (power state, name, etc.)
-         * Equivalent to C#: private void VM_PropertyChanged
-         */
-        void onVMPropertyChanged(const QString& vmRef, const QString& propertyName);
-
-        /**
-         * @brief Handle guest metrics changes (IP addresses)
-         * Equivalent to C#: private void guestMetrics_PropertyChanged
-         */
-        void onGuestMetricsPropertyChanged(const QString& propertyName);
-
-        /**
          * @brief Handle settings changes (RDP polling enabled/disabled)
          * Equivalent to C#: private void Default_PropertyChanged
          */
@@ -429,11 +417,6 @@ class XSVNCScreen : public QWidget
          * Equivalent to C#: private void UnregisterEventListeners()
          */
         void unregisterEventListeners();
-
-        /**
-         * @brief Route object data changes to specific handlers
-         */
-        void onObjectDataReceived(const QString& objectType, const QString& objectRef, const QVariantMap& data);
 
         /**
          * @brief Handle cache object changes from EventPoller (real-time updates)

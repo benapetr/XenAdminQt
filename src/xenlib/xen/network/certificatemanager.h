@@ -117,52 +117,15 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
         //! verification problem is a host name mismatch (e.g. connecting by IP address)
         static bool IsTrustedChain(const QList<QSslError>& errors);
 
-        // Certificate validation
-        bool validateCertificate(const QSslCertificate& certificate, const QString& hostname);
-        QList<QSslError> getCertificateErrors(const QSslCertificate& certificate, const QString& hostname);
-
-        // Certificate storage
-        bool storeCertificate(const QSslCertificate& certificate, const QString& hostname);
-        QSslCertificate getCertificate(const QString& hostname);
-        bool removeCertificate(const QString& hostname);
-        QStringList getStoredHosts();
-
-        // Trust management
-        bool isCertificateTrusted(const QSslCertificate& certificate, const QString& hostname);
-        void trustCertificate(const QSslCertificate& certificate, const QString& hostname);
-        void untrustCertificate(const QString& hostname);
-
-        // Certificate information
-        QString getCertificateInfo(const QSslCertificate& certificate);
-        QString getCertificateFingerprint(const QSslCertificate& certificate);
-        bool isCertificateExpired(const QSslCertificate& certificate);
-        QDateTime getCertificateExpiry(const QSslCertificate& certificate);
-
-        // Policy management
-        void setValidationPolicy(bool allowSelfSigned, bool allowExpired);
-        bool getAllowSelfSigned() const;
-        bool getAllowExpired() const;
-
     signals:
         //! Known servers or warn settings changed (emitted from the validating thread)
         void trustSettingsChanged();
-
-        void certificateValidated(const QString& hostname, bool isValid);
-        void certificateStored(const QString& hostname);
-        void certificateRemoved(const QString& hostname);
-        void certificateExpiringSoon(const QString& hostname, const QDateTime& expiry);
 
     private:
         static XenCertificateManager* s_instance;
 
         class Private;
         Private* d;
-
-        void loadStoredCertificates();
-        void saveStoredCertificates();
-        void checkExpiringCertificates();
-        bool matchesHostname(const QSslCertificate& certificate, const QString& hostname);
-        bool matchesPattern(const QString& pattern, const QString& hostname);
 };
 
 #endif // XEN_CERTIFICATEMANAGER_H

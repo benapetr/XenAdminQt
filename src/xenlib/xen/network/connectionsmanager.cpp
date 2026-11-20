@@ -225,22 +225,6 @@ void ConnectionsManager::ReleaseSession(XenAPI::Session* session)
     }
 }
 
-void ConnectionsManager::ConnectAll()
-{
-    // TODO: Update for worker-based connections - need username/password
-    qWarning() << "ConnectionsManager::connectAll: Not yet implemented for worker-based connections";
-    /*
-    auto connections = m_connections->toList();
-    for (XenConnection* conn : connections)
-    {
-        if (conn && !conn->isConnected())
-        {
-            conn->connectToHost(conn->getHostname(), conn->getPort());
-        }
-    }
-    */
-}
-
 void ConnectionsManager::DisconnectAll()
 {
     auto connections = this->m_connections->toList();

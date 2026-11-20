@@ -570,63 +570,6 @@ void XSVNCScreen::unregisterEventListeners()
 // ========== Private Slots - Event Handlers ==========
 
 /**
- * @brief Handle VM property changes
- * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs (VM_PropertyChanged not shown in excerpt)
- */
-void XSVNCScreen::onVMPropertyChanged(const QString& vmRef, const QString& propertyName)
-{
-    if (vmRef != this->_sourceRef)
-        return;
-
-    qDebug() << "XSVNCScreen: VM property changed:" << propertyName;
-
-    // TODO: Handle power state changes, name changes, etc.
-    // If power state changed to running, might need to start polling
-}
-
-/**
- * @brief Handle guest metrics property changes (IP address changes trigger re-polling)
- * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs lines 197-217
- */
-void XSVNCScreen::onGuestMetricsPropertyChanged(const QString& propertyName)
-{
-    if (this->_sourceRef.isEmpty())
-        return;
-
-    if (propertyName == "networks")
-    {
-        // TODO: Get new networks from guest metrics
-        // QMap<QString, QString> newNetworks = ...;
-
-        // if (!equateDictionary(newNetworks, _cachedNetworks))
-        // {
-        //     qDebug() << "XSVNCScreen: Detected IP address change, repolling for VNC/RDP...";
-        //     _cachedNetworks = newNetworks;
-        //     startPolling();
-        // }
-    }
-}
-
-/**
- * @brief Handle object data changes from EventPoller
- * Routes to specific handlers based on object type
- */
-void XSVNCScreen::onObjectDataReceived(const QString& objectType, const QString& objectRef, const QVariantMap& data)
-{
-    const XenObjectType type = XenObject::TypeFromString(objectType);
-
-    if (type == XenObjectType::VM && objectRef == this->_sourceRef)
-    {
-        // VM property changed - check if it affects console
-        this->onVMDataChanged(data);
-    } else if (type == XenObjectType::VMGuestMetrics && objectRef == this->_guestMetricsRef)
-    {
-        // Guest metrics changed - check for IP address changes
-        this->onGuestMetricsChanged(data);
-    }
-}
-
-/**
  * @brief Handle VM data changes (power state, name, etc.)
  */
 void XSVNCScreen::onVMDataChanged(const QVariantMap& vmData)
