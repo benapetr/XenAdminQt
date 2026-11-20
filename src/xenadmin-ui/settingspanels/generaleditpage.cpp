@@ -36,6 +36,7 @@
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/folders/foldersmanager.h"
 #include "xenlib/xencache.h"
+#include <QToolTip>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QPushButton>
@@ -258,11 +259,18 @@ bool GeneralEditPage::IsValidToSave() const
 
 void GeneralEditPage::ShowLocalValidationMessages()
 {
+    // C# ShowLocalValidationMessages: one balloon (HelpersGUI.ShowBalloonMessage), name first
+    auto showBalloon = [](QLineEdit* field, const QString& message)
+    {
+        field->setStyleSheet("border: 1px solid red;");
+        field->setFocus();
+        QToolTip::showText(field->mapToGlobal(QPoint(0, field->height())), message, field);
+    };
+
     if (this->ui->txtName->text().trimmed().isEmpty())
     {
-        this->ui->txtName->setFocus();
-        this->ui->txtName->setStyleSheet("border: 1px solid red;");
-        // TODO: Show balloon tooltip with error message
+        showBalloon(this->ui->txtName, tr("Please enter a valid name."));
+        return;
     }
 
     if (this->m_objectType == XenObjectType::Host && this->ui->lblIQN->isVisible())
@@ -270,8 +278,8 @@ void GeneralEditPage::ShowLocalValidationMessages()
         QString iqn = this->ui->txtIQN->text().trimmed();
         if (!iqn.isEmpty() && !iqn.startsWith("iqn.") && !iqn.startsWith("eui.") && !iqn.startsWith("naa."))
         {
-            this->ui->txtIQN->setStyleSheet("border: 1px solid red;");
-            // TODO: Show balloon tooltip with error message
+            showBalloon(this->ui->txtIQN,
+                        tr("Please enter a valid IQN, e.g. iqn.2007-11.com.example.subdomain:optional-domain-specific-string"));
         }
     }
 }
@@ -280,7 +288,7 @@ void GeneralEditPage::HideLocalValidationMessages()
 {
     this->ui->txtName->setStyleSheet("");
     this->ui->txtIQN->setStyleSheet("");
-    // TODO: Hide balloon tooltips
+    QToolTip::hideText();
 }
 
 void GeneralEditPage::Cleanup()
