@@ -32,10 +32,14 @@
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include "xenlib/customfields/customfieldsmanager.h"
 #include <algorithm>
 #include <QSet>
+#include "../../settingsmanager.h"
+#include <QCoreApplication>
+#include <QTimer>
 
 using namespace XenSearch;
 
@@ -344,93 +348,6 @@ QVariantList EnumPropertyQueryType::getEnumValues() const
     for (const auto& entry : PropertyAccessors::EnumValues(this->property_))
         values.append(QueryElement::ComboEntry(entry.first, entry.second));
     return values;
-}
-
-// ============================================================================
-// NumericPropertyQueryType - memory, disk size, CPU count, etc.
-// ============================================================================
-
-NumericPropertyQueryType::NumericPropertyQueryType(int group, ObjectTypes appliesTo, 
-                                                   PropertyNames property, const QString& name,
-                                                   qint64 multiplier, const QString& units)
-    : QueryType(group, appliesTo)
-    , property_(property)
-    , name_(name)
-    , multiplier_(multiplier)
-    , units_(units)
-{
-}
-
-bool NumericPropertyQueryType::ForQuery(QueryFilter* query) const
-{
-    NumericQuery* numericQuery = dynamic_cast<NumericQuery*>(query);
-    if (!numericQuery)
-        return false;
-    
-    return numericQuery->getProperty() == this->property_;
-}
-
-void NumericPropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
-{
-    NumericQuery* numericQuery = dynamic_cast<NumericQuery*>(query);
-    if (!numericQuery)
-        return;
-    
-    queryElement->setMatchTypeSelection(comparisonTypeToString(numericQuery->getComparisonType()));
-    queryElement->setNumericValue(numericQuery->getValue() / this->multiplier_);
-}
-
-QueryFilter* NumericPropertyQueryType::GetQuery(QueryElement* queryElement) const
-{
-    QString matchType = queryElement->getMatchTypeSelection();
-    ComparisonType comparisonType = comparisonTypeFromString(matchType);
-    qint64 value = queryElement->getNumericValue() * this->multiplier_;
-    
-    return new NumericQuery(this->property_, value, comparisonType);
-}
-
-QString NumericPropertyQueryType::toString() const
-{
-    return this->name_;
-}
-
-QStringList NumericPropertyQueryType::getMatchTypeComboButtonEntries() const
-{
-    return QStringList()
-        << comparisonTypeToString(ComparisonType::LessThan)
-        << comparisonTypeToString(ComparisonType::GreaterThan)
-        << comparisonTypeToString(ComparisonType::Equal)
-        << comparisonTypeToString(ComparisonType::NotEqual);
-}
-
-NumericPropertyQueryType::ComparisonType NumericPropertyQueryType::comparisonTypeFromString(const QString& str)
-{
-    if (str == "less than" || str == "Less Than")
-        return ComparisonType::LessThan;
-    if (str == "greater than" || str == "Greater Than")
-        return ComparisonType::GreaterThan;
-    if (str == "equal to" || str == "Equal To")
-        return ComparisonType::Equal;
-    if (str == "not equal to" || str == "Not Equal To")
-        return ComparisonType::NotEqual;
-    
-    return ComparisonType::Equal;
-}
-
-QString NumericPropertyQueryType::comparisonTypeToString(ComparisonType type)
-{
-    switch (type)
-    {
-        case ComparisonType::LessThan:
-            return "Less Than";
-        case ComparisonType::GreaterThan:
-            return "Greater Than";
-        case ComparisonType::Equal:
-            return "Equal To";
-        case ComparisonType::NotEqual:
-            return "Not Equal To";
-    }
-    return "Equal To";
 }
 
 // ============================================================================
@@ -1159,44 +1076,142 @@ QueryFilter* RecursiveXMOListQueryType::newQuery(PropertyNames property, QueryFi
 }
 
 // ============================================================================
-// XenModelObjectPropertyQueryType - Legacy direct object selection
+// Object lists of the legacy query types
 // ============================================================================
 
-XenModelObjectPropertyQueryType::XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QueryType(group, appliesTo)
-    , property_(property)
+namespace
 {
-    Q_UNUSED(parent);
-    // Monitor cache changes (C# Cache.RegisterBatchCollectionChanged<T>)
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &XenModelObjectPropertyQueryType::onConnectionsChanged);
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &XenModelObjectPropertyQueryType::onConnectionsChanged);
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionsChanged, this, &XenModelObjectPropertyQueryType::onConnectionsChanged);
-    
-    this->onConnectionsChanged();
-}
-
-XenModelObjectPropertyQueryType::~XenModelObjectPropertyQueryType()
-{
-}
-
-void XenModelObjectPropertyQueryType::onConnectionsChanged()
-{
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    
-    for (XenConnection* conn : connMgr->GetAllConnections())
+    // C# connection.Cache.AddAll(entries, filter) over all connections, as combo entries of
+    // name and UUID (the legacy queries identify the object by UUID)
+    QVariantList objectEntries(XenObjectType type, const XMOListContains::Filter& filter = XMOListContains::Filter())
     {
-        if (conn && conn->GetCache())
+        QList<QSharedPointer<XenObject>> objects;
+        for (XenConnection* connection : Xen::ConnectionsManager::instance()->GetAllConnections())
         {
-            QObject::connect(conn->GetCache(), &XenCache::itemChanged,
-                    this, &XenModelObjectPropertyQueryType::onCacheChanged, Qt::UniqueConnection);
+            if (!connection || !connection->GetCache())
+                continue;
+            for (const QSharedPointer<XenObject>& object : connection->GetCache()->GetAll(type))
+            {
+                if (object && (!filter || filter(object)))
+                    objects.append(object);
+            }
         }
+
+        std::sort(objects.begin(), objects.end(), [](const QSharedPointer<XenObject>& a, const QSharedPointer<XenObject>& b) {
+            return a->GetName().compare(b->GetName(), Qt::CaseInsensitive) < 0;
+        });
+
+        QVariantList entries;
+        for (const QSharedPointer<XenObject>& object : objects)
+            entries.append(QueryElement::ComboEntry(object->GetName(), object->GetUUID()));
+        return entries;
+    }
+
+    XenObjectType listedTypeFor(PropertyNames property)
+    {
+        switch (property)
+        {
+            case PropertyNames::pool:
+                return XenObjectType::Pool;
+            case PropertyNames::host:
+                return XenObjectType::Host;
+            case PropertyNames::networks:
+                return XenObjectType::Network;
+            case PropertyNames::storage:
+                return XenObjectType::SR;
+            case PropertyNames::vm:
+                return XenObjectType::VM;
+            default:
+                return XenObjectType::Null;
+        }
+    }
+
+    const char* const IS = QT_TRANSLATE_NOOP("XenSearch::QueryType", "is");
+    const char* const IS_NOT = QT_TRANSLATE_NOOP("XenSearch::QueryType", "is not");
+    const char* const USES = QT_TRANSLATE_NOOP("XenSearch::QueryType", "uses");
+    const char* const DOES_NOT_USE = QT_TRANSLATE_NOOP("XenSearch::QueryType", "does not use");
+    const char* const STARTS_WITH = QT_TRANSLATE_NOOP("XenSearch::QueryType", "starts with");
+    const char* const ENDS_WITH = QT_TRANSLATE_NOOP("XenSearch::QueryType", "ends with");
+    const char* const CONTAINS = QT_TRANSLATE_NOOP("XenSearch::QueryType", "contains");
+    const char* const NOT_CONTAINS = QT_TRANSLATE_NOOP("XenSearch::QueryType", "does not contain");
+    const char* const IS_STANDALONE = QT_TRANSLATE_NOOP("XenSearch::QueryType", "Is standalone");
+    const char* const IS_IN_A_POOL = QT_TRANSLATE_NOOP("XenSearch::QueryType", "Is in a pool");
+
+    QString text(const char* message)
+    {
+        return QCoreApplication::translate("XenSearch::QueryType", message);
     }
 }
 
-void XenModelObjectPropertyQueryType::onCacheChanged()
+ObjectListQueryType::ObjectListQueryType(int group, ObjectTypes appliesTo, XenObjectType listedType)
+    : QueryType(group, appliesTo), listedType_(listedType)
 {
-    // Notify QueryElement to refresh dropdown
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+    connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &ObjectListQueryType::onConnectionsChanged);
+    connect(connMgr, &Xen::ConnectionsManager::connectionsChanged, this, &ObjectListQueryType::onConnectionsChanged);
+    this->onConnectionsChanged();
+}
+
+void ObjectListQueryType::onConnectionsChanged()
+{
+    for (XenConnection* connection : Xen::ConnectionsManager::instance()->GetAllConnections())
+    {
+        if (!connection || !connection->GetCache())
+            continue;
+        XenCache* cache = connection->GetCache();
+        connect(cache, &XenCache::itemChanged, this, &ObjectListQueryType::onItemChanged, Qt::UniqueConnection);
+        connect(cache, &XenCache::itemRemoved, this, &ObjectListQueryType::onItemRemoved, Qt::UniqueConnection);
+        connect(cache, &XenCache::cacheCleared, this, &ObjectListQueryType::onCacheCleared, Qt::UniqueConnection);
+    }
+}
+
+void ObjectListQueryType::onItemChanged(XenConnection* connection, XenObjectType type, const QString& ref)
+{
+    if (type != this->listedType_)
+        return;
+    const QString key = QString::number(reinterpret_cast<quintptr>(connection)) + ref;
+    if (this->knownObjects_.contains(key))
+        return;
+    this->knownObjects_.insert(key);
+    this->scheduleRefresh();
+}
+
+void ObjectListQueryType::onItemRemoved(XenConnection* connection, XenObjectType type, const QString& ref)
+{
+    if (type != this->listedType_)
+        return;
+    if (this->knownObjects_.remove(QString::number(reinterpret_cast<quintptr>(connection)) + ref))
+        this->scheduleRefresh();
+}
+
+void ObjectListQueryType::onCacheCleared()
+{
+    // Objects that come back are counted as new again
+    this->knownObjects_.clear();
+    this->scheduleRefresh();
+}
+
+// One refresh for a burst of changes (e.g. a connection filling its cache)
+void ObjectListQueryType::scheduleRefresh()
+{
+    if (this->refreshPending_)
+        return;
+    this->refreshPending_ = true;
+    QTimer::singleShot(0, this, [this]()
+    {
+        this->refreshPending_ = false;
+        emit SomeThingChanged();
+    });
+}
+
+// ============================================================================
+// XenModelObjectPropertyQueryType - legacy "Pool is <pool>" (C# group 2, not offered for new queries)
+// ============================================================================
+
+XenModelObjectPropertyQueryType::XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property)
+    : ObjectListQueryType(group, appliesTo, listedTypeFor(property))
+    , property_(property)
+{
 }
 
 bool XenModelObjectPropertyQueryType::ForQuery(QueryFilter* query) const
@@ -1212,7 +1227,7 @@ QString XenModelObjectPropertyQueryType::toString() const
 
 QStringList XenModelObjectPropertyQueryType::getMatchTypeComboButtonEntries() const
 {
-    return QStringList() << "is" << "is not";
+    return QStringList() << text(IS) << text(IS_NOT);
 }
 
 bool XenModelObjectPropertyQueryType::showComboButton(QueryElement* queryElement) const
@@ -1224,31 +1239,27 @@ bool XenModelObjectPropertyQueryType::showComboButton(QueryElement* queryElement
 QVariantList XenModelObjectPropertyQueryType::getComboButtonEntries(QueryElement* queryElement) const
 {
     Q_UNUSED(queryElement);
-    
-    QVariantList entries;
-    
-    // C# collects all T objects from all connections
-    // For now, return empty list until XenObject integration complete
-    
-    // TODO: Implement when XenObject cache is fully integrated
-    // Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    // for (Xen::XenConnection* conn : connMgr->GetAllConnections()) {
-    //     if (conn && conn->GetCache()) {
-    //         // Get all objects of appropriate type
-    //         // CA-17132: Special case pools (filter out null pools)
-    //     }
-    // }
-    
-    return entries;
+
+    XMOListContains::Filter filter;
+    // CA-17132: a standalone server's pool is not a pool to the user
+    if (this->listedType_ == XenObjectType::Pool)
+    {
+        filter = [](const QSharedPointer<XenObject>& object) {
+            XenConnection* connection = object->GetConnection();
+            return connection && connection->GetCache() && connection->GetCache()->GetPool();
+        };
+    }
+    return objectEntries(this->listedType_, filter);
 }
 
 QueryFilter* XenModelObjectPropertyQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // C# extracts selected object from ComboButton and creates XenModelObjectPropertyQuery
-    Q_UNUSED(queryElement);
-    
-    // TODO: Implement when QueryElement combo button integration exists
-    return nullptr;
+    const QString uuid = queryElement->getComboBoxValue().toString();
+    if (uuid.isEmpty())
+        return nullptr;
+
+    const bool equals = queryElement->getMatchTypeSelection() == text(IS);
+    return new XenModelObjectPropertyQuery(this->property_, uuid, equals);
 }
 
 void XenModelObjectPropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
@@ -1256,66 +1267,30 @@ void XenModelObjectPropertyQueryType::FromQuery(QueryFilter* query, QueryElement
     auto* xmoQuery = dynamic_cast<XenModelObjectPropertyQuery*>(query);
     if (!xmoQuery)
         return;
-    
-    Q_UNUSED(queryElement);
-    
-    // TODO: Set queryElement match type and combo selection
+
+    queryElement->setMatchTypeSelection(text(xmoQuery->getEquals() ? IS : IS_NOT));
+    queryElement->setComboBoxValue(xmoQuery->getUuid());
 }
 
 // ============================================================================
-// XenModelObjectListContainsQueryType - Legacy list object selection
+// XenModelObjectListContainsQueryType - legacy "Network uses <network>" (C# group 5)
 // ============================================================================
 
-XenModelObjectListContainsQueryType::XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QueryType(group, appliesTo)
+XenModelObjectListContainsQueryType::XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property)
+    : ObjectListQueryType(group, appliesTo, listedTypeFor(property))
     , property_(property)
 {
-    Q_UNUSED(parent);
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &XenModelObjectListContainsQueryType::onConnectionsChanged);
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &XenModelObjectListContainsQueryType::onConnectionsChanged);
-    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionsChanged, this, &XenModelObjectListContainsQueryType::onConnectionsChanged);
-    
-    this->onConnectionsChanged();
-}
-
-XenModelObjectListContainsQueryType::~XenModelObjectListContainsQueryType()
-{
-}
-
-void XenModelObjectListContainsQueryType::onConnectionsChanged()
-{
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    
-    for (XenConnection* conn : connMgr->GetAllConnections())
-    {
-        if (conn && conn->GetCache())
-        {
-            QObject::connect(conn->GetCache(), &XenCache::itemChanged,
-                    this, &XenModelObjectListContainsQueryType::onCacheChanged, Qt::UniqueConnection);
-        }
-    }
-}
-
-void XenModelObjectListContainsQueryType::onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref)
-{
-    Q_UNUSED(connection);
-    Q_UNUSED(type);
-    Q_UNUSED(ref);
-    // TODO: Update collected values when cache changes
-    // For now, we just ignore the change
 }
 
 bool XenModelObjectListContainsQueryType::ForQuery(QueryFilter* query) const
 {
-    // C# checks XenModelObjectListContainsQuery<T> or XenModelObjectListContainsNameQuery
-    
+    // C# ListContainsQuery<T>: both the object and the name variant
     if (auto* listQuery = dynamic_cast<XenModelObjectListContainsQuery*>(query))
         return listQuery->getProperty() == this->property_;
-    
+
     if (auto* nameQuery = dynamic_cast<XenModelObjectListContainsNameQuery*>(query))
         return nameQuery->getProperty() == this->property_;
-    
+
     return false;
 }
 
@@ -1326,128 +1301,152 @@ QString XenModelObjectListContainsQueryType::toString() const
 
 QStringList XenModelObjectListContainsQueryType::getMatchTypeComboButtonEntries() const
 {
-    // C# returns different match types based on property
+    QStringList entries;
     if (this->property_ == PropertyNames::networks)
-    {
-        return QStringList() 
-            << "uses" 
-            << "does not use"
-            << "starts with"
-            << "ends with"
-            << "contains"
-            << "not contains";
-    }
+        entries << text(USES) << text(DOES_NOT_USE);
     else
-    {
-        return QStringList() 
-            << "uses" 
-            << "does not use";
-    }
+        entries << text(IS) << text(IS_NOT);
+    entries << text(STARTS_WITH) << text(ENDS_WITH) << text(CONTAINS) << text(NOT_CONTAINS);
+    return entries;
 }
 
 bool XenModelObjectListContainsQueryType::showComboButton(QueryElement* queryElement) const
 {
     if (!queryElement)
         return false;
-    
-    // Show combo button for "uses" and "does not use" match types
-    QString matchType = queryElement->getMatchTypeSelection();
-    return matchType == "uses" || matchType == "does not use";
+
+    const QString matchType = queryElement->getMatchTypeSelection();
+    return matchType == text(USES) || matchType == text(IS) ||
+           matchType == text(DOES_NOT_USE) || matchType == text(IS_NOT);
 }
 
 QVariantList XenModelObjectListContainsQueryType::getComboButtonEntries(QueryElement* queryElement) const
 {
     Q_UNUSED(queryElement);
-    
-    // TODO: Collect all objects of appropriate type from cache
-    return QVariantList();
+
+    XMOListContains::Filter filter;
+    // CA-24314: leave out the networks the tree hides
+    if (this->listedType_ == XenObjectType::Network)
+    {
+        const bool showHidden = SettingsManager::instance().GetShowHiddenObjects();
+        filter = [showHidden](const QSharedPointer<XenObject>& object) {
+            return object->Show(showHidden);
+        };
+    }
+    return objectEntries(this->listedType_, filter);
 }
 
 bool XenModelObjectListContainsQueryType::showTextBox(QueryElement* queryElement) const
 {
-    if (!queryElement)
-        return false;
-    
-    // Show text box for name-based matching (starts with, ends with, contains, not contains)
-    QString matchType = queryElement->getMatchTypeSelection();
-    return matchType == "starts with" || matchType == "ends with" || 
-           matchType == "contains" || matchType == "not contains";
+    return !this->showComboButton(queryElement);
 }
 
 QueryFilter* XenModelObjectListContainsQueryType::GetQuery(QueryElement* queryElement) const
 {
-    Q_UNUSED(queryElement);
-    
-    // TODO: Create XenModelObjectListContainsQuery or XenModelObjectListContainsNameQuery
-    // based on selected match type
-    return nullptr;
+    const QString matchType = queryElement->getMatchTypeSelection();
+
+    if (this->showComboButton(queryElement))
+    {
+        const bool contains = matchType == text(USES) || matchType == text(IS);
+        return new XenModelObjectListContainsQuery(this->property_, queryElement->getComboBoxValue().toString(), contains);
+    }
+
+    StringPropertyQuery::MatchType type;
+    if (matchType == text(STARTS_WITH))
+        type = StringPropertyQuery::MatchType::StartsWith;
+    else if (matchType == text(ENDS_WITH))
+        type = StringPropertyQuery::MatchType::EndsWith;
+    else if (matchType == text(CONTAINS))
+        type = StringPropertyQuery::MatchType::Contains;
+    else if (matchType == text(NOT_CONTAINS))
+        type = StringPropertyQuery::MatchType::NotContains;
+    else
+        return nullptr;
+
+    return new XenModelObjectListContainsNameQuery(this->property_, queryElement->getTextBoxValue(), type);
 }
 
 void XenModelObjectListContainsQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    Q_UNUSED(query);
-    Q_UNUSED(queryElement);
-    
-    // TODO: Populate match type and selection from query
+    if (auto* nameQuery = dynamic_cast<XenModelObjectListContainsNameQuery*>(query))
+    {
+        switch (nameQuery->getType())
+        {
+            case StringPropertyQuery::MatchType::StartsWith:
+                queryElement->setMatchTypeSelection(text(STARTS_WITH));
+                break;
+            case StringPropertyQuery::MatchType::EndsWith:
+                queryElement->setMatchTypeSelection(text(ENDS_WITH));
+                break;
+            case StringPropertyQuery::MatchType::Contains:
+                queryElement->setMatchTypeSelection(text(CONTAINS));
+                break;
+            case StringPropertyQuery::MatchType::NotContains:
+                queryElement->setMatchTypeSelection(text(NOT_CONTAINS));
+                break;
+            default:
+                break;
+        }
+        queryElement->setTextBoxValue(nameQuery->getQuery());
+        return;
+    }
+
+    auto* listQuery = dynamic_cast<XenModelObjectListContainsQuery*>(query);
+    if (!listQuery)
+        return;
+
+    const bool networks = this->property_ == PropertyNames::networks;
+    if (listQuery->getContains())
+        queryElement->setMatchTypeSelection(text(networks ? USES : IS));
+    else
+        queryElement->setMatchTypeSelection(text(networks ? DOES_NOT_USE : IS_NOT));
+    queryElement->setComboBoxValue(listQuery->getUuid());
 }
 
 // ============================================================================
-// HostQueryType - Special standalone/in-pool handling
+// HostQueryType - legacy server conditions, with standalone/in-pool (C# group 2)
 // ============================================================================
 
-HostQueryType::HostQueryType(int group, ObjectTypes appliesTo, QObject* parent)
-    : XenModelObjectListContainsQueryType(group, appliesTo, PropertyNames::host, parent)
+HostQueryType::HostQueryType(int group, ObjectTypes appliesTo)
+    : XenModelObjectListContainsQueryType(group, appliesTo, PropertyNames::host)
 {
 }
 
 QStringList HostQueryType::getMatchTypeComboButtonEntries() const
 {
-    // C# adds standalone/in-pool to base match types
     QStringList matchTypes = XenModelObjectListContainsQueryType::getMatchTypeComboButtonEntries();
-    matchTypes << "is standalone";
-    matchTypes << "is in a pool";
+    matchTypes << text(IS_STANDALONE) << text(IS_IN_A_POOL);
     return matchTypes;
 }
 
 bool HostQueryType::showTextBox(QueryElement* queryElement) const
 {
-    if (this->showComboButton(queryElement))
+    if (!queryElement || this->showComboButton(queryElement))
         return false;
-    
-    QString matchType = queryElement->getMatchTypeSelection();
-    
-    // Don't show text box for standalone/in-pool queries
-    return matchType != "is standalone" && matchType != "is in a pool";
+
+    const QString matchType = queryElement->getMatchTypeSelection();
+    return matchType != text(IS_STANDALONE) && matchType != text(IS_IN_A_POOL);
 }
 
 QueryFilter* HostQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // If showing combo button or text box, use base implementation
     if (this->showComboButton(queryElement) || this->showTextBox(queryElement))
         return XenModelObjectListContainsQueryType::GetQuery(queryElement);
-    
-    // Otherwise, create NullPropertyQuery for standalone/in-pool
-    QString matchType = queryElement->getMatchTypeSelection();
-    bool isNull = (matchType == "is standalone");
-    
-    return new NullPropertyQuery(PropertyNames::pool, isNull);
+
+    return new NullPropertyQuery(PropertyNames::pool, queryElement->getMatchTypeSelection() == text(IS_STANDALONE));
 }
 
 void HostQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // Check if it's a NullPropertyQuery (standalone/in-pool)
     if (auto* nullQuery = dynamic_cast<NullPropertyQuery*>(query))
     {
         if (nullQuery->getProperty() == PropertyNames::pool)
         {
-            // Set match type to "is standalone" or "is in a pool"
-            QString matchType = nullQuery->getIsNull() ? "is standalone" : "is in a pool";
-            queryElement->setMatchTypeSelection(matchType);
+            queryElement->setMatchTypeSelection(text(nullQuery->getIsNull() ? IS_STANDALONE : IS_IN_A_POOL));
             return;
         }
     }
-    
-    // Otherwise use base implementation
+
     XenModelObjectListContainsQueryType::FromQuery(query, queryElement);
 }
 
@@ -1520,11 +1519,12 @@ QString MatchType::units(QueryElement *queryElement) const
 }
 
 // ============================================================================
-// XMOListContains - "Contained in" / "Not contained in" match type
+// XMOListContains - "contained in" / "attached to" an object (C# XMOListContains<T>)
 // ============================================================================
 
-XMOListContains::XMOListContains(PropertyNames property, bool contains, const QString& matchText, const QString& objectType)
-    : MatchType(matchText), property_(property), contains_(contains), objectType_(objectType)
+XMOListContains::XMOListContains(PropertyNames property, bool contains, const QString& matchText,
+                                 XenObjectType objectType, Filter filter)
+    : MatchType(matchText), property_(property), contains_(contains), objectType_(objectType), filter_(std::move(filter))
 {
 }
 
@@ -1536,39 +1536,28 @@ bool XMOListContains::showComboButton(QueryElement* queryElement) const
 
 QVariantList XMOListContains::getComboButtonEntries() const
 {
-    // TODO: Populate from cache - needs XenObject cache API
-    // C# code iterates over ConnectionsManager.XenConnectionsCopy
-    // and calls connection.Cache.AddAll(entries, filter)
-    // For now, return empty list (will be implemented when cache API ready)
-    return QVariantList();
+    return objectEntries(this->objectType_, this->filter_);
 }
 
 QueryFilter* XMOListContains::getQuery(QueryElement* queryElement) const
 {
-    // TODO: Get selected object from combo button
-    // C# code: T t = queryElement.ComboButton.SelectedItem.Tag as T;
-    // For now return nullptr (stubbed)
-    Q_UNUSED(queryElement);
-    return nullptr;
-    
-    // Future implementation:
-    // QString uuid = queryElement->getComboButtonSelection().toString();
-    // return new XenModelObjectListContainsQuery(property_, uuid, contains_);
+    const QString uuid = queryElement->getComboBoxValue().toString();
+    if (uuid.isEmpty())
+        return nullptr;
+
+    return new XenModelObjectListContainsQuery(this->property_, uuid, this->contains_);
 }
 
 bool XMOListContains::forQuery(QueryFilter* query) const
 {
-    // TODO: Check if query matches this match type
-    // Need XenModelObjectListContainsQuery class first
-    Q_UNUSED(query);
-    return false;
+    auto* listQuery = dynamic_cast<XenModelObjectListContainsQuery*>(query);
+    return listQuery && listQuery->getProperty() == this->property_ && listQuery->getContains() == this->contains_;
 }
 
 void XMOListContains::fromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // TODO: Restore query to UI
-    Q_UNUSED(query);
-    Q_UNUSED(queryElement);
+    if (auto* listQuery = dynamic_cast<XenModelObjectListContainsQuery*>(query))
+        queryElement->setComboBoxValue(listQuery->getUuid());
 }
 
 // ============================================================================
@@ -1594,14 +1583,7 @@ QString IntMatch::units(QueryElement* queryElement) const
 
 QueryFilter* IntMatch::getQuery(QueryElement* queryElement) const
 {
-    // TODO: Get value from numericUpDown widget
-    // C# code: long value = multiplier * (long)queryElement.numericUpDown.Value;
-    Q_UNUSED(queryElement);
-    return nullptr;
-    
-    // Future implementation:
-    // qint64 value = this->multiplier_ * queryElement->getNumericValue();
-    // return new NumericQuery(property_, value, type_);
+    return new NumericQuery(this->property_, this->multiplier_ * queryElement->getNumericValue(), this->type_);
 }
 
 bool IntMatch::forQuery(QueryFilter* query) const
@@ -1609,23 +1591,14 @@ bool IntMatch::forQuery(QueryFilter* query) const
     auto* numQuery = dynamic_cast<NumericQuery*>(query);
     if (!numQuery)
         return false;
-    
+
     return numQuery->getProperty() == this->property_ && numQuery->getComparisonType() == this->type_;
 }
 
 void IntMatch::fromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    auto* numQuery = dynamic_cast<NumericQuery*>(query);
-    if (!numQuery)
-        return;
-    
-    // TODO: Set numericUpDown value
-    // C# code: queryElement.numericUpDown.Value = (decimal)numQuery.query / multiplier;
-    Q_UNUSED(queryElement);
-    
-    // Future implementation:
-    // qint64 displayValue = numQuery->getValue() / this->multiplier_;
-    // queryElement->setNumericValue(displayValue);
+    if (auto* numQuery = dynamic_cast<NumericQuery*>(query))
+        queryElement->setNumericValue(numQuery->getValue() / this->multiplier_);
 }
 
 // ============================================================================
@@ -1758,26 +1731,21 @@ DiskQueryType::DiskQueryType(int group, ObjectTypes appliesTo, const QString& i1
     //       Using "Attached to" / "Not attached to" for VM
     //       Using size queries for disk size
     
-    this->matchTypes_.append(new XMOListContains(PropertyNames::storage, true, 
-                                                 "Contained in", "sr"));
-    this->matchTypes_.append(new XMOListContains(PropertyNames::storage, false, 
-                                                 "Not contained in", "sr"));
-    this->matchTypes_.append(new XMOListContains(PropertyNames::vm, true, 
-                                                 "Attached to", "vm"));
-    this->matchTypes_.append(new XMOListContains(PropertyNames::vm, false, 
-                                                 "Not attached to", "vm"));
-    
-    // Size queries: 1 GiB = 1024*1024*1024 bytes
-    const qint64 GIGA = Q_INT64_C(1073741824);
-    this->matchTypes_.append(new IntMatch(PropertyNames::size, "Size is", 
-                                         "GB", GIGA, 
-                                         NumericQuery::ComparisonType::Equal));
-    this->matchTypes_.append(new IntMatch(PropertyNames::size, "Bigger than", 
-                                         "GB", GIGA, 
-                                         NumericQuery::ComparisonType::GreaterThan));
-    this->matchTypes_.append(new IntMatch(PropertyNames::size, "Smaller than", 
-                                         "GB", GIGA, 
-                                         NumericQuery::ComparisonType::LessThan));
+    // C# DiskQueryType.VmFilter: real VMs with disks
+    const XMOListContains::Filter vmFilter = [](const QSharedPointer<XenObject>& object) {
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(object);
+        return vm && !vm->IsTemplate() && !vm->IsControlDomain() && !vm->GetVBDRefs().isEmpty();
+    };
+
+    this->matchTypes_.append(new XMOListContains(PropertyNames::storage, true, QObject::tr("contained in"), XenObjectType::SR));
+    this->matchTypes_.append(new XMOListContains(PropertyNames::storage, false, QObject::tr("not contained in"), XenObjectType::SR));
+    this->matchTypes_.append(new XMOListContains(PropertyNames::vm, true, QObject::tr("attached to"), XenObjectType::VM, vmFilter));
+    this->matchTypes_.append(new XMOListContains(PropertyNames::vm, false, QObject::tr("not attached to"), XenObjectType::VM, vmFilter));
+
+    const QString gb = QObject::tr("GB");
+    this->matchTypes_.append(new IntMatch(PropertyNames::size, QObject::tr("size is"), gb, BINARY_GIGA, NumericQuery::ComparisonType::Equal));
+    this->matchTypes_.append(new IntMatch(PropertyNames::size, QObject::tr("bigger than"), gb, BINARY_GIGA, NumericQuery::ComparisonType::GreaterThan));
+    this->matchTypes_.append(new IntMatch(PropertyNames::size, QObject::tr("smaller than"), gb, BINARY_GIGA, NumericQuery::ComparisonType::LessThan));
 }
 
 DiskQueryType::~DiskQueryType()
@@ -1799,15 +1767,9 @@ LongQueryType::LongQueryType(int group, ObjectTypes appliesTo, const QString& i1
 {
     // Build 3 match types: bigger than, smaller than, is exactly
     // C# QueryElement.cs lines 2531-2539
-    this->matchTypes_.append(new IntMatch(property, "Bigger than", 
-                                         unit, multiplier, 
-                                         NumericQuery::ComparisonType::GreaterThan));
-    this->matchTypes_.append(new IntMatch(property, "Smaller than", 
-                                         unit, multiplier, 
-                                         NumericQuery::ComparisonType::LessThan));
-    this->matchTypes_.append(new IntMatch(property, "Is exactly", 
-                                         unit, multiplier, 
-                                         NumericQuery::ComparisonType::Equal));
+    this->matchTypes_.append(new IntMatch(property, QObject::tr("bigger than"), unit, multiplier, NumericQuery::ComparisonType::GreaterThan));
+    this->matchTypes_.append(new IntMatch(property, QObject::tr("smaller than"), unit, multiplier, NumericQuery::ComparisonType::LessThan));
+    this->matchTypes_.append(new IntMatch(property, QObject::tr("is exactly"), unit, multiplier, NumericQuery::ComparisonType::Equal));
 }
 
 LongQueryType::~LongQueryType()
@@ -1968,13 +1930,16 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllExcFolders | ObjectTypes::Appliance, PropertyNames::description));
     this->queryTypes_.append(new UuidStringQueryType(1, ObjectTypes::AllExcFolders));
     this->queryTypes_.append(new TagQueryType(1, ObjectTypes::AllExcFolders));
+
+    // Replaced by the parent/child queries; never offered, only shown for older saved searches
+    this->queryTypes_.append(new XenModelObjectPropertyQueryType(2, ObjectTypes::None, PropertyNames::pool));
+    this->queryTypes_.append(new HostQueryType(2, ObjectTypes::None));
     
     // Object type query (Group 1)
     this->queryTypes_.append(new EnumPropertyQueryType(1, ObjectTypes::None, PropertyNames::type));
     
     // VM-specific queries (Group 3)
-    this->queryTypes_.append(new NumericPropertyQueryType(3, ObjectTypes::VM, PropertyNames::memory, 
-                                                          "Memory", BINARY_MEGA, "MB"));
+    this->queryTypes_.append(new LongQueryType(3, ObjectTypes::VM, QObject::tr("Memory"), PropertyNames::memory, BINARY_MEGA, QObject::tr("MB")));
     this->queryTypes_.append(new IPAddressQueryType(3, ObjectTypes::VM | ObjectTypes::Server | ObjectTypes::LocalSR | ObjectTypes::RemoteSR,
                                                     PropertyNames::ip_address));
     this->queryTypes_.append(new EnumPropertyQueryType(3, ObjectTypes::VM, PropertyNames::power_state));
@@ -1986,8 +1951,7 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::vendor_device_state));
     
     // Storage queries (Group 4)
-    this->queryTypes_.append(new NumericPropertyQueryType(4, ObjectTypes::VDI, PropertyNames::size,
-                                                          "Size", BINARY_GIGA, "GB"));
+    this->queryTypes_.append(new LongQueryType(4, ObjectTypes::VDI, QObject::tr("Size"), PropertyNames::size, BINARY_GIGA, QObject::tr("GB")));
     this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::LocalSR | ObjectTypes::RemoteSR | ObjectTypes::VDI, 
                                                   PropertyNames::shared));
     this->queryTypes_.append(new EnumPropertyQueryType(4, ObjectTypes::LocalSR | ObjectTypes::RemoteSR, PropertyNames::sr_type));
@@ -1997,6 +1961,10 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::Pool, PropertyNames::isNotFullyUpgraded));
     this->queryTypes_.append(new NullQueryType(4, ObjectTypes::Server | ObjectTypes::VM, PropertyNames::pool, false, "Is in a pool"));
     this->queryTypes_.append(new NullQueryType(4, ObjectTypes::Server | ObjectTypes::VM, PropertyNames::pool, true, "Is standalone"));
+
+    // Replaced by the parent/child queries below; never offered, only shown for older saved searches
+    this->queryTypes_.append(new XenModelObjectListContainsQueryType(5, ObjectTypes::None, PropertyNames::networks));
+    this->queryTypes_.append(new DiskQueryType(5, ObjectTypes::None, QObject::tr("Disks")));
     
     // Recursive queries - Parent/Child filtering (Group 6)
     // C# QueryElement.cs lines 96-102
@@ -2038,10 +2006,6 @@ void QueryTypeRegistry::initialize()
                      [this]() { this->updateCustomFieldTypes(); });
     this->updateCustomFieldTypes();
     
-    // Legacy query types (Group 5) - NOT USED FOR NEW QUERIES, kept for backward compatibility
-    // C# QueryElement.cs lines 92-93
-    // this->queryTypes_.append(new XenModelObjectListContainsQueryType(...)); // Replaced by recursive queries
-    // this->queryTypes_.append(new DiskQueryType(5, ObjectTypes::None, "Disks"));  // Replaced by recursive disk queries
 }
 
 void QueryTypeRegistry::updateCustomFieldTypes()

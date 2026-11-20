@@ -32,11 +32,17 @@
 #include <QString>
 #include <QVariant>
 #include <QVariantList>
+#include <QSet>
+#include <QSharedPointer>
+#include <functional>
 #include "searcher.h"
 #include "xenlib/xensearch/queryfilter.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xen/xenobjecttype.h"
+
+class XenObject;
+class XenConnection;
 
 // Forward declarations
 class QueryElement;
@@ -209,38 +215,6 @@ namespace XenSearch
         protected:
             PropertyNames property_;
             QVariantList getEnumValues() const;
-    };
-
-    /**
-     * Numeric property query type (memory, disk size, CPU count, etc.)
-     */
-    class NumericPropertyQueryType : public QueryType
-    {
-        public:
-            // Use ComparisonType from NumericQuery
-            using ComparisonType = NumericQuery::ComparisonType;
-
-            NumericPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property,
-                                    const QString& name, qint64 multiplier, const QString& units);
-
-            bool ForQuery(QueryFilter* query) const override;
-            void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-            QueryFilter* GetQuery(QueryElement* queryElement) const override;
-            QString toString() const override;
-
-            bool showMatchTypeComboButton() const override { return true; }
-            bool showNumericUpDown(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
-            QStringList getMatchTypeComboButtonEntries() const override;
-            QString getUnits(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return this->units_; }
-
-            static ComparisonType comparisonTypeFromString(const QString& str);
-            static QString comparisonTypeToString(ComparisonType type);
-
-        protected:
-            PropertyNames property_;
-            QString name_;
-            qint64 multiplier_;
-            QString units_;
     };
 
     /**
@@ -568,13 +542,42 @@ namespace XenSearch
      * Kept for backward compatibility with saved searches.
      * Uses XenModelObjectPropertyQuery<T> for evaluation.
      */
-    class XenModelObjectPropertyQueryType : public QueryType
+    /**
+     * Base of the legacy query types that pick an object from a list
+     *
+     * C# registers Cache.RegisterBatchCollectionChanged<T> in these types and raises
+     * SomeThingChanged when objects of T are added or removed, so open rows refill their lists.
+     * Updates of existing objects are ignored, as a refresh reruns the search.
+     */
+    class ObjectListQueryType : public QueryType
     {
         Q_OBJECT
 
         public:
-            XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-            ~XenModelObjectPropertyQueryType() override;
+            ObjectListQueryType(int group, ObjectTypes appliesTo, XenObjectType listedType);
+
+        protected:
+            XenObjectType listedType_;
+
+        private slots:
+            void onConnectionsChanged();
+            void onItemChanged(XenConnection* connection, XenObjectType type, const QString& ref);
+            void onItemRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
+            void onCacheCleared();
+
+        private:
+            void scheduleRefresh();
+
+            QSet<QString> knownObjects_;  // connection and opaque ref of each listed object
+            bool refreshPending_ = false;
+    };
+
+    class XenModelObjectPropertyQueryType : public ObjectListQueryType
+    {
+        Q_OBJECT
+
+        public:
+            XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
             bool ForQuery(QueryFilter* query) const override;
             QString toString() const override;
@@ -587,10 +590,6 @@ namespace XenSearch
 
             QueryFilter* GetQuery(QueryElement* queryElement) const override;
             void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-
-        private slots:
-            void onConnectionsChanged();
-            void onCacheChanged();
 
         private:
             PropertyNames property_;
@@ -607,13 +606,12 @@ namespace XenSearch
      * Supports both dropdown selection and text matching.
      * Uses XenModelObjectListContainsQuery<T> for evaluation.
      */
-    class XenModelObjectListContainsQueryType : public QueryType
+    class XenModelObjectListContainsQueryType : public ObjectListQueryType
     {
         Q_OBJECT
 
         public:
-            XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-            ~XenModelObjectListContainsQueryType() override;
+            XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
             bool ForQuery(QueryFilter* query) const override;
             QString toString() const override;
@@ -628,10 +626,6 @@ namespace XenSearch
 
             QueryFilter* GetQuery(QueryElement* queryElement) const override;
             void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-
-        private slots:
-            void onConnectionsChanged();
-            void onCacheChanged(XenConnection* connection, XenObjectType type, const QString& ref);
 
         protected:
             PropertyNames property_;
@@ -651,7 +645,7 @@ namespace XenSearch
     class HostQueryType : public XenModelObjectListContainsQueryType
     {
         public:
-            HostQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
+            HostQueryType(int group, ObjectTypes appliesTo);
 
             QStringList getMatchTypeComboButtonEntries() const override;
             bool showTextBox(QueryElement* queryElement) const override;
@@ -724,13 +718,15 @@ namespace XenSearch
      *
      * C# Equivalent: XMOListContains<T> in QueryElement.cs (lines 2396-2448)
      *
-     * Template note: C# uses XenObject<T> generics, Qt uses QString type parameter.
-     * Filter predicate not implemented yet (needs cache API).
+     * C# XenObject<T> generics become the listed object type; the predicate limits the list.
      */
     class XMOListContains : public MatchType
     {
         public:
-            XMOListContains(PropertyNames property, bool contains, const QString& matchText, const QString& objectType);
+            using Filter = std::function<bool(const QSharedPointer<XenObject>&)>;
+
+            XMOListContains(PropertyNames property, bool contains, const QString& matchText,
+                            XenObjectType objectType, Filter filter = Filter());
 
             bool showComboButton(QueryElement* queryElement) const override;
             QVariantList getComboButtonEntries() const override;
@@ -742,7 +738,8 @@ namespace XenSearch
         private:
             PropertyNames property_;
             bool contains_;
-            QString objectType_;  // "vm", "host", "sr", etc.
+            XenObjectType objectType_;
+            Filter filter_;
     };
 
     /**

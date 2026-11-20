@@ -55,7 +55,12 @@ class XenAdminUiTests : public QObject
     static void choose(QueryElement* e, const QString& typeName)
     {
         QComboBox* combo = e->findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).first();
-        const int index = combo->findText(typeName);
+        // Without a search scope the types kept for older saved searches are offered too, before
+        // their replacements of the same name (e.g. "Pool"); take the current one
+        int index = -1;
+        for (int i = 0; i < combo->count(); ++i)
+            if (combo->itemText(i) == typeName)
+                index = i;
         QVERIFY2(index >= 0, qPrintable(typeName));
         combo->setCurrentIndex(index);
         emit combo->activated(index);
@@ -433,6 +438,106 @@ private slots:
 
         Xen::ConnectionsManager::instance()->RemoveConnection(connection);
         delete connection;
+    }
+
+    // The value combo of a row (after the type and match type combos)
+    static QComboBox* valueCombo(QueryElement* element)
+    {
+        return element->findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).at(2);
+    }
+
+    static QStringList comboTexts(QComboBox* combo)
+    {
+        QStringList texts;
+        for (int i = 0; i < combo->count(); ++i)
+            texts << combo->itemText(i);
+        return texts;
+    }
+
+    // C# group 2/5 types: not offered, but conditions of older saved searches load and save back
+    void legacyObjectConditionsRoundTrip()
+    {
+        XenConnection* connection = new XenConnection(nullptr);
+        XenCache* cache = connection->GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"uuid", "pool-uuid"}, {"name_label", "prod"},
+                                                                         {"master", "OpaqueRef:h1"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:h1", QVariantMap{{"uuid", "h1-uuid"}, {"name_label", "h1"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:h2", QVariantMap{{"uuid", "h2-uuid"}, {"name_label", "h2"}});
+        cache->Update(XenObjectType::Network, "OpaqueRef:net", QVariantMap{{"uuid", "net-uuid"}, {"name_label", "lan"},
+                                                                           {"other_config", QVariantMap()}});
+        Xen::ConnectionsManager::instance()->AddConnection(connection);
+
+        {
+            QueryElement element;
+            XenModelObjectPropertyQuery pool(PropertyNames::pool, "pool-uuid", false);
+            element.SetQueryFilter(&pool);
+            QCOMPARE(valueCombo(&element)->currentText(), QString("prod"));
+            std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+            QVERIFY(back && back->Equals(&pool));
+        }
+        {
+            QueryElement element;
+            XenModelObjectListContainsQuery host(PropertyNames::host, "h2-uuid", true);
+            element.SetQueryFilter(&host);
+            QCOMPARE(comboTexts(valueCombo(&element)), QStringList({"h1", "h2"}));
+            QCOMPARE(valueCombo(&element)->currentText(), QString("h2"));
+            std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+            QVERIFY(back && back->Equals(&host));
+        }
+        {
+            QueryElement element;
+            XenModelObjectListContainsQuery network(PropertyNames::networks, "net-uuid", false);
+            element.SetQueryFilter(&network);
+            std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+            QVERIFY(back && back->Equals(&network));
+
+            XenModelObjectListContainsNameQuery name(PropertyNames::networks, "la", StringPropertyQuery::MatchType::StartsWith);
+            element.SetQueryFilter(&name);
+            back.reset(element.GetQueryFilter());
+            QVERIFY(back && back->Equals(&name));
+        }
+
+        Xen::ConnectionsManager::instance()->RemoveConnection(connection);
+        delete connection;
+    }
+
+    void diskConditionsListRealVmsWithDisks()
+    {
+        XenConnection* connection = new XenConnection(nullptr);
+        XenCache* cache = connection->GetCache();
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"uuid", "vm-uuid"}, {"name_label", "web"},
+                                                                     {"VBDs", QVariantList{"OpaqueRef:vbd"}}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:empty", QVariantMap{{"uuid", "e-uuid"}, {"name_label", "nodisk"},
+                                                                        {"VBDs", QVariantList()}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:tpl", QVariantMap{{"uuid", "t-uuid"}, {"name_label", "tpl"},
+                                                                      {"is_a_template", true}, {"VBDs", QVariantList{"OpaqueRef:vbd2"}}});
+        Xen::ConnectionsManager::instance()->AddConnection(connection);
+
+        QueryElement element;
+        XenModelObjectListContainsQuery attached(PropertyNames::vm, "vm-uuid", true);
+        element.SetQueryFilter(&attached);
+        QCOMPARE(comboTexts(valueCombo(&element)), QStringList({"web"}));
+        std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+        QVERIFY(back && back->Equals(&attached));
+
+        Xen::ConnectionsManager::instance()->RemoveConnection(connection);
+        delete connection;
+    }
+
+    // C# LongQueryType
+    void memoryConditionUsesCsharpMatchTypes()
+    {
+        QueryElement element;
+        NumericQuery query(PropertyNames::memory, 512 * 1024 * 1024LL, NumericQuery::ComparisonType::GreaterThan);
+        element.SetQueryFilter(&query);
+
+        QComboBox* matchType = element.findChildren<QComboBox*>(QString(), Qt::FindDirectChildrenOnly).at(1);
+        QCOMPARE(comboTexts(matchType), QStringList({"bigger than", "smaller than", "is exactly"}));
+        QCOMPARE(matchType->currentText(), QString("bigger than"));
+        QCOMPARE(element.getNumericValue(), qint64(512));
+
+        std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
+        QVERIFY(back && back->Equals(&query));
     }
 
     // C# FolderListItem.CalcSizeAndTrunc / AllowSearch.AllButLast
