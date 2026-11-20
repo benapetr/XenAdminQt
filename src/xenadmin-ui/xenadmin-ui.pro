@@ -137,6 +137,7 @@ SOURCES += \
     settingspanels/vmenlightenmenteditpage.cpp \
     settingspanels/pooladvancededitpage.cpp \
     settingspanels/securityeditpage.cpp \
+    settingspanels/srreadcachingeditpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
     settingspanels/networkgeneraleditpage.cpp \
@@ -463,6 +464,7 @@ HEADERS += \
     settingspanels/vmenlightenmenteditpage.h \
     settingspanels/pooladvancededitpage.h \
     settingspanels/securityeditpage.h \
+    settingspanels/srreadcachingeditpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
     settingspanels/networkgeneraleditpage.h \
@@ -716,6 +718,7 @@ FORMS += \
     settingspanels/vmenlightenmenteditpage.ui \
     settingspanels/pooladvancededitpage.ui \
     settingspanels/securityeditpage.ui \
+    settingspanels/srreadcachingeditpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
     settingspanels/networkgeneraleditpage.ui \

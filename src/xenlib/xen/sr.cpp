@@ -270,6 +270,23 @@ bool SR::SupportsTrim() const
     return false;
 }
 
+bool SR::SupportsReadCaching() const
+{
+    if (Host::StockholmOrGreater(this->GetConnection()))
+    {
+        const QSharedPointer<SM> sm = this->GetSM();
+        return sm && sm->Features().contains("VDI_READ_CACHING");
+    }
+
+    const QString srType = this->GetType().toLower();
+    return srType == "nfs" || srType == "ext" || srType == "smb";
+}
+
+bool SR::GetReadCachingEnabled() const
+{
+    return this->SupportsReadCaching() && this->GetOtherConfig().value("o_direct").toString() != "true";
+}
+
 QVariantMap SR::Blobs() const
 {
     return this->property("blobs").toMap();

@@ -247,6 +247,34 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
+    void SR::add_to_other_config(Session* session, const QString& sr, const QString& key, const QString& value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << sr << key << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("SR.add_to_other_config", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
+    void SR::remove_from_other_config(Session* session, const QString& sr, const QString& key)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << sr << key;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("SR.remove_from_other_config", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     void SR::scan(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())

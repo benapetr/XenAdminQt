@@ -130,6 +130,12 @@ class XENLIB_EXPORT SR : public XenObject
         //! Check if SR supports trim/unmap
         bool SupportsTrim() const;
 
+        //! C# SR.SupportsReadCaching: the SM reports VDI_READ_CACHING (before Stockholm: NFS, EXT or SMB)
+        bool SupportsReadCaching() const;
+
+        //! C# SR.GetReadCachingEnabled: supported and other_config:o_direct is not "true"
+        bool GetReadCachingEnabled() const;
+
         //! Get binary blobs associated with this SR (map of blob name to blob reference)
         QVariantMap Blobs() const;
 

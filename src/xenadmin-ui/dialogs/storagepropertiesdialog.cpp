@@ -29,8 +29,10 @@
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
 #include "../settingspanels/perfmonalerteditpage.h"
+#include "../settingspanels/srreadcachingeditpage.h"
+#include "xenlib/xen/sr.h"
 
-StoragePropertiesDialog::StoragePropertiesDialog(QSharedPointer<SR> sr, QWidget* parent) : VerticallyTabbedDialog(sr, parent)
+StoragePropertiesDialog::StoragePropertiesDialog(QSharedPointer<SR> sr, QWidget* parent) : VerticallyTabbedDialog(sr, parent), m_sr(sr)
 {
     this->setWindowTitle(tr("Storage Properties"));
     this->resize(700, 550);
@@ -48,14 +50,7 @@ void StoragePropertiesDialog::build()
     // Performance Alerts tab
     this->showTab(new PerfmonAlertEditPage());
 
-    // TODO: Add SR-specific pages from C# XenAdmin.Dialogs.PropertiesDialog:
-    //
-    // - SrReadCachingEditPage (line 247) - Read caching settings
-    //   Conditional: SR.SupportsReadCaching() && !RestrictReadCaching
-    //   See XenAdmin/SettingsPages/SrReadCachingEditPage.cs
-    //
-    // Notes:
-    // - Read caching is only for certain SR types (NFS, EXT, etc.)
-    // - Check SR capabilities via Helper methods
-    // - Feature may be restricted by license
+    // C# PropertiesDialog: SR.SupportsReadCaching() && !RestrictReadCaching (XCP-ng has no licence restrictions)
+    if (this->m_sr && this->m_sr->SupportsReadCaching())
+        this->showTab(new SrReadCachingEditPage());
 }

@@ -50,6 +50,9 @@ class StoragePropertiesDialog : public VerticallyTabbedDialog
 
     protected:
         void build() override;
+
+    private:
+        QSharedPointer<SR> m_sr;
 };
 
 #endif // STORAGEPROPERTIESDIALOG_H

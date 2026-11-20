@@ -183,6 +183,12 @@ namespace XenAPI
              */
             static void set_other_config(Session* session, const QString& sr, const QVariantMap& value);
 
+            //! Adds one key to the SR's other_config
+            static void add_to_other_config(Session* session, const QString& sr, const QString& key, const QString& value);
+
+            //! Removes one key from the SR's other_config
+            static void remove_from_other_config(Session* session, const QString& sr, const QString& key);
+
             /**
              * @brief Scan SR for new/changed VDIs
              * @param session Active XenSession

@@ -358,6 +358,8 @@ set(XENADMIN_SOURCES
     settingspanels/pooladvancededitpage.ui
     settingspanels/poolgpueditpage.cpp
     settingspanels/securityeditpage.cpp
+    settingspanels/srreadcachingeditpage.cpp
+    settingspanels/srreadcachingeditpage.ui
     settingspanels/securityeditpage.ui
     settingspanels/vbdeditpage.cpp
     settingspanels/vbdeditpage.ui

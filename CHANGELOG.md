@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+SR properties have C#'s Read Caching page for storage types that support it
 Saved searches: save the current search to a pool (XenCenter-compatible, so XenCenter sees it too), delete it, pick saved and built-in searches from the Search tab and navigation pane, and export or import .xensearch files (File > Import Search...).
 - Search editor: custom fields can be searched, as in C#. Each custom field
   appears as a condition (text fields with contains/starts with/...; date
