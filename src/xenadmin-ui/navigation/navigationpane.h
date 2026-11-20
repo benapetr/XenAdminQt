@@ -29,6 +29,7 @@
 #define NAVIGATIONPANE_H
 
 #include <QWidget>
+#include <functional>
 #include "xenlib/xen/xenobject.h"
 
 QT_BEGIN_NAMESPACE
@@ -118,6 +119,8 @@ class NavigationPane : public QWidget
 
         // Search mode control (matches C# NavigationPane.InSearchMode property)
         void SetInSearchMode(bool enabled);
+        //! C# NavigationPane.SaveAndRestoreTreeViewFocus
+        void SaveAndRestoreTreeViewFocus(const std::function<void()>& f);
 
     signals:
         /**

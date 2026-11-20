@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Back and Forward return to tag and folder searches, as XenCenter does, and clicking the selected object in the tree while a search is shown brings its tabs back
 Changing a network's MTU, bond mode or load balancing algorithm in its properties is saved again, and the network is replugged so a new MTU takes effect, as XenCenter does; the MTU can be changed while VMs with I/O drivers are running
 Opening a console or performance graphs on a pool member of an XCP-ng 8.2 pool no longer asks to trust the member's default certificate
 Rebooting or restarting the toolstack of a pool coordinator, or installing a server certificate, now drops and reconnects the connection straight away, as XenCenter does, instead of treating it as live until the event stream failed; operations on a connection lost unexpectedly are cancelled

@@ -110,7 +110,8 @@ class XenModelObjectHistoryItem : public HistoryItem
 class SearchHistoryItem : public HistoryItem
 {
     public:
-        explicit SearchHistoryItem(const QString& searchQuery);
+        //! Keeps a copy of the search (as XML), so it can be shown again later
+        explicit SearchHistoryItem(const class Search* search);
 
         void go() override;
         QString name() const override;
@@ -119,8 +120,13 @@ class SearchHistoryItem : public HistoryItem
 
         friend class NavigationHistory;
 
+        //! A new copy of the search; the caller owns it
+        class Search* CreateSearch() const;
+
     private:
-        QString m_searchQuery;
+        QString m_searchXml;
+        QString m_name;
+        bool m_isDefault = false;
 };
 
 /**

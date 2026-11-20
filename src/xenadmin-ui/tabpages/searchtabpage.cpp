@@ -182,6 +182,9 @@ void SearchTabPage::onSearchChanged()
         this->setSearch(search);
 
     this->m_ignoreSearchUpdate = false;
+
+    if (search)
+        emit this->searchChanged();
 }
 
 void SearchTabPage::onQueryPanelSearchChanged()
@@ -202,6 +205,9 @@ void SearchTabPage::onQueryPanelSearchChanged()
 
     this->m_search->SetSorting(sorting);
     this->m_output->BuildList();
+
+    if (!this->m_ignoreSearchUpdate)
+        emit this->searchChanged();
 }
 
 void SearchTabPage::onItemDoubleClicked(QTreeWidgetItem* item, int column)

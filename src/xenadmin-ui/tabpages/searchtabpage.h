@@ -74,6 +74,8 @@ class SearchTabPage : public BaseTabPage
 
     signals:
         void objectSelected(const QString& objectType, const QString& objectRef);
+        //! The user changed the search: query, grouping or sorting (C# SearchPage.SearchChanged)
+        void searchChanged();
 
     private slots:
         void onSearchChanged();

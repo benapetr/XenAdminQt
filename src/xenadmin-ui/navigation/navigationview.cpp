@@ -96,7 +96,9 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
             this, [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
                 Q_UNUSED(current);
                 Q_UNUSED(previous);
-                emit this->treeNodeBeforeSelected();
+                // Not while the tree is rebuilt and the selection restored
+                if (!this->m_suppressSelectionSignals)
+                    emit this->treeNodeBeforeSelected();
             });
 
     // Connect selection changed signal with suppression check
@@ -221,9 +223,19 @@ void NavigationView::ResetSearchBox()
 
 void NavigationView::SetInSearchMode(bool enabled)
 {
-    // Matches C# NavigationView.InSearchMode property (line 120)
+    // Matches C# NavigationView.InSearchMode property (line 120): only used by
+    // SaveAndRestoreTreeViewFocus, there is nothing to show for it
     this->m_inSearchMode = enabled;
-    // TODO: Update UI based on search mode (show/hide search-related indicators)
+}
+
+void NavigationView::SaveAndRestoreTreeViewFocus(const std::function<void()>& f)
+{
+    const bool treeViewHasFocus = this->ui->treeWidget->hasFocus();
+
+    f();
+
+    if (!this->m_inSearchMode && treeViewHasFocus)
+        this->FocusTreeView();
 }
 
 void NavigationView::SetNavigationMode(NavigationPane::NavigationMode mode)

@@ -34,6 +34,7 @@
 #include <QSharedPointer>
 #include <QHash>
 #include <QMetaObject>
+#include <functional>
 #include "mainwindowtreebuilder.h"
 #include "navigationpane.h" // For NavigationMode enum
 #include "xensearch/search.h"
@@ -100,6 +101,10 @@ class NavigationView : public QWidget
         {
             return this->m_inSearchMode;
         }
+
+        //! Runs f and gives the focus back to the tree if it had it, unless a search is
+        //! shown (C# NavigationView.SaveAndRestoreTreeViewFocus)
+        void SaveAndRestoreTreeViewFocus(const std::function<void()>& f);
 
         // Search text access (matches C# searchTextBox.Text)
         QString GetSearchText() const;

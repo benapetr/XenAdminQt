@@ -27,6 +27,8 @@
 
 #include "navigationhistory.h"
 #include "../mainwindow.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/searchmarshalling.h"
 #include <QMenu>
 #include <QDebug>
 #include <QTimer>
@@ -86,29 +88,35 @@ bool XenModelObjectHistoryItem::equals(const HistoryItem* other) const
 
 // SearchHistoryItem implementation
 
-SearchHistoryItem::SearchHistoryItem(const QString& searchQuery)
-    : m_searchQuery(searchQuery)
+SearchHistoryItem::SearchHistoryItem(const Search* search)
 {
+    if (!search)
+        return;
+    this->m_searchXml = SearchMarshalling::SearchToXml(search);
+    this->m_name = search->GetName();
+    this->m_isDefault = search->IsDefaultSearch();
+}
+
+Search* SearchHistoryItem::CreateSearch() const
+{
+    return this->m_searchXml.isEmpty() ? nullptr : SearchMarshalling::LoadSearch(this->m_searchXml);
 }
 
 void SearchHistoryItem::go()
 {
-    // Navigate to search results (matches C# SearchHistoryItem.Go)
-    qDebug() << "NavigationHistory: Navigate to search:" << this->m_searchQuery;
-
-    // This will be handled by NavigationHistory::doHistoryItem
+    // C# SearchHistoryItem.Go (MainWindow.DoSearch) is done by NavigationHistory::doHistoryItem
 }
 
 QString SearchHistoryItem::name() const
 {
-    // Format: "Search for 'query'" - matches C# format
-    return QString("Search for '%1'").arg(this->m_searchQuery);
+    // C# SearchHistoryItem.Name: the search's name
+    return this->m_name.isEmpty() ? QObject::tr("Search") : this->m_name;
 }
 
 QIcon SearchHistoryItem::icon() const
 {
-    // Use search icon
-    return QIcon(":/icons/search.png");
+    // C# Images.GetIconFor(Search)
+    return QIcon(this->m_isDefault ? ":/icons/default_search_16.png" : ":/icons/search_16.png");
 }
 
 bool SearchHistoryItem::equals(const HistoryItem* other) const
@@ -117,7 +125,7 @@ bool SearchHistoryItem::equals(const HistoryItem* other) const
     if (!otherSearch)
         return false;
 
-    return otherSearch->m_searchQuery == this->m_searchQuery;
+    return otherSearch->m_searchXml == this->m_searchXml;
 }
 
 // NavigationHistory implementation
@@ -265,10 +273,9 @@ void NavigationHistory::doHistoryItem(const HistoryItemPtr& item)
             auto searchItem = qSharedPointerDynamicCast<SearchHistoryItem>(item);
             if (searchItem && this->m_mainWindow)
             {
-                // TODO: Set search text in search box and trigger search
-                // For now, just log it
-                qDebug() << "NavigationHistory: Navigate to search:" << searchItem->m_searchQuery;
-                // this->m_mainWindow->setSearchText(searchItem->m_searchQuery);
+                // C# SearchHistoryItem.Go: MainWindow.DoSearch(search)
+                if (Search* search = searchItem->CreateSearch())
+                    this->m_mainWindow->DoSearch(search);
             } else
             {
                 // Call go() for unknown item types

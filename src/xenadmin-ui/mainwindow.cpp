@@ -323,6 +323,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this->m_navigationPane, &NavigationPane::navigationModeChanged, this, &MainWindow::onNavigationModeChanged);
     connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
     connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
+    connect(this->m_navigationPane, &NavigationPane::treeNodeBeforeSelected, this, &MainWindow::onNavigationPaneTreeNodeBeforeSelected);
+    connect(this->m_navigationPane, &NavigationPane::treeNodeClicked, this, &MainWindow::onNavigationPaneTreeNodeClicked);
     connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
     connect(this->m_navigationPane, &NavigationPane::treeNodeActivated, this, &MainWindow::onNavigationPaneTreeNodeActivated);
     connect(this->m_navigationPane, &NavigationPane::dragDropCommandActivated, this, &MainWindow::onNavigationPaneDragDropCommandActivated);
@@ -426,6 +428,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Connect SearchTabPage objectSelected signal to navigate to that object
     connect(searchTab, &SearchTabPage::objectSelected, this, &MainWindow::onSearchTabPageObjectSelected);
+    connect(searchTab, &SearchTabPage::searchChanged, this, &MainWindow::onSearchTabPageSearchChanged);
 
     // Initialize notification pages (matches C# _notificationPages initialization)
     // C# Reference: xenadmin/XenAdmin/MainWindow.Designer.cs lines 304-306
@@ -935,7 +938,8 @@ void MainWindow::onTreeItemSelected()
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
 
-        this->showObjectTabs(this->m_currentObject);
+        // Keep keyboard navigation in the tree when the tabs change (C# UpdateToolbars)
+        this->m_navigationPane->SaveAndRestoreTreeViewFocus([this]() { this->showObjectTabs(this->m_currentObject); });
 
         // Add to navigation history (matches C# MainWindow.TreeView_SelectionsChanged)
         // Get current tab name (first tab is shown by default)
@@ -1004,8 +1008,72 @@ void MainWindow::showSearch(XenConnection* connection, Search* search)
 
 void MainWindow::DoSearch(Search* search)
 {
+    if (!search)
+        return;
+
+    // C# DoSearch: a history entry for the search, then search mode
+    if (this->m_navigationHistory)
+        this->m_navigationHistory->newHistoryItem(HistoryItemPtr(new SearchHistoryItem(search)));
+
+    this->setSearchMode(true);
+
     // Tags and folders span all connections, so no particular connection is preferred
     this->showSearch(nullptr, search);
+    this->updateSearchTitle();
+}
+
+void MainWindow::setSearchMode(bool searchMode)
+{
+    // C# MainWindow.SearchMode
+    if (this->m_searchMode == searchMode)
+        return;
+
+    this->m_searchMode = searchMode;
+    if (this->m_navigationPane)
+        this->m_navigationPane->SetInSearchMode(searchMode);
+    this->updateToolbarsAndMenus();
+}
+
+void MainWindow::updateSearchTitle()
+{
+    // C# UpdateHeader in search mode: the search's name and icon
+    Search* search = this->m_searchTabPage ? this->m_searchTabPage->getSearch() : nullptr;
+    if (!this->m_searchMode || !search)
+        return;
+
+    const QString name = search->GetName().isEmpty() ? tr("Search") : search->GetName();
+    this->m_titleBar->SetTitle(name, QIcon(search->IsDefaultSearch() ? ":/icons/default_search_16.png" : ":/icons/search_16.png"));
+}
+
+void MainWindow::onNavigationPaneTreeNodeBeforeSelected()
+{
+    // C# navigationPane_TreeNodeBeforeSelected: selecting a node leaves search mode
+    this->setSearchMode(false);
+}
+
+void MainWindow::onNavigationPaneTreeNodeClicked()
+{
+    // C# navigationPane_TreeNodeClicked: clicking the node that is already selected
+    // leaves search mode and shows its tabs again
+    if (!this->m_searchMode)
+        return;
+
+    this->setSearchMode(false);
+    this->m_lastSelectedRef.clear(); // the same object, but its tabs must be shown again
+    this->onTreeItemSelected();
+}
+
+void MainWindow::onSearchTabPageSearchChanged()
+{
+    // C# SearchPanel_SearchChanged: the edited search replaces the current history entry.
+    // Outside search mode the search tab belongs to a group node, which has no entry
+    // (C# uses a ModifiedSearchHistoryItem there, which can't select a group node).
+    if (!this->m_searchMode || !this->m_searchTabPage || !this->m_searchTabPage->getSearch())
+        return;
+
+    if (this->m_navigationHistory)
+        this->m_navigationHistory->replaceHistoryItem(HistoryItemPtr(new SearchHistoryItem(this->m_searchTabPage->getSearch())));
+    this->updateSearchTitle();
 }
 
 bool MainWindow::DoSearch(const QString& fileName)
@@ -3189,8 +3257,19 @@ void MainWindow::SelectObjectInTree(const QString& objectRef, const QString& obj
         if (obj && obj->OpaqueRef() == objectRef &&
             obj->GetObjectType() == XenObject::TypeFromString(objectType))
         {
-            // Found the item - select it
-            this->GetServerTreeWidget()->setCurrentItem(item);
+            // Found the item - select it. Showing an object leaves search mode; if it is
+            // already selected (e.g. Back from a search started on it) nothing else would
+            // replace the search with its tabs.
+            const bool wasSearchMode = this->m_searchMode;
+            this->setSearchMode(false);
+            if (wasSearchMode && this->GetServerTreeWidget()->currentItem() == item && item->isSelected())
+            {
+                this->m_lastSelectedRef.clear();
+                this->onTreeItemSelected();
+            } else
+            {
+                this->GetServerTreeWidget()->setCurrentItem(item);
+            }
             this->GetServerTreeWidget()->scrollToItem(item);
             return;
         }

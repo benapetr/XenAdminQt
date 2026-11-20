@@ -487,6 +487,11 @@ void NavigationPane::SetInSearchMode(bool enabled)
     this->m_currentNavigationView->SetInSearchMode(enabled);
 }
 
+void NavigationPane::SaveAndRestoreTreeViewFocus(const std::function<void()>& f)
+{
+    this->m_currentNavigationView->SaveAndRestoreTreeViewFocus(f);
+}
+
 void NavigationPane::updateButtonLayout()
 {
     // C# toolStripBig_LayoutCompleted shows each small button only when its
