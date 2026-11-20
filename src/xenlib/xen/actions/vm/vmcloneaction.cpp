@@ -29,6 +29,7 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "../../vm.h"
 #include <QDebug>
 
 VMCloneAction::VMCloneAction(QSharedPointer<VM> vm, const QString& name, const QString& description, QObject* parent)
@@ -65,11 +66,10 @@ void VMCloneAction::run()
 
         QString createdVmRef = GetResult();
 
-        // Wait for VM to appear in cache
-        // TODO: Implement Connection.WaitForCache equivalent
-        // For now, we'll just set the description directly
-
         qDebug() << "VMCloneAction: Cloned VM ref:" << createdVmRef;
+
+        // C#: Connection.WaitForCache, so whoever uses the result finds the new VM
+        this->GetConnection()->WaitForCacheObject<VM>("vm", createdVmRef, 60000, [this]() { return this->IsCancelled(); });
 
         // Set the description
         XenAPI::VM::set_name_description(GetSession(), createdVmRef, m_cloneDescription);
