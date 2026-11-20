@@ -30,6 +30,10 @@
 #include "VNCView.h"
 #include "xen/network/connection.h"
 #include "xen/host.h"
+#include "xen/vm.h"
+#include "xen/role.h"
+#include "xen/session.h"
+#include "xen/friendlynames.h"
 #include "xencache.h"
 #include <QDebug>
 #include <QVBoxLayout>
@@ -210,7 +214,8 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
 
     // Check RBAC permissions
     QStringList allowedRoles;
-    if (rbacDenied(vmRef, allowedRoles))
+    QStringList userRoles;
+    if (rbacDenied(vmRef, allowedRoles, userRoles))
     {
         qDebug() << "ConsolePanel: RBAC denied for VM:" << vmRef;
 
@@ -219,9 +224,6 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
             this->ui->consoleLayout->removeWidget(this->_activeVNCView);
             this->_activeVNCView = nullptr;
         }
-
-        // TODO: Get user's current roles from XenLib
-        QStringList userRoles; // Placeholder
 
         showRbacWarning(userRoles, allowedRoles);
         this->m_currentVmRef = vmRef;
@@ -372,8 +374,7 @@ QImage ConsolePanel::Snapshot(QSharedPointer<VM> vm, const QString& elevatedUser
     // Take Snapshot
     QImage snapshot = view->Snapshot();
 
-    // TODO: Pause view if not currently active
-    // view->pause();
+    // C# leaves the view running too (its "only pause if not in use" TODO was never done)
 
     // Cleanup temporary view if using elevated credentials
     if (useElevatedCredentials)
@@ -451,26 +452,65 @@ void ConsolePanel::clearErrorMessage()
 
 // ========== Private Methods ==========
 
-bool ConsolePanel::rbacDenied(const QString& vmRef, QStringList& allowedRoles)
+bool ConsolePanel::rbacDenied(const QString& vmRef, QStringList& allowedRoles, QStringList& userRoles)
 {
-    // C#: Lines 172-195
+    // C# ConsolePanel.RbacDenied
+    allowedRoles.clear();
+    userRoles.clear();
 
-    if (vmRef.isEmpty() || !this->_connection)
-    {
-        allowedRoles.clear();
+    XenCache* cache = this->_connection ? this->_connection->GetCache() : nullptr;
+    XenAPI::Session* session = this->_connection ? this->_connection->GetSession() : nullptr;
+    if (vmRef.isEmpty() || !cache || !session || session->IsLocalSuperuser())
         return false;
+
+    QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
+    if (!vm)
+        return false;
+
+    // C# VM.IsControlDomainZero
+    QSharedPointer<Host> residentOn = cache->ResolveObject<Host>(XenObjectType::Host, vm->GetResidentOnRef());
+    QSharedPointer<VM> dom0 = residentOn ? residentOn->ControlDomainZero() : QSharedPointer<VM>();
+    const bool controlDomainZero = vm->IsControlDomain() && dom0 && dom0->OpaqueRef() == vmRef;
+    const QString permission = controlDomainZero ? QStringLiteral("http/connect_console/host_console")
+                                                 : QStringLiteral("http/connect_console");
+
+    // C# Session.Roles: the session's permissions include the names of its parent roles
+    const QStringList permissions = session->GetPermissions();
+    auto displayName = [](const QString& name)
+    {
+        const QString friendly = FriendlyNames::getString(QStringLiteral("Role.%1.NameLabel").arg(name));
+        return friendly.isEmpty() ? name : friendly;
+    };
+
+    // C# Role.ValidRoleList: the roles with a subrole (permission) for this call
+    bool allowed = false;
+    bool anyValidRole = false;
+    for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Role))
+    {
+        QSharedPointer<Role> role = qSharedPointerDynamicCast<Role>(object);
+        if (!role || role->SubroleRefs().isEmpty())
+            continue;
+
+        const QString name = role->GetName();
+        const bool sessionHasRole = permissions.contains(name, Qt::CaseInsensitive);
+        if (sessionHasRole)
+            userRoles.append(displayName(name));
+
+        for (const QString& subroleRef : role->SubroleRefs())
+        {
+            const QString subrole = cache->ResolveObjectData(XenObjectType::Role, subroleRef).value("name_label").toString();
+            if (subrole.compare(permission, Qt::CaseInsensitive) == 0)
+            {
+                anyValidRole = true;
+                allowedRoles.append(displayName(name));
+                allowed = allowed || sessionHasRole;
+                break;
+            }
+        }
     }
 
-    // TODO: Implement RBAC checking via XenLib
-    // C#: Check session.IsLocalSuperuser, session.Roles, etc.
-    // C#: Build role list based on whether VM is control domain
-    //     - Control domain: "http/connect_console/host_console"
-    //     - Regular VM: "http/connect_console"
-    // C#: Check if user's roles intersect with allowed roles
-
-    // For now, allow all access (no RBAC enforcement)
-    allowedRoles.clear();
-    return false;
+    // No role list (e.g. roles not loaded): don't lock the user out
+    return anyValidRole && !allowed;
 }
 
 void ConsolePanel::showRbacWarning(const QStringList& userRoles, const QStringList& allowedRoles)
@@ -592,10 +632,12 @@ QString CvmConsolePanel::getOtherControlDomainForHost(const QString& hostRef)
     if (!this->_connection)
         return QString();
 
-    // TODO: Implement via XenLib
-    // C#: Host.OtherControlDomains().FirstOrDefault() - returns CVM for this host
-    // XenAPI: Look for VM where is_control_domain=true and resident_on=hostRef
-    //         but exclude dom0 (domid != 0)
+    // C#: Host.OtherControlDomains().FirstOrDefault()
+    XenCache* cache = this->_connection->GetCache();
+    QSharedPointer<Host> host = cache ? cache->ResolveObject<Host>(XenObjectType::Host, hostRef) : QSharedPointer<Host>();
+    if (!host)
+        return QString();
 
-    return QString(); // Placeholder
+    const QList<QSharedPointer<VM>> controlDomains = host->OtherControlDomains();
+    return controlDomains.isEmpty() ? QString() : controlDomains.first()->OpaqueRef();
 }

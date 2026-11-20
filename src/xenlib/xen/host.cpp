@@ -1014,14 +1014,40 @@ qint64 Host::Dom0Memory() const
 
 QSharedPointer<VM> Host::ControlDomainZero() const
 {
-    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
-    for (const QSharedPointer<VM>& vm : residentVMs)
+    // C#: control_domain if set, else the resident control domain with domid 0. A host
+    // with a driver domain has more than one resident control domain.
+    const QString controlDomain = this->ControlDomainRef();
+    XenCache* cache = this->GetCache();
+    if (cache && !controlDomain.isEmpty() && controlDomain != XENOBJECT_NULL)
     {
-        if (!vm.isNull() && vm->IsControlDomain())
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, controlDomain);
+        if (vm)
             return vm;
     }
-    
+
+    for (const QSharedPointer<VM>& vm : this->GetResidentVMs())
+    {
+        if (vm && vm->IsControlDomain() && vm->GetData().value("domid").toLongLong() == 0)
+            return vm;
+    }
+
     return QSharedPointer<VM>();
+}
+
+QList<QSharedPointer<VM>> Host::OtherControlDomains() const
+{
+    QList<QSharedPointer<VM>> result;
+    const QString controlDomain = this->ControlDomainRef();
+    const bool haveControlDomain = !controlDomain.isEmpty() && controlDomain != XENOBJECT_NULL;
+
+    for (const QSharedPointer<VM>& vm : this->GetResidentVMs())
+    {
+        if (!vm || !vm->IsControlDomain())
+            continue;
+        if (haveControlDomain ? vm->OpaqueRef() != controlDomain : vm->GetData().value("domid").toLongLong() != 0)
+            result.append(vm);
+    }
+    return result;
 }
 
 bool Host::GetBootPathCounts(int& current, int& max) const

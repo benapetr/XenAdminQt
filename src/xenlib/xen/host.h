@@ -479,9 +479,13 @@ class XENLIB_EXPORT Host : public XenObject
          * @brief Get control domain zero VM
          * 
          * C# equivalent: Host.ControlDomainZero()
-         * Finds the first resident VM where is_control_domain is true
+         * The host's control_domain, or else the resident control domain with domid 0
          */
         QSharedPointer<VM> ControlDomainZero() const;
+
+        //! Control domains other than dom0, e.g. storage driver domains
+        //! (C# Host.OtherControlDomains)
+        QList<QSharedPointer<VM>> OtherControlDomains() const;
 
     protected:
         XenObjectType GetObjectType() const override { return XenObjectType::Host; }

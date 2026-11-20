@@ -924,7 +924,13 @@ void VNCTabView::onSSHButtonClicked()
     } else // openssh
     {
         // Get username from session (or default to root)
-        QString username = "root"; // TODO: Get from session if available
+        // C#: the session subject's name, else root (OpenSSH can't prompt for it). The
+        // name the session logged in with is that subject's name, or root for root.
+        XenConnection* sshConnection = this->m_vm ? this->m_vm->GetConnection() : nullptr;
+        XenAPI::Session* sshSession = sshConnection ? sshConnection->GetSession() : nullptr;
+        QString username = sshSession && !sshSession->IsLocalSuperuser() ? sshSession->GetUsername() : QString();
+        if (username.isEmpty())
+            username = QStringLiteral("root");
 
 #ifdef Q_OS_LINUX
         // For Linux terminals, we need to wrap the SSH command

@@ -435,6 +435,30 @@ private slots:
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
     }
 
+    void hostTellsDom0FromDriverDomains()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        // The driver domain comes first: dom0 must not be "the first control domain"
+        cache->Update(XenObjectType::VM, "OpaqueRef:driver", QVariantMap{{"is_control_domain", true}, {"domid", 3}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:dom0", QVariantMap{{"is_control_domain", true}, {"domid", 0}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:guest", QVariantMap{{"is_control_domain", false}, {"domid", 5}});
+        QVariantMap hostData{{"resident_VMs", QVariantList{"OpaqueRef:driver", "OpaqueRef:dom0", "OpaqueRef:guest"}}};
+        cache->Update(XenObjectType::Host, "OpaqueRef:host", hostData);
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, "OpaqueRef:host");
+        QVERIFY(host);
+
+        QCOMPARE(host->ControlDomainZero()->OpaqueRef(), QString("OpaqueRef:dom0"));
+        QCOMPARE(host->OtherControlDomains().size(), 1);
+        QCOMPARE(host->OtherControlDomains().first()->OpaqueRef(), QString("OpaqueRef:driver"));
+
+        // control_domain, when the host reports it, decides
+        hostData["control_domain"] = "OpaqueRef:dom0";
+        cache->Update(XenObjectType::Host, "OpaqueRef:host", hostData);
+        QCOMPARE(host->ControlDomainZero()->OpaqueRef(), QString("OpaqueRef:dom0"));
+        QCOMPARE(host->OtherControlDomains().first()->OpaqueRef(), QString("OpaqueRef:driver"));
+    }
+
     void groupingTagIsFreedWithTheLastReference()
     {
         TagsGrouping grouping(nullptr);

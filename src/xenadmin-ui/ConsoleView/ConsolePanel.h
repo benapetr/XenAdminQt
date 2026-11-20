@@ -244,7 +244,9 @@ class ConsolePanel : public QWidget
          * @param allowedRoles Output list of roles that have permission
          * @return True if RBAC denies access, false if allowed
          */
-        bool rbacDenied(const QString& vmRef, QStringList& allowedRoles);
+        //! C# RbacDenied: the session has none of the roles allowed to open this console.
+        //! allowedRoles and userRoles get the roles' display names for the warning.
+        bool rbacDenied(const QString& vmRef, QStringList& allowedRoles, QStringList& userRoles);
 
         /**
          * @brief Show RBAC warning panel with role information
