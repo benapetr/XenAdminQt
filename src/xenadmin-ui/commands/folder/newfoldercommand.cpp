@@ -100,7 +100,7 @@ QString NewFolderCommand::MenuText() const
 
 QIcon NewFolderCommand::GetIcon() const
 {
-    return QIcon(":/icons/folder_16.png");
+    return QIcon(":/icons/folder.png");
 }
 
 XenConnection* NewFolderCommand::firstConnectedConnection()

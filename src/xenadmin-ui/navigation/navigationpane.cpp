@@ -235,7 +235,7 @@ void NavigationPane::populateOrganizationDropDown()
     tagsAction->setData(QVariant::fromValue(Tags));
     connect(tagsAction, &QAction::triggered, this, &NavigationPane::onOrganizationMenuItemTriggered);
 
-    QAction* foldersAction = new QAction(QIcon(":/icons/folder_16.png"), "Folders", this);
+    QAction* foldersAction = new QAction(QIcon(":/icons/folder.png"), "Folders", this);
     foldersAction->setData(QVariant::fromValue(Folders));
     connect(foldersAction, &QAction::triggered, this, &NavigationPane::onOrganizationMenuItemTriggered);
 

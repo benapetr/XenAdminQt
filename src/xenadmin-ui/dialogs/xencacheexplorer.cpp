@@ -148,7 +148,7 @@ void XenCacheExplorer::populateConnectionNode(QTreeWidgetItem* connectionNode, X
 
         QTreeWidgetItem* typeItem = new QTreeWidgetItem(connectionNode);
         typeItem->setText(0, QString("%1 (%2)").arg(type).arg(objects.size()));
-        typeItem->setIcon(0, QIcon(":/icons/folder-16.png"));
+        typeItem->setIcon(0, QIcon(":/icons/folder.png"));
         typeItem->setData(0, Qt::UserRole, Type_Category);
         
         this->m_itemToConnection[typeItem] = connection;

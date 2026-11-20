@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Folders use XenCenter's folder icon in the tree, search and menus, and the Folders button and New Folder command have an icon again
 Ctrl+F puts the cursor in the navigation pane's search box, not just the tree
 Consoles are rebuilt when the automatic switch to Remote Desktop is turned on or off in Options
 The search panel's "Search for" list shows an icon for each object type

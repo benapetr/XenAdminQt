@@ -67,6 +67,7 @@
         <file alias="storage-16.png">images/000_NewStorage_h32bit_16.png</file>
         <file alias="storage-32.png">images/000_NewStorage_h32bit_32.png</file>
         <file alias="virtual_storage.png">images/000_VirtualStorage_h32bit_16.png</file>
+        <file alias="folder.png">images/000_Folder_open_h32bit_16.png</file>
         <file alias="network-16.png">images/000_Network_h32bit_16.png</file>
         <file alias="management-interface-16.png">images/000_ManagementInterface_h32bit_16.png</file>
         <file alias="network-32.png">images/000_NewNetwork_h32bit_32.png</file>
@@ -145,6 +146,7 @@
         <file alias="host_disconnected.png">images/000_ServerDisconnected_h32bit_16.png</file>
         <file alias="host_maintenance.png">images/000_ServerMaintenance_h32bit_16.png</file>
         <file alias="pool.png">images/000_Pool_h32bit_16.png</file>
+        <file alias="folder.png">images/000_Folder_open_h32bit_16.png</file>
         <file alias="pool_connected.png">images/000_PoolConnected_h32bit_16.png</file>
         <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
         <file alias="storage_default.png">images/000_StorageDefault_h32bit_16.png</file>

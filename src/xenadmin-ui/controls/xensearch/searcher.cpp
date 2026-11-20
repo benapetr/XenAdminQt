@@ -26,8 +26,6 @@
  */
 
 #include "searcher.h"
-#include <QApplication>
-#include <QStyle>
 #include "queryelement.h"
 #include "groupingcontrol.h"
 #include "../../dialogs/customsearchdialog.h"
@@ -119,7 +117,7 @@ void SearchFor::initializeDictionaries()
     this->typeIcons_[ObjectTypes::LocalSR | ObjectTypes::RemoteSR] = QIcon(":/tree-icons/storage.png");
     this->typeIcons_[ObjectTypes::VDI] = QIcon(":/icons/virtual_storage.png");
     this->typeIcons_[ObjectTypes::Network] = QIcon(":/tree-icons/network.png");
-    this->typeIcons_[ObjectTypes::Folder] = QApplication::style()->standardIcon(QStyle::SP_DirIcon); // as the tree shows folders
+    this->typeIcons_[ObjectTypes::Folder] = QIcon(":/tree-icons/folder.png");
 }
 
 void SearchFor::populateComboBox()

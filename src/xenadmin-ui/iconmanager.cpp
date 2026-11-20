@@ -38,8 +38,6 @@
 #include "xenlib/xencache.h"
 #include <QPainter>
 #include <QDebug>
-#include <QApplication>
-#include <QStyle>
 
 IconManager::IconManager()
 {
@@ -86,7 +84,7 @@ QIcon IconManager::GetIconForObject(XenConnection* connection, XenObjectType obj
         case XenObjectType::VMAppliance:
             return QIcon(":/tree-icons/vm_generic.png");
         case XenObjectType::Folder:
-            return QApplication::style()->standardIcon(QStyle::SP_DirIcon);
+            return QIcon(":/tree-icons/folder.png");
         default:
             break;
     }
