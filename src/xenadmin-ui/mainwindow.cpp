@@ -367,6 +367,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Connect tab change signal to notify tab pages
     connect(this->ui->mainTabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
 
+    // C# Default_SettingChanging: consoles are rebuilt when the RDP switching setting changes
+    connect(&SettingsManager::instance(), &SettingsManager::settingsChanged, this, [this](const QString& key)
+    {
+        if (key == "Console/AutoSwitchToRDP")
+            this->resetConsoles();
+    });
+
     // Create Ctrl+F shortcut for search
     QShortcut* searchShortcut = new QShortcut(QKeySequence("Ctrl+F"), this);
     connect(searchShortcut, &QShortcut::activated, this, &MainWindow::focusSearch);
@@ -1982,6 +1989,28 @@ void MainWindow::onSearchTextChanged(const QString& text)
         this->filterTreeItems(item, text);
     }
 }
+void MainWindow::resetConsoles()
+{
+    // C# MainWindow.Default_SettingChanging
+    if (!this->m_consolePanel)
+        return;
+
+    this->m_consolePanel->ResetAllViews();
+
+    QSharedPointer<XenObject> selected = this->m_currentObject;
+    if (selected && selected->GetObjectType() == XenObjectType::VM)
+    {
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(selected);
+        if (vm && vm->IsRealVM())
+            this->m_consolePanel->SetCurrentSource(selected);
+    } else if (selected && selected->GetObjectType() == XenObjectType::Host)
+    {
+        this->m_consolePanel->SetCurrentSourceHost(selected);
+    }
+
+    this->m_consolePanel->UnpauseActiveView(false);
+}
+
 void MainWindow::focusSearch()
 {
     // Focus search box in NavigationPane

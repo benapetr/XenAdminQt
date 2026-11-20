@@ -706,6 +706,9 @@ bool SettingsManager::GetConsoleAutoSwitchToRDP() const
 
 void SettingsManager::SetConsoleAutoSwitchToRDP(bool enabled)
 {
+    // Consoles are rebuilt when this changes, so the Options dialog saving it unchanged must not notify
+    if (this->m_consoleAutoSwitchToRDP == enabled)
+        return;
     this->m_consoleAutoSwitchToRDP = enabled;
     emit settingsChanged("Console/AutoSwitchToRDP");
 }

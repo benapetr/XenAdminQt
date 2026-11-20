@@ -110,9 +110,7 @@ class ConsolePanel : public QWidget
          * - Called from MainWindow when console settings change
          *   (AutoSwitchToRDP or EnableRDPPolling), then current source is rebound.
          *
-         * Qt status:
-         * - Not wired from MainWindow settingsChanged yet.
-         * TODO: wire this from MainWindow on equivalent console setting changes
+         * Qt: MainWindow::resetConsoles, on Console/AutoSwitchToRDP (EnableRDPPolling has no setting here)
          */
         void ResetAllViews();
 

@@ -146,6 +146,8 @@ class MainWindow : public QMainWindow
         // Search functionality
         void onSearchTextChanged(const QString& text);
         void focusSearch();
+        //! Rebuilds the consoles after a setting they read on creation changed
+        void resetConsoles();
 
         // NavigationPane events (matches C# MainWindow.navigationPane_* handlers)
         void onNavigationModeChanged(int mode);
