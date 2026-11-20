@@ -33,7 +33,6 @@
 #include "xen/vm.h"
 #include "xen/role.h"
 #include "xen/session.h"
-#include "xen/friendlynames.h"
 #include "xencache.h"
 #include <QDebug>
 #include <QVBoxLayout>
@@ -474,43 +473,13 @@ bool ConsolePanel::rbacDenied(const QString& vmRef, QStringList& allowedRoles, Q
     const QString permission = controlDomainZero ? QStringLiteral("http/connect_console/host_console")
                                                  : QStringLiteral("http/connect_console");
 
-    // C# Session.Roles: the session's permissions include the names of its parent roles
-    const QStringList permissions = session->GetPermissions();
-    auto displayName = [](const QString& name)
-    {
-        const QString friendly = FriendlyNames::getString(QStringLiteral("Role.%1.NameLabel").arg(name));
-        return friendly.isEmpty() ? name : friendly;
-    };
+    // C# Role.ValidRoleList and Session.Roles
+    for (const QSharedPointer<Role>& role : Role::ValidRoles(this->_connection, permission))
+        allowedRoles.append(role->FriendlyName());
+    for (const QSharedPointer<Role>& role : Role::SessionRoles(this->_connection))
+        userRoles.append(role->FriendlyName());
 
-    // C# Role.ValidRoleList: the roles with a subrole (permission) for this call
-    bool allowed = false;
-    bool anyValidRole = false;
-    for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Role))
-    {
-        QSharedPointer<Role> role = qSharedPointerDynamicCast<Role>(object);
-        if (!role || role->SubroleRefs().isEmpty())
-            continue;
-
-        const QString name = role->GetName();
-        const bool sessionHasRole = permissions.contains(name, Qt::CaseInsensitive);
-        if (sessionHasRole)
-            userRoles.append(displayName(name));
-
-        for (const QString& subroleRef : role->SubroleRefs())
-        {
-            const QString subrole = cache->ResolveObjectData(XenObjectType::Role, subroleRef).value("name_label").toString();
-            if (subrole.compare(permission, Qt::CaseInsensitive) == 0)
-            {
-                anyValidRole = true;
-                allowedRoles.append(displayName(name));
-                allowed = allowed || sessionHasRole;
-                break;
-            }
-        }
-    }
-
-    // No role list (e.g. roles not loaded): don't lock the user out
-    return anyValidRole && !allowed;
+    return !Role::SessionCanPerform(this->_connection, permission);
 }
 
 void ConsolePanel::showRbacWarning(const QStringList& userRoles, const QStringList& allowedRoles)

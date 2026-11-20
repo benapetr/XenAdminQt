@@ -26,6 +26,7 @@
  */
 
 #include "messagealert.h"
+#include "../xen/role.h"
 #include "alarmmessagealert.h"
 #include "policyalert.h"
 #include "certificatealert.h"
@@ -242,9 +243,8 @@ bool MessageAlert::IsAllowedToDismiss() const
     if (!this->m_connection->IsConnected())
         return false;
 
-    // TODO: C# also requires the session to hold a role allowed to call Message.destroy
-    // (unless it's the local superuser). Add once RBAC role checks are wired up.
-    return true;
+    // C#: the local superuser, or a role allowed to call Message.destroy
+    return Role::SessionCanPerform(this->m_connection, QStringLiteral("Message.destroy"));
 }
 
 QString MessageAlert::GetMessageType() const

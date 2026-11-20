@@ -4,6 +4,7 @@
 #include "xenlib/xen/vdi.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/role.h"
 #include "xenlib/utils/vncdes.h"
 #include "xenlib/alerts/alertmanager.h"
 #include "xenlib/xen/actions/wlb/wlbrecommendations.h"
@@ -436,6 +437,29 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void roleListsComeFromSubroles()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Role, "OpaqueRef:p-destroy", QVariantMap{{"name_label", "message.destroy"}, {"subroles", QVariantList()}});
+        cache->Update(XenObjectType::Role, "OpaqueRef:p-console", QVariantMap{{"name_label", "http/connect_console"}, {"subroles", QVariantList()}});
+        cache->Update(XenObjectType::Role, "OpaqueRef:admin", QVariantMap{{"name_label", "pool-admin"},
+                                                                         {"subroles", QVariantList{"OpaqueRef:p-destroy", "OpaqueRef:p-console"}}});
+        cache->Update(XenObjectType::Role, "OpaqueRef:ro", QVariantMap{{"name_label", "read-only"},
+                                                                      {"subroles", QVariantList{"OpaqueRef:p-console"}}});
+
+        // C# Role.ValidRoleList, case-insensitive like the permission names
+        QList<QSharedPointer<Role>> roles = Role::ValidRoles(&connection, "Message.destroy");
+        QCOMPARE(roles.size(), 1);
+        QCOMPARE(roles.first()->OpaqueRef(), QString("OpaqueRef:admin"));
+        QCOMPARE(roles.first()->FriendlyName(), QString("Pool Admin"));
+        QCOMPARE(Role::ValidRoles(&connection, "http/connect_console").size(), 2);
+        QVERIFY(Role::ValidRoles(&connection, "vm.destroy").isEmpty());
+
+        // Without a session (e.g. disconnected) nothing is refused
+        QVERIFY(Role::SessionCanPerform(&connection, "Message.destroy"));
     }
 
     void wlbReasonsAreReadable()

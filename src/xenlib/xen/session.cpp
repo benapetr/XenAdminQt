@@ -536,9 +536,9 @@ namespace XenAPI
         if (this->d->sessionId.isEmpty())
             return;
 
+        // C# Session.Roles (the parent roles among these) is Role::SessionRoles, which
+        // reads the connection's cached roles instead of fetching them again
         this->d->permissions = XenAPI::SessionAPI::get_rbac_permissions(this, this->d->sessionId);
-        // TODO: Populate role objects by mapping permissions to Role.get_all_records(),
-        // mirroring C# Session.Roles behavior.
     }
 
     APIVersion Session::GetAPIVersion() const

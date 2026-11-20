@@ -51,6 +51,21 @@ class XENLIB_EXPORT Role : public XenObject
         // Property accessors
         QStringList SubroleRefs() const;
         bool IsInternal() const;
+
+        //! The friendly name of a role (e.g. "Pool Admin"), else its name
+        QString FriendlyName() const;
+
+        // RBAC helpers. Each of the six parent roles has every permission (an API call or
+        // "http/..." name) it grants as a subrole.
+
+        //! C# Role.ValidRoleList: the parent roles that can perform this call
+        static QList<QSharedPointer<Role>> ValidRoles(XenConnection* connection, const QString& method);
+        //! C# Session.Roles: the parent roles the session holds (its permissions include
+        //! their names)
+        static QList<QSharedPointer<Role>> SessionRoles(XenConnection* connection);
+        //! The session may perform the call: it is the local superuser, holds one of the
+        //! roles that can, or no role on the server is known to grant it (roles not loaded)
+        static bool SessionCanPerform(XenConnection* connection, const QString& method);
 };
 
 #endif // ROLE_H

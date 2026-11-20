@@ -27,6 +27,9 @@
 
 #include "role.h"
 #include "network/connection.h"
+#include "session.h"
+#include "friendlynames.h"
+#include "../xencache.h"
 
 Role::Role(XenConnection* connection, const QString& opaqueRef, QObject* parent)  : XenObject(connection, opaqueRef, parent)
 {
@@ -44,4 +47,75 @@ QStringList Role::SubroleRefs() const
 bool Role::IsInternal() const
 {
     return this->boolProperty("is_internal", false);
+}
+
+QString Role::FriendlyName() const
+{
+    const QString friendly = FriendlyNames::getString(QStringLiteral("Role.%1.NameLabel").arg(this->GetName()));
+    return friendly.isEmpty() ? this->GetName() : friendly;
+}
+
+QList<QSharedPointer<Role>> Role::ValidRoles(XenConnection* connection, const QString& method)
+{
+    QList<QSharedPointer<Role>> roles;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return roles;
+
+    for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Role))
+    {
+        QSharedPointer<Role> role = qSharedPointerDynamicCast<Role>(object);
+        if (!role)
+            continue;
+        for (const QString& subroleRef : role->SubroleRefs())
+        {
+            // C# Role.CanPerform: the subrole's name is the call
+            const QString subrole = cache->ResolveObjectData(XenObjectType::Role, subroleRef).value("name_label").toString();
+            if (subrole.compare(method, Qt::CaseInsensitive) == 0)
+            {
+                roles.append(role);
+                break;
+            }
+        }
+    }
+    return roles;
+}
+
+QList<QSharedPointer<Role>> Role::SessionRoles(XenConnection* connection)
+{
+    QList<QSharedPointer<Role>> roles;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
+    if (!cache || !session)
+        return roles;
+
+    const QStringList permissions = session->GetPermissions();
+    for (const QSharedPointer<XenObject>& object : cache->GetAll(XenObjectType::Role))
+    {
+        QSharedPointer<Role> role = qSharedPointerDynamicCast<Role>(object);
+        if (role && !role->SubroleRefs().isEmpty() && permissions.contains(role->GetName(), Qt::CaseInsensitive))
+            roles.append(role);
+    }
+    return roles;
+}
+
+bool Role::SessionCanPerform(XenConnection* connection, const QString& method)
+{
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
+    if (!session || session->IsLocalSuperuser())
+        return true;
+
+    const QList<QSharedPointer<Role>> valid = ValidRoles(connection, method);
+    if (valid.isEmpty())
+        return true;
+
+    for (const QSharedPointer<Role>& role : SessionRoles(connection))
+    {
+        for (const QSharedPointer<Role>& allowed : valid)
+        {
+            if (allowed->OpaqueRef() == role->OpaqueRef())
+                return true;
+        }
+    }
+    return false;
 }
