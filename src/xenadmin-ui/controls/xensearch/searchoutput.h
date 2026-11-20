@@ -94,7 +94,7 @@ class SearchOutput : public QWidget
          * C# equivalent: Search property setter (SearchOutput.cs lines 60-73)
          *
          * Sets the search on the QueryPanel. If the search has a FolderForNavigator,
-         * the FolderNavigator breadcrumb is shown (not yet implemented).
+         * the FolderNavigator breadcrumb is shown.
          */
         void SetSearch(Search* search);
 

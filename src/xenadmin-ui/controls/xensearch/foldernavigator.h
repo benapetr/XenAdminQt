@@ -36,6 +36,7 @@
 #include <QStringList>
 #include <QList>
 #include <QRect>
+#include <QPixmap>
 
 /*!
  * \brief Breadcrumb navigation widget for folder paths
@@ -133,56 +134,46 @@ class FolderNavigator : public QWidget
          * C# equivalent: OnMouseClick() override (FolderNavigator.cs lines 80-85)
          */
         void mousePressEvent(QMouseEvent* event) override;
+        void resizeEvent(QResizeEvent* event) override;
 
-        /*!
-         * \brief Calculate preferred size based on path
-         * \return Preferred size
-         */
+    public:
+        //! The whole path (C# FolderListItem.PreferredSize)
         QSize sizeHint() const override;
+        //! Narrower widths truncate the path
+        QSize minimumSizeHint() const override;
 
     private:
-        /*!
-         * \brief Parse folder path into components
-         * \param path Folder path string
-         * \return List of path components
-         *
-         * C# equivalent: Folders.PointToPath() (FolderListItem.cs line 116)
-         * TODO: Implement full Folders class with folder reference resolution
-         */
-        QStringList parsePath(const QString& path) const;
+        //! One drawn piece of the path: a component, or the ellipsis replacing leading ones
+        struct Part
+        {
+            QString text;
+            QRect rect;
+            bool separatorBefore = false;
+            QString searchPath;  //!< folder searched for on click; empty if not clickable
+        };
 
         /*!
-         * \brief Build path up to specified component index
-         * \param components Path components
-         * \param index Component index (inclusive)
-         * \return Reconstructed path
+         * \brief Lays the path out in the widget's width
          *
-         * C# equivalent: Folders.PathToPoint() (FolderListItem.cs line 153)
-         */
-        QString buildPath(const QStringList& components, int index) const;
-
-        /*!
-         * \brief Calculate layout of breadcrumb components
-         * TODO: Implement full CalcSizeAndTrunc logic with width constraints and ellipsization
-         * (C# FolderListItem.cs lines 229-261)
+         * C# FolderListItem.CalcSizeAndTrunc and DrawSelf: when the path does not fit, leading
+         * components are replaced by an ellipsis, then the last component is shortened.
          */
         void calculateLayout();
 
-        /*!
-         * \brief Find breadcrumb component at point
-         * \param pos Position
-         * \return Component index or -1 if not found
-         */
-        int componentAt(const QPoint& pos) const;
+        //! Width of the whole path untruncated (C# FolderListItem.PreferredSize)
+        int fullWidth() const;
 
-    private:
-        QString folder_;                    ///< Current folder path
-        QStringList pathComponents_;        ///< Parsed path components
-        QList<QRect> componentRects_;       ///< Clickable regions for each component
-        int hoveredComponent_;              ///< Index of hovered component (-1 if none)
-        
+        int partAt(const QPoint& pos) const;
+
+        QString folder_;
+        QStringList pathComponents_;
+        QList<Part> parts_;
+        int hoveredPart_ = -1;
+        QPixmap separator_;
+
         static const int INNER_PADDING = 9;     ///< Padding between components
         static const int IMAGE_OFFSET = 4;      ///< Vertical offset for separator icon
+        static const int LEFT_MARGIN = 3;       ///< C# DrawSelf: compensates for unpadded text
 };
 
 #endif // FOLDERNAVIGATOR_H

@@ -67,6 +67,7 @@
         <file alias="storage-16.png">images/000_NewStorage_h32bit_16.png</file>
         <file alias="storage-32.png">images/000_NewStorage_h32bit_32.png</file>
         <file alias="virtual_storage.png">images/000_VirtualStorage_h32bit_16.png</file>
+        <file alias="folder_separator.png">images/folder_separator.png</file>
         <file alias="folder.png">images/000_Folder_open_h32bit_16.png</file>
         <file alias="network-16.png">images/000_Network_h32bit_16.png</file>
         <file alias="management-interface-16.png">images/000_ManagementInterface_h32bit_16.png</file>

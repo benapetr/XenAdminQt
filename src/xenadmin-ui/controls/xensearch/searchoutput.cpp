@@ -28,6 +28,7 @@
 #include "searchoutput.h"
 #include "querypanel.h"
 #include "foldernavigator.h"
+#include "../../mainwindow.h"
 #include "../dropdownbutton.h"
 #include "../../../xenlib/xensearch/search.h"
 #include <QVBoxLayout>
@@ -77,6 +78,12 @@ void SearchOutput::setupUi()
     // Folder breadcrumb navigator (optional)
     this->folderNavigator_ = new FolderNavigator(this);
     this->folderNavigator_->setVisible(false);
+    // C# FolderListItem.OnMouseClick: Program.MainWindow.SearchForFolder
+    connect(this->folderNavigator_, &FolderNavigator::folderClicked, this, [](const QString& path)
+    {
+        if (MainWindow* mainWindow = MainWindow::instance())
+            mainWindow->SearchForFolder(path);
+    });
     this->layout_->addWidget(this->folderNavigator_);
     
     // Main QueryPanel grid

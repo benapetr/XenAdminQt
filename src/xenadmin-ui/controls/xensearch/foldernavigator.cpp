@@ -30,319 +30,193 @@
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QPaintEvent>
+#include <QResizeEvent>
+#include "xenlib/folders/foldersmanager.h"
 
-FolderNavigator::FolderNavigator(QWidget* parent)
-    : QWidget(parent),
-      folder_(""),
-      pathComponents_(),
-      componentRects_(),
-      hoveredComponent_(-1)
+FolderNavigator::FolderNavigator(QWidget* parent) : QWidget(parent), separator_(":/icons/folder_separator.png")
 {
-    // C# equivalent: FolderNavigator() constructor (FolderNavigator.cs line 39)
-    // C# code:
-    //   public FolderNavigator()
-    //   {
-    //       InitializeComponent();
-    //   }
-    
-    this->setMouseTracking(true);  // Enable mouse move events
+    this->setMouseTracking(true);
     this->setMinimumHeight(20);
     this->setMaximumHeight(30);
 }
 
 FolderNavigator::~FolderNavigator()
 {
-    // Qt manages child widget cleanup automatically
 }
 
+// C# FolderNavigator.Folder setter
 void FolderNavigator::SetFolder(const QString& folder)
 {
-    // C# equivalent: Folder property setter (FolderNavigator.cs lines 44-57)
-    // C# code:
-    //   public string Folder
-    //   {
-    //       set
-    //       {
-    //           if (string.IsNullOrEmpty(value))
-    //               this.Visible = false;
-    //           else
-    //           {
-    //               folderListItem = new FolderListItem(value, FolderListItem.AllowSearch.AllButLast, false);
-    //               folderListItem.Parent = this;
-    //               folderListItem.MaxWidth = this.Parent.Width - this.Left;
-    //               this.Width = folderListItem.PreferredSize.Width;
-    //               this.Visible = true;
-    //               this.Invalidate();
-    //           }
-    //       }
-    //   }
-    
     this->folder_ = folder;
-    
-    if (folder.isEmpty())
-    {
-        this->setVisible(false);
-    }
-    else
-    {
-        this->pathComponents_ = this->parsePath(folder);
-        this->calculateLayout();
-        this->setVisible(true);
-        this->update();
-    }
+    this->pathComponents_ = FoldersManager::PointToPath(folder);
+    this->hoveredPart_ = -1;
+    this->setVisible(!folder.isEmpty());
+    this->calculateLayout();
+    this->updateGeometry();
+    this->update();
 }
 
-QStringList FolderNavigator::parsePath(const QString& path) const
+int FolderNavigator::fullWidth() const
 {
-    // C# equivalent: Folders.PointToPath() (FolderListItem.cs line 116)
-    // Simplified implementation - just split by '/'
-    // In C# this involves more complex folder reference resolution
-    
-    if (path.isEmpty())
-        return QStringList();
-    
-    // Remove "OpaqueRef:" prefix if present
-    QString cleanPath = path;
-    if (cleanPath.startsWith("OpaqueRef:"))
-        cleanPath = cleanPath.mid(10);
-    
-    return cleanPath.split('/', Qt::SkipEmptyParts);
-}
-
-QString FolderNavigator::buildPath(const QStringList& components, int index) const
-{
-    // C# equivalent: Folders.PathToPoint() (FolderListItem.cs line 153)
-    // Build path from components up to (and including) index
-    
-    if (index < 0 || index >= components.size())
-        return QString();
-    
-    QStringList subList = components.mid(0, index + 1);
-    return "OpaqueRef:" + subList.join('/');
+    const QFontMetrics fm(this->font());
+    int width = LEFT_MARGIN;
+    for (int i = 0; i < this->pathComponents_.size(); ++i)
+    {
+        if (i > 0)
+            width += this->separator_.width() + INNER_PADDING;
+        width += fm.horizontalAdvance(this->pathComponents_.at(i)) + INNER_PADDING;
+    }
+    return width - INNER_PADDING;
 }
 
 void FolderNavigator::calculateLayout()
 {
-    // C# equivalent: CalcSizeAndTrunc() and DrawSelf() in FolderListItem.cs
-    // Calculate positions of each breadcrumb component
-    // TODO: Implement advanced truncation logic for long paths (ellipsization)
-    // TODO: Add "Change" button support for folder selection dialog
-    
-    this->componentRects_.clear();
-    
-    if (this->pathComponents_.isEmpty())
+    this->parts_.clear();
+    const int count = this->pathComponents_.size();
+    if (count == 0)
         return;
-    
-    QFontMetrics fm(this->font());
-    int x = 3;  // Left margin
-    int y = 2;  // Top margin
-    
-    for (int i = 0; i < this->pathComponents_.size(); ++i)
+
+    const QFontMetrics fm(this->font());
+    const QString ellipsis(QChar(0x2026));
+    const int available = this->width() > 0 ? this->width() : INT_MAX;
+
+    // C# CalcSizeAndTrunc. trunc1: leading components replaced by the ellipsis.
+    int width = this->fullWidth();
+    int trunc1 = 0;
+    for (; width > available && trunc1 < count - 1; ++trunc1)
     {
-        QString component = this->pathComponents_[i];
-        
-        // Add separator before component (except first)
-        if (i > 0)
-        {
-            x += 8 + INNER_PADDING;  // Separator width + padding
-        }
-        
-        // Measure component text
-        QRect textRect = fm.boundingRect(component);
-        int width = textRect.width();
-        int height = textRect.height();
-        
-        // Store clickable rect for this component
-        // All components except the last are clickable
-        if (i < this->pathComponents_.size() - 1)
-        {
-            this->componentRects_.append(QRect(x, y, width, height));
-        }
+        if (trunc1 == 0)
+            width += fm.horizontalAdvance(ellipsis);
         else
-        {
-            // Last component is not clickable, but still need rect for layout
-            this->componentRects_.append(QRect(x, y, width, height));
-        }
-        
-        x += width + INNER_PADDING;
+            width -= this->separator_.width() + 2 * INNER_PADDING;
+        width -= fm.horizontalAdvance(this->pathComponents_.at(trunc1));
     }
-    
-    // Set widget width to fit all components
-    this->setMinimumWidth(x + 10);
+
+    // Still too wide: the last remaining component loses characters from its end
+    QString last = this->pathComponents_.at(count - 1);
+    if (width > available)
+    {
+        const int lastWidth = fm.horizontalAdvance(last);
+        last = fm.elidedText(last, Qt::ElideRight, qMax(0, lastWidth - (width - available)));
+    }
+
+    // C# DrawSelf
+    int x = LEFT_MARGIN;
+    const int y = 2;
+    const int height = fm.height();
+    if (trunc1 > 0)
+    {
+        Part part;
+        part.text = ellipsis;
+        part.rect = QRect(x, y, fm.horizontalAdvance(ellipsis), height);
+        this->parts_.append(part);
+        x += part.rect.width() + INNER_PADDING;
+    }
+    for (int i = trunc1; i < count; ++i)
+    {
+        Part part;
+        part.separatorBefore = i > 0;
+        if (part.separatorBefore)
+            x += this->separator_.width() + INNER_PADDING;
+
+        part.text = (i == count - 1) ? last : this->pathComponents_.at(i);
+        part.rect = QRect(x, y, fm.horizontalAdvance(part.text), height);
+        // C# AllowSearch.AllButLast: each parent opens a search for that folder
+        if (i != count - 1)
+            part.searchPath = FoldersManager::PathToPoint(this->pathComponents_, i + 1);
+        this->parts_.append(part);
+        x += part.rect.width() + INNER_PADDING;
+    }
 }
 
-int FolderNavigator::componentAt(const QPoint& pos) const
+int FolderNavigator::partAt(const QPoint& pos) const
 {
-    // Find which component the mouse is over
-    for (int i = 0; i < this->componentRects_.size() - 1; ++i)  // Exclude last (non-clickable)
+    for (int i = 0; i < this->parts_.size(); ++i)
     {
-        if (this->componentRects_[i].contains(pos))
+        if (!this->parts_.at(i).searchPath.isEmpty() && this->parts_.at(i).rect.contains(pos))
             return i;
     }
     return -1;
 }
 
+void FolderNavigator::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    this->calculateLayout();
+}
+
 void FolderNavigator::paintEvent(QPaintEvent* event)
 {
-    // C# equivalent: OnPaint() override (FolderNavigator.cs lines 59-64)
-    // C# code:
-    //   protected override void OnPaint(PaintEventArgs e)
-    //   {
-    //       base.OnPaint(e);
-    //       if (folderListItem != null)
-    //           folderListItem.DrawSelf(e.Graphics, new Rectangle(0, 2, Width, Height), false);
-    //   }
-    
     QWidget::paintEvent(event);
-    
-    if (this->pathComponents_.isEmpty())
-        return;
-    
+
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    
-    QFontMetrics fm(this->font());
-    
-    for (int i = 0; i < this->pathComponents_.size(); ++i)
+    const QFontMetrics fm(this->font());
+    const QColor linkColor = this->palette().color(QPalette::Link);
+
+    for (int i = 0; i < this->parts_.size(); ++i)
     {
-        const QRect& rect = this->componentRects_[i];
-        QString component = this->pathComponents_[i];
-        
-        // Draw separator before component (except first)
-        if (i > 0)
+        const Part& part = this->parts_.at(i);
+        if (part.separatorBefore)
         {
-            int sepX = rect.x() - INNER_PADDING - 4;
-            int sepY = rect.y() + IMAGE_OFFSET;
-            painter.drawText(sepX, sepY + fm.ascent(), ">");
+            const int separatorX = part.rect.x() - INNER_PADDING - this->separator_.width();
+            painter.drawPixmap(separatorX, part.rect.y() + IMAGE_OFFSET, this->separator_);
         }
-        
-        // Determine text color
-        // All components except last are clickable and shown in blue
-        // Last component is shown in default color
-        QColor textColor;
-        if (i < this->pathComponents_.size() - 1)
-        {
-            // Clickable component
-            if (i == this->hoveredComponent_)
-            {
-                textColor = QColor(0, 0, 200);  // Darker blue when hovered
-                QFont underlineFont = this->font();
-                underlineFont.setUnderline(true);
-                painter.setFont(underlineFont);
-            }
-            else
-            {
-                textColor = QColor(0, 0, 255);  // Blue for clickable
-            }
-        }
-        else
-        {
-            // Last component (current location, not clickable)
-            textColor = this->palette().color(QPalette::WindowText);
-        }
-        
-        painter.setPen(textColor);
-        painter.drawText(rect.x(), rect.y() + fm.ascent(), component);
-        
-        // Reset font if we set underline
-        if (painter.font().underline())
-        {
-            painter.setFont(this->font());
-        }
+
+        const bool clickable = !part.searchPath.isEmpty();
+        QFont font = this->font();
+        font.setUnderline(clickable && i == this->hoveredPart_);
+        painter.setFont(font);
+        painter.setPen(clickable ? linkColor : this->palette().color(QPalette::WindowText));
+        painter.drawText(part.rect.x(), part.rect.y() + fm.ascent(), part.text);
     }
 }
 
 void FolderNavigator::mouseMoveEvent(QMouseEvent* event)
 {
-    // C# equivalent: OnMouseMove() override (FolderNavigator.cs lines 66-71)
-    // C# code:
-    //   protected override void OnMouseMove(MouseEventArgs e)
-    //   {
-    //       base.OnMouseMove(e);
-    //       if (folderListItem != null)
-    //           folderListItem.OnMouseMove(e.Location);
-    //   }
-    
     QWidget::mouseMoveEvent(event);
-    
-    int component = this->componentAt(event->pos());
-    
-    if (component != this->hoveredComponent_)
-    {
-        this->hoveredComponent_ = component;
-        this->update();
-        
-        // Change cursor to hand when over clickable component
-        if (component >= 0)
-            this->setCursor(Qt::PointingHandCursor);
-        else
-            this->setCursor(Qt::ArrowCursor);
-    }
+
+    const int part = this->partAt(event->pos());
+    if (part == this->hoveredPart_)
+        return;
+
+    this->hoveredPart_ = part;
+    this->setCursor(part >= 0 ? Qt::PointingHandCursor : Qt::ArrowCursor);
+    this->update();
 }
 
 void FolderNavigator::leaveEvent(QEvent* event)
 {
-    // C# equivalent: OnMouseLeave() override (FolderNavigator.cs lines 73-78)
-    // C# code:
-    //   protected override void OnMouseLeave(EventArgs e)
-    //   {
-    //       base.OnMouseLeave(e);
-    //       if (folderListItem != null)
-    //           folderListItem.OnMouseLeave();
-    //   }
-    
     QWidget::leaveEvent(event);
-    
-    if (this->hoveredComponent_ >= 0)
+
+    if (this->hoveredPart_ >= 0)
     {
-        this->hoveredComponent_ = -1;
+        this->hoveredPart_ = -1;
         this->update();
     }
-    
     this->setCursor(Qt::ArrowCursor);
 }
 
+// C# FolderListItem.OnMouseClick: Program.MainWindow.SearchForFolder(path)
 void FolderNavigator::mousePressEvent(QMouseEvent* event)
 {
-    // C# equivalent: OnMouseClick() override (FolderNavigator.cs lines 80-85)
-    // C# code:
-    //   protected override void OnMouseClick(MouseEventArgs e)
-    //   {
-    //       base.OnMouseClick(e);
-    //       if (folderListItem != null)
-    //           folderListItem.OnMouseClick(e, e.Location);
-    //   }
-    // 
-    // Which calls Program.MainWindow.SearchForFolder(control.tag)
-    // (FolderListItem.cs line 317)
-    
     QWidget::mousePressEvent(event);
-    
+
     if (event->button() != Qt::LeftButton)
         return;
-    
-    int component = this->componentAt(event->pos());
-    if (component >= 0)
-    {
-        QString folderPath = this->buildPath(this->pathComponents_, component);
-        emit folderClicked(folderPath);
-    }
+
+    const int part = this->partAt(event->pos());
+    if (part >= 0)
+        emit folderClicked(this->parts_.at(part).searchPath);
 }
 
+// C# FolderListItem.PreferredSize: the whole path
 QSize FolderNavigator::sizeHint() const
 {
-    // C# equivalent: PreferredSize property (FolderListItem.cs lines 178-184)
-    
-    if (this->componentRects_.isEmpty())
-        return QSize(100, 30);
-    
-    // Calculate total width needed
-    int width = 0;
-    if (!this->componentRects_.isEmpty())
-    {
-        const QRect& lastRect = this->componentRects_.last();
-        width = lastRect.right() + 10;  // Add right margin
-    }
-    
-    return QSize(width, 30);
+    return QSize(this->fullWidth(), 24);
+}
+
+// Narrower widths truncate the path
+QSize FolderNavigator::minimumSizeHint() const
+{
+    return QSize(0, 20);
 }

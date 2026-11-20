@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+The folder breadcrumb above search results shortens long paths to fit, uses XenCenter's separator icon, and clicking a parent folder searches it
 Folders use XenCenter's folder icon in the tree, search and menus, and the Folders button and New Folder command have an icon again
 Ctrl+F puts the cursor in the navigation pane's search box, not just the tree
 Consoles are rebuilt when the automatic switch to Remote Desktop is turned on or off in Options

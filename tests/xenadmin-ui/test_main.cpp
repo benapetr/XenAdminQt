@@ -14,6 +14,7 @@
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
 #include "controls/xensearch/searcher.h"
+#include "controls/xensearch/foldernavigator.h"
 #include "controls/xensearch/groupingcontrol.h"
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/queries.h"
@@ -432,6 +433,29 @@ private slots:
 
         Xen::ConnectionsManager::instance()->RemoveConnection(connection);
         delete connection;
+    }
+
+    // C# FolderListItem.CalcSizeAndTrunc / AllowSearch.AllButLast
+    void folderNavigatorTruncatesAndSearchesParents()
+    {
+        FolderNavigator navigator;
+        navigator.resize(2000, 24);
+        navigator.SetFolder("/alpha/beta/gamma");
+        QSignalSpy clicked(&navigator, &FolderNavigator::folderClicked);
+
+        const QFontMetrics fm(navigator.font());
+        QTest::mouseClick(&navigator, Qt::LeftButton, Qt::NoModifier, QPoint(3 + fm.horizontalAdvance("alpha") / 2, 2 + fm.height() / 2));
+        QCOMPARE(clicked.count(), 1);
+        QCOMPARE(clicked.first().first().toString(), QString("/alpha"));
+
+        // The last component is where we are: not a link
+        QTest::mouseClick(&navigator, Qt::LeftButton, Qt::NoModifier, QPoint(navigator.sizeHint().width() - 3, 2 + fm.height() / 2));
+        QCOMPARE(clicked.count(), 1);
+
+        // Too narrow: leading components become an ellipsis, the rest still fits
+        navigator.resize(navigator.sizeHint().width() - fm.horizontalAdvance("alpha"), 24);
+        QTest::mouseClick(&navigator, Qt::LeftButton, Qt::NoModifier, QPoint(3 + fm.horizontalAdvance(QChar(0x2026)) / 2, 2 + fm.height() / 2));
+        QCOMPARE(clicked.count(), 1);
     }
 
     static QStringList addGroupOffers(GroupingControl* control)
