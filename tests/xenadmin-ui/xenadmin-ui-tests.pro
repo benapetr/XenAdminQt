@@ -20,6 +20,7 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.cpp \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.cpp \
     ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.cpp \
+    ../../src/xenadmin-ui/settingspanels/nrpeeditpage.cpp \
     ../../src/xenadmin-ui/settingsmanager.cpp \
     ../../src/xenadmin-ui/connectionprofile.cpp \
     ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.cpp \
@@ -43,6 +44,7 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.h \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.h \
     ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.h \
+    ../../src/xenadmin-ui/settingspanels/nrpeeditpage.h \
     ../../src/xenadmin-ui/settingsmanager.h \
     ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.h \
     ../../src/xenadmin-ui/ConsoleView/VNCGraphicsClient.h \
@@ -55,6 +57,7 @@ FORMS += \
     ../../src/xenadmin-ui/settingspanels/perfmonalertoptionspage.ui \
     ../../src/xenadmin-ui/settingspanels/customfieldsdisplaypage.ui \
     ../../src/xenadmin-ui/settingspanels/networkgeneraleditpage.ui \
+    ../../src/xenadmin-ui/settingspanels/nrpeeditpage.ui \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.ui
 
 RESOURCES += ../../src/xenadmin-ui/resources.qrc

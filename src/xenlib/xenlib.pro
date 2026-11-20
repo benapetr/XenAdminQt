@@ -191,6 +191,8 @@ HEADERS += \
     xen/actions/host/shutdownhostaction.h \
     xen/actions/host/restarttoolstackaction.h \
     xen/actions/host/runpluginaction.h \
+    xen/actions/nrpe/nrpehostconfiguration.h \
+    xen/actions/nrpe/nrpeactions.h \
     xen/actions/host/hostpoweronaction.h \
     xen/actions/host/enablehostaction.h \
     xen/actions/host/disablehostaction.h \
@@ -463,6 +465,8 @@ SOURCES += \
     xen/actions/host/shutdownhostaction.cpp \
     xen/actions/host/restarttoolstackaction.cpp \
     xen/actions/host/runpluginaction.cpp \
+    xen/actions/nrpe/nrpehostconfiguration.cpp \
+    xen/actions/nrpe/nrpeactions.cpp \
     xen/actions/host/hostpoweronaction.cpp \
     xen/actions/host/enablehostaction.cpp \
     xen/actions/host/disablehostaction.cpp \

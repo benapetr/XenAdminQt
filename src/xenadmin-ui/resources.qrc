@@ -87,6 +87,7 @@
         <file alias="info3_16.png">images/000_Info3_h32bit_16.png</file>
         <file alias="usb_16.png">images/usb_16.png</file>
         <file alias="coreos_16.png">images/coreos-16.png</file>
+        <file alias="module_16.png">images/000_Module_h32bit_16.png</file>
         <file alias="tick_h32bit_16.png">images/000_Tick_h32bit_16.png</file>
         <file alias="error_16.png">images/000_error_h32bit_16.png</file>
         <file alias="cancelled_action_16.png">images/cancelled_action_16.png</file>

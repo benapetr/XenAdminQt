@@ -39,6 +39,7 @@
 #include "../settingspanels/securityeditpage.h"
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
+#include "../settingspanels/nrpeeditpage.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xencache.h"
@@ -113,12 +114,9 @@ void HostPropertiesDialog::build()
     // Clustering (Corosync) is not ported yet
     // TODO: Create ClusteringEditPage class (C# line 185, isPoolOrStandalone)
 
-    // Tab 14: NRPE (Monitoring)
-    // Shown for pool/standalone if XCP-ng 8.3+ / XenServer 23.27.0+ and user has permission (C# line 283-287)
-    // TODO: Create NRPEEditPage class
-    // TODO: Add conditional: if (isPoolOrStandalone && Helpers.XapiEqualOrGreater_23_27_0(connection)
-    //                           && (session.IsLocalSuperuser || session.Roles.Any(r => r.name_label == Role.MR_ROLE_POOL_ADMIN)))
-    // this->showTab(new NRPEEditPage());
+    // NRPE monitoring (C# isPoolOrStandalone, xapi 23.27.0 or later, local root or pool admin)
+    if (isStandalone && NRPEEditPage::IsAvailable(connection))
+        this->showTab(new NRPEEditPage());
 
     // Select first tab
     if (!this->m_pages.isEmpty())

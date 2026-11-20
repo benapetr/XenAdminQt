@@ -34,6 +34,7 @@
 #include "../settingspanels/securityeditpage.h"
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
+#include "../settingspanels/nrpeeditpage.h"
 #include "../settingspanels/poolgpueditpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/pool.h"
@@ -158,6 +159,10 @@ void PoolPropertiesDialog::build()
 
     if (cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
         this->showTab(new PoolAdvancedEditPage());
+
+    // NRPE monitoring (C#: last, xapi 23.27.0 or later, local root or pool admin)
+    if (NRPEEditPage::IsAvailable(connection))
+        this->showTab(new NRPEEditPage());
 }
 
 void PoolPropertiesDialog::SelectPoolGpuEditPage()

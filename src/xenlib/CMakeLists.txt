@@ -52,6 +52,8 @@ set(XENLIB_SOURCES
     xen/actions/host/reboothostaction.cpp
     xen/actions/host/restarttoolstackaction.cpp
     xen/actions/host/runpluginaction.cpp
+    xen/actions/nrpe/nrpehostconfiguration.cpp
+    xen/actions/nrpe/nrpeactions.cpp
     xen/actions/host/savepoweronsettingsaction.cpp
     xen/actions/host/shutdownhostaction.cpp
     xen/actions/host/updateintegratedgpupassthroughaction.cpp

@@ -54,6 +54,7 @@
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/vmhelpers.h"
 #include "xenlib/xen/pusb.h"
+#include "xenlib/xen/actions/nrpe/nrpehostconfiguration.h"
 #include "xenlib/xen/sr.h"
 #include <QTemporaryDir>
 #include <QTemporaryFile>
@@ -567,6 +568,36 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void nrpeConfigurationParsesPluginOutput()
+    {
+        NRPEHostConfiguration config;
+        config.ParseGeneralConfiguration("allowed_hosts: 127.0.0.1,::1,10.0.0.5,nagios.example.com\ndebug: 1\nssl_logging: 0x2f\n");
+        QCOMPARE(config.allowHosts, QString("10.0.0.5,nagios.example.com"));
+        QVERIFY(config.debug);
+        QVERIFY(config.sslLogging);
+
+        // Only the local addresses: no monitoring servers (C# shows its placeholder)
+        NRPEHostConfiguration local;
+        local.ParseGeneralConfiguration("allowed_hosts: 127.0.0.1,::1,\ndebug: 0\nssl_logging: 0x00");
+        QCOMPARE(local.allowHosts, QString());
+        QVERIFY(!local.debug);
+        QVERIFY(!local.sslLogging);
+
+        config.ParseThresholds("check_cpu warning threshold - 50 critical threshold - 80\n"
+                               "check_load warning threshold - 1.5,1.5,1.5 critical threshold - 3,3,3\n");
+        QCOMPARE(config.checks.size(), 2);
+        QCOMPARE(config.checks.value("check_cpu").warningThreshold, QString("50"));
+        QCOMPARE(config.checks.value("check_cpu").criticalThreshold, QString("80"));
+        QCOMPARE(config.checks.value("check_load").criticalThreshold, QString("3,3,3"));
+
+        // C# Equals: a check only one side has doesn't count
+        NRPEHostConfiguration other = config;
+        other.checks.remove("check_load");
+        QVERIFY(config == other);
+        other.checks["check_cpu"].criticalThreshold = "90";
+        QVERIFY(config != other);
     }
 
     void alertManagerAllowsCallbacksFromItsSignals()

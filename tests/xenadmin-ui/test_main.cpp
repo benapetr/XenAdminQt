@@ -8,6 +8,7 @@
 #include "settingspanels/customfieldsdisplaypage.h"
 #include "dialogs/newcustomfielddialog.h"
 #include "settingspanels/networkgeneraleditpage.h"
+#include "settingspanels/nrpeeditpage.h"
 #include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
 #include <QSpinBox>
 #include <QDateTimeEdit>
@@ -538,6 +539,35 @@ private slots:
 
         std::unique_ptr<QueryFilter> back(element.GetQueryFilter());
         QVERIFY(back && back->Equals(&query));
+    }
+
+    // C# NRPEEditPage.IsAllowHostsValid and the CheckGroup classes
+    void nrpeValidationMatchesCsharp()
+    {
+        QVERIFY(!NRPEEditPage::AllowHostsError("").isEmpty());
+        QVERIFY(NRPEEditPage::AllowHostsError("192.168.1.1, test.domain.com,10.0.0.0/8").isEmpty());
+        // 192.168.1.300 still passes, as a domain name, under C#'s regexes; this doesn't
+        QVERIFY(!NRPEEditPage::AllowHostsError("nagios server").isEmpty());
+        QVERIFY(!NRPEEditPage::AllowHostsError("10.0.0.1, 10.0.0.1").isEmpty());
+
+        using Kind = NRPEEditPage::CheckKind;
+        QString w, c;
+        QVERIFY(NRPEEditPage::CheckThresholds(Kind::Usage, "80", "90", &w, &c));
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Usage, "90", "80", &w, &c));
+        QVERIFY(!w.isEmpty());
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Usage, "", "90", &w, &c));
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Usage, "80", "101", &w, &c));
+        QVERIFY(!c.isEmpty());
+
+        // Free space: warning must be above critical
+        QVERIFY(NRPEEditPage::CheckThresholds(Kind::Free, "20", "10", &w, &c));
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Free, "10", "20", &w, &c));
+
+        // Dom0 load: three numbers each, no range limit, warning at most critical
+        QVERIFY(NRPEEditPage::CheckThresholds(Kind::Dom0Load, "2.7,2.6,2.5", "3.2,3.1,3", &w, &c));
+        QVERIFY(NRPEEditPage::CheckThresholds(Kind::Dom0Load, "3,3,3", "3,3,3", &w, &c));
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Dom0Load, "4,3,3", "3,3,3", &w, &c));
+        QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Dom0Load, "3,3", "3,3,3", &w, &c));
     }
 
     // C# FolderListItem.CalcSizeAndTrunc / AllowSearch.AllButLast

@@ -143,6 +143,7 @@ SOURCES += \
     settingspanels/usbeditpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
+    settingspanels/nrpeeditpage.cpp \
     settingspanels/networkgeneraleditpage.cpp \
     settingspanels/poolgpueditpage.cpp \
     settingspanels/gpueditpage.cpp \
@@ -473,6 +474,7 @@ HEADERS += \
     settingspanels/usbeditpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
+    settingspanels/nrpeeditpage.h \
     settingspanels/networkgeneraleditpage.h \
     settingspanels/poolgpueditpage.h \
     settingspanels/gpueditpage.h \
@@ -730,6 +732,7 @@ FORMS += \
     settingspanels/usbeditpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
+    settingspanels/nrpeeditpage.ui \
     settingspanels/networkgeneraleditpage.ui \
     settingspanels/vdisizelocationpage.ui \
     settingspanels/vbdeditpage.ui \

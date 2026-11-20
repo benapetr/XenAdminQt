@@ -353,6 +353,8 @@ set(XENADMIN_SOURCES
     settingspanels/networkgeneraleditpage.cpp
     settingspanels/networkgeneraleditpage.ui
     settingspanels/networkoptionseditpage.cpp
+    settingspanels/nrpeeditpage.cpp
+    settingspanels/nrpeeditpage.ui
     settingspanels/networkoptionseditpage.ui
     settingspanels/perfmonalerteditpage.cpp
     settingspanels/perfmonalertoptionspage.cpp

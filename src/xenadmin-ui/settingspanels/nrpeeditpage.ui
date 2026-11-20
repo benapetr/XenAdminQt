@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NRPEEditPage</class>
+ <widget class="QWidget" name="NRPEEditPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>540</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="DescLabelPool">
+     <property name="text">
+      <string>Nagios Remote Plugin Executor (NRPE) allows you to monitor remotely resource metrics on the servers of your pool.
+Use this page to review and modify the NRPE configuration and metric threshold settings used for this pool.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="DescLabelHost">
+     <property name="text">
+      <string>Nagios Remote Plugin Executor (NRPE) allows you to monitor remotely resource metrics on the servers of your pool.
+Use this page to review and modify the NRPE configuration and metric threshold settings used for this server.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="EnableNRPECheckBox">
+     <property name="text">
+      <string>&amp;Enable NRPE</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="GeneralConfigureGroupBox">
+     <property name="title">
+      <string>General Configuration</string>
+     </property>
+     <layout class="QGridLayout" name="generalLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="AllowHostsLabel">
+        <property name="text">
+         <string>&amp;Monitoring servers:</string>
+        </property>
+        <property name="buddy">
+         <cstring>AllowHostsTextBox</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="AllowHostsTextBox">
+        <property name="placeholderText">
+         <string>Comma separated IP address or domain list, e.g. 192.168.1.1, test.domain.com</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QCheckBox" name="DebugLogCheckBox">
+        <property name="text">
+         <string>Record &amp;debugging messages to syslog</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QCheckBox" name="SslDebugLogCheckBox">
+        <property name="text">
+         <string>Record &amp;SSL messages to syslog</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="CheckDataGridView">
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::AllEditTriggers</set>
+     </property>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Metric</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Warning Threshold</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Critical Threshold</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="retrieveLayout">
+     <item>
+      <widget class="QLabel" name="RetrieveNRPEPicture"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="RetrieveNRPELabel">
+       <property name="text">
+        <string>Retrieving NRPE configuration...</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
