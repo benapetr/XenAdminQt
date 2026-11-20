@@ -266,25 +266,20 @@ private slots:
         QVERIFY(icons.GetIconForObject(&connection, XenObjectType::VIF, ref).isNull());
     }
 
-    void defaultTemplateUsesBooleanValue()
+    // C# VM.DefaultTemplate: the other_config:default_template marker's presence counts, not its value
+    void defaultTemplateChecksMarkerPresence()
     {
         XenCache* cache = XenCache::GetDummy();
         const QString ref = "OpaqueRef:test-default-template";
         QSharedPointer<VM> vm(new VM(nullptr, ref));
 
-        QVariantMap dataFalse;
-        dataFalse.insert("other_config", QVariantMap{{"default_template", "false"}});
-        cache->Update(XenObjectType::VM, ref, dataFalse);
-        QCOMPARE(vm->IsDefaultTemplate(), false);
-
-        QVariantMap dataTrue;
-        dataTrue.insert("other_config", QVariantMap{{"default_template", "true"}});
-        cache->Update(XenObjectType::VM, ref, dataTrue);
+        cache->Update(XenObjectType::VM, ref, QVariantMap{{"other_config", QVariantMap{{"default_template", "true"}}}});
         QCOMPARE(vm->IsDefaultTemplate(), true);
 
-        QVariantMap dataMissing;
-        dataMissing.insert("other_config", QVariantMap{});
-        cache->Update(XenObjectType::VM, ref, dataMissing);
+        cache->Update(XenObjectType::VM, ref, QVariantMap{{"other_config", QVariantMap{{"default_template", "false"}}}});
+        QCOMPARE(vm->IsDefaultTemplate(), true);
+
+        cache->Update(XenObjectType::VM, ref, QVariantMap{{"other_config", QVariantMap{}}});
         QCOMPARE(vm->IsDefaultTemplate(), false);
     }
 
