@@ -114,6 +114,7 @@ class NavigationPane : public QWidget
         void SwitchToInfrastructureMode();
         void SwitchToNotificationsView(NotificationsSubMode subMode);
         void FocusTreeView();
+        void FocusSearchBox();
         void RequestRefreshTreeView();
         void UpdateSearch();
 

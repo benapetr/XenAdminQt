@@ -149,6 +149,12 @@ void NavigationView::FocusTreeView()
     this->ui->treeWidget->setFocus();
 }
 
+void NavigationView::FocusSearchBox()
+{
+    this->ui->searchLineEdit->setFocus(Qt::ShortcutFocusReason);
+    this->ui->searchLineEdit->selectAll();
+}
+
 void NavigationView::RequestRefreshTreeView()
 {
     // Matches C# TreeView BeginUpdate/EndUpdate pattern with PersistExpandedNodes/RestoreExpandedNodes

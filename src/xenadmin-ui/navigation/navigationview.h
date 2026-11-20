@@ -80,6 +80,8 @@ class NavigationView : public QWidget
 
         // Public methods matching C# NavigationView interface
         void FocusTreeView();
+        //! Puts the cursor in the search box with its text selected
+        void FocusSearchBox();
 
         //! TODO in original C# tree builder merges nodes (UpdateRootNodes) instead of clearing entire tree each time, and only
         //! forces visibility in specific cases (search clear), so it doesn’t constantly recenter during normal updates.

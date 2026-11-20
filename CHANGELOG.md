@@ -76,6 +76,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Ctrl+F puts the cursor in the navigation pane's search box, not just the tree
 Consoles are rebuilt when the automatic switch to Remote Desktop is turned on or off in Options
 The search panel's "Search for" list shows an icon for each object type
 The HA column in search results shows each VM's restart priority, a pool's failure tolerance and the heartbeat SR instead of always "--"

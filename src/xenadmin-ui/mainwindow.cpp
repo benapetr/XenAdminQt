@@ -2013,12 +2013,9 @@ void MainWindow::resetConsoles()
 
 void MainWindow::focusSearch()
 {
-    // Focus search box in NavigationPane
+    // Ctrl+F (not in C#): the navigation pane's search box
     if (this->m_navigationPane)
-    {
-        this->m_navigationPane->FocusTreeView();
-        // TODO: Also focus the search line edit when NavigationView exposes it
-    }
+        this->m_navigationPane->FocusSearchBox();
 }
 
 // NavigationPane event handlers (matches C# MainWindow.navigationPane_* methods)

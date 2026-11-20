@@ -460,6 +460,11 @@ void NavigationPane::FocusTreeView()
     this->m_currentNavigationView->FocusTreeView();
 }
 
+void NavigationPane::FocusSearchBox()
+{
+    this->m_currentNavigationView->FocusSearchBox();
+}
+
 void NavigationPane::RequestRefreshTreeView()
 {
     this->m_currentNavigationView->RequestRefreshTreeView();
