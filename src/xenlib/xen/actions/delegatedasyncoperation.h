@@ -64,6 +64,9 @@ class XENLIB_EXPORT DelegatedAsyncOperation : public AsyncOperation
          */
         explicit DelegatedAsyncOperation(XenConnection* connection, const QString& title, const QString& description, WorkCallback workCallback, QObject* parent = nullptr);
 
+        //! As above; with suppressHistory the operation stays out of the events list (C# DelegatedAsyncAction's suppressHistory)
+        explicit DelegatedAsyncOperation(XenConnection* connection, const QString& title, const QString& description, bool suppressHistory, WorkCallback workCallback, QObject* parent = nullptr);
+
         /**
          * @brief Construct without connection (for non-XenAPI work)
          */

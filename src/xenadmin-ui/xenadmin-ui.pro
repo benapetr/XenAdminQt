@@ -65,6 +65,7 @@ SOURCES += \
     dialogs/vdipropertiesdialog.cpp \
     dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
+    dialogs/attachusbdialog.cpp \
     dialogs/newvirtualdiskdialog.cpp \
     dialogs/movevirtualdiskdialog.cpp \
     dialogs/migratevirtualdiskdialog.cpp \
@@ -138,6 +139,7 @@ SOURCES += \
     settingspanels/pooladvancededitpage.cpp \
     settingspanels/securityeditpage.cpp \
     settingspanels/srreadcachingeditpage.cpp \
+    settingspanels/usbeditpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
     settingspanels/networkgeneraleditpage.cpp \
@@ -383,6 +385,7 @@ HEADERS += \
     dialogs/vdipropertiesdialog.h \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
+    dialogs/attachusbdialog.h \
     widgets/isodropdownbox.h \
     widgets/cdchanger.h \
     dialogs/newvirtualdiskdialog.h \
@@ -465,6 +468,7 @@ HEADERS += \
     settingspanels/pooladvancededitpage.h \
     settingspanels/securityeditpage.h \
     settingspanels/srreadcachingeditpage.h \
+    settingspanels/usbeditpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
     settingspanels/networkgeneraleditpage.h \
@@ -680,6 +684,7 @@ FORMS += \
     dialogs/vtpmmanagementdialog.ui \
     dialogs/vdipropertiesdialog.ui \
     dialogs/attachvirtualdiskdialog.ui \
+    dialogs/attachusbdialog.ui \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
@@ -719,6 +724,7 @@ FORMS += \
     settingspanels/pooladvancededitpage.ui \
     settingspanels/securityeditpage.ui \
     settingspanels/srreadcachingeditpage.ui \
+    settingspanels/usbeditpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
     settingspanels/networkgeneraleditpage.ui \

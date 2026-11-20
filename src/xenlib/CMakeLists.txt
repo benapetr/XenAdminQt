@@ -105,6 +105,8 @@ set(XENLIB_SOURCES
     xen/actions/vm/vtpmaction.cpp
     xen/actions/vif/createvifaction.cpp
     xen/actions/vif/deletevifaction.cpp
+    xen/actions/usb/createvusbaction.cpp
+    xen/actions/usb/deletevusbaction.cpp
     xen/actions/vif/plugvifaction.cpp
     xen/actions/vif/unplugvifaction.cpp
     xen/actions/vif/updatevifaction.cpp
@@ -262,6 +264,7 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_VLAN.cpp
     xen/xenapi/xenapi_VM.cpp
     xen/xenapi/xenapi_VTPM.cpp
+    xen/xenapi/xenapi_VUSB.cpp
     xen/xenobject.cpp
     xen/hiddenobjects.cpp
     # Header-only Q_OBJECT classes: listed explicitly so AUTOMOC processes them

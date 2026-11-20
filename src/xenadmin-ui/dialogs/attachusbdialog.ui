@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AttachUsbDialog</class>
+ <widget class="QDialog" name="AttachUsbDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Attach USB</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QLabel" name="labelNote">
+     <property name="text">
+      <string>Select a device to be passed through to this virtual machine.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="treeUsbList">
+     <property name="headerHidden">
+      <bool>true</bool>
+     </property>
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="itemsExpandable">
+      <bool>false</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string notr="true">1</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="warningLayout">
+     <item alignment="Qt::AlignTop">
+      <widget class="QLabel" name="pictureBoxAlert">
+       <property name="pixmap">
+        <pixmap resource="../resources.qrc">:/icons/alert_16.png</pixmap>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="warningLinesLayout">
+       <item>
+        <widget class="QLabel" name="labelWarningLine1">
+         <property name="text">
+          <string>Plugging in untrustworthy USB devices to your computer may put your computer at risk.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelWarningLine2">
+         <property name="text">
+          <string>USB devices with modifiable behaviour should only be assigned to trustworthy guest VMs.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelWarningLine3">
+         <property name="text">
+          <string>A major component update of VM will be performed the first time when a USB device is passed through to it. This update is irreversible.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>AttachUsbDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

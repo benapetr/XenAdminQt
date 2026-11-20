@@ -62,6 +62,7 @@ class XENLIB_EXPORT PUSB : public XenObject
         QString ProductDesc() const;
         QString Serial() const;
         QString Version() const;
+        //! C# PUSB.Description: the description, or vendor and product IDs when there is none
         QString Description() const;
         bool PassthroughEnabled() const;
         double Speed() const;

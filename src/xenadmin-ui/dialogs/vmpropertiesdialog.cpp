@@ -37,6 +37,7 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
+#include "../settingspanels/usbeditpage.h"
 #include "xen/pool.h"
 #include "xen/host.h"
 #include "xen/poolupdate.h"
@@ -46,6 +47,18 @@
 
 namespace
 {
+    bool anyHostHasPusbs(XenConnection* connection)
+    {
+        if (!connection || !connection->GetCache())
+            return false;
+        for (const QSharedPointer<Host>& host : connection->GetCache()->GetAll<Host>(XenObjectType::Host))
+        {
+            if (host && !host->PUSBRefs().isEmpty())
+                return true;
+        }
+        return false;
+    }
+
     bool containerCapability(XenConnection* connection)
     {
         if (!connection || !connection->GetCache())
@@ -140,11 +153,12 @@ void VMPropertiesDialog::build()
         if (this->m_vm->CanHaveGpu() && GpuHelpers::GpusAvailable(this->m_vm->GetConnection()))
             this->showTab(new GpuEditPage());
 
-        // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:
-        // - USBEditPage (if !template and USB passthrough supported and PUSBs exist)
-        // - CloudConfigParametersPage (if VM.CanHaveCloudConfigDrive())
         if (isHVM)
         {
+            // C#: not a template, USB passthrough not restricted by licence, and some host has PUSBs
+            if (!this->m_vm->IsTemplate() && anyHostHasPusbs(this->m_vm->GetConnection()))
+                this->showTab(new USBEditPage());
+
             this->showTab(new VMAdvancedEditPage());
         }
 

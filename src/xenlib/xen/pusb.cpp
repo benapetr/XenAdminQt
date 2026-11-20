@@ -88,7 +88,10 @@ QString PUSB::Version() const
 
 QString PUSB::Description() const
 {
-    return this->stringProperty("description");
+    const QString description = this->stringProperty("description");
+    if (!description.isEmpty())
+        return description;
+    return QObject::tr("Vendor: %1; Product: %2").arg(this->VendorId(), this->ProductId());
 }
 
 bool PUSB::PassthroughEnabled() const

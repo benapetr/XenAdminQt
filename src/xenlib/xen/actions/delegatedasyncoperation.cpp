@@ -37,6 +37,17 @@ DelegatedAsyncOperation::DelegatedAsyncOperation(XenConnection* connection,
 {
 }
 
+DelegatedAsyncOperation::DelegatedAsyncOperation(XenConnection* connection,
+                                                 const QString& title,
+                                                 const QString& description,
+                                                 bool suppressHistory,
+                                                 WorkCallback workCallback,
+                                                 QObject* parent)
+    : AsyncOperation(connection, title, description, suppressHistory, parent),
+      m_workCallback(std::move(workCallback))
+{
+}
+
 DelegatedAsyncOperation::DelegatedAsyncOperation(const QString& title,
                                                  const QString& description,
                                                  WorkCallback workCallback,

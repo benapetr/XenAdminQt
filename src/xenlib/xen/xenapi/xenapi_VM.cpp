@@ -1390,6 +1390,26 @@ namespace XenAPI
         return result;
     }
 
+    QStringList VM::get_possible_hosts(Session* session, const QString& vm)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.get_possible_hosts", params);
+        QByteArray response = session->SendApiRequest(request);
+
+        QStringList result;
+        const QVariantList list = api.ParseJsonRpcResponse(response).toList();
+        for (const QVariant& v : list)
+            result << v.toString();
+
+        return result;
+    }
+
     // VM.create - Synchronous
     QString VM::create(Session* session, const QVariantMap& record)
     {

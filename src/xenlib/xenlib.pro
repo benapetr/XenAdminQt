@@ -150,6 +150,7 @@ HEADERS += \
     xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_VTPM.h \
+    xen/xenapi/xenapi_VUSB.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
     xen/xenapi/xenapi_Host.h \
@@ -274,6 +275,8 @@ HEADERS += \
     xen/actions/network/rescanpifsaction.h \
     xen/actions/vif/createvifaction.h \
     xen/actions/vif/deletevifaction.h \
+    xen/actions/usb/createvusbaction.h \
+    xen/actions/usb/deletevusbaction.h \
     xen/actions/vif/plugvifaction.h \
     xen/actions/vif/unplugvifaction.h \
     xen/actions/vif/updatevifaction.h \
@@ -420,6 +423,7 @@ SOURCES += \
     xen/task.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_VTPM.cpp \
+    xen/xenapi/xenapi_VUSB.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
     xen/xenapi/xenapi_Host.cpp \
@@ -541,6 +545,8 @@ SOURCES += \
     xen/actions/network/rescanpifsaction.cpp \
     xen/actions/vif/createvifaction.cpp \
     xen/actions/vif/deletevifaction.cpp \
+    xen/actions/usb/createvusbaction.cpp \
+    xen/actions/usb/deletevusbaction.cpp \
     xen/actions/vif/plugvifaction.cpp \
     xen/actions/vif/unplugvifaction.cpp \
     xen/actions/vif/updatevifaction.cpp \

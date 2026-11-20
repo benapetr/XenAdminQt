@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+VM properties have C#'s USB page, with the Attach USB dialog, for passing host USB devices through to HVM VMs
 SR properties have C#'s Read Caching page for storage types that support it
 Saved searches: save the current search to a pool (XenCenter-compatible, so XenCenter sees it too), delete it, pick saved and built-in searches from the Search tab and navigation pane, and export or import .xensearch files (File > Import Search...).
 - Search editor: custom fields can be searched, as in C#. Each custom field

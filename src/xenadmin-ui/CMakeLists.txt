@@ -189,6 +189,8 @@ set(XENADMIN_SOURCES
     dialogs/addserverdialog.ui
     dialogs/addvgpudialog.cpp
     dialogs/attachvirtualdiskdialog.cpp
+    dialogs/attachusbdialog.cpp
+    dialogs/attachusbdialog.ui
     dialogs/attachvirtualdiskdialog.ui
     dialogs/ballooningdialog.cpp
     dialogs/ballooningdialog.ui
@@ -359,6 +361,8 @@ set(XENADMIN_SOURCES
     settingspanels/poolgpueditpage.cpp
     settingspanels/securityeditpage.cpp
     settingspanels/srreadcachingeditpage.cpp
+    settingspanels/usbeditpage.cpp
+    settingspanels/usbeditpage.ui
     settingspanels/srreadcachingeditpage.ui
     settingspanels/securityeditpage.ui
     settingspanels/vbdeditpage.cpp

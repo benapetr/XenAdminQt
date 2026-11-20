@@ -1039,6 +1039,11 @@ QVariantMap VM::GetPlatform() const
     return property("platform").toMap();
 }
 
+bool VM::UsingUpstreamQemu() const
+{
+    return this->GetPlatform().value("device-model").toString() == "qemu-upstream-compat";
+}
+
 QStringList VM::GetAllowedOperations() const
 {
     return stringListProperty("allowed_operations");

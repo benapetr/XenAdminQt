@@ -306,6 +306,9 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get platform configuration map
         QVariantMap GetPlatform() const;
 
+        //! C# VM.UsingUpstreamQemu: platform:device-model is qemu-upstream-compat (needed for USB passthrough)
+        bool UsingUpstreamQemu() const;
+
         //! Get allowed operations list
         QStringList GetAllowedOperations() const;
 

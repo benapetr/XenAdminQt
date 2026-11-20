@@ -801,6 +801,9 @@ namespace XenAPI
              */
             static QStringList get_VIFs(Session* session, const QString& vm);
 
+            //! VM.get_possible_hosts: hosts the VM could run on
+            static QStringList get_possible_hosts(Session* session, const QString& vm);
+
         private:
             VM() = delete; // Static class, no instances
             ~VM() = delete;

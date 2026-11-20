@@ -53,6 +53,8 @@
 #include "xenlib/xen/hiddenobjects.h"
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/vmhelpers.h"
+#include "xenlib/xen/pusb.h"
+#include "xenlib/xen/sr.h"
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QScopeGuard>
@@ -510,6 +512,40 @@ private slots:
 
         Pool* pool = cache->ResolveObject<Pool>(XenObjectType::Pool, "OpaqueRef:p").data();
         QCOMPARE(XenSearch::PropertyAccessorHelper::GetPoolHAStatus(pool), QString("1 failure tolerated"));
+    }
+
+    void srReadCachingFollowsSmAndODirect()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::SM, "OpaqueRef:sm-nfs", QVariantMap{{"type", "nfs"}, {"features", QVariantMap{{"VDI_READ_CACHING", 2}}}});
+        cache->Update(XenObjectType::SM, "OpaqueRef:sm-lvm", QVariantMap{{"type", "lvm"}, {"features", QVariantMap{{"SR_TRIM", 2}}}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:on", QVariantMap{{"type", "nfs"}, {"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:off", QVariantMap{{"type", "nfs"}, {"other_config", QVariantMap{{"o_direct", "true"}}}});
+        cache->Update(XenObjectType::SR, "OpaqueRef:lvm", QVariantMap{{"type", "lvm"}, {"other_config", QVariantMap()}});
+
+        // C# SR.SupportsReadCaching (Stockholm or later: the SM's VDI_READ_CACHING) and GetReadCachingEnabled
+        auto sr = [cache](const QString& ref) { return cache->ResolveObject<SR>(XenObjectType::SR, ref); };
+        QVERIFY(sr("OpaqueRef:on")->SupportsReadCaching());
+        QVERIFY(sr("OpaqueRef:on")->GetReadCachingEnabled());
+        QVERIFY(!sr("OpaqueRef:off")->GetReadCachingEnabled());
+        QVERIFY(!sr("OpaqueRef:lvm")->SupportsReadCaching());
+        QVERIFY(!sr("OpaqueRef:lvm")->GetReadCachingEnabled());
+    }
+
+    void usbHelpersMatchCsharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::PUSB, "OpaqueRef:named", QVariantMap{{"description", "Flash drive"}, {"vendor_id", "0781"}, {"product_id", "5567"}});
+        cache->Update(XenObjectType::PUSB, "OpaqueRef:bare", QVariantMap{{"description", ""}, {"vendor_id", "0781"}, {"product_id", "5567"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:old", QVariantMap{{"platform", QVariantMap()}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:new", QVariantMap{{"platform", QVariantMap{{"device-model", "qemu-upstream-compat"}}}});
+
+        QCOMPARE(cache->ResolveObject<PUSB>(XenObjectType::PUSB, "OpaqueRef:named")->Description(), QString("Flash drive"));
+        QCOMPARE(cache->ResolveObject<PUSB>(XenObjectType::PUSB, "OpaqueRef:bare")->Description(), QString("Vendor: 0781; Product: 5567"));
+        QVERIFY(!cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:old")->UsingUpstreamQemu());
+        QVERIFY(cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:new")->UsingUpstreamQemu());
     }
 
     void alertManagerAllowsCallbacksFromItsSignals()
