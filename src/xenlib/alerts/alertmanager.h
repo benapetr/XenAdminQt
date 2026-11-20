@@ -41,6 +41,11 @@ namespace XenLib
  * 
  * Manages the global collection of alerts, provides thread-safe access,
  * and emits signals when the collection changes.
+ *
+ * The mutex only guards the list: signals, predicates and alert deletion run
+ * outside it, so receivers may call back into the manager. Alerts are deleted
+ * by whoever removes them, so the pointers returned here are only safe to use
+ * on the thread that adds and removes alerts (the GUI thread).
  */
 class XENLIB_EXPORT AlertManager : public QObject
 {

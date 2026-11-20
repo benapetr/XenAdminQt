@@ -67,11 +67,15 @@ void AlertManager::AddAlerts(const QList<Alert*>& alerts)
 {
     if (alerts.isEmpty())
         return;
-    
-    // TODO This can cause a deadlock, need to figure it out
-    //QMutexLocker locker(&this->m_mutex);
-    this->m_alerts.append(alerts);
-    
+
+    // The lock only covers the list. Signals are emitted and predicates run without it:
+    // receivers call back into this class (e.g. GetNonDismissingAlerts), and QMutex is not
+    // recursive, unlike the C# lock, so holding it there deadlocked.
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_alerts.append(alerts);
+    }
+
     for (Alert* alert : alerts)
     {
         emit this->alertAdded(alert);
@@ -83,10 +87,15 @@ void AlertManager::RemoveAlert(Alert* alert)
 {
     if (!alert)
         return;
-    
-    // TODO This can cause a deadlock, need to figure it out
-    //QMutexLocker locker(&this->m_mutex);
-    if (this->m_alerts.removeOne(alert))
+
+    bool removed = false;
+    {
+        QMutexLocker locker(&this->m_mutex);
+        removed = this->m_alerts.removeOne(alert);
+    }
+
+    // Only the caller that took it out of the list deletes it
+    if (removed)
     {
         emit this->alertRemoved(alert);
         emit this->collectionChanged();
@@ -96,24 +105,31 @@ void AlertManager::RemoveAlert(Alert* alert)
 
 void AlertManager::RemoveAlerts(const std::function<bool(Alert*)>& predicate)
 {
-    // TODO This can cause a deadlock, need to figure it out
-    //QMutexLocker locker(&this->m_mutex);
-    
-    QList<Alert*> toRemove;
-    for (Alert* alert : this->m_alerts)
+    // The predicate runs on a copy, outside the lock (it may call FindAlert and the like)
+    QList<Alert*> candidates;
+    for (Alert* alert : this->GetAllAlerts())
     {
         if (predicate(alert))
-            toRemove.append(alert);
+            candidates.append(alert);
     }
-    
-    for (Alert* alert : toRemove)
+
+    QList<Alert*> removed;
     {
-        this->m_alerts.removeOne(alert);
+        QMutexLocker locker(&this->m_mutex);
+        for (Alert* alert : candidates)
+        {
+            if (this->m_alerts.removeOne(alert))
+                removed.append(alert);
+        }
+    }
+
+    for (Alert* alert : removed)
+    {
         emit this->alertRemoved(alert);
         delete alert;
     }
-    
-    if (!toRemove.isEmpty())
+
+    if (!removed.isEmpty())
         emit this->collectionChanged();
 }
 
@@ -188,12 +204,14 @@ QList<Alert*> AlertManager::GetAllAlerts() const
 
 void AlertManager::ClearAllAlerts()
 {
+    QList<Alert*> alerts;
     {
         QMutexLocker locker(&this->m_mutex);
-        qDeleteAll(this->m_alerts);
-        this->m_alerts.clear();
+        alerts.swap(this->m_alerts);
     }
 
+    // Alert destructors run without the lock as well
+    qDeleteAll(alerts);
     emit this->collectionChanged();
 }
 

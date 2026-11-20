@@ -5,6 +5,7 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/utils/vncdes.h"
+#include "xenlib/alerts/alertmanager.h"
 #include "xenlib/xen/xenobjecttype.h"
 #include "xenlib/ovf/ovfpackage.h"
 #include "test_helpers.h"
@@ -434,6 +435,49 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void alertManagerAllowsCallbacksFromItsSignals()
+    {
+        // Receivers call back into the manager (the alert list rebuilds from it); with the
+        // lock held while emitting, as before, every one of these calls deadlocked
+        XenLib::AlertManager* manager = XenLib::AlertManager::instance();
+        manager->ClearAllAlerts();
+        XenConnection connection;
+        auto makeAlert = [&connection](const QString& ref)
+        {
+            return new XenLib::MessageAlert(&connection, QVariantMap{{"opaque_ref", ref}, {"name", "TEST"}, {"uuid", ref},
+                                                                     {"priority", 3}, {"timestamp", 0}});
+        };
+
+        int callbacks = 0;
+        QObject receiver;
+        QObject::connect(manager, &XenLib::AlertManager::collectionChanged, &receiver, [&]()
+        {
+            callbacks++;
+            manager->NonDismissingAlertCount();
+            manager->GetAllAlerts();
+        });
+        QObject::connect(manager, &XenLib::AlertManager::alertRemoved, &receiver, [&](XenLib::Alert*)
+        {
+            manager->FindAlert(QStringLiteral("none"));
+        });
+
+        manager->AddAlerts({makeAlert("OpaqueRef:a"), makeAlert("OpaqueRef:b"), makeAlert("OpaqueRef:c")});
+        QCOMPARE(manager->AlertCount(), 3);
+
+        manager->RemoveAlert(manager->GetAllAlerts().first());
+        QCOMPARE(manager->AlertCount(), 2);
+
+        // The predicate may use the manager too
+        manager->RemoveAlerts([manager](XenLib::Alert* alert)
+        {
+            return manager->FindAlert(alert->GetUUID()) == alert;
+        });
+        QCOMPARE(manager->AlertCount(), 0);
+        QVERIFY(callbacks >= 3);
+
+        manager->ClearAllAlerts();
     }
 
     void vncDesMatchesStandardVectors()
