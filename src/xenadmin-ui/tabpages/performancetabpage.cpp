@@ -35,6 +35,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/general/getdatasourcesaction.h"
 #include "xenlib/xen/actions/general/enabledatasourceaction.h"
+#include "../dialogs/actionprogressdialog.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xencache.h"
@@ -632,9 +633,16 @@ bool PerformanceTabPage::showGraphDetailsDialog(DesignedGraph& graph, bool editM
                                                   source.DataSource.NameLabel,
                                                   source.FriendlyName.isEmpty() ? source.GetDataSource() : source.FriendlyName);
 
-        // TODO this is probably freezing the UI
-        action->RunSync(this->m_connection->GetSession());
-        const QList<QVariantMap> reloaded = action->DataSources();
+        // C# GraphDetailsDialog: run it under a progress dialog, not on the GUI thread
+        enableButton->setEnabled(false);
+        {
+            ActionProgressDialog progress(action, &dialog);
+            progress.setShowTryAgainMessage(false);
+            progress.setShowException(false);
+            progress.exec();
+        }
+        enableButton->setEnabled(true);
+        const QList<QVariantMap> reloaded = action->IsCompleted() && !action->HasError() ? action->DataSources() : QList<QVariantMap>();
         action->deleteLater();
 
         if (!reloaded.isEmpty())
