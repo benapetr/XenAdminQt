@@ -32,6 +32,7 @@
 
 #include <QVariant>
 #include <QString>
+#include <QSharedPointer>
 
 // Forward declarations
 class Grouping;
@@ -94,6 +95,12 @@ class GroupingTag
          */
         uint hashCode() const;
 
+        //! Tree item data for a new tag. The tag is shared by the item and every copy of
+        //! the QVariant (e.g. saved expansion state) and freed with the last of them.
+        static QVariant ToVariant(GroupingTag* tag);
+        //! The tag in tree item data, or nullptr. Valid while that data is.
+        static GroupingTag* FromVariant(const QVariant& value);
+
     private:
         Grouping* m_grouping; // The grouping algorithm
         QVariant m_parent;    // Parent group (optional)
@@ -106,7 +113,17 @@ inline uint qHash(const GroupingTag& tag)
     return tag.hashCode();
 }
 
-// Register GroupingTag* for QVariant
-Q_DECLARE_METATYPE(GroupingTag*)
+// Tree items hold their tags through a shared pointer (GroupingTag::ToVariant)
+Q_DECLARE_METATYPE(QSharedPointer<GroupingTag>)
+
+inline QVariant GroupingTag::ToVariant(GroupingTag* tag)
+{
+    return QVariant::fromValue(QSharedPointer<GroupingTag>(tag));
+}
+
+inline GroupingTag* GroupingTag::FromVariant(const QVariant& value)
+{
+    return value.canConvert<QSharedPointer<GroupingTag>>() ? value.value<QSharedPointer<GroupingTag>>().data() : nullptr;
+}
 
 #endif // GROUPINGTAG_H

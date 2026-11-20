@@ -166,9 +166,9 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
     QMenu* menu = new QMenu(parent);
 
-    if (groupingTagVar.canConvert<GroupingTag*>())
+    if (GroupingTag::FromVariant(groupingTagVar))
     {
-        GroupingTag* groupingTag = groupingTagVar.value<GroupingTag*>();
+        GroupingTag* groupingTag = GroupingTag::FromVariant(groupingTagVar);
         if (groupingTag && groupingTag->getGrouping())
         {
             if (dynamic_cast<TagsGrouping*>(groupingTag->getGrouping()))
@@ -300,8 +300,8 @@ QMenu* ContextMenuBuilder::buildRootSpecialContextMenu(QTreeWidgetItem* item, QW
 
     const QVariant objectVar = item->data(0, Qt::UserRole);
     const QVariant groupingTagVar = item->data(0, Qt::UserRole + 3);
-    GroupingTag* groupingTag = groupingTagVar.canConvert<GroupingTag*>()
-        ? groupingTagVar.value<GroupingTag*>()
+    GroupingTag* groupingTag = GroupingTag::FromVariant(groupingTagVar)
+        ? GroupingTag::FromVariant(groupingTagVar)
         : nullptr;
 
     // Infrastructure root: Add server/new pool/connect all/disconnect all.

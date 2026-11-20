@@ -146,10 +146,10 @@ bool RenameTagCommand::selectedTag(QString& tagName) const
         return false;
 
     QVariant tagVar = items.first()->data(0, Qt::UserRole + 3);
-    if (!tagVar.canConvert<GroupingTag*>())
+    if (!GroupingTag::FromVariant(tagVar))
         return false;
 
-    GroupingTag* gt = tagVar.value<GroupingTag*>();
+    GroupingTag* gt = GroupingTag::FromVariant(tagVar);
     if (!isTagGrouping(gt))
         return false;
 

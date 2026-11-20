@@ -140,10 +140,10 @@ QStringList DeleteTagCommand::selectedTags() const
             continue;
 
         QVariant tagVar = item->data(0, Qt::UserRole + 3);
-        if (!tagVar.canConvert<GroupingTag*>())
+        if (!GroupingTag::FromVariant(tagVar))
             continue;
 
-        GroupingTag* gt = tagVar.value<GroupingTag*>();
+        GroupingTag* gt = GroupingTag::FromVariant(tagVar);
         if (!isTagGrouping(gt))
             continue;
 

@@ -899,9 +899,9 @@ void MainWindow::onTreeItemSelected()
     // Check if this is a GroupingTag node (matches C# MainWindow.SwitchToTab line 1718)
     // GroupingTag is stored in Qt::UserRole + 3
     QVariant groupingTagVar = item->data(0, Qt::UserRole + 3);
-    if (groupingTagVar.canConvert<GroupingTag*>())
+    if (GroupingTag::FromVariant(groupingTagVar))
     {
-        GroupingTag* groupingTag = groupingTagVar.value<GroupingTag*>();
+        GroupingTag* groupingTag = GroupingTag::FromVariant(groupingTagVar);
         if (groupingTag)
         {
             // Show SearchTabPage with results for this grouping

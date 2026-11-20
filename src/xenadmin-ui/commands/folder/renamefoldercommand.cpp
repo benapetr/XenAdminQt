@@ -171,10 +171,10 @@ bool RenameFolderCommand::selectedFolder(QString& path, XenConnection*& connecti
     }
 
     const QVariant groupTagVar = item->data(0, Qt::UserRole + 3);
-    if (!groupTagVar.canConvert<GroupingTag*>())
+    if (!GroupingTag::FromVariant(groupTagVar))
         return false;
 
-    GroupingTag* gt = groupTagVar.value<GroupingTag*>();
+    GroupingTag* gt = GroupingTag::FromVariant(groupTagVar);
     if (!gt || !dynamic_cast<FolderGrouping*>(gt->getGrouping()))
         return false;
 

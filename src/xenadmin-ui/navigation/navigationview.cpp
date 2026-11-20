@@ -584,10 +584,10 @@ QString NavigationView::buildDragDropCommandKey(QTreeWidgetItem* targetItem) con
     }
 
     QVariant groupTagVar = targetItem->data(0, Qt::UserRole + 3);
-    if (!groupTagVar.canConvert<GroupingTag*>())
+    if (!GroupingTag::FromVariant(groupTagVar))
         return QString();
 
-    GroupingTag* groupingTag = groupTagVar.value<GroupingTag*>();
+    GroupingTag* groupingTag = GroupingTag::FromVariant(groupTagVar);
     if (!groupingTag || !groupingTag->getGrouping())
         return QString();
 

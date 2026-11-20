@@ -139,9 +139,9 @@ bool NewFolderCommand::resolveTargetFolder(QString& baseFolderPath, XenConnectio
         if (!connection)
         {
             const QVariant groupTagVar = selectedItem->data(0, Qt::UserRole + 3);
-            if (groupTagVar.canConvert<GroupingTag*>())
+            if (GroupingTag::FromVariant(groupTagVar))
             {
-                GroupingTag* gt = groupTagVar.value<GroupingTag*>();
+                GroupingTag* gt = GroupingTag::FromVariant(groupTagVar);
                 if (gt && dynamic_cast<FolderGrouping*>(gt->getGrouping()))
                 {
                     const QString groupPath = gt->getGroup().toString().trimmed();

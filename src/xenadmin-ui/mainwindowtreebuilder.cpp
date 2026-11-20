@@ -140,7 +140,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, Naviga
             newRootNode = new QTreeWidgetItem();
             newRootNode->setText(0, "Tags");
             if (search && search->GetGrouping())
-                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Tags"))));
+                newRootNode->setData(0, Qt::UserRole + 3, GroupingTag::ToVariant(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Tags"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             if (search)
                 search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
@@ -150,7 +150,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, Naviga
             newRootNode = new QTreeWidgetItem();
             newRootNode->setText(0, "Folders");
             if (search && search->GetGrouping())
-                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Folders"))));
+                newRootNode->setData(0, Qt::UserRole + 3, GroupingTag::ToVariant(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Folders"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             if (search)
                 search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
@@ -160,7 +160,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, Naviga
             newRootNode = new QTreeWidgetItem();
             newRootNode->setText(0, "Custom Fields");
             if (search && search->GetGrouping())
-                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Custom Fields"))));
+                newRootNode->setData(0, Qt::UserRole + 3, GroupingTag::ToVariant(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("Custom Fields"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             if (search)
                 search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
@@ -170,7 +170,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, Naviga
             newRootNode = new QTreeWidgetItem();
             newRootNode->setText(0, "vApps");
             if (search && search->GetGrouping())
-                newRootNode->setData(0, Qt::UserRole + 3, QVariant::fromValue(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("vApps"))));
+                newRootNode->setData(0, Qt::UserRole + 3, GroupingTag::ToVariant(new GroupingTag(search->GetGrouping(), QVariant(), QVariant("vApps"))));
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             if (search)
                 search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
@@ -249,7 +249,7 @@ QVariant MainWindowTreeBuilder::nodeTag(QTreeWidgetItem* node) const
         return QVariant();
 
     const QVariant groupingTag = node->data(0, Qt::UserRole + 3);
-    if (groupingTag.canConvert<GroupingTag*>() && groupingTag.value<GroupingTag*>())
+    if (GroupingTag::FromVariant(groupingTag))
         return groupingTag;
 
     const QVariant objectTag = node->data(0, Qt::UserRole);
@@ -273,10 +273,10 @@ bool MainWindowTreeBuilder::tagsEqual(const QVariant& left, const QVariant& righ
                leftObject->OpaqueRef() == rightObject->OpaqueRef();
     }
 
-    if (left.canConvert<GroupingTag*>() && right.canConvert<GroupingTag*>())
+    if (GroupingTag::FromVariant(left) && GroupingTag::FromVariant(right))
     {
-        GroupingTag* leftTag = left.value<GroupingTag*>();
-        GroupingTag* rightTag = right.value<GroupingTag*>();
+        GroupingTag* leftTag = GroupingTag::FromVariant(left);
+        GroupingTag* rightTag = GroupingTag::FromVariant(right);
         return leftTag && rightTag && *leftTag == *rightTag;
     }
 
@@ -574,10 +574,10 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
                     continue;
 
                 const QVariant existingTagVar = existingNode->data(0, Qt::UserRole + 3);
-                if (!existingTagVar.canConvert<GroupingTag*>())
+                if (!GroupingTag::FromVariant(existingTagVar))
                     continue;
 
-                GroupingTag* existingTag = existingTagVar.value<GroupingTag*>();
+                GroupingTag* existingTag = GroupingTag::FromVariant(existingTagVar);
                 if (!existingTag || !existingTag->getGrouping() || !grouping)
                     continue;
 
@@ -594,7 +594,7 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
             QString name = grouping ? grouping->getGroupName(group) : QString();
             QIcon icon = grouping ? grouping->getGroupIcon(group) : QIcon();
             GroupingTag* tag = new GroupingTag(grouping, this->getGroupingTagFromNode(this->parent_), group);
-            node = this->addNode(name, icon, false, QVariant::fromValue(tag));
+            node = this->addNode(name, icon, false, GroupingTag::ToVariant(tag));
         }
     }
     
@@ -610,9 +610,9 @@ QVariant MainWindowTreeNodeGroupAcceptor::getGroupingTagFromNode(QTreeWidgetItem
         return QVariant();
     
     QVariant tagVar = node->data(0, Qt::UserRole + 3);
-    if (tagVar.canConvert<GroupingTag*>())
+    if (GroupingTag::FromVariant(tagVar))
     {
-        GroupingTag* gt = tagVar.value<GroupingTag*>();
+        GroupingTag* gt = GroupingTag::FromVariant(tagVar);
         if (gt)
             return gt->getGroup();
     }
@@ -727,7 +727,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNode(const QString& name, c
 
     if (tagData.isValid())
     {
-        if (tagData.canConvert<GroupingTag*>())
+        if (GroupingTag::FromVariant(tagData))
         {
             result->setData(0, Qt::UserRole + 3, tagData);
         } else if (tagData.canConvert<QSharedPointer<XenObject>>())

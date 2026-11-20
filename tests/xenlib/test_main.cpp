@@ -26,6 +26,7 @@
 #include "xenlib/xensearch/group.h"
 #include "xenlib/xensearch/queries.h"
 #include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/groupingtag.h"
 #include "xenlib/xensearch/searchmarshalling.h"
 #include "xenlib/xensearch/searchmanager.h"
 #include "xenlib/customfields/customfieldsmanager.h"
@@ -432,6 +433,23 @@ private slots:
         QVERIFY(!plainVm->ReadCachingEnabled());
         QCOMPARE(plainVm->ReadCachingDisabledReason(),
                  QString("This VM does not have any read-only disks or disks with a read-only parent"));
+    }
+
+    void groupingTagIsFreedWithTheLastReference()
+    {
+        TagsGrouping grouping(nullptr);
+        QVariant itemData = GroupingTag::ToVariant(new GroupingTag(&grouping, QVariant(), QVariant("Tags")));
+        QWeakPointer<GroupingTag> watch = itemData.value<QSharedPointer<GroupingTag>>();
+        QVERIFY(GroupingTag::FromVariant(itemData));
+        QCOMPARE(GroupingTag::FromVariant(itemData)->getGroup().toString(), QString("Tags"));
+        QVERIFY(!GroupingTag::FromVariant(QVariant("not a tag")));
+
+        // A copy (e.g. saved expansion state) keeps it alive after the tree item goes
+        QVariant saved = itemData;
+        itemData = QVariant();
+        QVERIFY(!watch.isNull());
+        saved = QVariant();
+        QVERIFY(watch.isNull());
     }
 
     void customFieldDefinitionsAndValuesMatchCSharp()
