@@ -68,6 +68,7 @@ HEADERS += \
     xen/xenapi/xenapi_Bond.h \
     xen/xenapi/xenapi_Certificate.h \
     xen/xenapi/xenapi_Cluster_host.h \
+    xen/xenapi/xenapi_Cluster.h \
     xen/xenapi/xenapi_Network.h \
     xen/xenapi/xenapi_VLAN.h \
     xen/xenapi/xenapi_Tunnel.h \
@@ -252,6 +253,7 @@ HEADERS += \
     xen/actions/vm/vmmoveaction.h \
     xen/actions/pool/addhosttopoolaction.h \
     xen/actions/pool/createpoolaction.h \
+    xen/actions/pool/clusteringactions.h \
     xen/actions/pool/ejecthostfrompoolaction.h \
     xen/actions/pool/destroypoolaction.h \
     xen/actions/pool/rotatepoolsecretaction.h \
@@ -353,6 +355,7 @@ SOURCES += \
     xen/xenapi/xenapi_Bond.cpp \
     xen/xenapi/xenapi_Certificate.cpp \
     xen/xenapi/xenapi_Cluster_host.cpp \
+    xen/xenapi/xenapi_Cluster.cpp \
     xen/xenapi/xenapi_Network.cpp \
     xen/xenapi/xenapi_VLAN.cpp \
     xen/xenapi/xenapi_Tunnel.cpp \
@@ -525,6 +528,7 @@ SOURCES += \
     xen/actions/vm/vmmoveaction.cpp \
     xen/actions/pool/addhosttopoolaction.cpp \
     xen/actions/pool/createpoolaction.cpp \
+    xen/actions/pool/clusteringactions.cpp \
     xen/actions/pool/ejecthostfrompoolaction.cpp \
     xen/actions/pool/destroypoolaction.cpp \
     xen/actions/pool/rotatepoolsecretaction.cpp \

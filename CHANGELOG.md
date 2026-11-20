@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+Pool and standalone server properties have C#'s Clustering page for enabling corosync clustering (needed for GFS2 storage)
 Pool and standalone server properties have C#'s NRPE monitoring page (xapi 23.27.0 or later, local root or Pool Admin)
 VM properties have C#'s Cloud-Config Parameters page for CoreOS VMs and templates on pools with container support
 VM properties have C#'s USB page, with the Attach USB dialog, for passing host USB devices through to HVM VMs

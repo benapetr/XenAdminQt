@@ -35,6 +35,7 @@
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
 #include "../settingspanels/nrpeeditpage.h"
+#include "../settingspanels/clusteringeditpage.h"
 #include "../settingspanels/poolgpueditpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/pool.h"
@@ -135,13 +136,8 @@ void PoolPropertiesDialog::build()
     if (poolCoordinator && poolCoordinator->vSwitchNetworkBackend())
         this->showTab(new NetworkOptionsEditPage());
 
-    // Clustering tab (Corosync)
-    // C# line 185: if (isPoolOrStandalone && !Helpers.FeatureForbidden(connection, Host.RestrictCorosync))
-    // TODO: Create ClusteringEditPage class - more complex, requires network picker
-    // Reference: xenadmin/XenAdmin/SettingsPanels/ClusteringEditPage.cs
-    // Condition: Not forbidden
-    // TODO: Implement version/capability checking (need Helpers class)
-    // this->showTab(new ClusteringEditPage());
+    // Clustering (corosync); C# also hides it when the licence restricts corosync
+    this->showTab(new ClusteringEditPage());
 
     // Advanced Pool Settings tab (Migration Compression)
     // C# line 188: if (isPool && Helpers.CloudOrGreater(connection)

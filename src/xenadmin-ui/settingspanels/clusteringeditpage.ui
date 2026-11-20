@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ClusteringEditPage</class>
+ <widget class="QWidget" name="ClusteringEditPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>360</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="labelTitle">
+     <property name="text">
+      <string>Clustering allows you to create and use thinly provisioned (GFS2) storage repositories. Select whether you want to enable clustering on this pool. For the cluster network use a dedicated bonded network that has an IP address configured on all hosts in the pool. Ensure that the bonded NICs are on the same L2 segment.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="CheckBoxEnableClustering">
+     <property name="text">
+      <string>&amp;Enable clustering</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="networkLayout">
+     <item>
+      <widget class="QLabel" name="labelNetwork">
+       <property name="text">
+        <string>&amp;Network:</string>
+       </property>
+       <property name="buddy">
+        <cstring>comboBoxNetwork</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBoxNetwork">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="tableLayoutPanelNetworkWarning" native="true">
+     <layout class="QHBoxLayout" name="networkWarningLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignTop">
+       <widget class="QLabel" name="pictureBox1">
+        <property name="pixmap">
+         <pixmap resource="../resources.qrc">:/icons/alert_16.png</pixmap>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelInconsistentNetwork">
+        <property name="text">
+         <string>Inconsistent cluster network. This is normal during creation or deletion of bond.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="tableLayoutInfo">
+     <item row="0" column="0" alignment="Qt::AlignTop">
+      <widget class="QLabel" name="pictureBoxInfo1">
+       <property name="pixmap">
+        <pixmap resource="../resources.qrc">:/icons/info3_16.png</pixmap>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="labelWarning">
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" alignment="Qt::AlignTop">
+      <widget class="QLabel" name="pictureBoxInfo2">
+       <property name="pixmap">
+        <pixmap resource="../resources.qrc">:/icons/info3_16.png</pixmap>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="labelInfo">
+       <property name="text">
+        <string>Clustering requires a reliable infrastructure, as unreachable hosts without quorum will fence and restart.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="labelHostCountWarning">
+       <property name="text">
+        <string>The use of clustering is only recommended with at least 3 hosts.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

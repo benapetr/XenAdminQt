@@ -328,6 +328,8 @@ set(XENADMIN_SOURCES
     settingsmanager.cpp
     settingspanels/bootoptionseditpage.cpp
     settingspanels/cloudconfigparameterspage.cpp
+    settingspanels/clusteringeditpage.cpp
+    settingspanels/clusteringeditpage.ui
     settingspanels/cloudconfigparameterspage.ui
     settingspanels/bootoptionseditpage.ui
     settingspanels/cpumemoryeditpage.cpp

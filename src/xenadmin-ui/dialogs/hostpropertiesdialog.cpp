@@ -40,6 +40,7 @@
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
 #include "../settingspanels/nrpeeditpage.h"
+#include "../settingspanels/clusteringeditpage.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/xencache.h"
@@ -111,8 +112,9 @@ void HostPropertiesDialog::build()
     if (isStandalone && coordinator && coordinator->vSwitchNetworkBackend())
         this->showTab(new NetworkOptionsEditPage());
 
-    // Clustering (Corosync) is not ported yet
-    // TODO: Create ClusteringEditPage class (C# line 185, isPoolOrStandalone)
+    // Clustering (corosync), for pools and standalone servers; the licence check is not ported
+    if (isStandalone)
+        this->showTab(new ClusteringEditPage());
 
     // NRPE monitoring (C# isPoolOrStandalone, xapi 23.27.0 or later, local root or pool admin)
     if (isStandalone && NRPEEditPage::IsAvailable(connection))

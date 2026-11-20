@@ -130,6 +130,7 @@ SOURCES += \
     settingspanels/cpumemoryeditpage.cpp \
     settingspanels/bootoptionseditpage.cpp \
     settingspanels/cloudconfigparameterspage.cpp \
+    settingspanels/clusteringeditpage.cpp \
     settingspanels/vmhaeditpage.cpp \
     settingspanels/customfieldsdisplaypage.cpp \
     settingspanels/perfmonalerteditpage.cpp \
@@ -461,6 +462,7 @@ HEADERS += \
     settingspanels/cpumemoryeditpage.h \
     settingspanels/bootoptionseditpage.h \
     settingspanels/cloudconfigparameterspage.h \
+    settingspanels/clusteringeditpage.h \
     settingspanels/vmhaeditpage.h \
     settingspanels/customfieldsdisplaypage.h \
     settingspanels/perfmonalerteditpage.h \
@@ -719,6 +721,7 @@ FORMS += \
     settingspanels/cpumemoryeditpage.ui \
     settingspanels/bootoptionseditpage.ui \
     settingspanels/cloudconfigparameterspage.ui \
+    settingspanels/clusteringeditpage.ui \
     settingspanels/vmhaeditpage.ui \
     settingspanels/customfieldsdisplaypage.ui \
     settingspanels/perfmonalerteditpage.ui \

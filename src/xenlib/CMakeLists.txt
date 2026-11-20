@@ -71,6 +71,7 @@ set(XENLIB_SOURCES
     xen/actions/network/setsecondarymanagementpurposeaction.cpp
     xen/actions/pool/addhosttopoolaction.cpp
     xen/actions/pool/createpoolaction.cpp
+    xen/actions/pool/clusteringactions.cpp
     xen/actions/pool/designatenewmasteraction.cpp
     xen/actions/pool/destroypoolaction.cpp
     xen/actions/pool/disablehaaction.cpp
@@ -243,6 +244,7 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_Bond.cpp
     xen/xenapi/xenapi_Certificate.cpp
     xen/xenapi/xenapi_Cluster_host.cpp
+    xen/xenapi/xenapi_Cluster.cpp
     xen/xenapi/xenapi_GPU_group.cpp
     xen/xenapi/xenapi_Helper.cpp
     xen/xenapi/xenapi_Host.cpp

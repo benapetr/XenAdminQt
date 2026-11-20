@@ -9,6 +9,8 @@
 #include "dialogs/newcustomfielddialog.h"
 #include "settingspanels/networkgeneraleditpage.h"
 #include "settingspanels/nrpeeditpage.h"
+#include "settingspanels/clusteringeditpage.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
 #include <QSpinBox>
 #include <QDateTimeEdit>
@@ -568,6 +570,53 @@ private slots:
         QVERIFY(NRPEEditPage::CheckThresholds(Kind::Dom0Load, "3,3,3", "3,3,3", &w, &c));
         QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Dom0Load, "4,3,3", "3,3,3", &w, &c));
         QVERIFY(!NRPEEditPage::CheckThresholds(Kind::Dom0Load, "3,3", "3,3,3", &w, &c));
+    }
+
+    // C# ClusteringEditPage: management networks only, nothing preselected, the box follows the choice
+    void clusteringPageOffersManagementNetworks()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "pool"}, {"ha_enabled", false}, {"is_psr_pending", false}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:host", QVariantMap{{"name_label", "host"}});
+        cache->Update(XenObjectType::Network, "OpaqueRef:mgmt", QVariantMap{{"name_label", "Pool-wide network"}, {"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::Network, "OpaqueRef:storage", QVariantMap{{"name_label", "Storage"}, {"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::Network, "OpaqueRef:guest", QVariantMap{{"name_label", "Guests"}, {"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::PIF, "OpaqueRef:pif1", QVariantMap{{"network", "OpaqueRef:mgmt"}, {"management", true}, {"ip_configuration_mode", "DHCP"}});
+        cache->Update(XenObjectType::PIF, "OpaqueRef:pif2", QVariantMap{{"network", "OpaqueRef:storage"}, {"management", false}, {"ip_configuration_mode", "Static"}, {"IP", "10.0.0.2"}, {"other_config", QVariantMap()}});
+        cache->Update(XenObjectType::PIF, "OpaqueRef:pif3", QVariantMap{{"network", "OpaqueRef:guest"}, {"management", false}, {"ip_configuration_mode", "None"}});
+
+        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>(XenObjectType::Pool, "OpaqueRef:pool");
+        ClusteringEditPage page;
+        page.SetConnection(&connection);
+        page.SetXenObject(pool, QVariantMap(), QVariantMap());
+
+        auto* combo = page.findChild<QComboBox*>("comboBoxNetwork");
+        auto* enable = page.findChild<QCheckBox*>("CheckBoxEnableClustering");
+        QVERIFY(combo && enable);
+        QStringList names;
+        for (int i = 0; i < combo->count(); ++i)
+            names << combo->itemText(i);
+        QVERIFY(names.contains("Pool-wide network (management)"));
+        QVERIFY(!names.contains("Guests"));
+        QCOMPARE(combo->currentIndex(), -1);
+        QVERIFY(!enable->isChecked());
+        QVERIFY(!page.HasChanged());
+
+        // Ticking without a network can't be saved; choosing one ticks the box
+        enable->setChecked(true);
+        QVERIFY(!page.IsValidToSave());
+        enable->setChecked(false);
+        combo->setCurrentIndex(0);
+        QVERIFY(enable->isChecked());
+        QVERIFY(page.IsValidToSave());
+        QVERIFY(page.HasChanged());
+
+        // HA blocks enabling
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "pool"}, {"ha_enabled", true}, {"is_psr_pending", false}});
+        ClusteringEditPage haPage;
+        haPage.SetXenObject(pool, QVariantMap(), QVariantMap());
+        QVERIFY(!haPage.findChild<QCheckBox*>("CheckBoxEnableClustering")->isEnabled());
     }
 
     // C# FolderListItem.CalcSizeAndTrunc / AllowSearch.AllButLast
