@@ -45,6 +45,10 @@
 #include <QMutexLocker>
 #include <QSet>
 #include <QPointer>
+#include <functional>
+#ifdef Q_OS_MACOS
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 namespace
 {
@@ -63,6 +67,42 @@ namespace
         }
 
         return false;
+    }
+
+    //! Runs fn on the GUI thread, unless menu has been destroyed by then
+    //!
+    //! On macOS, menus in the native menu bar are tracked by AppKit and Qt does not deliver
+    //! queued events while one is open, so results posted with QMetaObject::invokeMethod
+    //! would only show after the menu closed. A run loop timer in the common modes still
+    //! fires during that tracking.
+    void runOnGuiThread(const QPointer<QObject>& menu, std::function<void()> fn)
+    {
+#ifdef Q_OS_MACOS
+        auto* payload = new std::function<void()>([menu, fn]()
+        {
+            if (menu)
+                fn();
+        });
+        CFRunLoopTimerContext context = {0, payload, nullptr, nullptr, nullptr};
+        CFRunLoopTimerRef timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), 0, 0, 0,
+            [](CFRunLoopTimerRef, void* info)
+            {
+                auto* callback = static_cast<std::function<void()>*>(info);
+                (*callback)();
+                delete callback;
+            }, &context);
+        CFRunLoopRef mainLoop = CFRunLoopGetMain();
+        CFRunLoopAddTimer(mainLoop, timer, kCFRunLoopCommonModes);
+        // The run loop holds the timer until it fires once and is invalidated
+        CFRelease(timer);
+        CFRunLoopWakeUp(mainLoop);
+#else
+        QMetaObject::invokeMethod(menu.data(), [menu, fn]()
+        {
+            if (menu)
+                fn();
+        }, Qt::QueuedConnection);
+#endif
     }
 
     QString joinUniqueReasons(const QSet<QString>& reasons)
@@ -617,7 +657,8 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
     const auto cancelled = this->m_checksCancelled;
     const quint64 generation = this->m_generation;
     const QString label = isHomeServer ? tr("Home Server") : host->GetName();
-    this->m_workerQueue->EnqueueTask([this, vms, operation, host, menuItem, isHomeServer, cancelled, generation, label]()
+    const QPointer<QObject> guard(this);
+    this->m_workerQueue->EnqueueTask([this, guard, vms, operation, host, menuItem, isHomeServer, cancelled, generation, label]()
     {
         bool canRunAny = false;
         QSet<QString> reasons;
@@ -651,8 +692,8 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
             return;
 
         // No menu item is accessed by a worker. Teardown joins the queue before
-        // destroying this receiver; queued callbacks are then discarded by Qt.
-        QMetaObject::invokeMethod(this, [this, menuItem, cancelled, generation, label, canRunAny, reasons, cantRunReasons]()
+        // destroying this receiver; the guard drops callbacks that run after that.
+        runOnGuiThread(guard, [this, menuItem, cancelled, generation, label, canRunAny, reasons, cantRunReasons]()
         {
             // stop() invalidates even callbacks already queued before closing.
             // Check the generation before dereferencing a potentially retired item.
@@ -668,7 +709,7 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
             menuItem->action->setEnabled(canRunAny);
             menuItem->reason = uniqueReason;
             menuItem->canRunAny = canRunAny;
-        }, Qt::QueuedConnection);
+        });
     });
 }
 
