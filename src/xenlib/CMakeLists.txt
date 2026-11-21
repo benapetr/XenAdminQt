@@ -135,6 +135,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/setvmstartupoptionsaction.cpp
     xen/actions/vm/shutdownapplianceaction.cpp
     xen/actions/vm/startapplianceaction.cpp
+    xen/actions/vm/vmapplianceactions.cpp
     xen/actions/vm/vmcloneaction.cpp
     xen/actions/vm/vmcopyaction.cpp
     xen/actions/vm/vmcrosspoolmigrateaction.cpp

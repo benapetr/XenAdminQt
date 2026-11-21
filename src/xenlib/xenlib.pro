@@ -174,6 +174,7 @@ HEADERS += \
     xen/actions/vm/exportvmaction.h \
     xen/actions/vm/exportapplianceaction.h \
     xen/actions/vm/startapplianceaction.h \
+    xen/actions/vm/vmapplianceactions.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/haunprotectvmaction.h \
     xen/actions/vm/hvmbootaction.h \
@@ -450,6 +451,7 @@ SOURCES += \
     xen/actions/vm/exportvmaction.cpp \
     xen/actions/vm/exportapplianceaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
+    xen/actions/vm/vmapplianceactions.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/haunprotectvmaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \

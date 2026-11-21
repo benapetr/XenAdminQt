@@ -623,6 +623,9 @@ namespace XenAPI
              */
             static void set_start_delay(Session* session, const QString& vm, qint64 value);
 
+            //! VM.set_appliance; an empty ref removes the VM from its vApp
+            static void set_appliance(Session* session, const QString& vm, const QString& appliance);
+
             /**
              * @brief Set HVM shadow memory multiplier (offline)
              * @param session Active XenSession

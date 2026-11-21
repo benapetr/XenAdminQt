@@ -26,6 +26,7 @@
  */
 
 #include "xenapi_VM.h"
+#include "../xenobject.h"
 #include "../session.h"
 #include "../api.h"
 #include "../failure.h"
@@ -1061,6 +1062,20 @@ namespace XenAPI
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VM.set_start_delay", params);
         session->SendApiRequest(request);
+    }
+
+    void VM::set_appliance(Session* session, const QString& vm, const QString& appliance)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm << (appliance.isEmpty() ? QString(XENOBJECT_NULL) : appliance);
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.set_appliance", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     void VM::set_HVM_shadow_multiplier(Session* session, const QString& vm, double value)
