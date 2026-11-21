@@ -491,15 +491,8 @@ namespace XenAPI
              */
             static QString async_snapshot(Session* session, const QString& vm, const QString& new_name);
 
-            /**
-             * @brief Snapshot the VM with quiesce asynchronously; returns new VM ref.
-             * @param session The session
-             * @param vm The opaque_ref of the given VM
-             * @param new_name The name of the snapshotted VM
-             * @return Task ref for async operation (ref of the newly created VM)
-             */
-            static QString async_snapshot_with_quiesce(Session* session, const QString& vm, const QString& new_name);
-
+            // VM.snapshot_with_quiesce is deliberately not bound: xapi removed it in XenServer 7.6
+            // (Quebec) and it always fails with VM_SNAPSHOT_WITH_QUIESCE_NOT_SUPPORTED.
             /**
              * @brief Checkpoint the specified VM asynchronously (includes memory image).
              * @param session The session

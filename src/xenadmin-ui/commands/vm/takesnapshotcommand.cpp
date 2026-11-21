@@ -171,9 +171,6 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
         case VmSnapshotDialog::DISK:
             actionType = VMSnapshotCreateAction::DISK;
             break;
-        case VmSnapshotDialog::QUIESCED_DISK:
-            actionType = VMSnapshotCreateAction::QUIESCED_DISK;
-            break;
         case VmSnapshotDialog::DISK_AND_MEMORY:
             actionType = VMSnapshotCreateAction::DISK_AND_MEMORY;
             break;
@@ -214,7 +211,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     }
 
     // Create VMSnapshotCreateAction (matches C# VMSnapshotCreateAction pattern)
-    // Action handles disk/quiesce/memory options and runs asynchronously
+    // Action handles disk/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
     VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, MainWindow::instance());
     action->SetMakeExportable(makeExportable);

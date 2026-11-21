@@ -81,6 +81,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+The Take VM Snapshot dialog no longer has the quiesce option; servers since XenServer 7.6 don't support quiesced snapshots
 The Take VM Snapshot dialog hides quiesced snapshots on servers that no longer support them and explains unavailable snapshot types by the VM's tools state, like C#
 The yellow notes in network properties are readable in dark mode
 On macOS, dialog fields stretch to the window width and forms are left-aligned, as on Windows and Linux, instead of narrow boxes in the middle

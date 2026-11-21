@@ -85,11 +85,6 @@ void VMSnapshotCreateAction::run()
         // Execute the appropriate snapshot operation based on type
         switch (m_type)
         {
-        case QUIESCED_DISK:
-            qDebug() << "Creating quiesced disk snapshot:" << m_newName;
-            taskRef = XenAPI::VM::async_snapshot_with_quiesce(GetSession(), m_vm->OpaqueRef(), m_newName);
-            break;
-
         case DISK_AND_MEMORY:
             qDebug() << "Creating disk and memory checkpoint:" << m_newName;
             taskRef = XenAPI::VM::async_checkpoint(GetSession(), m_vm->OpaqueRef(), m_newName);

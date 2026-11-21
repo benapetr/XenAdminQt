@@ -43,9 +43,11 @@ class VM;
  *
  * This dialog allows the user to configure snapshot creation with:
  * - Name and description
- * - Snapshot type: disk-only, disk with quiesce (VSS), or disk+memory (checkpoint)
+ * - Snapshot type: disk-only or disk+memory (checkpoint)
  *
- * Matches the C# VmSnapshotDialog implementation.
+ * Matches the C# VmSnapshotDialog implementation, except that C#'s "Quiesce" checkbox is
+ * deliberately left out: xapi removed quiesced (VSS) snapshots in XenServer 7.6 (Quebec), and C#
+ * only shows it for older servers. Don't port it back; see "Intentional differences" in docs/status.md.
  */
 class VmSnapshotDialog : public QDialog
 {
@@ -55,7 +57,6 @@ class VmSnapshotDialog : public QDialog
         enum SnapshotType
         {
             DISK,           // Disk-only snapshot
-            QUIESCED_DISK,  // Disk snapshot with quiesce (VSS)
             DISK_AND_MEMORY // Disk and memory snapshot (checkpoint)
         };
 
@@ -71,7 +72,6 @@ class VmSnapshotDialog : public QDialog
         void onNameChanged();
         void onDiskRadioToggled(bool checked);
         void onMemoryRadioToggled(bool checked);
-        void onQuiesceCheckBoxToggled(bool checked);
 
     private:
         void setupDialog();

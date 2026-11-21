@@ -22,6 +22,19 @@ Implementation presence does not establish complete C# parity. Exercise these
 features against supported server versions and retain outstanding work as
 specific reproducible gaps.
 
+## Intentional differences from C#
+
+Things the C# XenAdmin has that this port leaves out on purpose. When comparing the
+two codebases, don't report these as missing or port them back.
+
+- **Quiesced (VSS) snapshots.** C#'s Take Snapshot dialog has a "Quiesce" checkbox
+  (`SnapshotType.QUIESCED_DISK`, `VM.snapshot_with_quiesce`) that it only shows for
+  servers older than XenServer 7.6 (Quebec). xapi removed the call in Quebec: it is
+  marked removed in `xen-api/ocaml/idl/datamodel_vm.ml` and always fails with
+  `VM_SNAPSHOT_WITH_QUIESCE_NOT_SUPPORTED`. The port offers disk-only and disk and
+  memory snapshots only. The `VM_SNAPSHOT_WITH_QUIESCE_*` error texts are kept,
+  because current servers can still return them.
+
 ## Previously reported unfinished work
 
 - Search tab options panel: review remaining parity gaps.

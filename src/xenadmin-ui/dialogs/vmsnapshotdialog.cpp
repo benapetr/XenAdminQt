@@ -43,7 +43,6 @@ VmSnapshotDialog::VmSnapshotDialog(QSharedPointer<VM> vm, QWidget* parent) : QDi
     connect(this->ui->nameLineEdit, &QLineEdit::textChanged, this, &VmSnapshotDialog::onNameChanged);
     connect(this->ui->diskRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onDiskRadioToggled);
     connect(this->ui->memoryRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onMemoryRadioToggled);
-    connect(this->ui->quiesceCheckBox, &QCheckBox::toggled, this, &VmSnapshotDialog::onQuiesceCheckBoxToggled);
 
     // Set focus to name field
     this->ui->nameLineEdit->setFocus();
@@ -71,9 +70,6 @@ QString VmSnapshotDialog::snapshotDescription() const
 
 VmSnapshotDialog::SnapshotType VmSnapshotDialog::snapshotType() const
 {
-    if (this->ui->quiesceCheckBox->isChecked())
-        return QUIESCED_DISK;
-
     if (this->ui->diskRadioButton->isChecked())
         return DISK;
 
@@ -96,11 +92,8 @@ void VmSnapshotDialog::setupDialog()
     this->ui->diskRadioButton->setEnabled(allowedOps.contains("snapshot"));
     this->ui->diskSnapshotInfoLabel->setVisible(!this->ui->diskRadioButton->isEnabled());
 
-    // C#: quiesced snapshots were removed in Quebec (XenServer 7.6 / XCP-ng 7.6)
-    const bool quiesceAvailable = !Host::QuebecOrGreater(this->m_vm->GetConnection());
-    this->ui->quiesceCheckBox->setVisible(quiesceAvailable);
-    this->ui->quiesceCheckBox->setEnabled(quiesceAvailable && allowedOps.contains("snapshot_with_quiesce"));
-    this->ui->quiesceInfoLabel->setVisible(quiesceAvailable && !this->ui->quiesceCheckBox->isEnabled());
+    // C# also has a "Quiesce" checkbox, shown only before XenServer 7.6 (Quebec), which removed
+    // quiesced (VSS) snapshots from xapi. It is deliberately not ported; see docs/status.md.
 
     this->ui->memoryRadioButton->setEnabled(allowedOps.contains("checkpoint"));
     this->ui->memorySnapshotInfoLabel->setVisible(!this->ui->memoryRadioButton->isEnabled());
@@ -112,8 +105,7 @@ void VmSnapshotDialog::updateOkButton()
 {
     // C# UpdateOK
     const bool hasName = !this->ui->nameLineEdit->text().trimmed().isEmpty();
-    const bool hasValidType = this->ui->diskRadioButton->isEnabled() || this->ui->quiesceCheckBox->isEnabled()
-                              || this->ui->memoryRadioButton->isEnabled();
+    const bool hasValidType = this->ui->diskRadioButton->isEnabled() || this->ui->memoryRadioButton->isEnabled();
 
     if (QPushButton* okButton = this->ui->buttonBox->button(QDialogButtonBox::Ok))
         okButton->setEnabled(hasName && hasValidType);
@@ -121,25 +113,14 @@ void VmSnapshotDialog::updateOkButton()
 
 void VmSnapshotDialog::updateWarnings()
 {
-    // C# UpdateWarnings, without its licence checks
+    // C# UpdateWarnings, without its licence checks and its quiesce message
     const bool running = this->m_vm->GetPowerState() == "Running";
-    const int status = this->m_vm->GetVirtualizationStatus();
-    const bool managementInstalled = status & 8;   // VirtualizationStatus.ManagementInstalled
-    const bool ioDriversInstalled = status & 4;    // VirtualizationStatus.IoDriversInstalled
+    const bool ioDriversInstalled = this->m_vm->GetVirtualizationStatus() & 4;  // VirtualizationStatus.IoDriversInstalled
     // C# HasNewVirtualizationStates: Windows VMs report the agent and the drivers separately
     const bool newStates = this->m_vm->IsWindows();
     const QString vmTools = tr("XCP-ng VM Tools");
 
     this->ui->diskSnapshotInfoLabel->setText(tr("Disk snapshots are not currently available for this VM"));
-
-    if (!running)
-        this->ui->quiesceInfoLabel->setText(tr("Quiesced snapshots need the VM to be running"));
-    else if (!managementInstalled)
-        this->ui->quiesceInfoLabel->setText(newStates ? tr("Quiesced snapshots need Management Agent to be installed")
-                                                      : tr("Quiesced snapshots need %1 to be installed").arg(vmTools));
-    else
-        // C#: a guess, since whether VSS is enabled can't be told
-        this->ui->quiesceInfoLabel->setText(tr("Quiesced snapshots need the VSS service to be enabled on the VM"));
 
     if (!running)
         this->ui->memorySnapshotInfoLabel->setText(tr("Disk and memory snapshots need the VM to be running"));
@@ -169,18 +150,8 @@ void VmSnapshotDialog::onMemoryRadioToggled(bool checked)
 {
     if (checked)
     {
-        // Memory mode selected, disk mode and quiesce deselected
+        // Memory mode selected, disk mode deselected
         this->ui->diskRadioButton->setChecked(false);
-        this->ui->quiesceCheckBox->setChecked(false);
     }
     this->updateOkButton();
-}
-
-void VmSnapshotDialog::onQuiesceCheckBoxToggled(bool checked)
-{
-    if (checked)
-    {
-        // Quiesce requires disk mode
-        this->ui->diskRadioButton->setChecked(true);
-    }
 }

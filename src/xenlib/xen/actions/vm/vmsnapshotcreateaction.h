@@ -37,10 +37,12 @@ class VM;
 /**
  * @brief Action to create a VM snapshot
  *
- * Creates a snapshot of a VM using one of three methods:
+ * Creates a snapshot of a VM using one of two methods:
  * - DISK: Disk-only snapshot (async_snapshot)
  * - DISK_AND_MEMORY: Checkpoint with memory state (async_checkpoint)
- * - QUIESCED_DISK: Quiesced disk snapshot (async_snapshot_with_quiesce)
+ *
+ * C#'s third type, QUIESCED_DISK (VM.snapshot_with_quiesce), is deliberately not ported: xapi
+ * removed it in XenServer 7.6 (Quebec). See "Intentional differences" in docs/status.md.
  *
  * For DISK_AND_MEMORY snapshots of running VMs, captures and stores
  * console screenshot as JPEG blob (C#: VNC_SNAPSHOT const)
@@ -57,8 +59,7 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
         enum SnapshotType
         {
             DISK,
-            DISK_AND_MEMORY,
-            QUIESCED_DISK
+            DISK_AND_MEMORY
         };
 
         /**

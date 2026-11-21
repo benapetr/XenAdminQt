@@ -891,20 +891,6 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_snapshot_with_quiesce(Session* session, const QString& vm, const QString& new_name)
-    {
-        if (!session || !session->IsLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->GetSessionID() << vm << new_name;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.BuildJsonRpcCall("Async.VM.snapshot_with_quiesce", params);
-        QByteArray response = session->SendApiRequest(request);
-        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
-    }
-
     QString VM::async_checkpoint(Session* session, const QString& vm, const QString& new_name)
     {
         if (!session || !session->IsLoggedIn())
