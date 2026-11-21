@@ -13,6 +13,7 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
 #include <QSpinBox>
+#include <QTableWidget>
 #include <QDateTimeEdit>
 #include "controls/xensearch/queryelement.h"
 #include "controls/xensearch/resourceselectbutton.h"
@@ -39,6 +40,8 @@
 #include <QDeadlineTimer>
 #include <QDataStream>
 #include "settingsmanager.h"
+#include "settingspanels/vmappliancestartorderpage.h"
+#include "xenlib/xen/vmappliance.h"
 #include "ConsoleView/VNCGraphicsClient.h"
 #include "xenlib/utils/vncdes.h"
 #include <memory>
@@ -568,6 +571,41 @@ private slots:
     }
 
     // C# ClusteringEditPage: management networks only, nothing preselected, the box follows the choice
+    void vAppStartOrderPageTracksEdits()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "pool"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:a", QVariantMap{{"name_label", "a"}, {"order", 0}, {"start_delay", 0}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:b", QVariantMap{{"name_label", "b"}, {"order", 1}, {"start_delay", 30}});
+        cache->Update(XenObjectType::VMAppliance, "OpaqueRef:app", QVariantMap{{"name_label", "app"}, {"VMs", QVariantList{"OpaqueRef:a", "OpaqueRef:b"}}});
+
+        VMApplianceStartOrderPage page;
+        page.SetXenObject(cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, "OpaqueRef:app"), QVariantMap(), QVariantMap());
+        auto* table = page.findChild<QTableWidget*>("tableVMs");
+        auto* order = page.findChild<QSpinBox*>("spinOrder");
+        auto* delay = page.findChild<QSpinBox*>("spinStartDelay");
+        QVERIFY(table && order && delay);
+        QCOMPARE(table->rowCount(), 2);
+        QVERIFY(!page.HasChanged());
+        QVERIFY(page.ChangedSettings().isEmpty());
+
+        // Both rows selected: differing values leave the boxes blank; setting one applies to both
+        table->selectAll();
+        QCOMPARE(order->value(), -1);
+        order->setValue(5);
+        QVERIFY(page.HasChanged());
+        const QMap<QString, QVariantMap> changed = page.ChangedSettings();
+        QCOMPARE(changed.size(), 2);
+        QCOMPARE(changed.value("OpaqueRef:a").value("order").toLongLong(), 5LL);
+        QCOMPARE(changed.value("OpaqueRef:b").value("start_delay").toLongLong(), 30LL);
+
+        // C# SetSelectedVMs: edits survive for VMs still listed
+        page.SetSelectedVMs({cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:a")});
+        QCOMPARE(page.ChangedSettings().size(), 1);
+        QCOMPARE(page.ChangedSettings().value("OpaqueRef:a").value("order").toLongLong(), 5LL);
+    }
+
     void clusteringPageOffersManagementNetworks()
     {
         XenConnection connection;

@@ -31,6 +31,8 @@
 #include "verticallytabbeddialog.h"
 
 class VMAppliance;
+class VMApplianceVMsPage;
+class VMApplianceStartOrderPage;
 
 /**
  * @brief Properties dialog for VM appliance objects (vApps)
@@ -47,6 +49,8 @@ class VMAppliancePropertiesDialog : public VerticallyTabbedDialog
 
     private:
         QSharedPointer<VMAppliance> m_appliance;
+        VMApplianceVMsPage* m_vmsPage = nullptr;
+        VMApplianceStartOrderPage* m_startOrderPage = nullptr;
 };
 
 #endif // VMAPPLIANCEPROPERTIESDIALOG_H

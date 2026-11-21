@@ -26,6 +26,7 @@
  */
 
 #include "contextmenubuilder.h"
+#include "vm/assigntovappmenu.h"
 #include "command.h"
 #include "../controls/vmoperationmenu.h"
 #include "../mainwindow.h"
@@ -808,6 +809,13 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         this->addCommand(menu, convertCmd);
     }
 
+    // C# items.AddIfEnabled(new AssignGroupToolStripMenuItem<VM_appliance>(...))
+    AssignToVAppMenu* assignToVAppMenu = new AssignToVAppMenu(this->m_mainWindow, menu);
+    if (assignToVAppMenu->CanRun())
+        menu->addMenu(assignToVAppMenu);
+    else
+        delete assignToVAppMenu;
+
     this->addSeparator(menu);
 
     // Snapshot operations
@@ -1260,6 +1268,9 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
     {
         delete haMenu;
     }
+
+    // C# items.AddIfEnabled(new VMGroupCommand<VM_appliance>(...))
+    this->addCommand(menu, new ManageVAppsCommand(this->m_mainWindow, this));
 
     this->addSeparator(menu);
 

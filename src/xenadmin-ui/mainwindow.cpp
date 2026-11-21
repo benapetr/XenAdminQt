@@ -150,6 +150,7 @@
 
 // VM commands
 #include "commands/vm/importvmcommand.h"
+#include "commands/vm/assigntovappmenu.h"
 #include "commands/vm/exportvmcommand.h"
 #include "commands/vm/startvmcommand.h"
 #include "commands/vm/stopvmcommand.h"
@@ -3081,7 +3082,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
     this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
     this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
-    this->ui->manageVappsToolStripMenuItem->setEnabled(false);
+    this->ui->manageVappsToolStripMenuItem->setEnabled(this->m_commands["ManageVApps"]->CanRun());
     this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
     this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
     this->ui->menuDisasterRecovery->setEnabled(false);
@@ -3115,7 +3116,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
     this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
     this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
-    this->ui->assignToVappToolStripMenuItem->setEnabled(false);
+    this->ui->assignToVappToolStripMenuItem->setEnabled(this->m_commands["AssignToVApp"]->CanRun());
     this->ui->vtpmManagerToolStripMenuItem->setEnabled(this->m_commands["Vtpm"]->CanRun());
     this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
     this->ui->disablePvsReadCachingToolStripMenuItem->setEnabled(false);
@@ -3859,6 +3860,8 @@ void MainWindow::initializeCommands()
     this->m_commands["NewPool"] = new NewPoolCommand(this, this);
     this->m_commands["DeletePool"] = new DeletePoolCommand(this, this);
     this->m_commands["HAConfigure"] = new HAConfigureCommand(this, this);
+    this->m_commands["ManageVApps"] = new ManageVAppsCommand(this, this);
+    this->m_commands["AssignToVApp"] = new AssignToVAppCommand(this, this);
     this->m_commands["HADisable"] = new HADisableCommand(this, this);
     this->m_commands["DisconnectPool"] = new DisconnectPoolCommand(this, this);
     this->m_commands["RotatePoolSecret"] = new RotatePoolSecretCommand(this, this);
@@ -3956,6 +3959,9 @@ void MainWindow::connectMenuActions()
         this->ui->addServerToolStripMenuItem->setMenu(this->m_addServerToPoolMenu);
     }
 
+    if (!this->ui->assignToVappToolStripMenuItem->menu())
+        this->ui->assignToVappToolStripMenuItem->setMenu(new AssignToVAppMenu(this, this));
+
     if (!this->m_removeServerFromPoolMenu)
     {
         this->m_removeServerFromPoolMenu = new PoolRemoveServerMenu(this, this);
@@ -3988,6 +3994,11 @@ void MainWindow::connectMenuActions()
     connect(this->ui->poolDisconnectToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisconnectPool);
     connect(this->ui->deleteToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeletePool);
     connect(this->ui->toolStripMenuItemHaConfigure, &QAction::triggered, this, &MainWindow::onHAConfigure);
+    connect(this->ui->manageVappsToolStripMenuItem, &QAction::triggered, this, [this]()
+    {
+        if (this->m_commands["ManageVApps"]->CanRun())
+            this->m_commands["ManageVApps"]->Run();
+    });
     connect(this->ui->toolStripMenuItemHaDisable, &QAction::triggered, this, &MainWindow::onHADisable);
     connect(this->ui->changePoolPasswordToolStripMenuItem, &QAction::triggered, this, &MainWindow::onChangeServerPassword);
     connect(this->ui->rotatePoolSecretToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRotatePoolSecret);

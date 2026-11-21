@@ -66,6 +66,8 @@ SOURCES += \
     dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
     dialogs/attachusbdialog.cpp \
+    dialogs/newvmappliancewizard.cpp \
+    dialogs/vmappliancesdialog.cpp \
     dialogs/newvirtualdiskdialog.cpp \
     dialogs/movevirtualdiskdialog.cpp \
     dialogs/migratevirtualdiskdialog.cpp \
@@ -142,6 +144,8 @@ SOURCES += \
     settingspanels/securityeditpage.cpp \
     settingspanels/srreadcachingeditpage.cpp \
     settingspanels/usbeditpage.cpp \
+    settingspanels/vmappliancevmspage.cpp \
+    settingspanels/vmappliancestartorderpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
     settingspanels/nrpeeditpage.cpp \
@@ -219,6 +223,7 @@ SOURCES += \
     commands/vm/vappshutdowncommand.cpp \
     commands/vm/vappexportcommand.cpp \
     commands/vm/vapppropertiescommand.cpp \
+    commands/vm/assigntovappmenu.cpp \
     commands/vm/exportsnapshotastemplatecommand.cpp \
     commands/vm/newvmfromsnapshotcommand.cpp \
     commands/vm/newtemplatefromsnapshotcommand.cpp \
@@ -389,6 +394,8 @@ HEADERS += \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
     dialogs/attachusbdialog.h \
+    dialogs/newvmappliancewizard.h \
+    dialogs/vmappliancesdialog.h \
     widgets/isodropdownbox.h \
     widgets/cdchanger.h \
     dialogs/newvirtualdiskdialog.h \
@@ -474,6 +481,8 @@ HEADERS += \
     settingspanels/securityeditpage.h \
     settingspanels/srreadcachingeditpage.h \
     settingspanels/usbeditpage.h \
+    settingspanels/vmappliancevmspage.h \
+    settingspanels/vmappliancestartorderpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
     settingspanels/nrpeeditpage.h \
@@ -551,6 +560,7 @@ HEADERS += \
     commands/vm/vappshutdowncommand.h \
     commands/vm/vappexportcommand.h \
     commands/vm/vapppropertiescommand.h \
+    commands/vm/assigntovappmenu.h \
     commands/vm/exportsnapshotastemplatecommand.h \
     commands/vm/newvmfromsnapshotcommand.h \
     commands/vm/newtemplatefromsnapshotcommand.h \
@@ -691,6 +701,8 @@ FORMS += \
     dialogs/vdipropertiesdialog.ui \
     dialogs/attachvirtualdiskdialog.ui \
     dialogs/attachusbdialog.ui \
+    dialogs/newvmappliancewizard.ui \
+    dialogs/vmappliancesdialog.ui \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
@@ -733,6 +745,8 @@ FORMS += \
     settingspanels/securityeditpage.ui \
     settingspanels/srreadcachingeditpage.ui \
     settingspanels/usbeditpage.ui \
+    settingspanels/vmappliancevmspage.ui \
+    settingspanels/vmappliancestartorderpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
     settingspanels/nrpeeditpage.ui \

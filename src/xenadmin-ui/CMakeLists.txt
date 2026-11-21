@@ -114,6 +114,7 @@ set(XENADMIN_SOURCES
     commands/vm/unpausevmcommand.cpp
     commands/vm/vappexportcommand.cpp
     commands/vm/vapppropertiescommand.cpp
+    commands/vm/assigntovappmenu.cpp
     commands/vm/vappshutdowncommand.cpp
     commands/vm/vappstartcommand.cpp
     commands/vm/vmcommand.cpp
@@ -190,6 +191,10 @@ set(XENADMIN_SOURCES
     dialogs/addvgpudialog.cpp
     dialogs/attachvirtualdiskdialog.cpp
     dialogs/attachusbdialog.cpp
+    dialogs/newvmappliancewizard.cpp
+    dialogs/vmappliancesdialog.cpp
+    dialogs/vmappliancesdialog.ui
+    dialogs/newvmappliancewizard.ui
     dialogs/attachusbdialog.ui
     dialogs/attachvirtualdiskdialog.ui
     dialogs/ballooningdialog.cpp
@@ -368,6 +373,10 @@ set(XENADMIN_SOURCES
     settingspanels/securityeditpage.cpp
     settingspanels/srreadcachingeditpage.cpp
     settingspanels/usbeditpage.cpp
+    settingspanels/vmappliancevmspage.cpp
+    settingspanels/vmappliancestartorderpage.cpp
+    settingspanels/vmappliancestartorderpage.ui
+    settingspanels/vmappliancevmspage.ui
     settingspanels/usbeditpage.ui
     settingspanels/srreadcachingeditpage.ui
     settingspanels/securityeditpage.ui

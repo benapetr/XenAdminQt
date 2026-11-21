@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+Manage vApps dialog, New vApp wizard and Assign to vApp menu; vApp properties now include the VMs and their startup sequence
 Alerts for servers with a missing or duplicate iSCSI IQN, with an Edit IQN link that opens the server's properties
 Pool and standalone server properties have C#'s Clustering page for enabling corosync clustering (needed for GFS2 storage)
 Pool and standalone server properties have C#'s NRPE monitoring page (xapi 23.27.0 or later, local root or Pool Admin)

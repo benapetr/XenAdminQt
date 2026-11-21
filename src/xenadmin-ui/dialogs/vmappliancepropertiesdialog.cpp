@@ -28,6 +28,10 @@
 #include "vmappliancepropertiesdialog.h"
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
+#include "../settingspanels/vmappliancevmspage.h"
+#include "../settingspanels/vmappliancestartorderpage.h"
+#include "ui_verticallytabbeddialog.h"
+#include "../widgets/verticaltabwidget.h"
 #include "xenlib/xen/vmappliance.h"
 
 VMAppliancePropertiesDialog::VMAppliancePropertiesDialog(QSharedPointer<VMAppliance> appliance, QWidget* parent)
@@ -40,6 +44,18 @@ VMAppliancePropertiesDialog::VMAppliancePropertiesDialog(QSharedPointer<VMApplia
 
 void VMAppliancePropertiesDialog::build()
 {
+    // C# PropertiesDialog for a VM_appliance: General, Custom Fields, VMs, VM Startup Sequence
     this->showTab(new GeneralEditPage());
     this->showTab(new CustomFieldsDisplayPage());
+    this->m_vmsPage = new VMApplianceVMsPage();
+    this->showTab(this->m_vmsPage);
+    this->m_startOrderPage = new VMApplianceStartOrderPage();
+    this->showTab(this->m_startOrderPage);
+
+    // C# verticalTabs_SelectedIndexChanged: the startup sequence lists the VMs chosen on the VMs page
+    connect(this->ui->verticalTabs, &VerticalTabWidget::currentRowChanged, this, [this]()
+    {
+        if (this->ui->ContentPanel->currentWidget() == this->m_startOrderPage)
+            this->m_startOrderPage->SetSelectedVMs(this->m_vmsPage->SelectedVMs());
+    });
 }
