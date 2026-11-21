@@ -4,6 +4,7 @@ set(XENLIB_SOURCES
     alerts/alertmanager.cpp
     alerts/certificatealert.cpp
     alerts/failedloginattemptalert.cpp
+    alerts/iqnalert.cpp
     alerts/leafcoalescealert.cpp
     alerts/messagealert.cpp
     alerts/policyalert.cpp

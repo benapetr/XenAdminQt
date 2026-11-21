@@ -72,6 +72,9 @@ class GeneralEditPage : public IEditPage
         explicit GeneralEditPage(QWidget* parent = nullptr);
         ~GeneralEditPage();
 
+        //! C# GeneralEditPage.SelectIqn
+        void SelectIqn();
+
         // IVerticalTab interface
         QString GetText() const override;
         QString GetSubText() const override;

@@ -60,6 +60,7 @@
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/alarmmessagealert.h"
 #include "xenlib/alerts/certificatealert.h"
+#include "xenlib/alerts/iqnalert.h"
 #include "xenlib/xen/actions/general/dismissalertsaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/message.h"
@@ -282,8 +283,23 @@ namespace
         if (MessageAlert* message = dynamic_cast<MessageAlert*>(alert))
             return getMessageFixLink(message);
 
-        // TODO: C# IqnAlert has FixLinkText "Edit IQN" -> IqnPropertiesCommand. IqnAlert (and other
-        // non-message alerts) aren't ported yet; add its fix link here once it exists.
+        // C# IqnAlert.FixLinkAction: IqnPropertiesCommand, the properties dialog's IQN box
+        if (IqnAlert* iqn = qobject_cast<IqnAlert*>(alert))
+        {
+            QSharedPointer<Host> host = iqn->GetHost();
+            if (!host)
+                return AlertFixLink();
+
+            AlertFixLink link;
+            link.text = iqn->GetFixLinkText();
+            link.action = [host]()
+            {
+                HostPropertiesDialog dialog(host, MainWindow::instance());
+                dialog.EditIqn();
+                dialog.exec();
+            };
+            return link;
+        }
 
         return AlertFixLink();
     }

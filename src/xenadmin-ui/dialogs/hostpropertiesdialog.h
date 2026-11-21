@@ -47,6 +47,8 @@ class HostPropertiesDialog : public VerticallyTabbedDialog
     public:
         explicit HostPropertiesDialog(QSharedPointer<Host> host, QWidget* parent = nullptr);
         void SelectPoolGpuEditPage();
+        //! C# PropertiesDialog.EditIqn: opens the General page with the IQN box focused
+        void EditIqn();
 
     protected:
         void build() override;

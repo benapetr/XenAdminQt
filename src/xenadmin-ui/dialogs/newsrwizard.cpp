@@ -65,6 +65,7 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/alerts/iqnalert.h"
 
 namespace
 {
@@ -250,6 +251,9 @@ void NewSRWizard::onPageChanged(int pageId)
 
     if (pageId == Page_Configuration)
     {
+        // C# LVMoISCSI.PageLoadedCore runs HelpersGUI.PerformIQNCheck
+        if (this->m_selectedSRType == SRType::iSCSI)
+            XenLib::IqnAlert::PerformCheck(Xen::ConnectionsManager::instance()->GetAllConnections());
         this->updateConfigurationSection();
     }
 

@@ -84,6 +84,7 @@
 #include "tabpages/eventspage.h"
 #include "alerts/alertmanager.h"
 #include "alerts/messagealert.h"
+#include "xenlib/alerts/iqnalert.h"
 #include "ConsoleView/ConsolePanel.h"
 #include "placeholderwidget.h"
 #include "settingsmanager.h"
@@ -725,6 +726,11 @@ void MainWindow::onCachePopulated()
              << "srs=" << cache->Count(XenObjectType::SR);
 
     this->updateConnectionProfileFromCache(connection, cache);
+
+    // C# MainWindow.connection_ConnectionStateChanged: check servers' IQNs when iSCSI is in use
+    const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
+    if (XenLib::IqnAlert::IsIscsiUsed(connections))
+        XenLib::IqnAlert::PerformCheck(connections);
 
     // Refresh tree now that cache has data
     if (this->m_navigationPane)

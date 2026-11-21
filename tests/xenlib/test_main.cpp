@@ -48,6 +48,7 @@
 #include "xenlib/xen/message.h"
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/failedloginattemptalert.h"
+#include "xenlib/alerts/iqnalert.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
 #include "xenlib/xen/hiddenobjects.h"
@@ -568,6 +569,50 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void iqnCheckFindsMissingAndDuplicateIqns()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::HostMetrics, "OpaqueRef:live", QVariantMap{{"live", true}});
+        cache->Update(XenObjectType::HostMetrics, "OpaqueRef:dead", QVariantMap{{"live", false}});
+        auto host = [cache](const QString& ref, const QString& name, const QString& iqn, const QString& metrics)
+        {
+            cache->Update(XenObjectType::Host, ref, QVariantMap{{"name_label", name}, {"uuid", ref.mid(10)},
+                                                                {"metrics", metrics},
+                                                                {"other_config", QVariantMap{{"iscsi_iqn", iqn}}}});
+        };
+        host("OpaqueRef:a", "a", "iqn.2026-01.com.example:a", "OpaqueRef:live");
+        host("OpaqueRef:b", "b", "iqn.2026-01.com.example:a", "OpaqueRef:live");
+        host("OpaqueRef:c", "c", "", "OpaqueRef:live");
+        host("OpaqueRef:d", "d", "", "OpaqueRef:dead");
+        cache->Update(XenObjectType::SR, "OpaqueRef:sr", QVariantMap{{"type", "lvmoiscsi"}});
+
+        XenLib::AlertManager* manager = XenLib::AlertManager::instance();
+        manager->ClearAllAlerts();
+        const QList<XenConnection*> connections{&connection};
+        QVERIFY(XenLib::IqnAlert::IsIscsiUsed(connections));
+
+        // C# HelpersGUI.PerformIQNCheck: live servers without an IQN, and the later server of a
+        // shared IQN, naming the first; running it again adds nothing
+        XenLib::IqnAlert::PerformCheck(connections);
+        XenLib::IqnAlert::PerformCheck(connections);
+        QList<XenLib::Alert*> alerts = manager->GetAllAlerts();
+        QCOMPARE(alerts.size(), 2);
+
+        auto* missing = qobject_cast<XenLib::MissingIqnAlert*>(alerts.at(0));
+        auto* duplicate = qobject_cast<XenLib::DuplicateIqnAlert*>(alerts.at(1));
+        QVERIFY(missing && duplicate);
+        QCOMPARE(missing->AppliesTo(), QString("c"));
+        QCOMPARE(duplicate->GetDescription(),
+                 QString("b has an iSCSI-IQN (iqn.2026-01.com.example:a) which already exists on a. "
+                         "This could cause problems with iSCSI storage on this network."));
+        QCOMPARE(duplicate->GetFixLinkText(), QString("Edit IQN"));
+
+        missing->Dismiss();
+        QCOMPARE(manager->GetAllAlerts().size(), 1);
+        manager->ClearAllAlerts();
     }
 
     void nrpeConfigurationParsesPluginOutput()

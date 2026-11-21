@@ -482,3 +482,9 @@ void GeneralEditPage::updateTagsDisplay()
     else
         this->ui->txtTags->setPlainText(this->m_currentTags.join(", "));
 }
+
+void GeneralEditPage::SelectIqn()
+{
+    this->ui->txtIQN->setFocus();
+    this->ui->txtIQN->selectAll();
+}

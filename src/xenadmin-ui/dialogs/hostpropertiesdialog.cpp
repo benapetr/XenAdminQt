@@ -138,3 +138,16 @@ void HostPropertiesDialog::SelectPoolGpuEditPage()
         }
     }
 }
+
+void HostPropertiesDialog::EditIqn()
+{
+    for (IEditPage* page : this->m_pages)
+    {
+        if (GeneralEditPage* general = qobject_cast<GeneralEditPage*>(page))
+        {
+            this->selectPage(general);
+            general->SelectIqn();
+            return;
+        }
+    }
+}
