@@ -81,6 +81,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+The Take VM Snapshot dialog hides quiesced snapshots on servers that no longer support them and explains unavailable snapshot types by the VM's tools state, like C#
 The yellow notes in network properties are readable in dark mode
 On macOS, dialog fields stretch to the window width and forms are left-aligned, as on Windows and Linux, instead of narrow boxes in the middle
 The memory and disk size search conditions use XenCenter's "bigger than", "smaller than" and "is exactly"

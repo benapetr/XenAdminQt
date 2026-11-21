@@ -385,6 +385,8 @@ class XENLIB_EXPORT Host : public XenObject
         static bool InvernessOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "2.3.50"); }
         //! C# Helpers.NaplesOrGreater: platform version 2.9.50 or later
         static bool NaplesOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "2.9.50"); }
+        //! C# Helpers.QuebecOrGreater: platform version 3.0.50 or later
+        static bool QuebecOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "3.0.50"); }
         //! C# Helpers.StockholmOrGreater: platform version 3.1.50 or later
         static bool StockholmOrGreater(XenConnection* connection) { return PlatformVersionAtLeast(connection, "3.1.50"); }
         //! C# Helpers.CloudOrGreater: platform version 3.2.50 or later

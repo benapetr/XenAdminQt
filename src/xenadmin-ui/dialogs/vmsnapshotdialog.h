@@ -77,8 +77,6 @@ class VmSnapshotDialog : public QDialog
         void setupDialog();
         void updateOkButton();
         void updateWarnings();
-        bool canUseQuiesce() const;
-        bool canUseCheckpoint() const;
 
         Ui::VmSnapshotDialog* ui;
         QSharedPointer<VM> m_vm;
