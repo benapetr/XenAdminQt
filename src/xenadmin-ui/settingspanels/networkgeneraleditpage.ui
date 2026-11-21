@@ -107,7 +107,7 @@
       <item>
        <widget class="QLabel" name="disruptionWarningLabel">
         <property name="styleSheet">
-         <string notr="true">background-color: rgb(255, 255, 200); padding: 8px; border: 1px solid rgb(200, 150, 0);</string>
+         <string notr="true">background-color: rgb(255, 255, 200); color: black; padding: 8px; border: 1px solid rgb(200, 150, 0);</string>
         </property>
         <property name="text">
          <string>⚠ Warning: Changing these settings will cause brief network disruption</string>
@@ -173,7 +173,7 @@
       <item>
        <widget class="QLabel" name="lacpWarningLabel">
         <property name="styleSheet">
-         <string notr="true">background-color: rgb(255, 255, 200); padding: 6px; margin-top: 4px;</string>
+         <string notr="true">background-color: rgb(255, 255, 200); color: black; padding: 6px; margin-top: 4px;</string>
         </property>
         <property name="text">
          <string>Note: LACP bond mode requires switch configuration</string>
