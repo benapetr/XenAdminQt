@@ -37,6 +37,7 @@
 #include <cmath>
 #include <utility>
 #include "querypanel.h"
+#include <QSignalBlocker>
 #include "treewidgetgroupacceptor.h"
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/common.h"
@@ -75,7 +76,11 @@ QueryPanel::QueryPanel(QWidget* parent) : QTreeWidget(parent)
     this->setColumnCount(DEFAULT_COLUMNS.size());
     this->setRootIsDecorated(true);
     this->setAlternatingRowColors(true);
-    this->setSortingEnabled(true);
+    // C# QueryPanel: a header click changes the search's sorting and the list is rebuilt in
+    // that order (Search sorts groups and rows), so the tree doesn't sort the cell text itself
+    this->setSortingEnabled(false);
+    this->header()->setSectionsClickable(true);
+    this->header()->setSortIndicatorShown(true);
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
     this->setContextMenuPolicy(Qt::DefaultContextMenu);
     this->setItemDelegateForColumn(DEFAULT_COLUMNS.indexOf("cpu"), new ProgressBarDelegate(this));
@@ -181,7 +186,8 @@ void QueryPanel::SetSearch(Search* search)
             if (columnIndex >= 0)
             {
                 Qt::SortOrder order = firstSort.IsAscending() ? Qt::AscendingOrder : Qt::DescendingOrder;
-                this->sortByColumn(columnIndex, order);
+                const QSignalBlocker blocker(this->header());
+                this->header()->setSortIndicator(columnIndex, order);
             }
         }
         
@@ -240,13 +246,9 @@ void QueryPanel::buildListInternal()
     QList<IAcceptGroups*> adapters;
     adapters.append(&adapter);
 
-    bool addedAny = false;
-    for (XenConnection* connection : connections)
-    {
-        if (!connection)
-            continue;
-        addedAny |= this->search_->PopulateAdapters(connection, adapters);
-    }
+    // Search::PopulateAdapters already covers every connection, so populate once (calling it per
+    // connection listed everything once for each connected pool)
+    const bool addedAny = this->search_->PopulateAdapters(connections.first(), adapters);
 
     if (!addedAny)
     {
@@ -1132,7 +1134,8 @@ void QueryPanel::SetSorting(const QList<QPair<QString, bool>>& sorting)
     if (columnIndex >= 0)
     {
         Qt::SortOrder order = firstSort.second ? Qt::AscendingOrder : Qt::DescendingOrder;
-        this->sortByColumn(columnIndex, order);
+        const QSignalBlocker blocker(this->header());
+        this->header()->setSortIndicator(columnIndex, order);
     }
 }
 

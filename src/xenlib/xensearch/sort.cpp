@@ -28,6 +28,14 @@
 // sort.cpp - Implementation of Sort
 #include "sort.h"
 #include "xen/xenobject.h"
+#include "common.h"
+#include "../customfields/customfieldsmanager.h"
+#include "../utils/misc.h"
+#include <QDateTime>
+#include <QHash>
+#include <QScopedPointer>
+
+using namespace XenSearch;
 #include <QDebug>
 
 Sort::Sort(const QString& column, bool ascending)
@@ -118,154 +126,118 @@ void Sort::ToXml(QXmlStreamWriter& writer) const
     writer.writeEndElement();
 }
 
+namespace
+{
+    const QString CUSTOM_FIELD_PREFIX = QStringLiteral("CustomField:");  // C# CustomFieldsManager.CUSTOM_FIELD
+
+    bool isNumber(const QVariant& v)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        switch (v.typeId())
+#else
+        switch (static_cast<int>(v.type()))
+#endif
+        {
+            case QMetaType::Int:
+            case QMetaType::UInt:
+            case QMetaType::LongLong:
+            case QMetaType::ULongLong:
+            case QMetaType::Double:
+            case QMetaType::Float:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // C# IComparable.CompareTo for the values the sort properties return
+    int compareValues(const QVariant& v1, const QVariant& v2)
+    {
+        if (isNumber(v1) && isNumber(v2))
+        {
+            const double d1 = v1.toDouble();
+            const double d2 = v2.toDouble();
+            return d1 < d2 ? -1 : (d1 > d2 ? 1 : 0);
+        }
+        if (v1.userType() == QMetaType::QDateTime && v2.userType() == QMetaType::QDateTime)
+        {
+            const QDateTime t1 = v1.toDateTime();
+            const QDateTime t2 = v2.toDateTime();
+            return t1 < t2 ? -1 : (t1 > t2 ? 1 : 0);
+        }
+        return QString::localeAwareCompare(v1.toString(), v2.toString());
+    }
+}
+
+QVariant Sort::propertyOf(XenObject* o) const
+{
+    // C# Sort.CalcProperty
+    if (this->column_.startsWith(CUSTOM_FIELD_PREFIX))
+    {
+        const QString fieldName = this->column_.mid(CUSTOM_FIELD_PREFIX.length());
+        QScopedPointer<CustomFieldDefinition> definition(CustomFieldsManager::instance()->getCustomFieldDefinition(fieldName));
+        if (!definition)  // a custom field that existed when the search was saved but no longer does
+            return QVariant();
+
+        const QVariant value = CustomFieldsManager::GetCustomFieldValue(o->GetOtherConfig(), *definition);
+        if (definition->GetType() == CustomFieldDefinition::Type::Date)
+            return value.userType() == QMetaType::QDateTime ? value : QVariant();
+        return value.isValid() && !value.isNull() ? QVariant(value.toString()) : QVariant();
+    }
+
+    static const QHash<QString, ColumnNames> columns = {
+        {"name", ColumnNames::name},       {"cpu", ColumnNames::cpu},
+        {"memory", ColumnNames::memory},   {"disks", ColumnNames::disks},
+        {"network", ColumnNames::network}, {"ha", ColumnNames::ha},
+        {"ip", ColumnNames::ip},           {"uptime", ColumnNames::uptime},
+    };
+    if (!columns.contains(this->column_))
+        return QVariant();
+
+    auto property = PropertyAccessors::Get(PropertyAccessors::GetSortPropertyName(columns.value(this->column_)));
+    return property ? property(o) : QVariant();
+}
+
 int Sort::Compare(XenObject* one, XenObject* other) const
 {
-    // C# equivalent: Compare method (Sort.cs lines 121-157)
-    // C# code handles:
-    // - Special case for "name" column (natural string comparison)
-    // - Custom fields
-    // - Property accessors for other columns
-    //
-    // Simplified Qt implementation for now - just compare by column name
+    return this->compare(one, QVariant(), other, QVariant());
+}
 
-    if (!one && !other)
+int Sort::Compare(const QVariant& one, const QVariant& other) const
+{
+    return this->compare(nullptr, one, nullptr, other);
+}
+
+int Sort::compare(XenObject* o1, const QVariant& v1, XenObject* o2, const QVariant& v2) const
+{
+    // C# Sort.Compare. Objects are compared by the column's sort property; other values
+    // (group keys such as tags) only by the name column, as their text.
+    const bool nameSort = this->column_ == "name";
+
+    QVariant c1, c2;
+    if (o1)
+        c1 = this->propertyOf(o1);
+    else if (nameSort)
+        c1 = v1.userType() == QMetaType::QDateTime ? v1.toDateTime().toUTC().toString("yyyy-MM-dd HH:mm:ssZ") : v1.toString();
+
+    if (o2)
+        c2 = this->propertyOf(o2);
+    else if (nameSort)
+        c2 = v2.userType() == QMetaType::QDateTime ? v2.toDateTime().toUTC().toString("yyyy-MM-dd HH:mm:ssZ") : v2.toString();
+
+    const bool null1 = !c1.isValid() || c1.isNull();
+    const bool null2 = !c2.isValid() || c2.isNull();
+    if (null1 && null2)
         return 0;
-    if (!one)
+    if (null1)
         return this->ascending_ ? -1 : 1;
-    if (!other)
+    if (null2)
         return this->ascending_ ? 1 : -1;
 
-    // Get property values from XenObject
-    QVariant v1, v2;
-
-    // Map column names to XenObject properties
-    // C# uses PropertyAccessors.Get(propertyName) which returns a delegate
-    // We directly access XenObject properties instead
-    if (this->column_ == "name")
-    {
-        v1 = one->GetName();
-        v2 = other->GetName();
-    }
-    else if (this->column_ == "cpu" || this->column_ == "cpus")
-    {
-        // For VMs: number of vCPUs
-        // For Hosts: number of CPUs
-        v1 = one->GetData().value("VCPUs_max", 0);
-        v2 = other->GetData().value("VCPUs_max", 0);
-    }
-    else if (this->column_ == "memory")
-    {
-        // Memory in bytes
-        v1 = one->GetData().value("memory_static_max", 0LL);
-        v2 = other->GetData().value("memory_static_max", 0LL);
-    }
-    else if (this->column_ == "disks")
-    {
-        // Number of VBDs (virtual block devices)
-        QVariantList vbds1 = one->GetData().value("VBDs", QVariantList()).toList();
-        QVariantList vbds2 = other->GetData().value("VBDs", QVariantList()).toList();
-        v1 = vbds1.size();
-        v2 = vbds2.size();
-    }
-    else if (this->column_ == "network" || this->column_ == "networks")
-    {
-        // Number of VIFs (virtual network interfaces)
-        QVariantList vifs1 = one->GetData().value("VIFs", QVariantList()).toList();
-        QVariantList vifs2 = other->GetData().value("VIFs", QVariantList()).toList();
-        v1 = vifs1.size();
-        v2 = vifs2.size();
-    }
-    else if (this->column_ == "ha")
-    {
-        // HA restart priority
-        v1 = one->GetData().value("ha_restart_priority", QString(""));
-        v2 = other->GetData().value("ha_restart_priority", QString(""));
-    }
-    else if (this->column_ == "uptime")
-    {
-        // Start time (as timestamp)
-        v1 = one->GetData().value("start_time", QString(""));
-        v2 = other->GetData().value("start_time", QString(""));
-    }
-    else if (this->column_ == "ip" || this->column_ == "ip_address")
-    {
-        // IP address
-        // For VMs: get from guest metrics
-        // For now, use simple string comparison
-        v1 = one->GetData().value("ip_address", QString(""));
-        v2 = other->GetData().value("ip_address", QString(""));
-    }
-    else
-    {
-        // Generic property access
-        v1 = one->GetData().value(this->column_, QVariant());
-        v2 = other->GetData().value(this->column_, QVariant());
-    }
-
-    // Compare values
-    int result = 0;
-
-    // Handle null/invalid values
-    if (!v1.isValid() && !v2.isValid())
-        result = 0;
-    else if (!v1.isValid())
-        result = -1;
-    else if (!v2.isValid())
-        result = 1;
-    else
-    {
-        // Compare based on type
-        if (v1.type() == QVariant::String && v2.type() == QVariant::String)
-        {
-            // String comparison
-            QString s1 = v1.toString();
-            QString s2 = v2.toString();
-
-            // For "name" column, use natural comparison (like C# StringUtility.NaturalCompare)
-            // For now, use case-insensitive comparison
-            if (this->column_ == "name")
-                result = QString::compare(s1, s2, Qt::CaseInsensitive);
-            else
-                result = QString::compare(s1, s2);
-        }
-        else if (v1.type() == QVariant::Int || v1.type() == QVariant::LongLong)
-        {
-            // Numeric comparison
-            qint64 n1 = v1.toLongLong();
-            qint64 n2 = v2.toLongLong();
-            if (n1 < n2)
-                result = -1;
-            else if (n1 > n2)
-                result = 1;
-            else
-                result = 0;
-        }
-        else if (v1.type() == QVariant::Double)
-        {
-            // Double comparison
-            double d1 = v1.toDouble();
-            double d2 = v2.toDouble();
-            if (d1 < d2)
-                result = -1;
-            else if (d1 > d2)
-                result = 1;
-            else
-                result = 0;
-        }
-        else
-        {
-            // Default: convert to string and compare
-            QString s1 = v1.toString();
-            QString s2 = v2.toString();
-            result = QString::compare(s1, s2);
-        }
-    }
-
-    // Apply ascending/descending
+    int r = nameSort ? Misc::NaturalCompare(c1.toString(), c2.toString()) : compareValues(c1, c2);
     if (!this->ascending_)
-        result = -result;
-
-    return result;
+        r = -r;
+    return r;
 }
 
 bool Sort::operator==(const Sort& other) const

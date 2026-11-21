@@ -40,6 +40,7 @@
 #include "xenlib/xen/vdi.h"
 #include <QSignalSpy>
 #include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/sort.h"
 #include "xenlib/xensearch/query.h"
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xen/network/certificatemanager.h"
@@ -569,6 +570,29 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void sortComparesLikeCsharp()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm2", QVariantMap{{"name_label", "vm2"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm10", QVariantMap{{"name_label", "vm10"}});
+        XenObject* vm2 = cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:vm2").data();
+        XenObject* vm10 = cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:vm10").data();
+
+        // C# Sort.Compare: names compare naturally, reversed when descending
+        QVERIFY(Sort("name", true).Compare(vm2, vm10) < 0);
+        QVERIFY(Sort("name", false).Compare(vm2, vm10) > 0);
+
+        // Plain values (group keys) only order by the name column, as text
+        QVERIFY(Sort("name", true).Compare(QVariant("tag2"), QVariant("tag10")) < 0);
+        QVERIFY(Sort("name", false).Compare(QVariant("tag2"), QVariant("tag10")) > 0);
+        QCOMPARE(Sort("cpu", true).Compare(QVariant("tag2"), QVariant("tag10")), 0);
+
+        // Halted VMs have no CPU value; both missing compares equal, so later sorts decide
+        QCOMPARE(Sort("cpu", true).Compare(vm2, vm10), 0);
+        QCOMPARE(Sort("nonsense", true).Compare(vm2, vm10), 0);
     }
 
     void iqnCheckFindsMissingAndDuplicateIqns()

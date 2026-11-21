@@ -322,7 +322,8 @@ namespace XenSearch
             // Neither is an object => compare as generic values
 
             // Try sorting if available
-            // TODO: Sorting requires XenObject pointers, not QVariants
+            // Not used: searches are grouped and sorted by Search::populateGroupedObjects,
+            // which applies the search's sorting (see compareObjects in search.cpp)
             // if (search && !search->GetSorting().isEmpty())
             // {
             //     QList<Sort> sorting = search->GetSorting();
@@ -348,7 +349,7 @@ namespace XenSearch
         QVariantMap otherData = other.toMap();
 
         // Try sorting if available
-        // TODO: Sorting requires XenObject pointers, not QVariants with maps
+        // Not used: see Search::populateGroupedObjects / compareObjects in search.cpp
         // if (search && !search->GetSorting().isEmpty())
         // {
         //     QList<Sort> sorting = search->GetSorting();

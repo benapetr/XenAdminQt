@@ -32,6 +32,7 @@
 #define SORT_H
 
 #include <QString>
+#include <QVariant>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
@@ -122,11 +123,19 @@ class Sort
          * \param other Second object
          * \return Negative if one < other, 0 if equal, positive if one > other
          *
-         * C# equivalent: Compare method (Sort.cs lines 121-157)
-         *
-         * Note: Currently simplified - does not handle custom fields
+         * C# equivalent: Compare method (Sort.cs lines 121-157): by the column's sort property
+         * (PropertyAccessors.GetSortPropertyName, or a "CustomField:" column's value), with the
+         * name column compared naturally; missing values sort first when ascending
          */
         int Compare(XenObject* one, XenObject* other) const;
+
+        /*!
+         * \brief Compare two values that aren't objects, such as group keys
+         *
+         * C# Sort.Compare with non-IXenObject arguments: only the name column orders them,
+         * by their text; any other column treats them as equal.
+         */
+        int Compare(const QVariant& one, const QVariant& other) const;
 
         /*!
          * \brief Check equality with another Sort
@@ -143,6 +152,10 @@ class Sort
         bool operator!=(const Sort& other) const { return !(*this == other); }
 
     private:
+        //! C# Sort.CalcProperty applied to an object
+        QVariant propertyOf(XenObject* o) const;
+        int compare(XenObject* o1, const QVariant& v1, XenObject* o2, const QVariant& v2) const;
+
         QString column_;      ///< Column name to sort by
         bool ascending_;      ///< true = ascending, false = descending
 };

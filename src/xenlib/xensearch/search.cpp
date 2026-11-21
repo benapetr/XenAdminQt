@@ -379,6 +379,29 @@ static int compareByTypeAndName(const QString& typeA, const QVariantMap& dataA, 
     return Misc::NaturalCompare(refA, refB);
 }
 
+// C# GroupAlg Group.Compare for two objects: the search's sorting first, then type and name
+static int compareObjects(const QList<Sort>& sorting, XenConnection* conn,
+                          const QString& typeA, const QVariantMap& dataA, const QString& refA,
+                          const QString& typeB, const QVariantMap& dataB, const QString& refB)
+{
+    if (!sorting.isEmpty() && conn && conn->GetCache())
+    {
+        QSharedPointer<XenObject> objA = conn->GetCache()->ResolveObject(XenObject::TypeFromString(typeA), refA);
+        QSharedPointer<XenObject> objB = conn->GetCache()->ResolveObject(XenObject::TypeFromString(typeB), refB);
+        if (objA && objB)
+        {
+            for (const Sort& sort : sorting)
+            {
+                const int r = sort.Compare(objA.data(), objB.data());
+                if (r != 0)
+                    return r;
+            }
+        }
+    }
+
+    return compareByTypeAndName(typeA, dataA, refA, typeB, dataB, refB);
+}
+
 Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection* conn, QueryScope* scope)
 {
     if (!scope)
@@ -727,6 +750,17 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
 
         if (!this->m_grouping)
         {
+            // C# LeafGroup.Populate sorts its items with Group.Compare
+            const QList<Sort> sorting = this->m_sorting;
+            std::sort(matchedObjects.begin(), matchedObjects.end(),
+                [&](const QPair<XenObjectType, QString>& a, const QPair<XenObjectType, QString>& b) {
+                    const QString typeA = XenObject::TypeToString(a.first);
+                    const QString typeB = XenObject::TypeToString(b.first);
+                    const QVariantMap dataA = cache->ResolveObjectData(typeA, a.second);
+                    const QVariantMap dataB = cache->ResolveObjectData(typeB, b.second);
+                    return compareObjects(sorting, connection, typeA, dataA, a.second, typeB, dataB, b.second) < 0;
+                });
+
             for (IAcceptGroups* adapter : adapters)
             {
                 for (const auto& objPair : matchedObjects)
@@ -885,6 +919,8 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     if (!grouping || objects.isEmpty())
         return false;
 
+    const QList<Sort> sorting = this->m_sorting;
+
     // Organize objects by group value (use string keys for QHash)
     QHash<QString, QList<QPair<XenObjectType, QString>>> groupedObjects;
     QHash<QString, QVariant> groupValueLookup; // Map string key back to original group value
@@ -996,6 +1032,8 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     std::sort(groupKeys.begin(), groupKeys.end(), [&](const QString& a, const QString& b) {
         if (dynamic_cast<TypeGrouping*>(grouping))
         {
+            // Types keep their fixed order whatever the sorting (C# would compare the
+            // ObjectTypes names when sorting by name)
             int orderA = groupSortKey(a);
             int orderB = groupSortKey(b);
             if (orderA != orderB)
@@ -1004,6 +1042,24 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
 
         const QVariant valueA = groupValueLookup.value(a);
         const QVariant valueB = groupValueLookup.value(b);
+
+        // C# Group.Compare: the search's sorting first, on the group objects (pools, servers,
+        // folders, vApps) or on plain group values, which only the name column orders
+        if (!sorting.isEmpty() && !dynamic_cast<TypeGrouping*>(grouping))
+        {
+            QSharedPointer<XenObject> objA, objB;
+            if (groupObjectType != XenObjectType::Null)
+            {
+                objA = conn->GetCache()->ResolveObject(groupObjectType, valueA.toString());
+                objB = conn->GetCache()->ResolveObject(groupObjectType, valueB.toString());
+            }
+            for (const Sort& sort : sorting)
+            {
+                const int r = (objA && objB) ? sort.Compare(objA.data(), objB.data()) : sort.Compare(valueA, valueB);
+                if (r != 0)
+                    return r < 0;
+            }
+        }
 
         if (groupObjectType != XenObjectType::Null)
         {
@@ -1075,7 +1131,7 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
                 QVariantMap dataB = conn->GetCache()->ResolveObjectData(typeB, b.second);
                 dataA["__type"] = typeA;
                 dataB["__type"] = typeB;
-                return compareByTypeAndName(typeA, dataA, a.second, typeB, dataB, b.second) < 0;
+                return compareObjects(sorting, conn, typeA, dataA, a.second, typeB, dataB, b.second) < 0;
             });
 
             for (const auto& objPair : groupObjects)
@@ -1113,7 +1169,7 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
                     QVariantMap dataB = conn->GetCache()->ResolveObjectData(typeB, b.second);
                     dataA["__type"] = typeA;
                     dataB["__type"] = typeB;
-                    return compareByTypeAndName(typeA, dataA, a.second, typeB, dataB, b.second) < 0;
+                    return compareObjects(sorting, conn, typeA, dataA, a.second, typeB, dataB, b.second) < 0;
                 });
 
             for (const auto& objPair : ungroupedObjects)

@@ -82,6 +82,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Search results sort by the chosen column's value, as in XenCenter, including groups and multi-pool searches, instead of by cell text; searches over several pools no longer list results once per pool
 Rebooting servers now warns when a server runs a storage virtual appliance, and a failed reboot is reported in Events instead of a separate message box
 The Take VM Snapshot dialog no longer has the quiesce option; servers since XenServer 7.6 don't support quiesced snapshots
 The Take VM Snapshot dialog hides quiesced snapshots on servers that no longer support them and explains unavailable snapshot types by the VM's tools state, like C#
