@@ -332,7 +332,9 @@ void VMAppliancesDialog::onShutdown()
 
 void VMAppliancesDialog::onImport()
 {
+    // C# opens the import wizard for appliances (OVF/OVA) only
     ImportVMCommand command(MainWindow::instance());
+    command.SetOvfOnlyMode(true);
     if (command.CanRun())
         command.Run();
 }
