@@ -81,6 +81,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+On macOS, dialog fields stretch to the window width and forms are left-aligned, as on Windows and Linux, instead of narrow boxes in the middle
 The memory and disk size search conditions use XenCenter's "bigger than", "smaller than" and "is exactly"
 Older saved searches with conditions such as "Pool is", "Server is", "Network uses" or "Disks attached to" load into the search editor instead of an empty condition
 The folder breadcrumb above search results shortens long paths to fit, uses XenCenter's separator icon, and clicking a parent folder searches it

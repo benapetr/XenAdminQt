@@ -26,6 +26,8 @@
  */
 
 #include <QApplication>
+#include <QFormLayout>
+#include <QProxyStyle>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDebug>
@@ -39,6 +41,31 @@
 #include "xenlib/folders/foldersmanager.h"
 #include "xenlib/xenlib.h"
 #include "xenlib/utils/filelogger.h"
+
+namespace
+{
+    /*!
+     * macOS's style keeps form fields at their natural width and centres the form, so most
+     * dialogs (laid out for Windows, like C#) end up with narrow text boxes floating in the
+     * middle. Use the Windows and Linux form behaviour; everything else stays native.
+     */
+    class FormLayoutStyle : public QProxyStyle
+    {
+        public:
+            int styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const override
+            {
+                switch (hint)
+                {
+                    case SH_FormLayoutFieldGrowthPolicy:
+                        return QFormLayout::AllNonFixedFieldsGrow;
+                    case SH_FormLayoutFormAlignment:
+                        return int(Qt::AlignLeft | Qt::AlignTop);
+                    default:
+                        return QProxyStyle::styleHint(hint, option, widget, returnData);
+                }
+            }
+    };
+}
 
 int main(int argc, char* argv[])
 {
@@ -72,6 +99,9 @@ int main(int argc, char* argv[])
     }
 
     QApplication app(argc, argv);
+#ifdef Q_OS_MACOS
+    app.setStyle(new FormLayoutStyle());
+#endif
     XenLib::RegisterMetaTypes();
 
     // Set application properties
