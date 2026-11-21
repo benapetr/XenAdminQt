@@ -32,9 +32,10 @@
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/host/reboothostaction.h"
 #include <QMessageBox>
-#include <QTreeWidget>
+#include <QPushButton>
 
 RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
@@ -69,7 +70,7 @@ void RebootHostCommand::Run()
         if (host->IsLive())
             runnable.append(host);
         else
-            cantRunReasons.insert(host, "Host is not live.");
+            cantRunReasons.insert(host, tr("Server is not reachable"));
     }
 
     if (runnable.isEmpty() && cantRunReasons.isEmpty())
@@ -80,112 +81,91 @@ void RebootHostCommand::Run()
         CommandErrorDialog::DialogMode mode =
             runnable.isEmpty() ? CommandErrorDialog::DialogMode::Close
                                : CommandErrorDialog::DialogMode::OKCancel;
-        CommandErrorDialog dialog("Reboot Host", "Some hosts cannot be rebooted.", cantRunReasons, mode, MainWindow::instance());
+        CommandErrorDialog dialog(tr("Reboot Server"), tr("Some servers cannot be rebooted."), cantRunReasons, mode, MainWindow::instance());
         if (dialog.exec() != QDialog::Accepted || runnable.isEmpty())
             return;
     }
 
+    // C# RebootHostCommand.ConfirmationDialogText
     bool hasRunningVMs = false;
+    QStringList hciHosts;
     for (const QSharedPointer<Host>& host : runnable)
     {
-        if (host && host->HasRunningVMs())
-        {
+        if (host->HasRunningVMs())
             hasRunningVMs = true;
-            break;
+
+        // VM.HciWarnBeforeShutdown: the VM is a storage virtual appliance
+        for (const QSharedPointer<VM>& vm : host->GetResidentVMs())
+        {
+            if (vm && vm->GetOtherConfig().contains("hci-warn-before-shutdown"))
+            {
+                hciHosts.append(host->GetName());
+                break;
+            }
         }
     }
 
-    // Show warning dialog
-    // TODO: Add HCI warning handling once we have equivalent APIs.
     const int count = runnable.count();
-    const QString confirmTitle = count == 1 ? "Reboot Host" : "Reboot Hosts";
-    const QString confirmText = count == 1
-        ? QString(hasRunningVMs
-                      ? "Rebooting host '%1' will shut down all VMs running on it.\n\n"
-                        "Are you sure you want to continue?"
-                      : "Rebooting host '%1' will restart this host.\n\n"
-                        "Are you sure you want to continue?")
-              .arg(runnable.first()->GetName())
-        : QString(hasRunningVMs
-                      ? "Rebooting these hosts will shut down all VMs running on them.\n\n"
-                        "Are you sure you want to continue?"
-                      : "Rebooting these hosts will restart them.\n\n"
-                        "Are you sure you want to continue?");
+    QString confirmText;
+    if (!hciHosts.isEmpty())
+    {
+        confirmText = hciHosts.count() == 1
+            ? tr("Rebooting a server will also shut down all the VMs running on it. '%1' is running a storage "
+                 "virtual appliance and rebooting it might impact the availability of your storage. "
+                 "Are you sure you want to continue?").arg(hciHosts.first())
+            : tr("Rebooting a server will also shut down all the VMs running on it. The following servers are "
+                 "running a storage virtual appliance and rebooting them might impact the availability of your "
+                 "storage:\n\n%1\n\nAre you sure you want to continue?").arg(hciHosts.join("\n"));
+    } else if (hasRunningVMs)
+    {
+        confirmText = count == 1
+            ? tr("Are you sure you want to reboot '%1'?\n\nThis will also shut down all the VMs currently running on it.")
+                  .arg(runnable.first()->GetName())
+            : tr("Are you sure you want to reboot the selected servers?\n\nThis will also shut down all the VMs currently running on them.");
+    } else
+    {
+        confirmText = count == 1
+            ? tr("Are you sure you want to reboot '%1'?").arg(runnable.first()->GetName())
+            : tr("Are you sure you want to reboot the selected servers?");
+    }
 
     QMessageBox msgBox(MainWindow::instance());
-    msgBox.setWindowTitle(confirmTitle);
+    msgBox.setWindowTitle(count == 1 ? tr("Reboot Server") : tr("Reboot Multiple Servers"));
     msgBox.setText(confirmText);
     msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgBox.setDefaultButton(QMessageBox::No);
-    int ret = msgBox.exec();
+    QPushButton* yesButton = msgBox.addButton(tr("&Yes, Reboot"), QMessageBox::YesRole);
+    QPushButton* noButton = msgBox.addButton(QMessageBox::No);
+    msgBox.setDefaultButton(noButton);
+    msgBox.exec();
+    if (msgBox.clickedButton() != yesButton)
+        return;
 
-    if (ret == QMessageBox::Yes)
+    auto ntolPrompt = [](QSharedPointer<Pool> pool, qint64 current, qint64 target)
     {
-        if (count == 1)
-        {
-            MainWindow::instance()->ShowStatusMessage(QString("Rebooting host '%1'...").arg(runnable.first()->GetName()));
-        }
-        else
-        {
-            MainWindow::instance()->ShowStatusMessage(QString("Rebooting %1 hosts...").arg(count));
-        }
+        const QString poolName = pool ? pool->GetName() : QString();
+        const QString poolLabel = poolName.isEmpty() ? tr("pool") : tr("pool '%1'").arg(poolName);
+        const QString text = tr("HA is enabled for %1.\n\n"
+                                "To reboot this server, the pool's server failures to tolerate must be "
+                                "reduced from %2 to %3.\n\n"
+                                "Do you want to continue?")
+                                 .arg(poolLabel)
+                                 .arg(current)
+                                 .arg(target);
 
-        for (const QSharedPointer<Host>& host : runnable)
-        {
-            if (!host)
-                continue;
+        return QMessageBox::question(MainWindow::instance(),
+                                     tr("Adjust HA Failures to Tolerate"),
+                                     text,
+                                     QMessageBox::Yes | QMessageBox::No,
+                                     QMessageBox::No) != QMessageBox::Yes;
+    };
 
-            if (!host->IsConnected())
-            {
-                QMessageBox::warning(MainWindow::instance(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
-                continue;
-            }
+    // C# runs these through RunMultipleActions; failures are reported in the Events
+    // history like any other action, without a separate message box
+    QList<AsyncOperation*> actions;
+    for (const QSharedPointer<Host>& host : runnable)
+        actions.append(new RebootHostAction(host, ntolPrompt, nullptr));
 
-            const QString hostName = host->GetName();
-            auto ntolPrompt = [](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
-                const QString poolName = pool ? pool->GetName() : QString();
-                const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
-                const QString text = QString("HA is enabled for %1.\n\n"
-                                             "To reboot this host, the pool's host failures to tolerate must be "
-                                             "reduced from %2 to %3.\n\n"
-                                             "Do you want to continue?")
-                                         .arg(poolLabel)
-                                         .arg(current)
-                                         .arg(target);
-
-                return QMessageBox::question(MainWindow::instance(),
-                                             "Adjust HA Failures to Tolerate",
-                                             text,
-                                             QMessageBox::Yes | QMessageBox::No,
-                                             QMessageBox::No) != QMessageBox::Yes;
-            };
-
-            RebootHostAction* action = new RebootHostAction(host, ntolPrompt, nullptr);
-
-            connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
-            {
-                if (!MainWindow::instance())
-                {
-                    action->deleteLater();
-                    return;
-                }
-
-                if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
-                {
-                    MainWindow::instance()->ShowStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
-                } else
-                {
-                    // TODO: Add detailed error dialog and cant-run reason handling like C#.
-                    QMessageBox::warning(MainWindow::instance(), "Reboot Host Failed", QString("Failed to reboot host '%1'. Check the error log for details.").arg(hostName));
-                    MainWindow::instance()->ShowStatusMessage("Host reboot failed", 5000);
-                }
-                action->deleteLater();
-            });
-
-            action->RunAsync();
-        }
-    }
+    this->RunMultipleActions(actions, QString(), tr("Rebooting servers"), tr("Servers rebooted"), true, true);
 }
 
 QString RebootHostCommand::MenuText() const
