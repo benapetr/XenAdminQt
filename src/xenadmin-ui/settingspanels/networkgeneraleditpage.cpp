@@ -154,7 +154,6 @@ void NetworkGeneralEditPage::SetXenObject(QSharedPointer<XenObject> object,
     QVariantMap otherConfig = this->m_objectDataCopy_.value("other_config").toMap();
     QString automaticValue = otherConfig.value("automatic", "false").toString();
     bool autoAdd = (automaticValue != "false");
-    // TODO saving of this modified value doesn't seem to work right now
     this->ui->autoAddCheckBox->setChecked(autoAdd);
 
     // Check if this is guest installer network
