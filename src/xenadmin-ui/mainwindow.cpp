@@ -74,6 +74,8 @@
 #include "tabpages/nicstabpage.h"
 #include "tabpages/gputabpage.h"
 #include "tabpages/hatabpage.h"
+#include "tabpages/adtabpage.h"
+#include "commands/connection/disconnectcommand.h"
 #include "tabpages/consoletabpage.h"
 #include "tabpages/cvmconsoletabpage.h"
 #include "tabpages/snapshotstabpage.h"
@@ -400,7 +402,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
-    // Note: We don't implement all C# tabs yet (Home, Ballooning, WLB, AD, Docker, USB)
+    // Note: We don't implement all C# tabs yet (Home, WLB, Docker, USB)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
     // Console tabs are added below after initialization
     this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
@@ -413,10 +415,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->m_tabPages.append(new HATabPage());          // C#: TabPageHA
     this->m_tabPages.append(new SnapshotsTabPage()); // C#: TabPageSnapshots
     // WLB - not implemented yet
-    // AD - not implemented yet
     // Docker pages - not implemented yet
     // USB - not implemented yet
     this->m_tabPages.append(new MemoryTabPage());  // In C# this is called "Ballooning"
+    this->m_tabPages.append(new AdTabPage());      // C#: TabPageAD ("Active Directory Users")
+    AdTabPage::DisconnectConnection = [this](XenConnection* connection)
+    {
+        DisconnectCommand(this, connection, false).Run();
+    };
 
     // Create console tab and wire up ConsolePanel (matches C# AddTabContents line 186)
     ConsoleTabPage* consoleTab = new ConsoleTabPage();
@@ -1271,6 +1277,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
     BaseTabPage* consoleTab = nullptr;
     BaseTabPage* cvmConsoleTab = nullptr;
     BaseTabPage* searchTab = nullptr;
+    BaseTabPage* adTab = nullptr;
 
     for (BaseTabPage* tab : this->m_tabPages)
     {
@@ -1318,6 +1325,9 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             case BaseTabPage::Type::Search:
                 searchTab = tab;
                 break;
+            case BaseTabPage::Type::Ad:
+                adTab = tab;
+                break;
             case BaseTabPage::Type::Unknown:
             default:
                 break;
@@ -1344,6 +1354,10 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(consoleTab);
         if (performanceTab)
             newTabs.append(performanceTab);
+        // C# TabPageAD: pools and live standalone servers (isPoolOrLiveStandaloneHost)
+        if (adTab && isHostLive && xen_obj->GetConnection() && xen_obj->GetConnection()->GetCache()
+            && !xen_obj->GetConnection()->GetCache()->GetPool())
+            newTabs.append(adTab);
     }
     // VM tab order: General, Memory, Storage, Networking, Snapshots, Console, Performance
     // C# Reference: TabPageBallooning is shown for VMs (MainWindow.cs line 1328)
@@ -1387,6 +1401,12 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
             newTabs.append(haTab);
         if (performanceTab)
             newTabs.append(performanceTab);
+        // The C# copy in xenadmin/ no longer adds the HA and AD tabs: commit f586cc26b
+        // ("removed licencing ... upsell pages") deleted their lines along with the upsell
+        // pages. This follows the rule from before that commit: HA for pools, AD for pools
+        // and live standalone servers.
+        if (adTab)
+            newTabs.append(adTab);
     }
     // SR tab order: General, Storage, CVM Console (if applicable), Search
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1324, 1333, 1376, 1391

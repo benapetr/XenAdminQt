@@ -49,6 +49,8 @@
 #include "xenlib/xen/role.h"
 #include "dialogs/roleselectiondialog.h"
 #include "dialogs/resolvingsubjectsdialog.h"
+#include "tabpages/adtabpage.h"
+#include <QStackedWidget>
 #include "xenlib/xen/vmappliance.h"
 #include "ConsoleView/VNCGraphicsClient.h"
 #include "xenlib/utils/vncdes.h"
@@ -579,6 +581,77 @@ private slots:
     }
 
     // C# ClusteringEditPage: management networks only, nothing preselected, the box follows the choice
+    void adTabShowsEachStateWithoutCrashing()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "lab"}, {"master", "OpaqueRef:coord"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:coord", QVariantMap{{"name_label", "coord"}, {"external_auth_type", ""}});
+        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>(XenObjectType::Pool, "OpaqueRef:pool");
+
+        AdTabPage tab;
+        auto* stack = tab.findChild<QStackedWidget*>("listStack");
+        auto* table = tab.findChild<QTableWidget*>("tableSubjects");
+        auto* joinLeave = tab.findChild<QPushButton*>("buttonJoinLeave");
+        QVERIFY(stack && table && joinLeave);
+
+        // No AD: the list is replaced by "Active Directory is disabled", Join is offered
+        tab.SetObject(pool);
+        QCOMPARE(stack->currentWidget()->objectName(), QString("pageDisabled"));
+        QCOMPARE(joinLeave->text(), QString("&Join Domain..."));
+        QVERIFY(joinLeave->isEnabled());
+
+        // AD enabled, with a user, a group and a subject with odd data (no other_config, a
+        // role ref that doesn't resolve)
+        cache->Update(XenObjectType::Role, "OpaqueRef:pa", QVariantMap{{"name_label", "pool-admin"}, {"subroles", QVariantList{"OpaqueRef:x"}}});
+        cache->Update(XenObjectType::Subject, "OpaqueRef:u", QVariantMap{{"subject_identifier", "S-1"}, {"roles", QVariantList{"OpaqueRef:pa"}},
+            {"other_config", QVariantMap{{"subject-name", "CORP\\alice"}, {"subject-displayname", "Alice"}, {"subject-is-group", "false"}}}});
+        cache->Update(XenObjectType::Subject, "OpaqueRef:g", QVariantMap{{"subject_identifier", "S-2"},
+            {"other_config", QVariantMap{{"subject-name", "CORP\\admins"}, {"subject-is-group", "true"}}}});
+        cache->Update(XenObjectType::Subject, "OpaqueRef:odd", QVariantMap{{"roles", QVariantList{"OpaqueRef:gone"}}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:coord", QVariantMap{{"name_label", "coord"}, {"external_auth_type", "AD"},
+                                                                         {"external_auth_service_name", "corp.example"}});
+        tab.SetObject(QSharedPointer<XenObject>());
+        tab.SetObject(pool);
+        QCOMPARE(stack->currentWidget()->objectName(), QString("pageSubjects"));
+        QCOMPARE(joinLeave->text(), QString("L&eave Domain..."));
+        QCOMPARE(table->rowCount(), 4);
+        // The local root account is first, expanded when the list appears
+        QVERIFY(table->item(0, 2)->text().startsWith("Local root account"));
+        QVERIFY(table->item(0, 2)->text().contains("(Always granted access)"));
+
+        // The root row can't be changed, removed or logged out
+        table->selectRow(0);
+        QVERIFY(!tab.findChild<QPushButton*>("buttonRemove")->isEnabled());
+        QVERIFY(!tab.findChild<QPushButton*>("buttonChangeRoles")->isEnabled());
+        QVERIFY(tab.findChild<QPushButton*>("buttonAdd")->isEnabled());
+
+        // Reversed sort: the root row stays on top
+        table->sortItems(2, Qt::DescendingOrder);
+        QVERIFY(table->item(0, 2)->text().startsWith("Local root account"));
+        bool foundAlice = false;
+        for (int row = 0; row < table->rowCount(); ++row)
+        {
+            if (table->item(row, 2)->text() == "Alice")
+            {
+                foundAlice = true;
+                QCOMPARE(table->item(row, 3)->text(), QString("Pool Admin"));
+            }
+        }
+        QVERIFY(foundAlice);
+
+        // Expanding every row, the odd one included
+        for (int row = 1; row < table->rowCount(); ++row)
+            emit table->cellClicked(row, 0);
+
+        // No coordinator: waiting, nothing to click
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "lab"}, {"master", "OpaqueRef:missing"}});
+        tab.SetObject(QSharedPointer<XenObject>());
+        tab.SetObject(pool);
+        QCOMPARE(stack->currentWidget()->objectName(), QString("pageDisabled"));
+        QVERIFY(!joinLeave->isEnabled());
+    }
+
     void addUsersSplitsNamesLikeCsharp()
     {
         QCOMPARE(ResolvingSubjectsDialog::SplitNames(" alice, CORP\\bob;alice ;; carol "),

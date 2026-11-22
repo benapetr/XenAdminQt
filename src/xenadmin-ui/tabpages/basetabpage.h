@@ -66,7 +66,8 @@ class BaseTabPage : public QWidget
             BootOptions,
             Console,
             CvmConsole,
-            Search
+            Search,
+            Ad
         };
 
         explicit BaseTabPage(QWidget* parent = nullptr);

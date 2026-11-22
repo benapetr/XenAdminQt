@@ -85,6 +85,16 @@ QString AdPasswordPrompt::Password() const
     return this->ui->textBoxPassword->text();
 }
 
+void AdPasswordPrompt::SetDomain(const QString& domain)
+{
+    this->ui->textBoxDomain->setText(domain);
+}
+
+void AdPasswordPrompt::SetUsername(const QString& username)
+{
+    this->ui->textBoxUsername->setText(username);
+}
+
 void AdPasswordPrompt::updateOkButton()
 {
     // C# EnableOkButton: with the domain box shown all three are needed, otherwise the user name

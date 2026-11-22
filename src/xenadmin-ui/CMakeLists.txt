@@ -420,6 +420,8 @@ set(XENADMIN_SOURCES
     tabpages/gputabpage.cpp
     tabpages/gputabpage.ui
     tabpages/hatabpage.cpp
+    tabpages/adtabpage.cpp
+    tabpages/adtabpage.ui
     tabpages/hatabpage.ui
     tabpages/memorytabpage.cpp
     tabpages/memorytabpage.ui

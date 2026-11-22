@@ -60,6 +60,8 @@ class AdPasswordPrompt : public QDialog
         QString Domain() const;
         QString Username() const;
         QString Password() const;
+        void SetDomain(const QString& domain);
+        void SetUsername(const QString& username);
 
     private slots:
         void updateOkButton();

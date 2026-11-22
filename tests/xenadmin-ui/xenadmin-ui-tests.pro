@@ -23,6 +23,10 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.cpp \
+    ../../src/xenadmin-ui/tabpages/basetabpage.cpp \
+    ../../src/xenadmin-ui/tabpages/adtabpage.cpp \
+    ../../src/xenadmin-ui/dialogs/actionprogressdialog.cpp \
+    ../../src/xenadmin-ui/dialogs/adpasswordprompt.cpp \
     ../../src/xenadmin-ui/dialogs/roleselectiondialog.cpp \
     ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.cpp \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.cpp \
@@ -54,6 +58,10 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.h \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.h \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.h \
+    ../../src/xenadmin-ui/tabpages/basetabpage.h \
+    ../../src/xenadmin-ui/tabpages/adtabpage.h \
+    ../../src/xenadmin-ui/dialogs/actionprogressdialog.h \
+    ../../src/xenadmin-ui/dialogs/adpasswordprompt.h \
     ../../src/xenadmin-ui/dialogs/roleselectiondialog.h \
     ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.h \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.h \
@@ -74,6 +82,9 @@ FORMS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.ui \
+    ../../src/xenadmin-ui/tabpages/adtabpage.ui \
+    ../../src/xenadmin-ui/dialogs/actionprogressdialog.ui \
+    ../../src/xenadmin-ui/dialogs/adpasswordprompt.ui \
     ../../src/xenadmin-ui/dialogs/roleselectiondialog.ui \
     ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.ui \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.ui \

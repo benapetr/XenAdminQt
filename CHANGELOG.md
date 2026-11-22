@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+Active Directory Users tab for pools and standalone servers: join or leave a domain, add and remove users and groups, change their roles and log them out
 VM snapshot schedules: the VM Snapshot Schedules dialog with run history, the New Snapshot Schedule wizard, schedule properties and the Assign to Snapshot Schedule menu
 Manage vApps dialog, New vApp wizard and Assign to vApp menu; vApp properties now include the VMs and their startup sequence
 Alerts for servers with a missing or duplicate iSCSI IQN, with an Edit IQN link that opens the server's properties

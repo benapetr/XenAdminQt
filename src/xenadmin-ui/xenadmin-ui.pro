@@ -308,6 +308,7 @@ SOURCES += \
     tabpages/snapshotstabpage.cpp \
     tabpages/performancetabpage.cpp \
     tabpages/hatabpage.cpp \
+    tabpages/adtabpage.cpp \
     tabpages/memorytabpage.cpp \
     tabpages/searchtabpage.cpp \
     tabpages/notificationsbasepage.cpp \
@@ -654,6 +655,7 @@ HEADERS += \
     tabpages/snapshotstabpage.h \
     tabpages/performancetabpage.h \
     tabpages/hatabpage.h \
+    tabpages/adtabpage.h \
     tabpages/memorytabpage.h \
     tabpages/searchtabpage.h \
     tabpages/notificationsbasepage.h \
@@ -800,6 +802,7 @@ FORMS += \
     tabpages/snapshotstabpage.ui \
     tabpages/performancetabpage.ui \
     tabpages/hatabpage.ui \
+    tabpages/adtabpage.ui \
     tabpages/memorytabpage.ui \
     tabpages/vmstoragetabpage.ui \
     tabpages/alertsummarypage.ui \
