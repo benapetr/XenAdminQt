@@ -233,6 +233,9 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         bool m_autoDelete = false;
 
     private:
+        //! Adds the connection's pool (or the standalone server's pool-of-one); m_mutex must be held
+        void appendPoolOfOne(XenConnection* connection);
+
         static const int TASK_POLL_INTERVAL_MS = 900;
         static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
         static int totalActions;

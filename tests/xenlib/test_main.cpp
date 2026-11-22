@@ -50,6 +50,7 @@
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/iqnalert.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
 #include "xenlib/xen/hiddenobjects.h"
@@ -570,6 +571,25 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void appliesToIncludesThePool()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "pool"}, {"master", "OpaqueRef:host"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:host", QVariantMap{{"name_label", "host"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:vm", QVariantMap{{"name_label", "vm"}, {"resident_on", "OpaqueRef:host"}, {"power_state", "Running"}});
+
+        // C# ActionBase.SetAppliesTo: a server, or a VM with a home server, also covers the pool
+        DelegatedAsyncOperation hostOp(&connection, "t", "d", [](DelegatedAsyncOperation*) {});
+        hostOp.SetHost(cache->ResolveObject<Host>(XenObjectType::Host, "OpaqueRef:host"));
+        QVERIFY(hostOp.GetAppliesToList().contains("OpaqueRef:pool"));
+        QVERIFY(hostOp.GetAppliesToList().contains("OpaqueRef:host"));
+
+        DelegatedAsyncOperation vmOp(&connection, "t", "d", [](DelegatedAsyncOperation*) {});
+        vmOp.SetVM(cache->ResolveObject<VM>(XenObjectType::VM, "OpaqueRef:vm"));
+        QVERIFY(vmOp.GetAppliesToList().contains("OpaqueRef:pool"));
     }
 
     void sortComparesLikeCsharp()

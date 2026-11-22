@@ -34,6 +34,7 @@
 #include "vm.h"
 #include "sr.h"
 #include "failure.h"
+#include "../xencache.h"
 #include "xenlib/operations/operationmanager.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
@@ -343,9 +344,20 @@ void AsyncOperation::SetHost(QSharedPointer<Host> host)
             this->m_appliesTo.append(ref);
         }
 
-        // Set pool if in pool-of-one (matches C# ActionBase.Host setter)
-        // TODO: Check if host is in pool-of-one and set pool accordingly
+        // C# SetAppliesTo(host) also covers the server's pool (Helpers.GetPoolOfOne), so the
+        // task shows up when filtering events by the pool
+        this->appendPoolOfOne(host->GetConnection());
     }
+}
+
+void AsyncOperation::appendPoolOfOne(XenConnection* connection)
+{
+    // Caller holds m_mutex
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    const QString ref = pool ? pool->OpaqueRef() : QString();
+    if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
+        this->m_appliesTo.append(ref);
 }
 
 QSharedPointer<VM> AsyncOperation::GetVM() const
@@ -383,12 +395,14 @@ void AsyncOperation::SetVM(QSharedPointer<VM> vm)
             this->m_appliesTo.append(ref);
         }
 
-        // Add home host if available
+        // Add home host if available, and its pool (C# SetAppliesTo(vm.Home()))
         QString homeRef = vm->GetHomeRef();
         if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
         {
             this->m_appliesTo.append(homeRef);
         }
+        if (!homeRef.isEmpty())
+            this->appendPoolOfOne(vm->GetConnection());
     }
 }
 
@@ -419,6 +433,8 @@ void AsyncOperation::SetSR(QSharedPointer<SR> sr)
             {
                 this->m_appliesTo.append(homeRef);
             }
+            if (!homeRef.isEmpty())
+                this->appendPoolOfOne(sr->GetConnection());
         }
     }
 }
