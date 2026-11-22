@@ -35,6 +35,8 @@
 #include "../session.h"
 #include "../../xencache.h"
 #include "../pool.h"
+#include "../host.h"
+#include "connectionsmanager.h"
 #include "metricupdater.h"
 #include "../asyncoperation.h"
 #include "../../operations/operationmanager.h"
@@ -237,6 +239,22 @@ QString XenConnection::GetName() const
     QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
     const QString poolName = pool ? pool->GetName() : QString();
     return !poolName.isEmpty() ? poolName : this->GetHostname();
+}
+
+QString XenConnection::ConnectedElsewhere(const QString& hostname)
+{
+    for (XenConnection* connection : Xen::ConnectionsManager::instance()->GetAllConnections())
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+        if (!pool)
+            continue;
+
+        QSharedPointer<Host> coordinator = cache->ResolveObject<Host>(XenObjectType::Host, pool->GetMasterHostRef());
+        if (coordinator && coordinator->GetAddress() == hostname)
+            return pool->GetName();
+    }
+    return QString();
 }
 
 int XenConnection::GetPort() const

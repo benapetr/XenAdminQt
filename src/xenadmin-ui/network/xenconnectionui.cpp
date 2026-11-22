@@ -182,9 +182,21 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
                 : QString();
             if (!masterHost.isEmpty())
             {
-                const QString prompt = QString("This server is a pool member. Connect to the pool coordinator at %1 instead?")
-                                           .arg(masterHost);
-                if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
+                // C# XenConnectionUI: if we're already connected to that pool, say so instead
+                const QString oldHost = connection->GetName();
+                const QString poolName = XenConnection::ConnectedElsewhere(masterHost);
+                if (!poolName.isEmpty())
+                {
+                    const QString text = poolName == oldHost
+                        ? QObject::tr("You are already connected to '%1'").arg(poolName)
+                        : QObject::tr("Server '%1' is a member of pool '%2' and is already connected.").arg(oldHost, poolName);
+                    QMessageBox::information(owner, QObject::tr("Add New Server"), text);
+                    return;
+                }
+
+                const QString prompt = QObject::tr("Server '%1' is in a pool.  To connect to a pool, you must connect to the pool coordinator.\n"
+                                          "Do you want to connect to the pool coordinator '%2'?").arg(oldHost, masterHost);
+                if (QMessageBox::question(owner, QObject::tr("Connect to Server"), prompt) == QMessageBox::Yes)
                 {
                     connection->EndConnect(false, false);
                     connection->SetFindingNewCoordinator(false);

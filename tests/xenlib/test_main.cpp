@@ -573,6 +573,22 @@ private slots:
         QVERIFY(!without->CanHaveCloudConfigDrive());
     }
 
+    void connectedElsewhereFindsThePoolByCoordinatorAddress()
+    {
+        XenConnection* connection = new XenConnection(nullptr);
+        XenCache* cache = connection->GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "Production"}, {"master", "OpaqueRef:coord"}});
+        cache->Update(XenObjectType::Host, "OpaqueRef:coord", QVariantMap{{"name_label", "coord"}, {"address", "10.0.0.1"}});
+        Xen::ConnectionsManager::instance()->AddConnection(connection);
+
+        // C# XenConnection.ConnectedElsewhere: matched on the coordinator's address
+        QCOMPARE(XenConnection::ConnectedElsewhere("10.0.0.1"), QString("Production"));
+        QCOMPARE(XenConnection::ConnectedElsewhere("10.0.0.2"), QString());
+
+        Xen::ConnectionsManager::instance()->RemoveConnection(connection);
+        delete connection;
+    }
+
     void appliesToIncludesThePool()
     {
         XenConnection connection;

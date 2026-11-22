@@ -83,6 +83,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Connecting to a pool member whose pool is already connected now says so instead of offering to connect to the coordinator, and the offer uses XenCenter's wording
 Connection errors no longer report a wrong password when the server gave no reason, no longer repeat an earlier attempt's reason, and declining to connect to the pool coordinator shows no extra error
 Tasks on a server, or on its VMs and storage, now show when filtering events by the server's pool
 The console's Enable Remote Desktop button now asks the VM to turn Remote Desktop on

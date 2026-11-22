@@ -80,6 +80,13 @@ class XENLIB_EXPORT XenConnection : public QObject
         //! C# XenConnection.Name, minus the user-set friendly name kept in the UI's connection profile.
         QString GetName() const;
 
+        /**
+         * The name of the connected pool whose coordinator has the address \a hostname, or an
+         * empty string. Used when a server turns out to be a pool member, to tell the user
+         * they're already connected to its pool. C# XenConnection.ConnectedElsewhere
+         */
+        static QString ConnectedElsewhere(const QString& hostname);
+
         int GetPort() const;
         QString GetUsername() const;
         QString GetPassword() const;
