@@ -84,6 +84,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+Adding a server without Active Directory to a pool that uses it now asks for domain credentials and joins the server to the pool's domain, as XenCenter does
 Renaming a vApp or changing its description in its properties is saved again
 Connecting to a pool member whose pool is already connected now says so instead of offering to connect to the coordinator, and the offer uses XenCenter's wording
 Connection errors no longer report a wrong password when the server gave no reason, no longer repeat an earlier attempt's reason, and declining to connect to the pool coordinator shows no extra error

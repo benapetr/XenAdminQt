@@ -192,6 +192,8 @@ set(XENADMIN_SOURCES
     dialogs/addvgpudialog.cpp
     dialogs/attachvirtualdiskdialog.cpp
     dialogs/attachusbdialog.cpp
+    dialogs/adpasswordprompt.cpp
+    dialogs/adpasswordprompt.ui
     dialogs/newvmappliancewizard.cpp
     dialogs/vmappliancesdialog.cpp
     dialogs/newpolicywizard.cpp

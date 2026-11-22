@@ -29,7 +29,10 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../pooljoinrules.h"
+#include "../ad/adactions.h"
 #include "../../pool.h"
+#include "../../host.h"
 #include "../../sr.h"
 #include "../../xenobject.h"
 #include "../../../xencache.h"
@@ -90,6 +93,9 @@ void AddHostToPoolAction::run()
             throw std::runtime_error("Missing pool connection credentials");
         }
 
+        // C# FixAd: a server without AD joining a pool that uses it is joined to the domain first
+        this->fixAd();
+
         this->SetPercentComplete(5);
         this->SetDescription("Joining pool...");
 
@@ -108,9 +114,7 @@ void AddHostToPoolAction::run()
         // database is reset) and clears the pool's default SRs if the default isn't shared
         this->clearNonSharedSrs();
 
-        // Not ported from C#: FixLicensing (XCP-ng has no licensing) and FixAd, which needs an
-        // Active Directory credentials prompt and EnableAdAction. Without it a join between
-        // servers with different AD configurations fails in xapi with a mismatch error.
+        // Not ported from C#: FixLicensing (XCP-ng has no licensing).
         // Removing the joined server's own connection is done by AddHostToPoolCommand once
         // this action is gone (C# OnCompleted: ConnectionsManager.ClearCacheAndRemoveConnection).
 
@@ -155,4 +159,36 @@ void AddHostToPoolAction::clearNonSharedSrs()
     }
     session->Logout();
     delete session;
+}
+
+void AddHostToPoolAction::fixAd()
+{
+    // C# PoolAbstractAction.FixAd for the hosts PoolJoinRules.CompatibleAdConfig rejects: the
+    // joining server has no AD and the pool does, so the server joins the pool's domain
+    XenCache* poolCache = this->m_poolConnection ? this->m_poolConnection->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = poolCache ? poolCache->GetPoolOfOne() : QSharedPointer<Pool>();
+    QSharedPointer<Host> coordinator = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    if (!coordinator || !this->m_joiningHost || PoolJoinRules::CompatibleAdConfig(this->m_joiningHost, coordinator, false))
+        return;
+    if (!this->m_adPrompt)
+        return;  // xapi will refuse the join with its AD mismatch error
+
+    const QString domain = coordinator->ExternalAuthServiceName();
+    while (true)
+    {
+        QString user, password;
+        if (!this->m_adPrompt(domain, &user, &password))
+            throw std::runtime_error(tr("Canceled by user").toStdString());
+
+        try
+        {
+            this->SetDescription(tr("Enabling Active Directory Authentication"));
+            EnableAdAction::Enable(this->GetSession(), this->m_hostConnection, domain, user, password);
+            return;
+        } catch (const EnableAdAction::CredentialsFailure&)
+        {
+            // C#: ask again until the credentials work or the user cancels
+            continue;
+        }
+    }
 }

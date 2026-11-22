@@ -89,6 +89,12 @@ namespace XenAPI
              */
             static void set_crash_dump_SR(Session* session, const QString& pool, const QString& sr);
 
+            //! pool.enable_external_auth: joins every server to the directory (C# EnableAdAction)
+            static void enable_external_auth(Session* session, const QString& pool, const QVariantMap& config,
+                                             const QString& serviceName, const QString& authType);
+            //! pool.disable_external_auth; \a config may hold "user"/"pass" to disable the machine account
+            static void disable_external_auth(Session* session, const QString& pool, const QVariantMap& config);
+
             /**
              * @brief Designate new pool master/coordinator (async)
              * @param session Active XenSession

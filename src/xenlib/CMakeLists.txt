@@ -137,6 +137,7 @@ set(XENLIB_SOURCES
     xen/actions/vm/startapplianceaction.cpp
     xen/actions/vm/vmapplianceactions.cpp
     xen/actions/vm/vmssactions.cpp
+    xen/actions/ad/adactions.cpp
     xen/actions/vm/vmcloneaction.cpp
     xen/actions/vm/vmcopyaction.cpp
     xen/actions/vm/vmcrosspoolmigrateaction.cpp
@@ -205,6 +206,7 @@ set(XENLIB_SOURCES
     xen/poolupdate.cpp
     xen/pusb.cpp
     xen/role.cpp
+    xen/subject.cpp
     xensearch/common.cpp
     xensearch/group.cpp
     xensearch/grouping.cpp
@@ -249,6 +251,8 @@ set(XENLIB_SOURCES
     xen/xenapi/xenapi_Cluster_host.cpp
     xen/xenapi/xenapi_Cluster.cpp
     xen/xenapi/xenapi_VMSS.cpp
+    xen/xenapi/xenapi_Subject.cpp
+    xen/xenapi/xenapi_Auth.cpp
     xen/xenapi/xenapi_GPU_group.cpp
     xen/xenapi/xenapi_Helper.cpp
     xen/xenapi/xenapi_Host.cpp

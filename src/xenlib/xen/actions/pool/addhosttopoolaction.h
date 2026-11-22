@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include <QString>
+#include <functional>
 
 class XenConnection;
 class Host;
@@ -59,13 +60,26 @@ class AddHostToPoolAction : public AsyncOperation
          * @param joiningHost Host object being joined to pool
          * @param parent Parent QObject
          */
+        /**
+         * Asks for Active Directory credentials to join the joining server to \a domain, the
+         * pool's domain. Called on the worker thread; return false if the user cancels.
+         * C# PoolAbstractAction.GetAdCredentials
+         */
+        using AdCredentialsPrompt = std::function<bool(const QString& domain, QString* user, QString* password)>;
+
         AddHostToPoolAction(XenConnection* poolConnection, XenConnection* hostConnection, QSharedPointer<Host> joiningHost, bool auto_delete, QObject* parent = nullptr);
+
+        //! Without a prompt, a server needing AD configuration fails to join (xapi rejects it)
+        void SetAdCredentialsPrompt(AdCredentialsPrompt prompt) { this->m_adPrompt = std::move(prompt); }
 
     protected:
         void run() override;
 
     private:
         void clearNonSharedSrs();
+        void fixAd();
+
+        AdCredentialsPrompt m_adPrompt;
 
         XenConnection* m_poolConnection;
         XenConnection* m_hostConnection;

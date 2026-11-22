@@ -51,6 +51,7 @@
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/iqnalert.h"
 #include "xenlib/xen/vmss.h"
+#include "xenlib/xen/subject.h"
 #include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
@@ -572,6 +573,37 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void subjectsAreCachedAndDescribed()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        // Event classes are lower-case names; "subject" must map to the Subject type
+        QCOMPARE(XenObject::TypeFromString("subject"), XenObjectType::Subject);
+        cache->Update(XenObjectType::Subject, "OpaqueRef:s", QVariantMap{
+            {"subject_identifier", "S-1-5-21-1"},
+            {"roles", QVariantList{"OpaqueRef:role"}},
+            {"other_config", QVariantMap{{"subject-name", "CORP\\admins"}, {"subject-displayname", "Admins"},
+                                         {"subject-is-group", "True"}, {"subject-sid", "S-1-5-21-1"},
+                                         {"subject-account-disabled", "false"}}}});
+
+        QSharedPointer<Subject> subject = Subject::GetBySID(&connection, "S-1-5-21-1");
+        QVERIFY(subject);
+        QCOMPARE(subject->GetName(), QString("CORP\\admins"));
+        QCOMPARE(subject->DisplayName(), QString("Admins"));
+        QVERIFY(subject->IsGroup());  // C# bool.TryParse is case-insensitive
+        QCOMPARE(subject->RoleRefs(), QStringList({"OpaqueRef:role"}));
+        QVERIFY(!Subject::GetBySID(&connection, "S-1-5-21-2"));
+
+        // C# Subject.ExtractKvpInfo: headings, a blank line, then friendly key/value pairs
+        const auto kvp = Subject::ExtractKvpInfo(subject->GetOtherConfig());
+        QCOMPARE(kvp.size(), 4);
+        QCOMPARE(kvp.at(0).first, QString("Admins"));
+        QCOMPARE(kvp.at(1).first, QString("CORP\\admins"));
+        QCOMPARE(kvp.at(2), qMakePair(QString(), QString()));
+        QVERIFY(kvp.at(3).first.endsWith(": "));
+        QCOMPARE(kvp.at(3).second, QString("No"));
     }
 
     void vmssNextRunTimesMatchCsharp()

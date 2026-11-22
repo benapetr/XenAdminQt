@@ -65,6 +65,7 @@
 #include "xen/pifmetrics.h"
 #include "xen/pool.h"
 #include "xen/role.h"
+#include "xen/subject.h"
 #include "xen/sr.h"
 #include "xen/task.h"
 #include "xen/tunnel.h"
@@ -533,6 +534,7 @@ QStringList XenCache::GetKnownTypes() const
         XenCache::TypeToCacheString(XenObjectType::Pool),
         XenCache::TypeToCacheString(XenObjectType::Role),
         XenCache::TypeToCacheString(XenObjectType::SR),
+        XenCache::TypeToCacheString(XenObjectType::Subject),
         XenCache::TypeToCacheString(XenObjectType::Task),
         XenCache::TypeToCacheString(XenObjectType::Tunnel),
         XenCache::TypeToCacheString(XenObjectType::VBD),
@@ -609,6 +611,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(XenObjectType type, cons
         return QSharedPointer<XenObject>(new Role(this->m_connection, ref));
     if (type == XenObjectType::SR)
         return QSharedPointer<XenObject>(new SR(this->m_connection, ref));
+    if (type == XenObjectType::Subject)
+        return QSharedPointer<XenObject>(new Subject(this->m_connection, ref));
     if (type == XenObjectType::Task)
         return QSharedPointer<XenObject>(new Task(this->m_connection, ref));
     if (type == XenObjectType::Tunnel)

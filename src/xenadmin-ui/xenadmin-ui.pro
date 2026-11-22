@@ -67,6 +67,7 @@ SOURCES += \
     dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
     dialogs/attachusbdialog.cpp \
+    dialogs/adpasswordprompt.cpp \
     dialogs/newvmappliancewizard.cpp \
     dialogs/vmappliancesdialog.cpp \
     dialogs/newpolicywizard.cpp \
@@ -401,6 +402,7 @@ HEADERS += \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
     dialogs/attachusbdialog.h \
+    dialogs/adpasswordprompt.h \
     dialogs/newvmappliancewizard.h \
     dialogs/vmappliancesdialog.h \
     dialogs/newpolicywizard.h \
@@ -713,6 +715,7 @@ FORMS += \
     dialogs/vdipropertiesdialog.ui \
     dialogs/attachvirtualdiskdialog.ui \
     dialogs/attachusbdialog.ui \
+    dialogs/adpasswordprompt.ui \
     dialogs/newvmappliancewizard.ui \
     dialogs/vmappliancesdialog.ui \
     dialogs/newpolicywizard.ui \

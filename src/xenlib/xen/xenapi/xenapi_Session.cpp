@@ -115,4 +115,18 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Void method
     }
 
+    void SessionAPI::logout_subject_identifier(Session* session, const QString& subjectIdentifier)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << subjectIdentifier;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("session.logout_subject_identifier", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
 } // namespace XenAPI

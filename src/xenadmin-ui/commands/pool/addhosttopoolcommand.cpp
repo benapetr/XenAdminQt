@@ -38,6 +38,7 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 #include "../host/removehostcommand.h"
+#include "../../dialogs/adpasswordprompt.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include <memory>
 
@@ -162,6 +163,19 @@ void AddHostToPoolCommand::Run()
             continue;
 
         AddHostToPoolAction* action = new AddHostToPoolAction(poolConnection, host->GetConnection(), host, true, nullptr);
+        // C# AddHostToPoolCommand.GetAdPrompt: ask on the GUI thread while the action waits
+        action->SetAdCredentialsPrompt([](const QString& domain, QString* user, QString* password)
+        {
+            bool accepted = false;
+            QMetaObject::invokeMethod(qApp, [&]()
+            {
+                AdPasswordPrompt prompt(true, domain, MainWindow::instance());
+                accepted = prompt.exec() == QDialog::Accepted;
+                *user = prompt.Username();
+                *password = prompt.Password();
+            }, Qt::BlockingQueuedConnection);
+            return accepted;
+        });
 
         // C#: hide the standalone server while it joins and show it again when the action
         // ends, whether it succeeded or not (the joined server reappears under the pool)
@@ -326,8 +340,17 @@ bool AddHostToPoolCommand::getPermissionForAdConfig(QSharedPointer<Host> coordin
     if (affectedHosts.isEmpty())
         return true;
 
-    const QString message = tr("Active Directory configuration will be updated for:\n%1")
-        .arg(buildHostNameList(affectedHosts));
+    // C# ADD_HOST_TO_POOL_AD_MESSAGE(_MULTIPLE)
+    QStringList names;
+    for (const QSharedPointer<Host>& host : affectedHosts)
+        names.append(host->GetName());
+    const QString message = affectedHosts.size() == 1
+        ? tr("You are attempting to add the server '%1' to a pool that is configured to use AD authentication. "
+             "All pool members must use the same authentication method.\n\n"
+             "Do you want to enable AD authentication on your server and join it to the same domain as the pool?").arg(names.first())
+        : tr("You are attempting to add the following servers to a pool that is configured to use AD authentication:\n\n%1\n\n"
+             "All pool members must use the same authentication method. "
+             "Do you want to enable AD authentication on these servers and join them to the same domain as the pool?").arg(names.join("\n"));
     return WarningDialog::ShowYesNo(message, tr("Active Directory"), MainWindow::instance()) == WarningDialog::Result::Yes;
 }
 

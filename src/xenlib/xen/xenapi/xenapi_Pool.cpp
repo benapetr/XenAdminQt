@@ -110,6 +110,35 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
+    void Pool::enable_external_auth(Session* session, const QString& pool, const QVariantMap& config,
+                                    const QString& serviceName, const QString& authType)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << pool << config << serviceName << authType;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("pool.enable_external_auth", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
+    void Pool::disable_external_auth(Session* session, const QString& pool, const QVariantMap& config)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << pool << config;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("pool.disable_external_auth", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     QString Pool::async_designate_new_master(Session* session, const QString& host)
     {
         if (!session || !session->IsLoggedIn())

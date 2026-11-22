@@ -70,6 +70,7 @@ XenObjectType XenObject::TypeFromString(const QString &name)
     if (n == "pool_patch" || n == "pool_patches") return XenObjectType::PoolPatch;
     if (n == "pool_update" || n == "pool_updates") return XenObjectType::PoolUpdate;
     if (n == "role" || n == "roles") return XenObjectType::Role;
+    if (n == "subject" || n == "subjects") return XenObjectType::Subject;
     if (n == "sm" || n == "sms") return XenObjectType::SM;
     if (n == "sr" || n == "srs") return XenObjectType::SR;
     if (n == "task" || n == "tasks") return XenObjectType::Task;
@@ -130,6 +131,7 @@ QString XenObject::TypeToString(XenObjectType type)
     case XenObjectType::PoolPatch: return "pool_patch";
     case XenObjectType::PoolUpdate: return "pool_update";
     case XenObjectType::Role: return "role";
+    case XenObjectType::Subject: return "subject";
     case XenObjectType::SM: return "SM";
     case XenObjectType::SR: return "sr";
     case XenObjectType::Task: return "task";

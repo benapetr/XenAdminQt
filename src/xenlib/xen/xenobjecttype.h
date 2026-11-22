@@ -84,7 +84,8 @@ enum class XenObjectType
     VMSS,
     VTPM,
     VUSB,
-    PUSB
+    PUSB,
+    Subject
 };
 
 // Hash function for XenObjectType to support QSet/QHash in both Qt5 and Qt6
@@ -127,6 +128,7 @@ inline XenObjectType XenObjectTypeFromString(const QString& name)
     if (n == "vm_appliance")    return XenObjectType::VMAppliance;
     if (n == "sm")              return XenObjectType::SM;
     if (n == "role")            return XenObjectType::Role;
+    if (n == "subject")         return XenObjectType::Subject;
     if (n == "user")            return XenObjectType::User;
     if (n == "bond")            return XenObjectType::Bond;
     if (n == "vlan")            return XenObjectType::VLAN;

@@ -97,6 +97,9 @@ namespace XenAPI
              * Matches C# Session.change_password()
              */
             static void change_password(Session* session, const QString& oldPassword, const QString& newPassword);
+
+            //! session.logout_subject_identifier: ends every session of a directory user or group
+            static void logout_subject_identifier(Session* session, const QString& subjectIdentifier);
     };
 
 } // namespace XenAPI

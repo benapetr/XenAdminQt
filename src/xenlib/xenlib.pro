@@ -71,6 +71,8 @@ HEADERS += \
     xen/xenapi/xenapi_Cluster_host.h \
     xen/xenapi/xenapi_Cluster.h \
     xen/xenapi/xenapi_VMSS.h \
+    xen/xenapi/xenapi_Subject.h \
+    xen/xenapi/xenapi_Auth.h \
     xen/xenapi/xenapi_Network.h \
     xen/xenapi/xenapi_VLAN.h \
     xen/xenapi/xenapi_Tunnel.h \
@@ -177,6 +179,7 @@ HEADERS += \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/vmapplianceactions.h \
     xen/actions/vm/vmssactions.h \
+    xen/actions/ad/adactions.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/haunprotectvmaction.h \
     xen/actions/vm/hvmbootaction.h \
@@ -324,6 +327,7 @@ HEADERS += \
     xen/usbgroup.h \
     xen/sm.h \
     xen/role.h \
+    xen/subject.h \
     xen/user.h \
     xen/vbdmetrics.h \
     otherconfig/otherconfigandtagswatcher.h \
@@ -362,6 +366,8 @@ SOURCES += \
     xen/xenapi/xenapi_Cluster_host.cpp \
     xen/xenapi/xenapi_Cluster.cpp \
     xen/xenapi/xenapi_VMSS.cpp \
+    xen/xenapi/xenapi_Subject.cpp \
+    xen/xenapi/xenapi_Auth.cpp \
     xen/xenapi/xenapi_Network.cpp \
     xen/xenapi/xenapi_VLAN.cpp \
     xen/xenapi/xenapi_Tunnel.cpp \
@@ -456,6 +462,7 @@ SOURCES += \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/vmapplianceactions.cpp \
     xen/actions/vm/vmssactions.cpp \
+    xen/actions/ad/adactions.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/haunprotectvmaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
@@ -601,6 +608,7 @@ SOURCES += \
     xen/usbgroup.cpp \
     xen/sm.cpp \
     xen/role.cpp \
+    xen/subject.cpp \
     xen/user.cpp \
     xen/vbdmetrics.cpp \
     xen/vmguestmetrics.cpp \
