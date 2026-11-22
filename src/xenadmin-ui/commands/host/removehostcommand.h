@@ -59,6 +59,13 @@ class RemoveHostCommand : public HostCommand
         void Run() override;
         QString MenuText() const override;
 
+        /**
+         * Disconnects a connection, removes it and its saved profile and saves the server list.
+         * Doesn't refresh the tree or show anything. Also used when a server joins a pool
+         * (C# ConnectionsManager.ClearCacheAndRemoveConnection).
+         */
+        static void ForgetConnection(XenConnection* connection);
+
     private:
         /**
          * @brief Check if host can be removed

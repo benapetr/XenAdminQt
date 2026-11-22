@@ -29,6 +29,9 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../pool.h"
+#include "../../sr.h"
+#include "../../xenobject.h"
 #include "../../../xencache.h"
 #include <stdexcept>
 
@@ -101,11 +104,15 @@ void AddHostToPoolAction::run()
         this->SetPercentComplete(90);
         this->SetDescription("Join complete");
 
-        // TODO: In full implementation:
-        // 1. Create new session to coordinator and clear non-shared SRs on the joined host
-        // 2. Handle license compatibility (PoolJoinRules.FreeHostPaidCoordinator)
-        // 3. Synchronize AD configuration (FixAd)
-        // 4. Remove the host's connection from ConnectionsManager
+        // C# then takes a session on the pool (the joining server's own session dies as its
+        // database is reset) and clears the pool's default SRs if the default isn't shared
+        this->clearNonSharedSrs();
+
+        // Not ported from C#: FixLicensing (XCP-ng has no licensing) and FixAd, which needs an
+        // Active Directory credentials prompt and EnableAdAction. Without it a join between
+        // servers with different AD configurations fails in xapi with a mismatch error.
+        // Removing the joined server's own connection is done by AddHostToPoolCommand once
+        // this action is gone (C# OnCompleted: ConnectionsManager.ClearCacheAndRemoveConnection).
 
         this->SetDescription("Host added to pool successfully");
 
@@ -119,4 +126,33 @@ void AddHostToPoolAction::run()
             setError(QString("Failed to add host to pool: %1").arg(e.what()));
         }
     }
+}
+
+void AddHostToPoolAction::clearNonSharedSrs()
+{
+    // C# PoolAbstractAction.ClearNonSharedSrs: a pool whose default SR is local storage is a
+    // configuration the GUI doesn't allow, so clear the default, crash dump and suspend SRs
+    XenCache* cache = this->m_poolConnection ? this->m_poolConnection->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->GetPoolOfOne() : QSharedPointer<Pool>();
+    QSharedPointer<SR> defaultSr = pool ? pool->GetDefaultSR() : QSharedPointer<SR>();
+    if (!defaultSr || defaultSr->IsShared())
+        return;
+
+    XenAPI::Session* session = XenAPI::Session::DuplicateSession(this->m_poolConnection->GetSession(), nullptr);
+    if (!session)
+        throw std::runtime_error("Could not open a session on the pool");
+
+    try
+    {
+        XenAPI::Pool::set_default_SR(session, pool->OpaqueRef(), XENOBJECT_NULL);
+        XenAPI::Pool::set_crash_dump_SR(session, pool->OpaqueRef(), XENOBJECT_NULL);
+        XenAPI::Pool::set_suspend_image_SR(session, pool->OpaqueRef(), XENOBJECT_NULL);
+    } catch (...)
+    {
+        session->Logout();
+        delete session;
+        throw;
+    }
+    session->Logout();
+    delete session;
 }

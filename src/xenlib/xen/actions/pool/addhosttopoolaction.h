@@ -65,6 +65,8 @@ class AddHostToPoolAction : public AsyncOperation
         void run() override;
 
     private:
+        void clearNonSharedSrs();
+
         XenConnection* m_poolConnection;
         XenConnection* m_hostConnection;
         QSharedPointer<Host> m_joiningHost;

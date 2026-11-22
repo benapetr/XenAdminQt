@@ -37,6 +37,9 @@
 #include "../../dialogs/warningdialogs/warningdialog.h"
 #include <QCoreApplication>
 #include <QMessageBox>
+#include "../host/removehostcommand.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include <memory>
 
 namespace
 {
@@ -172,6 +175,25 @@ void AddHostToPoolCommand::Run()
                 HiddenObjects::Show(hostRef);
             }
         }, Qt::QueuedConnection);
+
+        // C# OnCompleted: once joined, the server's own connection goes away
+        // (ConnectionsManager.ClearCacheAndRemoveConnection). Wait until the action is gone,
+        // as it still uses that connection while it finishes.
+        XenConnection* hostConnection = host->GetConnection();
+        auto joined = std::make_shared<bool>(false);
+        connect(action, &AsyncOperation::completed, QCoreApplication::instance(), [action, joined]()
+        {
+            *joined = !action->IsFailed() && !action->IsCancelled();
+        }, Qt::DirectConnection);
+        connect(action, &QObject::destroyed, QCoreApplication::instance(), [hostConnection, joined]()
+        {
+            if (!*joined || !Xen::ConnectionsManager::instance()->GetAllConnections().contains(hostConnection))
+                return;
+            RemoveHostCommand::ForgetConnection(hostConnection);
+            if (MainWindow::instance())
+                MainWindow::instance()->RefreshServerTree();
+        });
+
         actions.append(action);
 
         HiddenObjects::Hide(hostRef);
