@@ -51,6 +51,8 @@
 #include "../commands/host/reboothostcommand.h"
 #include "../mainwindow.h"
 #include "../settingsmanager.h"
+#include "xenlib/xen/actions/delegatedasyncoperation.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
 #include <QDebug>
 #include <QMenu>
 #include <QToolButton>
@@ -794,27 +796,25 @@ void VNCTabView::onToggleConsoleButtonClicked()
             // C#: if (CanEnableRDP()) { show dialog to enable RDP }
             if (canEnableRDP())
             {
-                QMessageBox msgBox(this);
-                msgBox.setWindowTitle(tr("Enable RDP"));
-                msgBox.setText(tr("Do you want to enable RDP on this VM?\n\n"
-                                  "This will allow you to connect using the Remote Desktop Protocol."));
-                msgBox.setIcon(QMessageBox::Question);
-                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-                msgBox.setDefaultButton(QMessageBox::Yes);
+                const int answer = QMessageBox::question(this, tr("Enable Remote Desktop"),
+                    tr("Would you like to configure this VM to accept Remote Desktop connections, and then connect to it over Remote Desktop?"),
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 
-                if (msgBox.exec() == QMessageBox::Yes)
+                if (answer == QMessageBox::Yes)
                 {
-                    qDebug() << "VNCTabView: Requesting RDP enable via guest-agent-operation";
-
-                    // C#: VM.call_plugin(session, source.opaque_ref, "guest-agent-operation", "request-rdp-on", _arguments);
-                    // TODO: Implement when XenRpcAPI has call_plugin method
-                    // For now, just log that we would enable RDP
+                    // C#: VM.call_plugin(session, source.opaque_ref, "guest-agent-operation", "request-rdp-on", _arguments)
+                    // C# makes the call on the GUI thread; run it as an action instead so the console
+                    // doesn't freeze, and a failure shows in Events
+                    const QString vmRef = this->m_vm->OpaqueRef();
+                    auto* op = new DelegatedAsyncOperation(this->m_vm->GetConnection(),
+                        tr("Enable Remote Desktop on '%1'").arg(this->m_vm->GetName()),
+                        tr("Requesting Remote Desktop..."),
+                        [vmRef](DelegatedAsyncOperation* self)
+                        {
+                            XenAPI::VM::call_plugin(self->GetSession(), vmRef, "guest-agent-operation", "request-rdp-on", QVariantMap());
+                        });
+                    op->RunAsync(true);
                     this->m_tryToConnectRDP = true;
-
-                    QMessageBox::information(this, tr("RDP Enable"),
-                                             tr("RDP enable request sent.\n\n"
-                                                "Note: Full RDP enable via guest-agent-operation not yet implemented.\n"
-                                                "The VM must have RDP already enabled or XenServer Tools installed."));
                 }
             }
 

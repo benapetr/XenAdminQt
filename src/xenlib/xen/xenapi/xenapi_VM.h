@@ -623,6 +623,10 @@ namespace XenAPI
              */
             static void set_start_delay(Session* session, const QString& vm, qint64 value);
 
+            //! VM.call_plugin: calls a function of a guest plugin (e.g. guest-agent-operation)
+            static QString call_plugin(Session* session, const QString& vm, const QString& plugin,
+                                       const QString& function, const QVariantMap& args);
+
             //! VM.set_appliance; an empty ref removes the VM from its vApp
             static void set_appliance(Session* session, const QString& vm, const QString& appliance);
 

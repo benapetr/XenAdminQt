@@ -1064,6 +1064,21 @@ namespace XenAPI
         session->SendApiRequest(request);
     }
 
+    QString VM::call_plugin(Session* session, const QString& vm, const QString& plugin,
+                            const QString& function, const QVariantMap& args)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm << plugin << function << args;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.call_plugin", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
     void VM::set_appliance(Session* session, const QString& vm, const QString& appliance)
     {
         if (!session || !session->IsLoggedIn())

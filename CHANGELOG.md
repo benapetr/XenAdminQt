@@ -83,6 +83,7 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+The console's Enable Remote Desktop button now asks the VM to turn Remote Desktop on
 After a server joins a pool its separate connection is removed, and the pool's default storage is cleared if it was local storage, as XenCenter does
 Search results sort by the chosen column's value, as in XenCenter, instead of by cell text, and the order applies to groups too; searches over several pools no longer list results once per pool
 Rebooting servers now warns when a server runs a storage virtual appliance, and a failed reboot is reported in Events instead of a separate message box
