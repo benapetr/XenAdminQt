@@ -28,7 +28,7 @@
 #include "vmappliancepropertiesdialog.h"
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
-#include "../settingspanels/vmappliancevmspage.h"
+#include "../settingspanels/vmgroupvmspage.h"
 #include "../settingspanels/vmappliancestartorderpage.h"
 #include "ui_verticallytabbeddialog.h"
 #include "../widgets/verticaltabwidget.h"
@@ -47,7 +47,7 @@ void VMAppliancePropertiesDialog::build()
     // C# PropertiesDialog for a VM_appliance: General, Custom Fields, VMs, VM Startup Sequence
     this->showTab(new GeneralEditPage());
     this->showTab(new CustomFieldsDisplayPage());
-    this->m_vmsPage = new VMApplianceVMsPage();
+    this->m_vmsPage = new VMGroupVMsPage(VMGroup::Kind::VMAppliance);
     this->showTab(this->m_vmsPage);
     this->m_startOrderPage = new VMApplianceStartOrderPage();
     this->showTab(this->m_startOrderPage);

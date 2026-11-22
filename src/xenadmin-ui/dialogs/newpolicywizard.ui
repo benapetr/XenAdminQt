@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NewPolicyWizard</class>
+ <widget class="QWizard" name="NewPolicyWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>820</width>
+    <height>560</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>New snapshot schedule</string>
+  </property>
+  <widget class="QWizardPage" name="pageName">
+   <property name="title">
+    <string>What do you want to call this schedule?</string>
+   </property>
+   <layout class="QVBoxLayout" name="nameLayout">
+    <item>
+     <widget class="QLabel" name="labelWizard">
+      <property name="text">
+       <string>Use this wizard to define a schedule that will run automatic snapshot jobs for your VMs.
+
+To begin, enter a name for the schedule and, optionally, a description, then click Next.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QFormLayout" name="nameForm">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelName">
+        <property name="text">
+         <string>Schedule na&amp;me:</string>
+        </property>
+        <property name="buddy">
+         <cstring>textName</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="textName"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelDescription">
+        <property name="text">
+         <string>&amp;Description:</string>
+        </property>
+        <property name="buddy">
+         <cstring>textDescription</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPlainTextEdit" name="textDescription">
+        <property name="tabChangesFocus">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageVMs">
+   <property name="title">
+    <string>Select the VMs that you want to schedule snapshots for</string>
+   </property>
+   <layout class="QVBoxLayout" name="vmsLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageType">
+   <property name="title">
+    <string>What type of snapshot do you want to use for scheduled snapshots?</string>
+   </property>
+   <layout class="QVBoxLayout" name="typeLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageFrequency">
+   <property name="title">
+    <string>When do you want snapshots to be taken?</string>
+   </property>
+   <layout class="QVBoxLayout" name="frequencyLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Create the new schedule</string>
+   </property>
+   <layout class="QVBoxLayout" name="finishLayout">
+    <item>
+     <widget class="QLabel" name="labelFinish">
+      <property name="text">
+       <string>Review the new snapshot schedule and click Previous if you want to change any settings or Finish to create the new schedule.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="textSummary">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="checkBoxRunNow">
+      <property name="text">
+       <string>&amp;Run the new snapshot schedule job when I click Finish</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -54,6 +54,7 @@ SOURCES += \
     dialogs/storagepropertiesdialog.cpp \
     dialogs/networkpropertiesdialog.cpp \
     dialogs/vmappliancepropertiesdialog.cpp \
+    dialogs/vmsspropertiesdialog.cpp \
     dialogs/networkingpropertiesdialog.cpp \
     dialogs/networkingpropertiespage.cpp \
     dialogs/bondpropertiesdialog.cpp \
@@ -68,6 +69,8 @@ SOURCES += \
     dialogs/attachusbdialog.cpp \
     dialogs/newvmappliancewizard.cpp \
     dialogs/vmappliancesdialog.cpp \
+    dialogs/newpolicywizard.cpp \
+    dialogs/scheduledsnapshotsdialog.cpp \
     dialogs/newvirtualdiskdialog.cpp \
     dialogs/movevirtualdiskdialog.cpp \
     dialogs/migratevirtualdiskdialog.cpp \
@@ -144,7 +147,9 @@ SOURCES += \
     settingspanels/securityeditpage.cpp \
     settingspanels/srreadcachingeditpage.cpp \
     settingspanels/usbeditpage.cpp \
-    settingspanels/vmappliancevmspage.cpp \
+    settingspanels/vmgroupvmspage.cpp \
+    settingspanels/policysnapshottypepage.cpp \
+    settingspanels/policysnapshotfrequencypage.cpp \
     settingspanels/vmappliancestartorderpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
@@ -223,7 +228,8 @@ SOURCES += \
     commands/vm/vappshutdowncommand.cpp \
     commands/vm/vappexportcommand.cpp \
     commands/vm/vapppropertiescommand.cpp \
-    commands/vm/assigntovappmenu.cpp \
+    commands/vm/assigntogroupmenu.cpp \
+    commands/vm/vmgroup.cpp \
     commands/vm/exportsnapshotastemplatecommand.cpp \
     commands/vm/newvmfromsnapshotcommand.cpp \
     commands/vm/newtemplatefromsnapshotcommand.cpp \
@@ -382,6 +388,7 @@ HEADERS += \
     dialogs/storagepropertiesdialog.h \
     dialogs/networkpropertiesdialog.h \
     dialogs/vmappliancepropertiesdialog.h \
+    dialogs/vmsspropertiesdialog.h \
     dialogs/networkingpropertiesdialog.h \
     dialogs/networkingpropertiespage.h \
     dialogs/bondpropertiesdialog.h \
@@ -396,6 +403,8 @@ HEADERS += \
     dialogs/attachusbdialog.h \
     dialogs/newvmappliancewizard.h \
     dialogs/vmappliancesdialog.h \
+    dialogs/newpolicywizard.h \
+    dialogs/scheduledsnapshotsdialog.h \
     widgets/isodropdownbox.h \
     widgets/cdchanger.h \
     dialogs/newvirtualdiskdialog.h \
@@ -481,7 +490,9 @@ HEADERS += \
     settingspanels/securityeditpage.h \
     settingspanels/srreadcachingeditpage.h \
     settingspanels/usbeditpage.h \
-    settingspanels/vmappliancevmspage.h \
+    settingspanels/vmgroupvmspage.h \
+    settingspanels/policysnapshottypepage.h \
+    settingspanels/policysnapshotfrequencypage.h \
     settingspanels/vmappliancestartorderpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
@@ -560,7 +571,8 @@ HEADERS += \
     commands/vm/vappshutdowncommand.h \
     commands/vm/vappexportcommand.h \
     commands/vm/vapppropertiescommand.h \
-    commands/vm/assigntovappmenu.h \
+    commands/vm/assigntogroupmenu.h \
+    commands/vm/vmgroup.h \
     commands/vm/exportsnapshotastemplatecommand.h \
     commands/vm/newvmfromsnapshotcommand.h \
     commands/vm/newtemplatefromsnapshotcommand.h \
@@ -703,6 +715,8 @@ FORMS += \
     dialogs/attachusbdialog.ui \
     dialogs/newvmappliancewizard.ui \
     dialogs/vmappliancesdialog.ui \
+    dialogs/newpolicywizard.ui \
+    dialogs/scheduledsnapshotsdialog.ui \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
@@ -745,7 +759,9 @@ FORMS += \
     settingspanels/securityeditpage.ui \
     settingspanels/srreadcachingeditpage.ui \
     settingspanels/usbeditpage.ui \
-    settingspanels/vmappliancevmspage.ui \
+    settingspanels/vmgroupvmspage.ui \
+    settingspanels/policysnapshottypepage.ui \
+    settingspanels/policysnapshotfrequencypage.ui \
     settingspanels/vmappliancestartorderpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \

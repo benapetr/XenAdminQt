@@ -25,46 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-// C# equivalent: xenadmin/XenAdmin/Wizards/GenericPages/NewVMGroupVMsPage.cs (for VM_appliance)
+// C# equivalent: xenadmin/XenAdmin/Wizards/GenericPages/NewVMGroupVMsPage.cs
 
-#ifndef VMAPPLIANCEVMSPAGE_H
-#define VMAPPLIANCEVMSPAGE_H
+#ifndef VMGROUPVMSPAGE_H
+#define VMGROUPVMSPAGE_H
 
 #include "ieditpage.h"
+#include "../commands/vm/vmgroup.h"
 #include <QSet>
 
 namespace Ui
 {
-    class VMApplianceVMsPage;
+    class VMGroupVMsPage;
 }
 
 class Pool;
 class VM;
-class VMAppliance;
 class QTableWidgetItem;
 
 /**
- * Chooses the VMs in a vApp: a page of the New vApp wizard and of the vApp's properties.
+ * Chooses the VMs in a vApp or snapshot schedule: a page of the New vApp and New Snapshot
+ * Schedule wizards and of the group's properties (C# NewVMGroupVMsPage<T>).
  */
-class VMApplianceVMsPage : public IEditPage
+class VMGroupVMsPage : public IEditPage
 {
     Q_OBJECT
 
     public:
-        explicit VMApplianceVMsPage(QWidget* parent = nullptr);
-        ~VMApplianceVMsPage() override;
+        explicit VMGroupVMsPage(VMGroup::Kind kind, QWidget* parent = nullptr);
+        ~VMGroupVMsPage() override;
 
         //! The pool whose VMs are listed (C# Pool property); refills the list
         void SetPool(QSharedPointer<Pool> pool);
-        //! Preselects VMs, e.g. the ones selected when "New vApp..." was chosen
+        //! Preselects VMs, e.g. the ones selected when "New vApp..." or "New Snapshot Schedule..." was chosen
         void SetSelectedVMs(const QList<QSharedPointer<VM>>& vms);
         QList<QSharedPointer<VM>> SelectedVMs() const;
         QStringList SelectedVMRefs() const;
-        //! The new vApp's name, for the warning about VMs already in another vApp
+        //! The new group's name, for the warning about VMs already in another group
         void SetGroupName(const QString& name) { this->m_groupName = name; }
 
         /**
-         * C# PageLeaveCore/ValidToSave: if any chosen VM is in another vApp, asks whether to
+         * C# PageLeaveCore/ValidToSave: if any chosen VM is in another group, asks whether to
          * move it. Returns whether to go on.
          */
         bool UserAcceptsWarning();
@@ -94,13 +95,14 @@ class VMApplianceVMsPage : public IEditPage
         void setAllChecked(bool checked);
         void updateCounterAndButtons();
 
-        Ui::VMApplianceVMsPage* ui;
+        Ui::VMGroupVMsPage* ui;
         QSharedPointer<Pool> m_pool;
-        QSharedPointer<VMAppliance> m_appliance;
+        VMGroup::Kind m_kind;
+        QSharedPointer<XenObject> m_group;
         QStringList m_selectedRefs;  //!< in the order chosen, like C#'s SelectedVMs list
         QString m_groupName;
         bool m_filling = false;
         mutable bool m_warningAccepted = false;
 };
 
-#endif // VMAPPLIANCEVMSPAGE_H
+#endif // VMGROUPVMSPAGE_H

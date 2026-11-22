@@ -40,7 +40,7 @@ namespace Ui
 
 class Pool;
 class VM;
-class VMApplianceVMsPage;
+class VMGroupVMsPage;
 class VMApplianceStartOrderPage;
 class WizardNavigationPane;
 
@@ -79,7 +79,7 @@ class NewVMApplianceWizard : public QWizard
 
         Ui::NewVMApplianceWizard* ui;
         QSharedPointer<Pool> m_pool;
-        VMApplianceVMsPage* m_vmsPage;
+        VMGroupVMsPage* m_vmsPage;
         VMApplianceStartOrderPage* m_orderPage;
         WizardNavigationPane* m_navigationPane;
 };

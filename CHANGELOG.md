@@ -9,6 +9,7 @@ are omitted.
 
 ### Added
 
+VM snapshot schedules: the VM Snapshot Schedules dialog with run history, the New Snapshot Schedule wizard, schedule properties and the Assign to Snapshot Schedule menu
 Manage vApps dialog, New vApp wizard and Assign to vApp menu; vApp properties now include the VMs and their startup sequence
 Alerts for servers with a missing or duplicate iSCSI IQN, with an Edit IQN link that opens the server's properties
 Pool and standalone server properties have C#'s Clustering page for enabling corosync clustering (needed for GFS2 storage)

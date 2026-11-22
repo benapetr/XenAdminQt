@@ -25,16 +25,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmappliancevmspage.h"
-#include "ui_vmappliancevmspage.h"
-#include "../commands/vm/assigntovappmenu.h"
+#include "vmgroupvmspage.h"
+#include "ui_vmgroupvmspage.h"
 #include "../iconmanager.h"
 #include "../settingsmanager.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/vm.h"
-#include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/actions/vm/vmapplianceactions.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xencache.h"
 #include <QHeaderView>
@@ -64,23 +61,25 @@ namespace
     };
 }
 
-VMApplianceVMsPage::VMApplianceVMsPage(QWidget* parent) : IEditPage(parent), ui(new Ui::VMApplianceVMsPage)
+VMGroupVMsPage::VMGroupVMsPage(VMGroup::Kind kind, QWidget* parent) : IEditPage(parent), ui(new Ui::VMGroupVMsPage), m_kind(kind)
 {
     this->ui->setupUi(this);
+    this->ui->labelRubric->setText(VMGroup::ChooseVMsPageRubric(kind));
+    this->ui->tableVMs->horizontalHeaderItem(3)->setText(VMGroup::ChooseVMsPageCurrentGroup(kind));
     this->ui->tableVMs->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    connect(this->ui->tableVMs, &QTableWidget::itemChanged, this, &VMApplianceVMsPage::onItemChanged);
-    connect(this->ui->buttonSelectAll, &QPushButton::clicked, this, &VMApplianceVMsPage::onSelectAll);
-    connect(this->ui->buttonClearAll, &QPushButton::clicked, this, &VMApplianceVMsPage::onClearAll);
-    connect(this->ui->searchBox, &QLineEdit::textChanged, this, &VMApplianceVMsPage::refill);
+    connect(this->ui->tableVMs, &QTableWidget::itemChanged, this, &VMGroupVMsPage::onItemChanged);
+    connect(this->ui->buttonSelectAll, &QPushButton::clicked, this, &VMGroupVMsPage::onSelectAll);
+    connect(this->ui->buttonClearAll, &QPushButton::clicked, this, &VMGroupVMsPage::onClearAll);
+    connect(this->ui->searchBox, &QLineEdit::textChanged, this, &VMGroupVMsPage::refill);
     this->updateCounterAndButtons();
 }
 
-VMApplianceVMsPage::~VMApplianceVMsPage()
+VMGroupVMsPage::~VMGroupVMsPage()
 {
     delete this->ui;
 }
 
-void VMApplianceVMsPage::SetPool(QSharedPointer<Pool> pool)
+void VMGroupVMsPage::SetPool(QSharedPointer<Pool> pool)
 {
     this->m_pool = pool;
     if (pool && pool->GetConnection())
@@ -92,7 +91,7 @@ void VMApplianceVMsPage::SetPool(QSharedPointer<Pool> pool)
     this->refill();
 }
 
-void VMApplianceVMsPage::SetSelectedVMs(const QList<QSharedPointer<VM>>& vms)
+void VMGroupVMsPage::SetSelectedVMs(const QList<QSharedPointer<VM>>& vms)
 {
     this->m_selectedRefs.clear();
     for (const QSharedPointer<VM>& vm : vms)
@@ -103,7 +102,7 @@ void VMApplianceVMsPage::SetSelectedVMs(const QList<QSharedPointer<VM>>& vms)
     this->refill();
 }
 
-QList<QSharedPointer<VM>> VMApplianceVMsPage::SelectedVMs() const
+QList<QSharedPointer<VM>> VMGroupVMsPage::SelectedVMs() const
 {
     QList<QSharedPointer<VM>> vms;
     if (!this->m_pool || !this->m_pool->GetConnection())
@@ -119,12 +118,12 @@ QList<QSharedPointer<VM>> VMApplianceVMsPage::SelectedVMs() const
     return vms;
 }
 
-QStringList VMApplianceVMsPage::SelectedVMRefs() const
+QStringList VMGroupVMsPage::SelectedVMRefs() const
 {
     return this->m_selectedRefs;
 }
 
-void VMApplianceVMsPage::refill()
+void VMGroupVMsPage::refill()
 {
     // C# RefreshTab / searchTextBox1_TextChanged: real VMs that are shown, filtered by the search box
     this->m_filling = true;
@@ -148,7 +147,9 @@ void VMApplianceVMsPage::refill()
                 continue;
 
             const QString ref = vm->OpaqueRef();
-            QSharedPointer<VMAppliance> current = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, vm->ApplianceRef());
+            const QString currentRef = VMGroup::VmToGroup(vm, this->m_kind);
+            QSharedPointer<XenObject> current = currentRef.isEmpty() ? QSharedPointer<XenObject>()
+                : cache->ResolveObject(this->m_kind == VMGroup::Kind::VMSS ? XenObjectType::VMSS : XenObjectType::VMAppliance, currentRef);
 
             const int row = table->rowCount();
             table->insertRow(row);
@@ -182,7 +183,7 @@ void VMApplianceVMsPage::refill()
     this->updateCounterAndButtons();
 }
 
-void VMApplianceVMsPage::onItemChanged(QTableWidgetItem* item)
+void VMGroupVMsPage::onItemChanged(QTableWidgetItem* item)
 {
     if (this->m_filling || !item || item->column() != 0)
         return;
@@ -201,7 +202,7 @@ void VMApplianceVMsPage::onItemChanged(QTableWidgetItem* item)
     emit this->selectionChanged();
 }
 
-void VMApplianceVMsPage::setAllChecked(bool checked)
+void VMGroupVMsPage::setAllChecked(bool checked)
 {
     QTableWidget* table = this->ui->tableVMs;
     for (int row = 0; row < table->rowCount(); ++row)
@@ -211,17 +212,17 @@ void VMApplianceVMsPage::setAllChecked(bool checked)
     }
 }
 
-void VMApplianceVMsPage::onSelectAll()
+void VMGroupVMsPage::onSelectAll()
 {
     this->setAllChecked(true);
 }
 
-void VMApplianceVMsPage::onClearAll()
+void VMGroupVMsPage::onClearAll()
 {
     this->setAllChecked(false);
 }
 
-void VMApplianceVMsPage::updateCounterAndButtons()
+void VMGroupVMsPage::updateCounterAndButtons()
 {
     const int count = this->m_selectedRefs.size();
     this->ui->labelCounter->setText(count == 1 ? tr("1 VM selected") : tr("%1 VMs selected").arg(count));
@@ -229,77 +230,77 @@ void VMApplianceVMsPage::updateCounterAndButtons()
     this->ui->buttonSelectAll->setEnabled(count < this->ui->tableVMs->rowCount());
 }
 
-bool VMApplianceVMsPage::UserAcceptsWarning()
+bool VMGroupVMsPage::UserAcceptsWarning()
 {
     if (this->m_warningAccepted)
         return true;
 
-    const QString groupName = this->m_appliance ? this->m_appliance->GetName() : this->m_groupName;
-    this->m_warningAccepted = AssignToVAppMenu::ChangesOK(this->SelectedVMs(), this->m_appliance, groupName, this);
+    const QString groupName = this->m_group ? this->m_group->GetName() : this->m_groupName;
+    this->m_warningAccepted = VMGroup::ChangesOK(this->SelectedVMs(), this->m_group, groupName, this->m_kind, this);
     return this->m_warningAccepted;
 }
 
-QString VMApplianceVMsPage::GetText() const
+QString VMGroupVMsPage::GetText() const
 {
-    return tr("Virtual Machines");
+    return VMGroup::ChooseVMsPageText(this->m_kind);
 }
 
-QString VMApplianceVMsPage::GetSubText() const
+QString VMGroupVMsPage::GetSubText() const
 {
     return this->ui->labelCounter->text();
 }
 
-QIcon VMApplianceVMsPage::GetImage() const
+QIcon VMGroupVMsPage::GetImage() const
 {
     return QIcon(":/tree-icons/vm_generic.png");
 }
 
-void VMApplianceVMsPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
+void VMGroupVMsPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
     this->m_object = object;
-    this->m_appliance = qSharedPointerDynamicCast<VMAppliance>(object);
-    if (!this->m_appliance || !this->m_appliance->GetConnection())
+    this->m_group = object;
+    if (!this->m_group || !this->m_group->GetConnection())
         return;
 
-    // C# SetXenObjects: the vApp's current members start checked
-    this->m_selectedRefs = this->m_appliance->VMRefs();
+    // C# SetXenObjects: the group's current members start checked
+    this->m_selectedRefs = VMGroup::GroupToVMs(this->m_group, this->m_kind);
     this->m_warningAccepted = false;
-    this->SetPool(this->m_appliance->GetConnection()->GetCache()->GetPoolOfOne());
+    this->SetPool(this->m_group->GetConnection()->GetCache()->GetPoolOfOne());
 }
 
-AsyncOperation* VMApplianceVMsPage::SaveSettings()
+AsyncOperation* VMGroupVMsPage::SaveSettings()
 {
-    if (!this->m_appliance || !this->HasChanged())
+    if (!this->m_group || !this->HasChanged())
         return nullptr;
-    return new AssignVMsToVMApplianceAction(this->m_appliance, this->m_selectedRefs, true);
+    return VMGroup::AssignVMsToGroupAction(this->m_group, this->m_selectedRefs, true, this->m_kind);
 }
 
-bool VMApplianceVMsPage::IsValidToSave() const
+bool VMGroupVMsPage::IsValidToSave() const
 {
     // C# ValidToSave runs the same "already in another vApp" question
-    return const_cast<VMApplianceVMsPage*>(this)->UserAcceptsWarning();
+    return const_cast<VMGroupVMsPage*>(this)->UserAcceptsWarning();
 }
 
-void VMApplianceVMsPage::ShowLocalValidationMessages()
+void VMGroupVMsPage::ShowLocalValidationMessages()
 {
 }
 
-void VMApplianceVMsPage::HideLocalValidationMessages()
+void VMGroupVMsPage::HideLocalValidationMessages()
 {
 }
 
-void VMApplianceVMsPage::Cleanup()
+void VMGroupVMsPage::Cleanup()
 {
     this->ui->tableVMs->setRowCount(0);
 }
 
-bool VMApplianceVMsPage::HasChanged() const
+bool VMGroupVMsPage::HasChanged() const
 {
-    if (!this->m_appliance)
+    if (!this->m_group)
         return false;
     // C# Helpers.CompareLists: same members in any order
-    const QStringList current = this->m_appliance->VMRefs();
+    const QStringList current = VMGroup::GroupToVMs(this->m_group, this->m_kind);
     return QSet<QString>(current.begin(), current.end()) != QSet<QString>(this->m_selectedRefs.begin(), this->m_selectedRefs.end());
 }

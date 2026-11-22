@@ -253,7 +253,13 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
                                                               true,
                                                               nullptr);
     saveChangesAction->setParent(nullptr);
-    actions.prepend(saveChangesAction);
+    // C# PropertiesDialog: for a snapshot schedule the field changes go last, after the VMs
+    // page has assigned its VMs (C# keeps them first only for quiesced schedules, which this
+    // port never creates)
+    if (this->m_object->GetObjectType() == XenObjectType::VMSS)
+        actions.append(saveChangesAction);
+    else
+        actions.prepend(saveChangesAction);
 
     // Create progress dialog - it will own the MultipleOperation and all sub-actions
     QString objName = this->m_object->GetName();
@@ -444,6 +450,13 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
         if (pageData.contains("MTU"))
         {
             this->m_objectDataCopy["MTU"] = pageData.value("MTU");
+        }
+
+        // Snapshot schedule fields (C# NewPolicySnapshotTypePage / NewPolicySnapshotFrequencyPage)
+        for (const char* key : {"type", "frequency", "schedule", "retained_snapshots"})
+        {
+            if (pageData.contains(key))
+                this->m_objectDataCopy[key] = pageData.value(key);
         }
         
         if (action)

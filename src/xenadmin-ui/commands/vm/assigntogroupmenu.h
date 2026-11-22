@@ -26,27 +26,27 @@
  */
 
 // C# equivalent: xenadmin/XenAdmin/Commands/Controls/AssignVMGroupToolStripMenuItem.cs
-// (AssignGroupToolStripMenuItem<VM_appliance>) and VMGroupCommand<VM_appliance>
+// (AssignGroupToolStripMenuItem<T>) and xenadmin/XenAdmin/Commands/VMGroupCommand.cs
 
-#ifndef ASSIGNTOVAPPMENU_H
-#define ASSIGNTOVAPPMENU_H
+#ifndef ASSIGNTOGROUPMENU_H
+#define ASSIGNTOGROUPMENU_H
 
 #include "../command.h"
+#include "vmgroup.h"
 #include <QMenu>
 
 class VM;
-class VMAppliance;
 
 /**
- * The "Assign to vApp" command: VMs of one pool, at least one of them a real, unlocked VM.
- * Its items live in AssignToVAppMenu.
+ * "Assign to vApp" / "Assign to Snapshot Schedule": VMs of one pool, at least one of them a
+ * real, unlocked VM. Its items live in AssignToGroupMenu.
  */
-class AssignToVAppCommand : public Command
+class AssignToGroupCommand : public Command
 {
     Q_OBJECT
 
     public:
-        explicit AssignToVAppCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        AssignToGroupCommand(VMGroup::Kind kind, MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override {}
@@ -54,52 +54,51 @@ class AssignToVAppCommand : public Command
 
         //! The selected VMs
         QList<QSharedPointer<VM>> SelectedVMs() const;
+
+    private:
+        VMGroup::Kind m_kind;
 };
 
 /**
- * Submenu listing "New vApp..." and the pool's vApps; choosing a vApp adds the selected VMs
- * to it, or takes a single VM out of the vApp it's already in.
+ * Submenu listing "New vApp..." / "New Snapshot Schedule..." and the pool's groups; choosing a
+ * group adds the selected VMs to it, or takes a single VM out of the group it's already in.
  */
-class AssignToVAppMenu : public QMenu
+class AssignToGroupMenu : public QMenu
 {
     Q_OBJECT
 
     public:
-        explicit AssignToVAppMenu(MainWindow* mainWindow, QWidget* parent = nullptr);
+        AssignToGroupMenu(VMGroup::Kind kind, MainWindow* mainWindow, QWidget* parent = nullptr);
 
         bool CanRun() const;
-
-        /**
-         * C# AssignGroupToVMCommand.ChangesOK: if any of \a vms is already in a vApp other than
-         * \a appliance (null for a new one, named \a applianceName), asks whether to move them.
-         * Returns whether to go on.
-         */
-        static bool ChangesOK(const QList<QSharedPointer<VM>>& vms, QSharedPointer<VMAppliance> appliance,
-                              const QString& applianceName, QWidget* parent);
 
     private slots:
         void onAboutToShow();
 
     private:
-        void assign(QSharedPointer<VMAppliance> appliance, const QList<QSharedPointer<VM>>& vms);
+        void assign(QSharedPointer<XenObject> group, const QList<QSharedPointer<VM>>& vms);
 
+        VMGroup::Kind m_kind;
         MainWindow* m_mainWindow;
 };
 
 /**
- * Opens the Manage vApps dialog for the selection's pool.
- * C# VMGroupCommand<VM_appliance>
+ * Opens the Manage vApps or VM Snapshot Schedules dialog for the selection's pool.
+ * C# VMGroupCommand<T>
  */
-class ManageVAppsCommand : public Command
+class ManageVMGroupsCommand : public Command
 {
     Q_OBJECT
 
     public:
-        explicit ManageVAppsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        ManageVMGroupsCommand(VMGroup::Kind kind, MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+
+    private:
+        VMGroup::Kind m_kind;
 };
 
-#endif // ASSIGNTOVAPPMENU_H
+#endif // ASSIGNTOGROUPMENU_H

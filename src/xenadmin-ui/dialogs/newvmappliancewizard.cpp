@@ -27,7 +27,7 @@
 
 #include "newvmappliancewizard.h"
 #include "ui_newvmappliancewizard.h"
-#include "../settingspanels/vmappliancevmspage.h"
+#include "../settingspanels/vmgroupvmspage.h"
 #include "../settingspanels/vmappliancestartorderpage.h"
 #include "../widgets/wizardnavigationpane.h"
 #include "xenlib/xen/pool.h"
@@ -58,7 +58,7 @@ NewVMApplianceWizard::NewVMApplianceWizard(QSharedPointer<Pool> pool, const QLis
     // C# NewVMApplianceNamePage.EnableNext: a name that isn't blank
     connect(this->ui->textName, &QLineEdit::textChanged, this, &NewVMApplianceWizard::updateNextButton);
 
-    this->m_vmsPage = new VMApplianceVMsPage(this->ui->pageVMs);
+    this->m_vmsPage = new VMGroupVMsPage(VMGroup::Kind::VMAppliance, this->ui->pageVMs);
     this->ui->vmsLayout->addWidget(this->m_vmsPage);
     this->m_vmsPage->SetPool(pool);
     this->m_vmsPage->SetSelectedVMs(vms);

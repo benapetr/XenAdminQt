@@ -34,6 +34,14 @@ two codebases, don't report these as missing or port them back.
   `VM_SNAPSHOT_WITH_QUIESCE_NOT_SUPPORTED`. The port offers disk-only and disk and
   memory snapshots only. The `VM_SNAPSHOT_WITH_QUIESCE_*` error texts are kept,
   because current servers can still return them.
+- **Quiesced snapshot schedules.** For the same reason, C#'s New Snapshot Schedule
+  wizard and schedule properties have a "Quiesce the VM before taking snapshot" checkbox
+  (`vmss_type.snapshot_with_quiesce`), shown only before XenServer 7.6. xapi still has
+  the type but needs the VSS feature and VMs that support quiesced snapshots, so it can't
+  work on current servers. The port offers disk-only and disk and memory schedules. A
+  schedule that already has the quiesced type keeps it, with a note, until another type
+  is chosen (`PolicySnapshotTypePage`), and the Assign to Snapshot Schedule menu leaves
+  such schedules out, as C# does when the VMs can't take quiesced snapshots.
 
 ## Previously reported unfinished work
 

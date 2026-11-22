@@ -114,7 +114,8 @@ set(XENADMIN_SOURCES
     commands/vm/unpausevmcommand.cpp
     commands/vm/vappexportcommand.cpp
     commands/vm/vapppropertiescommand.cpp
-    commands/vm/assigntovappmenu.cpp
+    commands/vm/assigntogroupmenu.cpp
+    commands/vm/vmgroup.cpp
     commands/vm/vappshutdowncommand.cpp
     commands/vm/vappstartcommand.cpp
     commands/vm/vmcommand.cpp
@@ -193,6 +194,10 @@ set(XENADMIN_SOURCES
     dialogs/attachusbdialog.cpp
     dialogs/newvmappliancewizard.cpp
     dialogs/vmappliancesdialog.cpp
+    dialogs/newpolicywizard.cpp
+    dialogs/scheduledsnapshotsdialog.cpp
+    dialogs/scheduledsnapshotsdialog.ui
+    dialogs/newpolicywizard.ui
     dialogs/vmappliancesdialog.ui
     dialogs/newvmappliancewizard.ui
     dialogs/attachusbdialog.ui
@@ -300,6 +305,7 @@ set(XENADMIN_SOURCES
     dialogs/vifdialog.cpp
     dialogs/vifdialog.ui
     dialogs/vmappliancepropertiesdialog.cpp
+    dialogs/vmsspropertiesdialog.cpp
     dialogs/vmpropertiesdialog.cpp
     dialogs/vmsnapshotdialog.cpp
     dialogs/vtpmmanagementdialog.cpp
@@ -373,10 +379,14 @@ set(XENADMIN_SOURCES
     settingspanels/securityeditpage.cpp
     settingspanels/srreadcachingeditpage.cpp
     settingspanels/usbeditpage.cpp
-    settingspanels/vmappliancevmspage.cpp
+    settingspanels/vmgroupvmspage.cpp
+    settingspanels/policysnapshottypepage.cpp
+    settingspanels/policysnapshotfrequencypage.cpp
+    settingspanels/policysnapshotfrequencypage.ui
+    settingspanels/policysnapshottypepage.ui
     settingspanels/vmappliancestartorderpage.cpp
     settingspanels/vmappliancestartorderpage.ui
-    settingspanels/vmappliancevmspage.ui
+    settingspanels/vmgroupvmspage.ui
     settingspanels/usbeditpage.ui
     settingspanels/srreadcachingeditpage.ui
     settingspanels/securityeditpage.ui

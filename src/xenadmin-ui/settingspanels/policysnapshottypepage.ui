@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PolicySnapshotTypePage</class>
+ <widget class="QWidget" name="PolicySnapshotTypePage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>560</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="labelRubric">
+     <property name="text">
+      <string>Choose the type of snapshot you would like to take.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radioButtonDiskOnly">
+     <property name="text">
+      <string>&amp;Disk only snapshot</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelDiskOnly">
+     <property name="text">
+      <string>The VM's disks (storage) and metadata will be saved. This type of snapshot is crash-consistent and can be performed on all VM types, including Linux VMs.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="radioButtonDiskAndMemory">
+     <property name="text">
+      <string>Disk and &amp;memory snapshot</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelDiskAndMemory">
+     <property name="text">
+      <string>In addition to the VM's disks and metadata, this type of snapshot also stores the VM's memory state (RAM). Note that this type of snapshot can be very large and you should ensure that you make sufficient disk space available for all your scheduled snapshots.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelWarning">
+     <property name="text">
+      <string>Note that scheduled disk and memory snapshots will only be taken of VMs in this schedule that meet all of the following conditions:
+
+1. The VM is running or suspended at the time the snapshot is scheduled.
+2. The VM has %1 installed.
+3. If the VM has a dedicated GPU assigned to it, this GPU supports disk and memory snapshots.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelQuiesceRemoved">
+     <property name="styleSheet">
+      <string notr="true">background-color: #fff3c4; color: black; padding: 6px;</string>
+     </property>
+     <property name="text">
+      <string>This schedule takes quiesced snapshots, which servers since XenServer 7.6 no longer support, so its snapshots will fail. Choose one of the snapshot types above to change it.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="bottomSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

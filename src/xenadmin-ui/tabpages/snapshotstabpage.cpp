@@ -60,6 +60,7 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/gpu/gpuhelpers.h"
 #include "xenlib/utils/misc.h"
+#include "../commands/vm/assigntogroupmenu.h"
 
 QHash<QString, SnapshotsTabPage::SnapshotsView> SnapshotsTabPage::s_viewByVmRef;
 
@@ -1193,11 +1194,13 @@ void SnapshotsTabPage::onScheduledSnapshotsToggled()
 
 void SnapshotsTabPage::onVmssLinkClicked()
 {
-    // TODO: C# runs VMGroupCommand<VMSS> (opens the VM snapshot schedules management dialog).
-    // Replace this placeholder once the VMSS dialog/command is ported.
-    QMessageBox::information(this,
-                             tr("VM Snapshot Schedules"),
-                             tr("VM snapshot schedules are not available yet in this version."));
+    // C# runs VMGroupCommand<VMSS> for the VM: the pool's VM Snapshot Schedules dialog
+    if (!this->m_vm)
+        return;
+    ManageVMGroupsCommand command(VMGroup::Kind::VMSS, MainWindow::instance());
+    command.SetSelectionOverride({this->m_vm});
+    if (command.CanRun())
+        command.Run();
 }
 
 bool SnapshotsTabPage::isScheduledSnapshot(const QSharedPointer<VM>& snapshot) const

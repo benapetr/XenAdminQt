@@ -13,6 +13,7 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/network/unplugplugnetworkaction.h"
 #include <QSpinBox>
+#include <QRadioButton>
 #include <QTableWidget>
 #include <QDateTimeEdit>
 #include "controls/xensearch/queryelement.h"
@@ -41,6 +42,9 @@
 #include <QDataStream>
 #include "settingsmanager.h"
 #include "settingspanels/vmappliancestartorderpage.h"
+#include "settingspanels/vmgroupvmspage.h"
+#include "settingspanels/policysnapshottypepage.h"
+#include "xenlib/xen/vmss.h"
 #include "xenlib/xen/vmappliance.h"
 #include "ConsoleView/VNCGraphicsClient.h"
 #include "xenlib/utils/vncdes.h"
@@ -571,6 +575,59 @@ private slots:
     }
 
     // C# ClusteringEditPage: management networks only, nothing preselected, the box follows the choice
+    void vmGroupPageEditsScheduleMembers()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::Pool, "OpaqueRef:pool", QVariantMap{{"name_label", "pool"}});
+        cache->Update(XenObjectType::VMSS, "OpaqueRef:daily", QVariantMap{{"name_label", "daily"}, {"VMs", QVariantList{"OpaqueRef:a"}}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:a", QVariantMap{{"name_label", "a"}, {"snapshot_schedule", "OpaqueRef:daily"}, {"power_state", "Halted"}});
+        cache->Update(XenObjectType::VM, "OpaqueRef:b", QVariantMap{{"name_label", "b"}, {"snapshot_schedule", "OpaqueRef:NULL"}, {"power_state", "Halted"}});
+
+        // C# NewVMGroupVMsPage<VMSS>: members start checked, the column shows each VM's schedule
+        VMGroupVMsPage page(VMGroup::Kind::VMSS);
+        page.SetXenObject(cache->ResolveObject<VMSS>(XenObjectType::VMSS, "OpaqueRef:daily"), QVariantMap(), QVariantMap());
+        auto* table = page.findChild<QTableWidget*>("tableVMs");
+        QVERIFY(table);
+        QCOMPARE(table->rowCount(), 2);
+        QCOMPARE(table->horizontalHeaderItem(3)->text(), QString("Current schedule"));
+        QCOMPARE(page.SelectedVMRefs(), QStringList({"OpaqueRef:a"}));
+        QVERIFY(!page.HasChanged());
+
+        for (int row = 0; row < table->rowCount(); ++row)
+        {
+            if (table->item(row, 1)->text() == "b")
+            {
+                QCOMPARE(table->item(row, 3)->text(), QString("<None>"));
+                table->item(row, 0)->setCheckState(Qt::Checked);
+            }
+        }
+        QVERIFY(page.HasChanged());
+        QCOMPARE(page.SelectedVMRefs(), QStringList({"OpaqueRef:a", "OpaqueRef:b"}));
+        std::unique_ptr<AsyncOperation> action(page.SaveSettings());
+        QVERIFY(action);
+    }
+
+    void scheduleTypePageKeepsOldQuiesceUntilChanged()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        cache->Update(XenObjectType::VMSS, "OpaqueRef:q", QVariantMap{{"name_label", "q"}, {"type", "snapshot_with_quiesce"}});
+
+        PolicySnapshotTypePage page;
+        page.SetXenObject(cache->ResolveObject<VMSS>(XenObjectType::VMSS, "OpaqueRef:q"), QVariantMap(), QVariantMap());
+        QCOMPARE(page.BackupType(), QString("snapshot_with_quiesce"));
+        QVERIFY(!page.HasChanged());
+
+        // Choosing a type replaces it
+        auto* memory = page.findChild<QRadioButton*>("radioButtonDiskAndMemory");
+        QVERIFY(memory);
+        memory->click();
+        QCOMPARE(page.BackupType(), QString("checkpoint"));
+        QVERIFY(page.HasChanged());
+        QCOMPARE(page.GetModifiedObjectData().value("type").toString(), QString("checkpoint"));
+    }
+
     void vAppStartOrderPageTracksEdits()
     {
         XenConnection connection;

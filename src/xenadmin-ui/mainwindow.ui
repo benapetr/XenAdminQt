@@ -1110,7 +1110,7 @@
   </action>
   <action name="assignSnapshotScheduleToolStripMenuItem">
    <property name="text">
-    <string>Assign to Snaps&amp;hot Schedule...</string>
+    <string>Assign to Snapshot Schedu&amp;le</string>
    </property>
    <property name="statusTip">
     <string>Assign VM to a snapshot schedule</string>

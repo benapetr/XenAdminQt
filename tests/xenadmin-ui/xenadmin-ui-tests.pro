@@ -23,6 +23,9 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.cpp \
+    ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.cpp \
+    ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.cpp \
+    ../../src/xenadmin-ui/commands/vm/vmgroup.cpp \
     ../../src/xenadmin-ui/settingsmanager.cpp \
     ../../src/xenadmin-ui/connectionprofile.cpp \
     ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.cpp \
@@ -49,6 +52,9 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.h \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.h \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.h \
+    ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.h \
+    ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.h \
+    ../../src/xenadmin-ui/commands/vm/vmgroup.h \
     ../../src/xenadmin-ui/settingsmanager.h \
     ../../src/xenadmin-ui/ConsoleView/ConsoleKeyHandler.h \
     ../../src/xenadmin-ui/ConsoleView/VNCGraphicsClient.h \
@@ -64,6 +70,8 @@ FORMS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.ui \
+    ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.ui \
+    ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.ui \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.ui
 
 RESOURCES += ../../src/xenadmin-ui/resources.qrc

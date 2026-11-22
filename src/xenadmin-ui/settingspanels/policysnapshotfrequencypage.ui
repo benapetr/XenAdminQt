@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PolicySnapshotFrequencyPage</class>
+ <widget class="QWidget" name="PolicySnapshotFrequencyPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>560</width>
+    <height>460</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="outerLayout">
+   <item>
+    <widget class="QLabel" name="labelLoading">
+     <property name="text">
+      <string>Loading...</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="mainPanel">
+     <layout class="QVBoxLayout" name="mainLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QGroupBox" name="groupSchedule">
+        <property name="title">
+         <string>Snapshot schedule</string>
+        </property>
+        <layout class="QVBoxLayout" name="scheduleLayout">
+         <item>
+          <widget class="QLabel" name="labelScheduleRubric">
+           <property name="text">
+            <string>Snapshots will be automatically taken according to the schedule specified below.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="frequencyLayout">
+           <item>
+            <widget class="QRadioButton" name="radioButtonHourly">
+             <property name="text">
+              <string>H&amp;ourly snapshots</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="radioButtonDaily">
+             <property name="text">
+              <string>&amp;Daily snapshots</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="radioButtonWeekly">
+             <property name="text">
+              <string>Wee&amp;kly snapshots</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="frequencySpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QWidget" name="panelHourly">
+           <layout class="QHBoxLayout" name="hourlyLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelHourly">
+              <property name="text">
+               <string>&amp;Recur at:</string>
+              </property>
+              <property name="buddy">
+               <cstring>comboBoxMin</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxMin">
+              <item>
+               <property name="text">
+                <string notr="true">0</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string notr="true">15</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string notr="true">30</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string notr="true">45</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelMinutesPast">
+              <property name="text">
+               <string>minutes past each hour</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="hourlySpacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>10</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="panelDaily">
+           <layout class="QHBoxLayout" name="dailyLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelDaily">
+              <property name="text">
+               <string>&amp;Recur every day at this time:</string>
+              </property>
+              <property name="buddy">
+               <cstring>comboBoxDailyTime</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxDailyTime"/>
+            </item>
+            <item>
+             <spacer name="dailySpacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>10</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="panelWeekly">
+           <layout class="QVBoxLayout" name="weeklyLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="weeklyTimeLayout">
+              <item>
+               <widget class="QLabel" name="labelWeekly">
+                <property name="text">
+                 <string>&amp;Recur at this time:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>comboBoxWeeklyTime</cstring>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBoxWeeklyTime"/>
+              </item>
+              <item>
+               <spacer name="weeklySpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>10</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QGridLayout" name="daysLayout">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="checkBoxMonday">
+                <property name="text">
+                 <string>&amp;Monday</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QCheckBox" name="checkBoxTuesday">
+                <property name="text">
+                 <string>&amp;Tuesday</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QCheckBox" name="checkBoxWednesday">
+                <property name="text">
+                 <string>&amp;Wednesday</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QCheckBox" name="checkBoxThursday">
+                <property name="text">
+                 <string>T&amp;hursday</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="checkBoxFriday">
+                <property name="text">
+                 <string>Frida&amp;y</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QCheckBox" name="checkBoxSaturday">
+                <property name="text">
+                 <string>S&amp;aturday</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QCheckBox" name="checkBoxSunday">
+                <property name="text">
+                 <string>&amp;Sunday</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelClientNextRun">
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelServerNextRun">
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupRetention">
+        <property name="title">
+         <string>Number of snapshots to keep</string>
+        </property>
+        <layout class="QVBoxLayout" name="retentionLayout">
+         <item>
+          <widget class="QLabel" name="labelRetentionRubric">
+           <property name="text">
+            <string>When the number of scheduled snapshots taken exceeds the maximum number specified here, the oldest scheduled snapshot will be deleted.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="retentionRow">
+           <item>
+            <widget class="QLabel" name="labelRetention">
+             <property name="text">
+              <string>Ma&amp;ximum number of scheduled snapshots:</string>
+             </property>
+             <property name="buddy">
+              <cstring>spinRetention</cstring>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="spinRetention">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>7</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="retentionSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="bottomSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

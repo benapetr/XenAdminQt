@@ -150,7 +150,7 @@
 
 // VM commands
 #include "commands/vm/importvmcommand.h"
-#include "commands/vm/assigntovappmenu.h"
+#include "commands/vm/assigntogroupmenu.h"
 #include "commands/vm/exportvmcommand.h"
 #include "commands/vm/startvmcommand.h"
 #include "commands/vm/stopvmcommand.h"
@@ -3086,7 +3086,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
     this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
     this->ui->menuDisasterRecovery->setEnabled(false);
-    this->ui->vmSnapshotSchedulesToolStripMenuItem->setEnabled(false);
+    this->ui->vmSnapshotSchedulesToolStripMenuItem->setEnabled(this->m_commands["ManageVMSS"]->CanRun());
     this->ui->exportResourceDataToolStripMenuItem->setEnabled(false);
     this->ui->menuWorkloadBalancing->setEnabled(false);
     this->ui->makeStandaloneServerToolStripMenuItem->setEnabled(false);
@@ -3115,7 +3115,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
     this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
     this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
-    this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
+    this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(this->m_commands["AssignToVMSS"]->CanRun());
     this->ui->assignToVappToolStripMenuItem->setEnabled(this->m_commands["AssignToVApp"]->CanRun());
     this->ui->vtpmManagerToolStripMenuItem->setEnabled(this->m_commands["Vtpm"]->CanRun());
     this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
@@ -3860,8 +3860,10 @@ void MainWindow::initializeCommands()
     this->m_commands["NewPool"] = new NewPoolCommand(this, this);
     this->m_commands["DeletePool"] = new DeletePoolCommand(this, this);
     this->m_commands["HAConfigure"] = new HAConfigureCommand(this, this);
-    this->m_commands["ManageVApps"] = new ManageVAppsCommand(this, this);
-    this->m_commands["AssignToVApp"] = new AssignToVAppCommand(this, this);
+    this->m_commands["ManageVApps"] = new ManageVMGroupsCommand(VMGroup::Kind::VMAppliance, this, this);
+    this->m_commands["AssignToVApp"] = new AssignToGroupCommand(VMGroup::Kind::VMAppliance, this, this);
+    this->m_commands["ManageVMSS"] = new ManageVMGroupsCommand(VMGroup::Kind::VMSS, this, this);
+    this->m_commands["AssignToVMSS"] = new AssignToGroupCommand(VMGroup::Kind::VMSS, this, this);
     this->m_commands["HADisable"] = new HADisableCommand(this, this);
     this->m_commands["DisconnectPool"] = new DisconnectPoolCommand(this, this);
     this->m_commands["RotatePoolSecret"] = new RotatePoolSecretCommand(this, this);
@@ -3960,7 +3962,9 @@ void MainWindow::connectMenuActions()
     }
 
     if (!this->ui->assignToVappToolStripMenuItem->menu())
-        this->ui->assignToVappToolStripMenuItem->setMenu(new AssignToVAppMenu(this, this));
+        this->ui->assignToVappToolStripMenuItem->setMenu(new AssignToGroupMenu(VMGroup::Kind::VMAppliance, this, this));
+    if (!this->ui->assignSnapshotScheduleToolStripMenuItem->menu())
+        this->ui->assignSnapshotScheduleToolStripMenuItem->setMenu(new AssignToGroupMenu(VMGroup::Kind::VMSS, this, this));
 
     if (!this->m_removeServerFromPoolMenu)
     {
@@ -3998,6 +4002,11 @@ void MainWindow::connectMenuActions()
     {
         if (this->m_commands["ManageVApps"]->CanRun())
             this->m_commands["ManageVApps"]->Run();
+    });
+    connect(this->ui->vmSnapshotSchedulesToolStripMenuItem, &QAction::triggered, this, [this]()
+    {
+        if (this->m_commands["ManageVMSS"]->CanRun())
+            this->m_commands["ManageVMSS"]->Run();
     });
     connect(this->ui->toolStripMenuItemHaDisable, &QAction::triggered, this, &MainWindow::onHADisable);
     connect(this->ui->changePoolPasswordToolStripMenuItem, &QAction::triggered, this, &MainWindow::onChangeServerPassword);
