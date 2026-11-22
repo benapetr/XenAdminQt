@@ -627,6 +627,9 @@ namespace XenAPI
             static QString call_plugin(Session* session, const QString& vm, const QString& plugin,
                                        const QString& function, const QVariantMap& args);
 
+            //! VM.set_snapshot_schedule; an empty ref takes the VM out of its schedule
+            static void set_snapshot_schedule(Session* session, const QString& vm, const QString& vmss);
+
             //! VM.set_appliance; an empty ref removes the VM from its vApp
             static void set_appliance(Session* session, const QString& vm, const QString& appliance);
 

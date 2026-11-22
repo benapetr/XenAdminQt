@@ -33,6 +33,7 @@
 #include <QStringList>
 #include <QVariantMap>
 #include <QDateTime>
+#include <QList>
 
 /*!
  * \brief VM Snapshot Schedule wrapper class
@@ -62,6 +63,22 @@ class XENLIB_EXPORT VMSS : public XenObject
         // Helper methods
         bool IsEnabled() const;
         int VMCount() const;
+
+        /**
+         * Scheduling helpers (C# XenAPI-Extensions/VMSS.cs). Times are wall-clock times with no
+         * time zone, held as QDateTimes in Qt::UTC so arithmetic doesn't shift across DST; the
+         * schedule itself is in the server's local time.
+         */
+        //! The next run after \a serverLocalTime, or an invalid QDateTime if the schedule is incomplete
+        QDateTime GetNextRunTime(const QDateTime& serverLocalTime) const;
+        static QDateTime GetHourlyDate(const QDateTime& time, int min);
+        static QDateTime GetDailyDate(const QDateTime& time, int min, int hour);
+        //! The next run on each of \a days (Qt::DayOfWeek values), earliest first
+        static QList<QDateTime> GetWeeklyDates(const QDateTime& time, int min, int hour, const QList<int>& days);
+        //! The days in a schedule's "days" value (e.g. "monday,friday") as Qt::DayOfWeek values
+        static QList<int> ScheduleDays(const QVariantMap& schedule);
+        //! C# HelpersGUI.RoundToNearestQuarter
+        static QDateTime RoundToNearestQuarter(const QDateTime& time);
 };
 
 #endif // VMSS_H

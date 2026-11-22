@@ -38,6 +38,8 @@
 #include <QtGlobal>
 #include <QSet>
 #include <stdexcept>
+#include "../../xenapi/vm_appliance.h"
+#include "../../xenapi/xenapi_VMSS.h"
 
 SaveChangesAction::SaveChangesAction(QSharedPointer<XenObject> object,
                                      const QVariantMap& objectDataBefore,
@@ -112,6 +114,12 @@ void SaveChangesAction::run()
             {
                 XenAPI::VDI::set_name_label(session, this->m_objectRef, newName);
                 this->throwIfJsonError("VDI.set_name_label");
+            } else if (this->m_objectType == XenObjectType::VMAppliance)
+            {
+                XenAPI::VM_appliance::set_name_label(session, this->m_objectRef, newName);
+            } else if (this->m_objectType == XenObjectType::VMSS)
+            {
+                XenAPI::VMSS::set_name_label(session, this->m_objectRef, newName);
             }
         }
 
@@ -146,6 +154,12 @@ void SaveChangesAction::run()
             {
                 XenAPI::VDI::set_name_description(session, this->m_objectRef, newDesc);
                 this->throwIfJsonError("VDI.set_name_description");
+            } else if (this->m_objectType == XenObjectType::VMAppliance)
+            {
+                XenAPI::VM_appliance::set_name_description(session, this->m_objectRef, newDesc);
+            } else if (this->m_objectType == XenObjectType::VMSS)
+            {
+                XenAPI::VMSS::set_name_description(session, this->m_objectRef, newDesc);
             }
         }
 
@@ -197,6 +211,25 @@ void SaveChangesAction::run()
                 XenAPI::Network::set_MTU(session, this->m_objectRef, newMtu.toLongLong());
                 this->throwIfJsonError("Network.set_MTU");
             }
+        }
+
+        // C# VMSS.SaveChanges order: type, retained snapshots, frequency, then schedule
+        // (set_frequency fills in schedule keys the new frequency needs; set_schedule then
+        // writes the chosen ones)
+        if (this->m_objectType == XenObjectType::VMSS)
+        {
+            const auto changed = [this](const QString& key)
+            {
+                return this->m_objectDataCopy.contains(key) && this->m_objectDataBefore.value(key) != this->m_objectDataCopy.value(key);
+            };
+            if (changed("type"))
+                XenAPI::VMSS::set_type(session, this->m_objectRef, this->m_objectDataCopy.value("type").toString());
+            if (changed("retained_snapshots"))
+                XenAPI::VMSS::set_retained_snapshots(session, this->m_objectRef, this->m_objectDataCopy.value("retained_snapshots").toLongLong());
+            if (changed("frequency"))
+                XenAPI::VMSS::set_frequency(session, this->m_objectRef, this->m_objectDataCopy.value("frequency").toString());
+            if (changed("schedule"))
+                XenAPI::VMSS::set_schedule(session, this->m_objectRef, this->m_objectDataCopy.value("schedule").toMap());
         }
 
         this->SetPercentComplete(55);

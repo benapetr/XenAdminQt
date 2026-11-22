@@ -153,6 +153,20 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response);
     }
 
+    QVariant Host::get_server_localtime(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.get_server_localtime", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response);
+    }
+
     double Host::query_data_source(Session* session, const QString& host, const QString& data_source)
     {
         if (!session || !session->IsLoggedIn())

@@ -50,6 +50,7 @@
 #include "xenlib/alerts/messagealert.h"
 #include "xenlib/alerts/failedloginattemptalert.h"
 #include "xenlib/alerts/iqnalert.h"
+#include "xenlib/xen/vmss.h"
 #include "xenlib/xen/actions/delegatedasyncoperation.h"
 #include "xenlib/alerts/leafcoalescealert.h"
 #include "xenlib/utils/filelogger.h"
@@ -571,6 +572,40 @@ private slots:
         QVERIFY(with->CanHaveCloudConfigDrive());
         QVERIFY(!without->CloudConfigDrive());
         QVERIFY(!without->CanHaveCloudConfigDrive());
+    }
+
+    void vmssNextRunTimesMatchCsharp()
+    {
+        // Wednesday 2026-11-18 10:20, a wall-clock time
+        const QDateTime now(QDate(2026, 11, 18), QTime(10, 20), Qt::UTC);
+
+        QCOMPARE(VMSS::GetHourlyDate(now, 30), QDateTime(QDate(2026, 11, 18), QTime(10, 30), Qt::UTC));
+        QCOMPARE(VMSS::GetHourlyDate(now, 15), QDateTime(QDate(2026, 11, 18), QTime(11, 15), Qt::UTC));
+        QCOMPARE(VMSS::GetDailyDate(now, 0, 9), QDateTime(QDate(2026, 11, 19), QTime(9, 0), Qt::UTC));
+        QCOMPARE(VMSS::GetDailyDate(now, 45, 23), QDateTime(QDate(2026, 11, 18), QTime(23, 45), Qt::UTC));
+
+        // Monday and Wednesday at 9:00: today's run has passed, so next Monday, then next Wednesday
+        const QList<int> days = VMSS::ScheduleDays(QVariantMap{{"days", "wednesday,Monday"}});
+        QCOMPARE(days, QList<int>({Qt::Wednesday, Qt::Monday}));
+        const QList<QDateTime> weekly = VMSS::GetWeeklyDates(now, 0, 9, days);
+        QCOMPARE(weekly.size(), 2);
+        QCOMPARE(weekly.at(0), QDateTime(QDate(2026, 11, 23), QTime(9, 0), Qt::UTC));
+        QCOMPARE(weekly.at(1), QDateTime(QDate(2026, 11, 25), QTime(9, 0), Qt::UTC));
+
+        QCOMPARE(VMSS::RoundToNearestQuarter(QDateTime(QDate(2026, 1, 1), QTime(10, 7), Qt::UTC)).time(), QTime(10, 0));
+        QCOMPARE(VMSS::RoundToNearestQuarter(QDateTime(QDate(2026, 1, 1), QTime(10, 8), Qt::UTC)).time(), QTime(10, 15));
+        QCOMPARE(VMSS::RoundToNearestQuarter(QDateTime(QDate(2026, 1, 1), QTime(10, 53), Qt::UTC)).time(), QTime(11, 0));
+
+        XenConnection connection;
+        connection.GetCache()->Update(XenObjectType::VMSS, "OpaqueRef:s", QVariantMap{
+            {"frequency", "daily"}, {"schedule", QVariantMap{{"hour", "22"}, {"min", "15"}}}});
+        QSharedPointer<VMSS> vmss = connection.GetCache()->ResolveObject<VMSS>(XenObjectType::VMSS, "OpaqueRef:s");
+        QCOMPARE(vmss->GetNextRunTime(now), QDateTime(QDate(2026, 11, 18), QTime(22, 15), Qt::UTC));
+
+        // An incomplete schedule has no next run
+        connection.GetCache()->Update(XenObjectType::VMSS, "OpaqueRef:s", QVariantMap{
+            {"frequency", "daily"}, {"schedule", QVariantMap{{"min", "15"}}}});
+        QVERIFY(!vmss->GetNextRunTime(now).isValid());
     }
 
     void connectedElsewhereFindsThePoolByCoordinatorAddress()

@@ -1079,6 +1079,20 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString();
     }
 
+    void VM::set_snapshot_schedule(Session* session, const QString& vm, const QString& vmss)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << vm << (vmss.isEmpty() ? QString(XENOBJECT_NULL) : vmss);
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.set_snapshot_schedule", params);
+        QByteArray response = session->SendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Throws on error
+    }
+
     void VM::set_appliance(Session* session, const QString& vm, const QString& appliance)
     {
         if (!session || !session->IsLoggedIn())

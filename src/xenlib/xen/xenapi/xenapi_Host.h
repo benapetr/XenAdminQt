@@ -79,6 +79,9 @@ namespace XenAPI
              */
             static QVariant get_servertime(Session* session, const QString& host);
 
+            //! host.get_server_localtime: the server's wall-clock time in its own time zone
+            static QVariant get_server_localtime(Session* session, const QString& host);
+
             /**
              * @brief Query a performance data source for a host
              * @param session The session

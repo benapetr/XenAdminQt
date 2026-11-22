@@ -66,6 +66,10 @@ class XENLIB_EXPORT PolicyAlert : public MessageAlert
         QString GetTitle() const override;
         QString GetDescription() const override;
 
+        PolicyAlertType GetPolicyType() const { return this->m_policyType; }
+        //! C# PolicyAlert.FromPriority (also right for pre-Stockholm servers, CA-343763)
+        static PolicyAlertType FromPriority(qint64 priority);
+
     private:
         void parsePolicyMessage();
         PolicyAlertType policyTypeFromPriority(int priority) const;

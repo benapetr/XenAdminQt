@@ -113,16 +113,7 @@ void PolicyAlert::parsePolicyMessage()
 
 PolicyAlertType PolicyAlert::policyTypeFromPriority(int priority) const
 {
-    // C# Reference: PolicyAlert.cs FromPriority() line 126
-    // CA-343763: Logic works for pre-Stockholm servers where info=4 and warn=1
-    
-    if (priority < 3)
-        return PolicyAlertType::Error;
-    
-    if (priority == 3)
-        return PolicyAlertType::Warn;
-    
-    return PolicyAlertType::Info;
+    return FromPriority(priority);
 }
 
 QString PolicyAlert::GetTitle() const
@@ -133,4 +124,13 @@ QString PolicyAlert::GetTitle() const
 QString PolicyAlert::GetDescription() const
 {
     return this->m_description;
+}
+
+PolicyAlertType PolicyAlert::FromPriority(qint64 priority)
+{
+    if (priority < 3)
+        return PolicyAlertType::Error;
+    if (priority == 3)
+        return PolicyAlertType::Warn;
+    return PolicyAlertType::Info;
 }
