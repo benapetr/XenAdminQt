@@ -76,9 +76,24 @@ class MoveVirtualDiskDialog : public QDialog
          * all selected VDIs, otherwise falls back to MoveVirtualDiskCommand.
          *
          *
-         * TODO we don't seem to allow migration of certain VDIs that require to be attached to some VM
-         * Xen Orchestra does this by temporarily attaching to control domain (for example LVM SR
-         * to LVM SR is blocked in UI when the VM is offline)
+         * TODO possible improvement, beyond C#, following Xen Orchestra (xen-orchestra/packages/
+         * xo-server/src/xapi/index.mjs, moveVdi). Not done yet:
+         *
+         * - XO doesn't attach disks to the control domain itself. It calls VDI.pool_migrate
+         *   even for halted VMs; xapi then picks a host that could boot the VM and migrates
+         *   there (xen-api/ocaml/xapi/message_forwarding.ml, VDI.pool_migrate). Our Migrate
+         *   command already allows halted VMs, as C# does.
+         * - What we lack is XO's fallback. When pool_migrate fails with NO_HOSTS_AVAILABLE
+         *   (e.g. no host has the memory to boot the halted VM), VDI_NEEDS_VM_FOR_MIGRATE or
+         *   LICENCE_RESTRICTION, XO does VDI.copy to the target SR, recreates the VM's VBDs
+         *   on the copy and destroys the original. We just show the error. This is the likely
+         *   cause of moves between LVM SRs failing for halted VMs. The copy gets a new UUID
+         *   and leaves the snapshots behind, which the UI should say.
+         * - XO retries pool_migrate on TOO_MANY_STORAGE_MIGRATES.
+         * - XO disables CBT automatically and retries on VDI_CBT_ENABLED (on the whole VM
+         *   when the disk has one, because xapi checks all its disks), which makes the next
+         *   backup a full one. We and C# refuse CBT disks instead; doing what XO does would
+         *   need the user's confirmation.
          */
         static Command* MoveMigrateCommand(MainWindow* mainWindow, const QList<QSharedPointer<XenObject>>& selection, QObject* parent = nullptr);
 
