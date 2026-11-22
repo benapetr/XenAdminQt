@@ -23,6 +23,8 @@ SOURCES += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.cpp \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.cpp \
+    ../../src/xenadmin-ui/dialogs/roleselectiondialog.cpp \
+    ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.cpp \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.cpp \
     ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.cpp \
     ../../src/xenadmin-ui/commands/vm/vmgroup.cpp \
@@ -52,6 +54,8 @@ HEADERS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.h \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.h \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.h \
+    ../../src/xenadmin-ui/dialogs/roleselectiondialog.h \
+    ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.h \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.h \
     ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.h \
     ../../src/xenadmin-ui/commands/vm/vmgroup.h \
@@ -70,6 +74,8 @@ FORMS += \
     ../../src/xenadmin-ui/settingspanels/nrpeeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/clusteringeditpage.ui \
     ../../src/xenadmin-ui/settingspanels/vmappliancestartorderpage.ui \
+    ../../src/xenadmin-ui/dialogs/roleselectiondialog.ui \
+    ../../src/xenadmin-ui/dialogs/resolvingsubjectsdialog.ui \
     ../../src/xenadmin-ui/settingspanels/vmgroupvmspage.ui \
     ../../src/xenadmin-ui/settingspanels/policysnapshottypepage.ui \
     ../../src/xenadmin-ui/dialogs/newcustomfielddialog.ui

@@ -193,6 +193,10 @@ set(XENADMIN_SOURCES
     dialogs/attachvirtualdiskdialog.cpp
     dialogs/attachusbdialog.cpp
     dialogs/adpasswordprompt.cpp
+    dialogs/roleselectiondialog.cpp
+    dialogs/resolvingsubjectsdialog.cpp
+    dialogs/resolvingsubjectsdialog.ui
+    dialogs/roleselectiondialog.ui
     dialogs/adpasswordprompt.ui
     dialogs/newvmappliancewizard.cpp
     dialogs/vmappliancesdialog.cpp

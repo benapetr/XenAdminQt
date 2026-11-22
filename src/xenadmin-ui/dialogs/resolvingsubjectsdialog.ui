@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ResolvingSubjectsDialog</class>
+ <widget class="QDialog" name="ResolvingSubjectsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Add Users</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QLabel" name="labelTopBlurb">
+     <property name="text">
+      <string>Adding users or groups to the access list of %1 lets them connect to the server using their AD credentials. To grant access to users, enter their AD name or group name, separating multiple entries by commas or semicolons.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="namesLayout">
+     <item>
+      <widget class="QLabel" name="labelNames">
+       <property name="text">
+        <string>&amp;Names:</string>
+       </property>
+       <property name="buddy">
+        <cstring>textBoxUserNames</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="textBoxUserNames"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="entryList">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::NoSelection</enum>
+     </property>
+     <column>
+      <property name="text">
+       <string>Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Resolution Status</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Grant Access Status</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelStatus">
+     <property name="text">
+      <string>Resolving names against the domain...</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonsLayout">
+     <item>
+      <spacer name="buttonsSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>10</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonGrantAccess">
+       <property name="text">
+        <string>&amp;Grant Access</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonCancel">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

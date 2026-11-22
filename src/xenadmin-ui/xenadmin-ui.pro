@@ -68,6 +68,8 @@ SOURCES += \
     dialogs/attachvirtualdiskdialog.cpp \
     dialogs/attachusbdialog.cpp \
     dialogs/adpasswordprompt.cpp \
+    dialogs/roleselectiondialog.cpp \
+    dialogs/resolvingsubjectsdialog.cpp \
     dialogs/newvmappliancewizard.cpp \
     dialogs/vmappliancesdialog.cpp \
     dialogs/newpolicywizard.cpp \
@@ -403,6 +405,8 @@ HEADERS += \
     dialogs/attachvirtualdiskdialog.h \
     dialogs/attachusbdialog.h \
     dialogs/adpasswordprompt.h \
+    dialogs/roleselectiondialog.h \
+    dialogs/resolvingsubjectsdialog.h \
     dialogs/newvmappliancewizard.h \
     dialogs/vmappliancesdialog.h \
     dialogs/newpolicywizard.h \
@@ -716,6 +720,8 @@ FORMS += \
     dialogs/attachvirtualdiskdialog.ui \
     dialogs/attachusbdialog.ui \
     dialogs/adpasswordprompt.ui \
+    dialogs/roleselectiondialog.ui \
+    dialogs/resolvingsubjectsdialog.ui \
     dialogs/newvmappliancewizard.ui \
     dialogs/vmappliancesdialog.ui \
     dialogs/newpolicywizard.ui \

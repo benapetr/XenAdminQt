@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RoleSelectionDialog</class>
+ <widget class="QDialog" name="RoleSelectionDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>560</width>
+    <height>440</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Select Roles</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <layout class="QHBoxLayout" name="headerLayout">
+     <item>
+      <widget class="QLabel" name="labelSubjectType"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelBlurb">
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="rolesLayout">
+     <item>
+      <widget class="QTableWidget" name="tableRoles">
+       <property name="editTriggers">
+        <set>QAbstractItemView::NoEditTriggers</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::SingleSelection</enum>
+       </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectRows</enum>
+       </property>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderStretchLastSection">
+        <bool>true</bool>
+       </attribute>
+       <column>
+        <property name="text">
+         <string/>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Roles</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelDescription">
+       <property name="text">
+        <string>Description of the role.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelPoolAdminWarning">
+     <property name="styleSheet">
+      <string notr="true">background-color: #fff3c4; color: black; padding: 6px;</string>
+     </property>
+     <property name="text">
+      <string>To reduce the risk of unauthorized access to your system after you have removed the Pool Administrator role, it is recommended that you also change the server root password and rotate the pool secret.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonsLayout">
+     <item>
+      <spacer name="buttonsSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>10</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonSave">
+       <property name="text">
+        <string>&amp;Save</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonCancel">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

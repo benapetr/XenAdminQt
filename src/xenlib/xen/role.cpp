@@ -55,6 +55,22 @@ QString Role::FriendlyName() const
     return friendly.isEmpty() ? this->GetName() : friendly;
 }
 
+QString Role::FriendlyDescription() const
+{
+    return FriendlyNames::getString(QStringLiteral("Role.%1.Description").arg(this->GetName().toLower()));
+}
+
+int Role::Rank() const
+{
+    static const QStringList ranks = {"read-only", "vm-operator", "vm-admin", "vm-power-admin", "pool-operator", "pool-admin"};
+    return ranks.indexOf(this->GetName().toLower());
+}
+
+bool Role::IsAssignable() const
+{
+    return !this->IsInternal() && !this->SubroleRefs().isEmpty();
+}
+
 QList<QSharedPointer<Role>> Role::ValidRoles(XenConnection* connection, const QString& method)
 {
     QList<QSharedPointer<Role>> roles;

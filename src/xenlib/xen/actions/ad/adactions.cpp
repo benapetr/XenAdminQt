@@ -239,6 +239,8 @@ void AddRemoveSubjectsAction::run()
     QStringList sidsToAdd;
     for (const QString& name : this->m_namesToAdd)
     {
+        if (this->IsCancelled())
+            return;
         QString sid, resolvedName, error;
         try
         {
@@ -260,6 +262,8 @@ void AddRemoveSubjectsAction::run()
     // Add
     for (const QString& sid : sidsToAdd)
     {
+        if (this->IsCancelled())
+            return;
         QString name, error;
         try
         {
@@ -286,6 +290,8 @@ void AddRemoveSubjectsAction::run()
     bool logoutSelf = false;
     for (const Removal& removal : this->m_toRemove)
     {
+        if (this->IsCancelled())
+            return;
         QString error;
         try
         {
@@ -330,7 +336,7 @@ AddRemoveRolesAction::AddRemoveRolesAction(XenConnection* connection, QSharedPoi
     const QStringList current = subject->RoleRefs();
     for (const QSharedPointer<Role>& role : connection->GetCache()->GetAll<Role>(XenObjectType::Role))
     {
-        if (!role || role->IsInternal() || role->SubroleRefs().isEmpty())
+        if (!role || !role->IsAssignable())
             continue;
         const QString ref = role->OpaqueRef();
         if (newRoleRefs.contains(ref) && !current.contains(ref))

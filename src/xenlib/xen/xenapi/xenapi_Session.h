@@ -100,6 +100,9 @@ namespace XenAPI
 
             //! session.logout_subject_identifier: ends every session of a directory user or group
             static void logout_subject_identifier(Session* session, const QString& subjectIdentifier);
+
+            //! session.get_all_subject_identifiers: the SIDs of every directory user logged in
+            static QStringList get_all_subject_identifiers(Session* session);
     };
 
 } // namespace XenAPI

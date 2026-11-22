@@ -54,6 +54,13 @@ class XENLIB_EXPORT Role : public XenObject
 
         //! The friendly name of a role (e.g. "Pool Admin"), else its name
         QString FriendlyName() const;
+        //! C# Role.FriendlyDescription: what the role allows, else empty
+        QString FriendlyDescription() const;
+        //! C# Role.RoleRank: read-only 0 ... pool-admin 5, -1 for others (C# CompareTo orders by it)
+        int Rank() const;
+        //! A role a subject can hold: a parent role (it has subroles) that isn't internal
+        //! (C# RoleSelectionDialog / AddRemoveRolesAction filter)
+        bool IsAssignable() const;
 
         // RBAC helpers. Each of the six parent roles has every permission (an API call or
         // "http/..." name) it grants as a subrole.

@@ -45,6 +45,10 @@
 #include "settingspanels/vmgroupvmspage.h"
 #include "settingspanels/policysnapshottypepage.h"
 #include "xenlib/xen/vmss.h"
+#include "xenlib/xen/subject.h"
+#include "xenlib/xen/role.h"
+#include "dialogs/roleselectiondialog.h"
+#include "dialogs/resolvingsubjectsdialog.h"
 #include "xenlib/xen/vmappliance.h"
 #include "ConsoleView/VNCGraphicsClient.h"
 #include "xenlib/utils/vncdes.h"
@@ -575,6 +579,48 @@ private slots:
     }
 
     // C# ClusteringEditPage: management networks only, nothing preselected, the box follows the choice
+    void addUsersSplitsNamesLikeCsharp()
+    {
+        QCOMPARE(ResolvingSubjectsDialog::SplitNames(" alice, CORP\\bob;alice ;; carol "),
+                 QStringList({"alice", "CORP\\bob", "carol"}));
+        QVERIFY(ResolvingSubjectsDialog::SplitNames(" , ; ").isEmpty());
+    }
+
+    void roleDialogStartsFromSharedRole()
+    {
+        XenConnection connection;
+        XenCache* cache = connection.GetCache();
+        // Parent roles have subroles; the dialog lists them highest rank first
+        cache->Update(XenObjectType::Role, "OpaqueRef:ro", QVariantMap{{"name_label", "read-only"}, {"subroles", QVariantList{"OpaqueRef:x"}}});
+        cache->Update(XenObjectType::Role, "OpaqueRef:pa", QVariantMap{{"name_label", "pool-admin"}, {"subroles", QVariantList{"OpaqueRef:x"}}});
+        cache->Update(XenObjectType::Role, "OpaqueRef:x", QVariantMap{{"name_label", "vm.start"}, {"subroles", QVariantList()}});
+        cache->Update(XenObjectType::Subject, "OpaqueRef:a", QVariantMap{{"roles", QVariantList{"OpaqueRef:ro"}}, {"other_config", QVariantMap{{"subject-name", "a"}}}});
+        cache->Update(XenObjectType::Subject, "OpaqueRef:b", QVariantMap{{"roles", QVariantList{"OpaqueRef:pa"}}, {"other_config", QVariantMap{{"subject-name", "b"}}}});
+        auto subject = [cache](const QString& ref) { return cache->ResolveObject<Subject>(XenObjectType::Subject, ref); };
+
+        // One user: their role is checked, nothing to save yet
+        RoleSelectionDialog single(&connection, {subject("OpaqueRef:a")});
+        auto* table = single.findChild<QTableWidget*>("tableRoles");
+        auto* save = single.findChild<QPushButton*>("buttonSave");
+        QVERIFY(table && save);
+        QCOMPARE(table->rowCount(), 2);
+        QCOMPARE(table->item(0, 1)->text(), QString("Pool Admin"));
+        QCOMPARE(table->item(1, 0)->checkState(), Qt::Checked);
+        QVERIFY(!save->isEnabled());
+        QCOMPARE(single.SelectedRoleRefs(), QStringList({"OpaqueRef:ro"}));
+
+        // Two users with different roles: both partly checked; choosing one enables Save
+        RoleSelectionDialog mixed(&connection, {subject("OpaqueRef:a"), subject("OpaqueRef:b")});
+        table = mixed.findChild<QTableWidget*>("tableRoles");
+        save = mixed.findChild<QPushButton*>("buttonSave");
+        QCOMPARE(table->item(0, 0)->checkState(), Qt::PartiallyChecked);
+        QCOMPARE(table->item(1, 0)->checkState(), Qt::PartiallyChecked);
+        QVERIFY(mixed.SelectedRoleRefs().isEmpty());
+        emit table->cellClicked(1, 0);
+        QVERIFY(save->isEnabled());
+        QCOMPARE(mixed.SelectedRoleRefs(), QStringList({"OpaqueRef:ro"}));
+    }
+
     void vmGroupPageEditsScheduleMembers()
     {
         XenConnection connection;
