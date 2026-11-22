@@ -296,6 +296,10 @@ Session* XenConnection::GetNewSession(const QString& hostname,
 
     for (int attempt = 0; attempt < kMaxAttempts; ++attempt)
     {
+        // Each attempt reports its own failure; a transport failure mustn't leave the previous
+        // attempt's xapi error behind for XenConnectionUI to show
+        this->d->lastFailureDescription.clear();
+
         // This method can run on a worker thread; avoid parenting to `this`
         // (which lives on another thread) to prevent cross-thread QObject warnings.
         XenConnection* newConn = new XenConnection(nullptr);

@@ -191,8 +191,9 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
                     connection->SetFindingNewCoordinatorStartedAt(QDateTime());
                     connection->SetHostname(masterHost);
                     connection->BeginConnect(false);
-                    return;
                 }
+                // C#: nothing more to show when the user declines
+                return;
             }
         } else if (code == Failure::RBAC_PERMISSION_DENIED)
         {
@@ -214,42 +215,10 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
         }
     }
 
-    //! TODO this fallback is probably not needed, review and eventually delete it
-
-    if (error.startsWith("HOST_IS_SLAVE:"))
-    {
-        const QString masterHost = error.section(':', 1);
-        const QString prompt = QString("This server is a pool member. Connect to the pool coordinator at %1 instead?")
-                                   .arg(masterHost);
-        if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
-        {
-            connection->EndConnect(false, false);
-            connection->SetFindingNewCoordinator(false);
-            connection->SetFindingNewCoordinatorStartedAt(QDateTime());
-            connection->SetHostname(masterHost);
-            connection->BeginConnect(false);
-            return;
-        }
-    }
-
-    if (error.contains("RBAC_PERMISSION_DENIED", Qt::CaseInsensitive))
-    {
-        QMessageBox::critical(owner, "Connection Failed", "You do not have permission to log in.");
-        return;
-    }
-
-    if (error.contains("SESSION_AUTHENTICATION_FAILED", Qt::CaseInsensitive) ||
-        error.contains("Authentication failed", Qt::CaseInsensitive))
-    {
-        QMessageBox::critical(owner, "Connection Failed", "User name and password mismatch.");
-        return;
-    }
-
-    if (error.contains("HOST_STILL_BOOTING", Qt::CaseInsensitive))
-    {
-        QMessageBox::critical(owner, "Connection Failed", "The host is still booting.");
-        return;
-    }
-
+    // No xapi failure: a transport or other client-side error, shown as it is. C# branches on
+    // the exception type the same way (Failure vs WebException etc.) and never parses the text;
+    // GetLastFailureDescription is set whenever the server returned a failure, including the
+    // HOST_IS_SLAVE redirect, so matching error codes in the message here would only misreport
+    // a bare "Authentication failed" as a wrong password.
     QMessageBox::critical(owner, "Connection Failed", error);
 }
