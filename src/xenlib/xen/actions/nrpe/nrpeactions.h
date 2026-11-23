@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include "nrpehostconfiguration.h"
+#include <QVariantMap>
 
 class XenObject;
 
