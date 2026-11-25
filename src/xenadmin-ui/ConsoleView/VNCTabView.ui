@@ -224,30 +224,41 @@ QPushButton:disabled {
    </item>
    <item>
     <!-- Content panel - XSVNCScreen goes here (C#: contentPanel - centered) -->
-    <widget class="QWidget" name="contentPanel" native="true">
-     <property name="styleSheet">
-      <string notr="true">QWidget#contentPanel {
+    <widget class="QScrollArea" name="consoleScrollArea">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <property name="focusPolicy">
+      <enum>Qt::NoFocus</enum>
+     </property>
+     <widget class="QWidget" name="contentPanel" native="true">
+      <property name="styleSheet">
+       <string notr="true">QWidget#contentPanel {
     background-color: black;
 }</string>
-     </property>
-     <layout class="QVBoxLayout" name="contentPanelLayout">
-      <property name="spacing">
-       <number>0</number>
       </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <!-- VNC screen widget will be added here programmatically and centered -->
-     </layout>
+      <layout class="QVBoxLayout" name="contentPanelLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <!-- VNC screen widget will be added here programmatically and centered -->
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>

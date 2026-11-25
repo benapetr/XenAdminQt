@@ -223,7 +223,8 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
         layout = new QVBoxLayout(this->ui->contentPanel);
         layout->setContentsMargins(0, 0, 0, 0);
     }
-    layout->addWidget(this->m_vncScreen); // Fill space (XSVNCScreen has Expanding size policy)
+    layout->addWidget(this->m_vncScreen);
+    this->updateConsoleGeometry();
 
     // Set toggle console button label
     this->ui->toggleConsoleButton->setText(guessNativeConsoleLabel());
@@ -517,7 +518,7 @@ void VNCTabView::MaybeScale()
     bool preserveScale = settings.GetConsolePreserveScaleWhenSwitchBackToVNC();
 
     // C#: if (vncScreen.DesktopSize.Width > 10 && contentPanel.Width < vncScreen.DesktopSize.Width)
-    if (desktopSize.width() > 10 && this->ui->contentPanel->width() < desktopSize.width())
+    if (desktopSize.width() > 10 && this->ui->consoleScrollArea->viewport()->width() < desktopSize.width())
     {
         if (!preserveScale)
         {
@@ -736,6 +737,9 @@ void VNCTabView::onScaleCheckBoxChanged(bool checked)
         throw;
     }
     this->m_ignoringResizes = false;
+    if (this->m_vncScreen && this->m_vncScreen->GetUseVNC())
+        this->m_oldScaleValue = checked;
+    this->updateConsoleGeometry();
 
     // C#: FocusVNC();
     if (this->m_vncScreen)
@@ -1892,6 +1896,7 @@ void VNCTabView::updateButtons()
 
     // C#: ignoreScaleChange = false;
     m_ignoreScaleChange = false;
+    this->updateConsoleGeometry();
 }
 
 void VNCTabView::setupSpecialKeysMenu()
@@ -1973,23 +1978,28 @@ void VNCTabView::vncResizeHandler()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 836-843
     qDebug() << "VNCTabView: vncResizeHandler()";
 
-    // C#: if (!ignoringResizes && DesktopSizeHasChanged() && !scaleCheckBox.Checked)
-    //         MaybeScale();
-
     if (this->m_ignoringResizes)
         return;
 
+    // Honor the selected scaling mode when the guest changes resolution.
+    // An unscaled desktop grows inside the scroll area, not the host window.
+    this->updateConsoleGeometry();
     if (!this->desktopSizeHasChanged())
         return;
 
-    if (!this->ui->scaleCheckBox->isChecked())
-    {
-        qDebug() << "VNCTabView: Desktop size changed, auto-scaling...";
-        this->MaybeScale();
-    }
-
     this->UpdateParentMinimumSize();
     emit consoleResized();
+}
+
+void VNCTabView::updateConsoleGeometry()
+{
+    if (!this->m_vncScreen)
+        return;
+    const QSize desktop = this->m_vncScreen->GetDesktopSize();
+    const bool scaled = this->ui->scaleCheckBox->isChecked();
+    if (this->m_vncScreen->IsScaling() != scaled)
+        this->m_vncScreen->SetScaling(scaled);
+    this->ui->contentPanel->setMinimumSize(!scaled && desktop.isValid() ? desktop : QSize(0, 0));
 }
 
 bool VNCTabView::desktopSizeHasChanged()
@@ -2193,9 +2203,10 @@ void VNCTabView::toggleFullscreen()
         if (connection)
             connect(connection, &XenConnection::BeforeConnectionEnd, this, &VNCTabView::toggleFullscreen, Qt::UniqueConnection);
 
-        if (QLayout* layout = this->ui->contentPanel->layout())
-            layout->removeWidget(this->m_vncScreen);
-        this->m_fullscreenForm->AttachConsole(this->m_vncScreen, this->connectionName());
+        // Move the whole scrollable surface so native-size desktops remain
+        // reachable even when they exceed the fullscreen monitor resolution.
+        this->ui->verticalLayout->removeWidget(this->ui->consoleScrollArea);
+        this->m_fullscreenForm->AttachConsole(this->ui->consoleScrollArea, this->connectionName());
         this->m_fullscreenForm->ShowFullScreen();
 
         this->m_vncScreen->setFocus();
@@ -2205,13 +2216,10 @@ void VNCTabView::toggleFullscreen()
         if (connection)
             disconnect(connection, &XenConnection::BeforeConnectionEnd, this, &VNCTabView::toggleFullscreen);
 
-        this->m_fullscreenForm->DetachConsole(this->m_vncScreen);
-        QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(this->ui->contentPanel->layout());
-        if (layout)
-            layout->addWidget(this->m_vncScreen);
-        else
-            this->m_vncScreen->setParent(this->ui->contentPanel);
-        this->m_vncScreen->show();
+        this->m_fullscreenForm->DetachConsole(this->ui->consoleScrollArea);
+        this->ui->verticalLayout->insertWidget(this->ui->verticalLayout->indexOf(this->ui->bottomToolbar),
+                                               this->ui->consoleScrollArea);
+        this->ui->consoleScrollArea->show();
 
         FullScreenForm* form = this->m_fullscreenForm;
         this->m_fullscreenForm = nullptr;

@@ -459,6 +459,9 @@ class VNCTabView : public QWidget
          */
         void vncResizeHandler();
 
+        //! Keep an unscaled desktop scrollable without enlarging the window.
+        void updateConsoleGeometry();
+
         /**
          * @brief Check if desktop size has changed
          * Reference: VNCTabView.cs lines 870-881

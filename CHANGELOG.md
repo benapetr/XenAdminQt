@@ -85,6 +85,10 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 
 ### Fixed
 
+- Added console scrollbars when Scale to fit is disabled, including fullscreen,
+  so guest desktops larger than the available space remain accessible. Guest
+  resolution changes now preserve the selected scaling mode.
+
 Building with Qt 5 on Linux failed in the NRPE actions
 Adding a server without Active Directory to a pool that uses it now asks for domain credentials and joins the server to the pool's domain, as XenCenter does
 Renaming a vApp or changing its description in its properties is saved again
