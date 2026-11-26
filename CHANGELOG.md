@@ -7,35 +7,48 @@ are omitted.
 
 ## [Unreleased]
 
+## [v0.2.0-beta] - 2026-11-26
+
 ### Added
 
-Active Directory Users tab for pools and standalone servers: join or leave a domain, add and remove users and groups, change their roles and log them out
-VM snapshot schedules: the VM Snapshot Schedules dialog with run history, the New Snapshot Schedule wizard, schedule properties and the Assign to Snapshot Schedule menu
-Manage vApps dialog, New vApp wizard and Assign to vApp menu; vApp properties now include the VMs and their startup sequence
-Alerts for servers with a missing or duplicate iSCSI IQN, with an Edit IQN link that opens the server's properties
-Pool and standalone server properties have C#'s Clustering page for enabling corosync clustering (needed for GFS2 storage)
-Pool and standalone server properties have C#'s NRPE monitoring page (xapi 23.27.0 or later, local root or Pool Admin)
-VM properties have C#'s Cloud-Config Parameters page for CoreOS VMs and templates on pools with container support
-VM properties have C#'s USB page, with the Attach USB dialog, for passing host USB devices through to HVM VMs
-SR properties have C#'s Read Caching page for storage types that support it
-Saved searches: save the current search to a pool (XenCenter-compatible, so XenCenter sees it too), delete it, pick saved and built-in searches from the Search tab and navigation pane, and export or import .xensearch files (File > Import Search...).
+- Active Directory Users tab for pools and standalone servers: join or leave a
+  domain, add and remove users and groups, change their roles and log them out
+- VM snapshot schedules: the VM Snapshot Schedules dialog with run history, the
+  New Snapshot Schedule wizard, schedule properties and the Assign to Snapshot
+  Schedule menu
+- Manage vApps dialog, New vApp wizard and Assign to vApp menu; vApp properties
+  now include the VMs and their startup sequence
+- Alerts for servers with a missing or duplicate iSCSI IQN, with an Edit IQN
+  link that opens the server's properties
+- Pool and standalone server properties have C#'s Clustering page for enabling
+  corosync clustering (needed for GFS2 storage)
+- Pool and standalone server properties have C#'s NRPE monitoring page (xapi
+  23.27.0 or later, local root or Pool Admin)
+- VM properties have C#'s Cloud-Config Parameters page for CoreOS VMs and
+  templates on pools with container support
+- VM properties have C#'s USB page, with the Attach USB dialog, for passing host
+  USB devices through to HVM VMs
+- SR properties have C#'s Read Caching page for storage types that support it
+- Saved searches: save the current search to a pool (XenCenter-compatible, so
+  XenCenter sees it too), delete it, pick saved and built-in searches from the
+  Search tab and navigation pane, and export or import .xensearch files (File >
+  Import Search...).
 - Search editor: custom fields can be searched, as in C#. Each custom field
-  appears as a condition (text fields with contains/starts with/...; date
-  fields with before/after/on and recent periods), and the list follows custom
-  fields as they are added or removed.
-- Search editor: conditions on related objects work, as in C#. Choosing
-  "Pool", "Server", "VM", "Network", "SR", "Virtual Disk", "VM Appliance" or a
-  folder adds a condition for that object on the same line, including "Is"
-  to pick one object. Switching a condition to "All/Any/None of the
-  following" keeps it as the first entry, a new "Select a filter..." row
-  appears as rows are used, and conditions that stop applying are removed
-  when "Search for" changes.
+  appears as a condition (text fields with contains/starts with/...; date fields
+  with before/after/on and recent periods), and the list follows custom fields
+  as they are added or removed.
+- Search editor: conditions on related objects work, as in C#. Choosing "Pool",
+  "Server", "VM", "Network", "SR", "Virtual Disk", "VM Appliance" or a folder
+  adds a condition for that object on the same line, including "Is" to pick one
+  object. Switching a condition to "All/Any/None of the following" keeps it as
+  the first entry, a new "Select a filter..." row appears as rows are used, and
+  conditions that stop applying are removed when "Search for" changes.
 - Email notifications page in Pool Properties (and Server Properties for a
   standalone server): send performance alert emails to an address through an
   SMTP server, in English, Chinese or Japanese, as in C#.
-- vTPM manager (VM > Trusted Platform Module Manager..., the VM right-click
-  menu and the General tab's Trusted Platform Module row): attach, remove and
-  inspect vTPMs of UEFI VMs, as in C#.
+- vTPM manager (VM > Trusted Platform Module Manager..., the VM right-click menu
+  and the General tab's Trusted Platform Module row): attach, remove and inspect
+  vTPMs of UEFI VMs, as in C#.
 - General tab: VMs show their boot mode (BIOS, UEFI or UEFI Secure Boot, in red
   when the pool lacks UEFI certificates), servers booting over multipath show
   how many boot paths are active, and running VMs list their read-cached disks
@@ -46,8 +59,8 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
   Events pages, as in C#.
 - Quick Create (Templates menu and template context menu), as in C#: creates a
   VM named "<template> (n)" from an instant template and starts it straight
-  away. The menu item used to show "Not Implemented". While the VM is being
-  set up it is kept out of the tree, as the New VM wizard now also does.
+  away. The menu item used to show "Not Implemented". While the VM is being set
+  up it is kept out of the tree, as the New VM wizard now also does.
 - Full screen consoles, as in C#: the Fullscreen button or the configured
   shortcut (Ctrl+Alt by default, Ctrl+Alt+F, F12 or Ctrl+Enter) shows the
   console on the whole screen with C#'s connection bar (console name, pin and
@@ -64,8 +77,8 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
   log and two backups). Messages are written in batches every few seconds to
   keep disk writes low, and console session cookies are masked.
 - Added C#'s status bar buttons for tasks in progress, failed tasks and alerts.
-  Each shows its count only when it is above zero and opens the Events or
-  Alerts page when clicked.
+  Each shows its count only when it is above zero and opens the Events or Alerts
+  page when clicked.
 - Added C# fix actions to the alert Actions menu: HA Settings for HA alerts,
   Repair Storage for failed storage plugs, Alarm Settings for performance alarms
   (opening the Alerts page of the affected host, VM, or SR), and Install
@@ -88,83 +101,137 @@ Saved searches: save the current search to a pool (XenCenter-compatible, so XenC
 - Added console scrollbars when Scale to fit is disabled, including fullscreen,
   so guest desktops larger than the available space remain accessible. Guest
   resolution changes now preserve the selected scaling mode.
-
-Building with Qt 5 on Linux failed in the NRPE actions
-Adding a server without Active Directory to a pool that uses it now asks for domain credentials and joins the server to the pool's domain, as XenCenter does
-Renaming a vApp or changing its description in its properties is saved again
-Connecting to a pool member whose pool is already connected now says so instead of offering to connect to the coordinator, and the offer uses XenCenter's wording
-Connection errors no longer report a wrong password when the server gave no reason, no longer repeat an earlier attempt's reason, and declining to connect to the pool coordinator shows no extra error
-Tasks on a server, or on its VMs and storage, now show when filtering events by the server's pool
-The console's Enable Remote Desktop button now asks the VM to turn Remote Desktop on
-After a server joins a pool its separate connection is removed, and the pool's default storage is cleared if it was local storage, as XenCenter does
-Search results sort by the chosen column's value, as in XenCenter, instead of by cell text, and the order applies to groups too; searches over several pools no longer list results once per pool
-Rebooting servers now warns when a server runs a storage virtual appliance, and a failed reboot is reported in Events instead of a separate message box
-The Take VM Snapshot dialog no longer has the quiesce option; servers since XenServer 7.6 don't support quiesced snapshots
-The Take VM Snapshot dialog hides quiesced snapshots on servers that no longer support them and explains unavailable snapshot types by the VM's tools state, like C#
-The yellow notes in network properties are readable in dark mode
-On macOS, dialog fields stretch to the window width and forms are left-aligned, as on Windows and Linux, instead of narrow boxes in the middle
-The memory and disk size search conditions use XenCenter's "bigger than", "smaller than" and "is exactly"
-Older saved searches with conditions such as "Pool is", "Server is", "Network uses" or "Disks attached to" load into the search editor instead of an empty condition
-The folder breadcrumb above search results shortens long paths to fit, uses XenCenter's separator icon, and clicking a parent folder searches it
-Folders use XenCenter's folder icon in the tree, search and menus, and the Folders button and New Folder command have an icon again
-Ctrl+F puts the cursor in the navigation pane's search box, not just the tree
-Consoles are rebuilt when the automatic switch to Remote Desktop is turned on or off in Options
-The search panel's "Search for" list shows an icon for each object type
-The HA column in search results shows each VM's restart priority, a pool's failure tolerance and the heartbeat SR instead of always "--"
-The Migrate to Server, Start on Server and Resume on Server submenus in the main VM menu on macOS no longer stay stuck at "Updating..."
-After New Pool, the servers that joined are no longer kept as separate connections in the tree and the server list, as in XenCenter
-Alerts can only be dismissed by users whose role allows deleting messages, as in XenCenter, instead of failing on the server
-Selecting pools and standalone servers together offers Disconnect, Reconnect and Edit Tags in the context menu, as XenCenter does, and Disconnect then disconnects all of them
-Failed snapshot schedule alerts and Workload Balancing placement reasons show readable error messages instead of raw XenAPI error codes
-Changing an SR-IOV network to another NIC, VLAN or to an internal network removes its SR-IOV configuration, as XenCenter does, instead of leaving it behind
-Switch to Graphical Console works for VMs running their own VNC server, as in XenCenter: the app finds the server, asks for its password when needed (remembered per VM, saved with the session) and goes back to the text console if you cancel; the VNC client now answers password challenges correctly and no longer stalls when the server's handshake arrives in pieces
-Consoles check the user's role like XenCenter: a user whose role may not open a console sees which roles may, instead of a console that fails; the host console opens dom0 and the driver domain console its storage driver domain on hosts that have one; Open SSH Console uses the logged-in user's name instead of root
-Back and Forward return to tag and folder searches, as XenCenter does, and clicking the selected object in the tree while a search is shown brings its tabs back
-Changing a network's MTU, bond mode or load balancing algorithm in its properties is saved again, and the network is replugged so a new MTU takes effect, as XenCenter does; the MTU can be changed while VMs with I/O drivers are running
-Opening a console or performance graphs on a pool member of an XCP-ng 8.2 pool no longer asks to trust the member's default certificate
-Rebooting or restarting the toolstack of a pool coordinator, or installing a server certificate, now drops and reconnects the connection straight away, as XenCenter does, instead of treating it as live until the event stream failed; operations on a connection lost unexpectedly are cancelled
-Install Guest Tools inserts the guest tools ISO (XCP-ng: guest-tools.iso) into the VM's CD drive, repairing an unplugged tools SR first, and shows the install commands for Linux guests; it used to show a "Not Implemented" message
-Custom fields work like XenCenter's: they are defined pool-wide (New Custom Field... and Delete on the Custom Fields page update the pool's list, and deleting a field clears its values), the page shows every defined field with a text or date-and-time editor, and the General tab lists only defined fields
-New VM from Snapshot opens the New VM wizard with the chosen snapshot selected, instead of the first template
-Crash when clicking a group in the navigation tree of a saved search, and possible crashes in the Tags, Folders and vApps views or while filtering them with the search box
-- Search conditions read the same values as C#, so conditions on values held
-  by related records now match: Operating System, Start Time, Tools Status,
-  Memory and HA Restart Priority never matched before. Enum conditions offer
-  the C# choices (for example "Fully optimized" for tools status), and date
-  conditions offer "is today", "was yesterday", "is this week", "was last
-  week", "is before", "is after" and "exactly matches", matched as in C#.
+- Building with Qt 5 on Linux failed in the NRPE actions
+- Adding a server without Active Directory to a pool that uses it now asks for
+  domain credentials and joins the server to the pool's domain, as XenCenter
+  does
+- Renaming a vApp or changing its description in its properties is saved again
+- Connecting to a pool member whose pool is already connected now says so
+  instead of offering to connect to the coordinator, and the offer uses
+  XenCenter's wording
+- Connection errors no longer report a wrong password when the server gave no
+  reason, no longer repeat an earlier attempt's reason, and declining to connect
+  to the pool coordinator shows no extra error
+- Tasks on a server, or on its VMs and storage, now show when filtering events
+  by the server's pool
+- The console's Enable Remote Desktop button now asks the VM to turn Remote
+  Desktop on
+- After a server joins a pool its separate connection is removed, and the pool's
+  default storage is cleared if it was local storage, as XenCenter does
+- Search results sort by the chosen column's value, as in XenCenter, instead of
+  by cell text, and the order applies to groups too; searches over several pools
+  no longer list results once per pool
+- Rebooting servers now warns when a server runs a storage virtual appliance,
+  and a failed reboot is reported in Events instead of a separate message box
+- The Take VM Snapshot dialog no longer has the quiesce option; servers since
+  XenServer 7.6 don't support quiesced snapshots
+- The Take VM Snapshot dialog hides quiesced snapshots on servers that no longer
+  support them and explains unavailable snapshot types by the VM's tools state,
+  like C#
+- The yellow notes in network properties are readable in dark mode
+- On macOS, dialog fields stretch to the window width and forms are
+  left-aligned, as on Windows and Linux, instead of narrow boxes in the middle
+- The memory and disk size search conditions use XenCenter's "bigger than",
+  "smaller than" and "is exactly"
+- Older saved searches with conditions such as "Pool is", "Server is", "Network
+  uses" or "Disks attached to" load into the search editor instead of an empty
+  condition
+- The folder breadcrumb above search results shortens long paths to fit, uses
+  XenCenter's separator icon, and clicking a parent folder searches it
+- Folders use XenCenter's folder icon in the tree, search and menus, and the
+  Folders button and New Folder command have an icon again
+- Ctrl+F puts the cursor in the navigation pane's search box, not just the tree
+- Consoles are rebuilt when the automatic switch to Remote Desktop is turned on
+  or off in Options
+- The search panel's "Search for" list shows an icon for each object type
+- The HA column in search results shows each VM's restart priority, a pool's
+  failure tolerance and the heartbeat SR instead of always "--"
+- The Migrate to Server, Start on Server and Resume on Server submenus in the
+  main VM menu on macOS no longer stay stuck at "Updating..."
+- After New Pool, the servers that joined are no longer kept as separate
+  connections in the tree and the server list, as in XenCenter
+- Alerts can only be dismissed by users whose role allows deleting messages, as
+  in XenCenter, instead of failing on the server
+- Selecting pools and standalone servers together offers Disconnect, Reconnect
+  and Edit Tags in the context menu, as XenCenter does, and Disconnect then
+  disconnects all of them
+- Failed snapshot schedule alerts and Workload Balancing placement reasons show
+  readable error messages instead of raw XenAPI error codes
+- Changing an SR-IOV network to another NIC, VLAN or to an internal network
+  removes its SR-IOV configuration, as XenCenter does, instead of leaving it
+  behind
+- Switch to Graphical Console works for VMs running their own VNC server, as in
+  XenCenter: the app finds the server, asks for its password when needed
+  (remembered per VM, saved with the session) and goes back to the text console
+  if you cancel; the VNC client now answers password challenges correctly and no
+  longer stalls when the server's handshake arrives in pieces
+- Consoles check the user's role like XenCenter: a user whose role may not open
+  a console sees which roles may, instead of a console that fails; the host
+  console opens dom0 and the driver domain console its storage driver domain on
+  hosts that have one; Open SSH Console uses the logged-in user's name instead
+  of root
+- Back and Forward return to tag and folder searches, as XenCenter does, and
+  clicking the selected object in the tree while a search is shown brings its
+  tabs back
+- Changing a network's MTU, bond mode or load balancing algorithm in its
+  properties is saved again, and the network is replugged so a new MTU takes
+  effect, as XenCenter does; the MTU can be changed while VMs with I/O drivers
+  are running
+- Opening a console or performance graphs on a pool member of an XCP-ng 8.2 pool
+  no longer asks to trust the member's default certificate
+- Rebooting or restarting the toolstack of a pool coordinator, or installing a
+  server certificate, now drops and reconnects the connection straight away, as
+  XenCenter does, instead of treating it as live until the event stream failed;
+  operations on a connection lost unexpectedly are cancelled
+- Install Guest Tools inserts the guest tools ISO (XCP-ng: guest-tools.iso) into
+  the VM's CD drive, repairing an unplugged tools SR first, and shows the
+  install commands for Linux guests; it used to show a "Not Implemented" message
+- Custom fields work like XenCenter's: they are defined pool-wide (New Custom
+  Field... and Delete on the Custom Fields page update the pool's list, and
+  deleting a field clears its values), the page shows every defined field with a
+  text or date-and-time editor, and the General tab lists only defined fields
+- New VM from Snapshot opens the New VM wizard with the chosen snapshot
+  selected, instead of the first template
+- Crash when clicking a group in the navigation tree of a saved search, and
+  possible crashes in the Tags, Folders and vApps views or while filtering them
+  with the search box
+- Search conditions read the same values as C#, so conditions on values held by
+  related records now match: Operating System, Start Time, Tools Status, Memory
+  and HA Restart Priority never matched before. Enum conditions offer the C#
+  choices (for example "Fully optimized" for tools status), and date conditions
+  offer "is today", "was yesterday", "is this week", "was last week", "is
+  before", "is after" and "exactly matches", matched as in C#.
 - Search "Group by" works as in C#: grouping by operating system, power state,
   tools status, HA restart priority, read caching, Windows Update capable,
   network, SR, virtual disk, VM, vApp and custom fields now groups by those
-  (before, most of these silently grouped by type). Only groupings relevant
-  to what is searched for are offered, related-object groupings keep their
+  (before, most of these silently grouped by type). Only groupings relevant to
+  what is searched for are offered, related-object groupings keep their
   pool/server/VM order, buttons can be dragged to reorder, and a search's
   grouping is shown when it is opened.
-- The "Tags" search condition lists the tags in use; its list was always
-  empty.
-- Searching by a date custom field set in XenCenter now matches; the stored
-  date format was not recognised.
+- The "Tags" search condition lists the tags in use; its list was always empty.
+- Searching by a date custom field set in XenCenter now matches; the stored date
+  format was not recognised.
 - The search editor lists conditions by their names ("Name", "Power State",
   "Pool") instead of internal identifiers, and no longer lists "In Any
   Appliance" twice.
 - Search conditions that look at related objects now work, as in C#: "Pool",
-  "Server", "VM", "Networks", "Storage" and "Disks" conditions never matched
-  (or matched the object itself), and an "All of" group returned nothing while
-  one of its rows was still "Select a filter...".
-- The client now builds objects for every server class it receives, as C#
-  does. Sixteen classes were never turned into objects, so code that looked
-  them up got nothing. Among the effects: vApp Start/Shut Down could not find
-  their vApp, vApps were missing from views that list them, "Reclaim freed
-  space" was never offered for storage that supports it, and clustering and
-  pool-join checks saw no clustered servers.
+  "Server", "VM", "Networks", "Storage" and "Disks" conditions never matched (or
+  matched the object itself), and an "All of" group returned nothing while one
+  of its rows was still "Select a filter...".
+- The client now builds objects for every server class it receives, as C# does.
+  Sixteen classes were never turned into objects, so code that looked them up
+  got nothing. Among the effects: vApp Start/Shut Down could not find their
+  vApp, vApps were missing from views that list them, "Reclaim freed space" was
+  never offered for storage that supports it, and clustering and pool-join
+  checks saw no clustered servers.
 - Pool and Server Properties show the same pages as C#: Security only before
   XenServer 8 (Stockholm), Live Patching only before the Cloud release,
   Networking only with the vSwitch backend, and no Performance Alerts page for
-  pools. A standalone server's properties now include these pool-wide pages
-  and its GPU page, which the server dialog left out.
-- The General tab now shows the Trusted Platform Module row for VMs with a
-  vTPM. The client received vTPM records but never turned them into objects,
-  so VMs always looked as if they had no vTPM.
+  pools. A standalone server's properties now include these pool-wide pages and
+  its GPU page, which the server dialog left out.
+- The General tab now shows the Trusted Platform Module row for VMs with a vTPM.
+  The client received vTPM records but never turned them into objects, so VMs
+  always looked as if they had no vTPM.
 - The General tab's read caching status now uses the per-server state the
   storage manager reports, as C# does; it could say "Enabled" when the VM was
   not using read caching.
@@ -172,8 +239,8 @@ Crash when clicking a group in the navigation tree of a saved search, and possib
   running VM, as in C#.
 - The Memory tab now also updates when a VM's guest agent reports changes
   (ballooning support, the Edit button), batches bursts of changes into one
-  redraw, skips redraws while hidden and, on a server, hides VMs that are
-  hidden in the tree, as in C#.
+  redraw, skips redraws while hidden and, on a server, hides VMs that are hidden
+  in the tree, as in C#.
 - If the New VM wizard fails while creating a VM, the half-created VM and its
   disks are now deleted, as in C#, instead of being left behind.
 - While a server is being added to or removed from a pool it is hidden from the
@@ -182,13 +249,13 @@ Crash when clicking a group in the navigation tree of a saved search, and possib
   if the VM can't boot, the boot diagnosis, like VM > Start. The start no longer
   depends on the wizard's own progress, which could cancel it once the wizard
   finished.
-- Deleting a VM together with its snapshots now also deletes the snapshots'
-  own disks, as in C#.
+- Deleting a VM together with its snapshots now also deletes the snapshots' own
+  disks, as in C#.
 - Templates created from a snapshot are now marked as instant templates, as in
   C#, so Quick Create is offered for them.
 - VM > Uninstall VM now deletes the VM through the usual delete confirmation
-  (choosing which disks and snapshots to remove), as in C#, instead of showing
-  a "Not Implemented" message.
+  (choosing which disks and snapshots to remove), as in C#, instead of showing a
+  "Not Implemented" message.
 - The console tab now follows changes like C#: the CD drive list updates when
   drives are added or removed, host and storage driver domain consoles pick up
   renames, the SSH button follows IP address changes after the VM boots, and
@@ -207,25 +274,25 @@ Crash when clicking a group in the navigation tree of a saved search, and possib
 - VM consoles are faster and closer to C#: screen updates use the compact
   CopyRect, RRE and CoRRE encodings instead of raw pixels only and are drawn row
   by row; the guest's mouse cursor is shown as the local pointer instead of
-  being drawn into the picture; and HVM guests get physical key scan codes
-  (QEMU extended key events) so non-US layouts and AltGr behave like the guest
+  being drawn into the picture; and HVM guests get physical key scan codes (QEMU
+  extended key events) so non-US layouts and AltGr behave like the guest
   expects. Keys held when the console loses focus are released.
 - VM consoles now follow guest resolution changes, e.g. while a VM boots. The
   console only told the server it understood raw pixel updates, so the server
-  could not announce a new screen size and the console kept the old one,
-  showing only the top part of the screen until the tab was reopened.
+  could not announce a new screen size and the console kept the old one, showing
+  only the top part of the screen until the tab was reopened.
 - Options > Consoles "Enable clipboard and printer redirection" now controls
   clipboard sharing with VNC consoles, as in C#. The clipboard was always shared
-  in both directions, and the option was disabled in builds without FreeRDP.
-  The console's clipboard text is also no longer written to the debug log.
+  in both directions, and the option was disabled in builds without FreeRDP. The
+  console's clipboard text is also no longer written to the debug log.
 - Security: server TLS certificates were never checked. Every connection (API,
   console, import/export, performance data) accepted any certificate, so an
   impersonated server would have received the login password. Certificates are
   now handled as in C#: ones trusted by the system are accepted; any other is
-  trusted on first use after a "New Security Certificate" prompt, remembered
-  per server, and a later change triggers a "Security Certificate Changed"
-  warning. The Options > Security settings for both warnings now take effect.
-  Expect one prompt per server the first time you connect after updating.
+  trusted on first use after a "New Security Certificate" prompt, remembered per
+  server, and a later change triggers a "Security Certificate Changed" warning.
+  The Options > Security settings for both warnings now take effect. Expect one
+  prompt per server the first time you connect after updating.
 - OVF/OVA and disk image imports now keep the new VM hidden until it is fully
   set up, as in C#, and destroy the partly imported VM when an import is
   cancelled or fails part-way (OVF/OVA imports could leave it behind).
@@ -233,25 +300,25 @@ Crash when clicking a group in the navigation tree of a saved search, and possib
   counts again, e.g. "Alerts (3)" and "Events (2 errors)" with the Events error
   icon; the counts were never updated. The title of an open Alerts or Events
   page follows the count.
-- The Alerts, Events and Updates entries in the notifications pane and the
-  title bar of those pages now show C#'s icons. They used desktop theme icons,
-  which are missing on macOS and Windows, and the title bar referenced images
-  that did not exist.
+- The Alerts, Events and Updates entries in the notifications pane and the title
+  bar of those pages now show C#'s icons. They used desktop theme icons, which
+  are missing on macOS and Windows, and the title bar referenced images that did
+  not exist.
 - View > Show Hidden Objects now works in the tree and searches. Hidden VMs,
   SRs, disks and networks are left out unless it is enabled (they used to be
   always shown, grayed), and, as in C#, internal and temporary objects, memory
   and tools SRs, missing or unmanaged disks, vTPM templates when vTPM is not
   licensed, and VMs or local SRs whose server is offline are always left out.
-- The VM network tab now uses the VM's own limit on network interfaces (from
-  its template's restrictions) instead of always allowing 7, and shows the C#
-  error when the limit is reached.
+- The VM network tab now uses the VM's own limit on network interfaces (from its
+  template's restrictions) instead of always allowing 7, and shows the C# error
+  when the limit is reached.
 - The VM network tab now shows interfaces on the guest installer network when
   hidden objects are shown, as in C#.
 - VM reboot and shutdown operations now record the VM's server and pool, so
-  their Events history entries show where they ran, and use C#'s titles such
-  as "Rebooting VM 'vm1' on 'host1'" and "Suspending VM 'vm1'".
-- Reducing vCPUs on a running VM now fails with C#'s message, which includes
-  the current vCPU count.
+  their Events history entries show where they ran, and use C#'s titles such as
+  "Rebooting VM 'vm1' on 'host1'" and "Suspending VM 'vm1'".
+- Reducing vCPUs on a running VM now fails with C#'s message, which includes the
+  current vCPU count.
 - Fixed dismissed alerts reappearing after reconnecting. Dismissing now deletes
   the messages on the server, in one call on xapi 22.19.0 and newer; alerts
   reappear if the deletion fails. Alerts can no longer be dismissed while their
@@ -259,33 +326,29 @@ Crash when clicking a group in the navigation tree of a saved search, and possib
 - Repair Storage now handles several selected storage repositories at once.
 - The Scheduled snapshots view option is now hidden only when the license does
   not allow snapshot schedules.
-
 - Restored fixed-height navigation buttons and their icons, with buttons moving
   progressively into the bottom icon row as the tree splitter is dragged down.
-
 - Fixed Attach Disk showing unmanaged snapshot-chain base disks and other
-  ineligible disks. Matched C# sharing, read-only, HVM, and storage-accessibility
-  rules, with eligibility refreshed as disk and storage metadata changes.
-
+  ineligible disks. Matched C# sharing, read-only, HVM, and
+  storage-accessibility rules, with eligibility refreshed as disk and storage
+  metadata changes.
 - Restored OS icons, template category labels, and C# ordering in the New VM
   wizard: custom templates first, newer names first within each category, and
   hidden templates last. Explicit template selection now also accepts UUIDs.
-
 - Fixed snapshots marked as templates showing template icons and appearing as
-  templates in Infrastructure view; snapshot classification now takes precedence.
-
+  templates in Infrastructure view; snapshot classification now takes
+  precedence.
 - Fixed built-in and custom templates sharing a cached icon, and matched C#'s
-  built-in template detection using the presence of the `default_template` marker.
-
+  built-in template detection using the presence of the `default_template`
+  marker.
 - Restored tree double-click actions for starting or resuming VMs, creating VMs
-  from templates, reconnecting disconnected hosts, and powering on eligible hosts.
-
+  from templates, reconnecting disconnected hosts, and powering on eligible
+  hosts.
 - Fixed new and attached VM disks skipping free device positions, and restored
   the reboot notification when a newly created disk cannot be hot-plugged.
-
 - Restored the HA warning when starting or resuming protected VMs that cannot
-  run on every host, with confirmation before clearing their HA restart priority.
-
+  run on every host, with confirmation before clearing their HA restart
+  priority.
 - Fixed recovery from closed API connections in long-running sessions and
   restored heartbeat monitoring after connection and reconnection.
 - Fixed failed host eligibility checks being treated as successful, which could

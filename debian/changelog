@@ -1,3 +1,13 @@
+xenadmin-qt (0.2.0) unstable; urgency=medium
+
+  * Second beta release.
+  * Add Active Directory management, snapshot schedules, vApps, saved searches,
+    and additional VM, pool, and server settings.
+  * Improve console scrolling and fullscreen support, storage workflows,
+    navigation, alerts, and connection recovery.
+
+ -- Petr Bena <petr@bena.rocks>  Thu, 26 Nov 2026 10:30:46 +0100
+
 xenadmin-qt (0.1.0) unstable; urgency=medium
 
   * First beta release.

@@ -144,7 +144,7 @@ With custom version:
 ./package-deb.sh --version 0.2.0
 ```
 
-**Output:** `packaging/output/xenadmin-qt_0.1.0_amd64.deb`
+**Output:** `packaging/output/xenadmin-qt_0.2.0_amd64.deb`
 
 **Notes:**
 - Uses `debhelper`/`dpkg-shlibdeps` so runtime dependencies are auto-detected via `${shlibs:Depends}` and `${misc:Depends}`
@@ -152,7 +152,7 @@ With custom version:
 
 **Installation:**
 ```bash
-sudo dpkg -i packaging/output/xenadmin-qt_0.1.0_amd64.deb
+sudo dpkg -i packaging/output/xenadmin-qt_0.2.0_amd64.deb
 sudo apt-get install -f  # Install any missing dependencies
 ```
 
@@ -173,17 +173,17 @@ With custom version:
 ./package-rpm.sh --version 0.2.0
 ```
 
-**Output:** `packaging/output/xenadmin-qt-0.1.0-1.*.rpm`
+**Output:** `packaging/output/xenadmin-qt-0.2.0-1.*.rpm`
 
 The Fedora script now drives `rpmbuild` end-to-end, so it also emits a matching SRPM:
-- Binary RPM: `packaging/output/xenadmin-qt-0.1.0-1.*.rpm`
-- Source RPM: `packaging/output/xenadmin-qt-0.1.0-1.*.src.rpm`
+- Binary RPM: `packaging/output/xenadmin-qt-0.2.0-1.*.rpm`
+- Source RPM: `packaging/output/xenadmin-qt-0.2.0-1.*.src.rpm`
 
 **Installation:**
 ```bash
-sudo dnf install packaging/output/xenadmin-qt-0.1.0-1.*.rpm
+sudo dnf install packaging/output/xenadmin-qt-0.2.0-1.*.rpm
 # or
-sudo rpm -ivh packaging/output/xenadmin-qt-0.1.0-1.*.rpm
+sudo rpm -ivh packaging/output/xenadmin-qt-0.2.0-1.*.rpm
 ```
 
 ### Build AppImage
@@ -203,12 +203,12 @@ With custom version:
 ./package-appimage.sh --version 0.2.0
 ```
 
-**Output:** `packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage`
+**Output:** `packaging/output/xenadmin-qt-0.2.0-x86_64.AppImage`
 
 **Installation/Run:**
 ```bash
-chmod +x packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage
-./packaging/output/xenadmin-qt-0.1.0-x86_64.AppImage
+chmod +x packaging/output/xenadmin-qt-0.2.0-x86_64.AppImage
+./packaging/output/xenadmin-qt-0.2.0-x86_64.AppImage
 ```
 
 **Notes:**
@@ -239,7 +239,7 @@ If using Homebrew's Qt binaries, you'll need to specify which architecture you'r
 ./package-dmg.sh --archs x86_64
 ```
 
-**Output:** `packaging/output/XenAdmin-Qt-0.1.0.dmg`
+**Output:** `packaging/output/XenAdmin-Qt-0.2.0.dmg`
 
 **Installation:**
 1. Double-click the DMG file
@@ -270,7 +270,7 @@ Using MinGW compiler:
 .\package-win.ps1 -QtPath C:\Qt\6.5.0\mingw_64 -Compiler mingw
 ```
 
-**Output:** `packaging/output/xenadmin-qt-0.1.0-windows.zip`
+**Output:** `packaging/output/xenadmin-qt-0.2.0-windows.zip`
 
 **Installation:**
 1. Extract the ZIP file to a directory
@@ -294,7 +294,7 @@ All bash scripts support the following options:
   - Must contain `qmake` and platform-specific deploy tools
 
 - `--version <x.y.z>`: Package version number
-  - Default: `0.1.0`
+  - Default: `0.2.0`
   - Must follow semantic versioning (major.minor.patch)
 
 ### Windows Script
